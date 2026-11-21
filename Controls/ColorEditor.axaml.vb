@@ -9,8 +9,8 @@ Imports Avalonia.Media
 Namespace Controls
 
     ''' <summary>
-    ''' Der Inhalt eines Farb-Aufklappers: Farbrad (siehe ColorWheel), Deckkraft, Hex-Wert und die
-    ''' zuletzt benutzten Farben. Ersetzt Avalonias ColorPicker, damit jeder Farbwaehler der
+    ''' Der Inhalt eines Farb-Aufklappers: Farbrad (siehe ColorWheel), Deckkraft, Hex-Wert, die
+    ''' Kanalwerte R, G, B und A (siehe ColorChannelFields) und die zuletzt benutzten Farben. Ersetzt Avalonias ColorPicker, damit jeder Farbwaehler der
     ''' Anwendung genauso aussieht und bedient wird wie der Farbmischer der Objektwerkzeuge.
     '''
     ''' Die Vergleichsfarbe links neben dem Hex-Feld ist die Farbe beim Oeffnen. Der Besitzer setzt
@@ -21,6 +21,13 @@ Namespace Controls
 
         Public Shared ReadOnly ColorProperty As StyledProperty(Of Color) =
             AvaloniaProperty.Register(Of ColorEditor, Color)(NameOf(Color), Colors.White, defaultBindingMode:=BindingMode.TwoWay)
+
+        ''' <summary>Kennt die Farbe eine Deckung? Aus, wo der Besitzer Alpha ohnehin verwirft (die
+        ''' Lichtfarbe etwa): dann fehlt die Zeile Deckkraft, und ein getippter Hex-Wert wird
+        ''' deckend uebernommen. Eine hereingereichte Farbe bleibt dabei unangetastet, damit schon
+        ''' das Oeffnen nichts am Wert des Besitzers aendert.</summary>
+        Public Shared ReadOnly ShowAlphaProperty As StyledProperty(Of Boolean) =
+            AvaloniaProperty.Register(Of ColorEditor, Boolean)(NameOf(ShowAlpha), True)
 
         Private _suppressSync As Boolean
         Private _original As Color = Colors.White
@@ -51,6 +58,9 @@ Namespace Controls
                 AddHandler hexBox.KeyDown, AddressOf OnHexKeyDown
             End If
 
+            Dim channelFields = Me.FindControl(Of ColorChannelFields)("ChannelFields")
+            If channelFields IsNot Nothing Then AddHandler channelFields.PropertyChanged, AddressOf OnChannelFieldsPropertyChanged
+
             UpdateVisuals()
         End Sub
 
@@ -63,6 +73,15 @@ Namespace Controls
             End Set
         End Property
 
+        Public Property ShowAlpha As Boolean
+            Get
+                Return GetValue(ShowAlphaProperty)
+            End Get
+            Set(value As Boolean)
+                SetValue(ShowAlphaProperty, value)
+            End Set
+        End Property
+
         ''' <summary>Haelt die aktuelle Farbe als Vergleich fest. Aufgerufen beim Oeffnen des
         ''' Aufklappers, damit links steht, womit man angefangen hat.</summary>
         Public Sub MarkOriginal()
@@ -72,7 +91,14 @@ Namespace Controls
 
         Protected Overrides Sub OnPropertyChanged(change As AvaloniaPropertyChangedEventArgs)
             MyBase.OnPropertyChanged(change)
-            If change.Property Is ColorProperty Then UpdateVisuals()
+            If change.Property Is ColorProperty Then
+                UpdateVisuals()
+            ElseIf change.Property Is ShowAlphaProperty Then
+                Dim alphaRow = Me.FindControl(Of Control)("AlphaRow")
+                If alphaRow IsNot Nothing Then alphaRow.IsVisible = ShowAlpha
+                Dim channelFields = Me.FindControl(Of ColorChannelFields)("ChannelFields")
+                If channelFields IsNot Nothing Then channelFields.ShowAlpha = ShowAlpha
+            End If
         End Sub
 
         Private Sub UpdateVisuals()
@@ -99,6 +125,9 @@ Namespace Controls
                 If hexBox IsNot Nothing AndAlso Not hexBox.IsFocused AndAlso
                    Not String.Equals(hexBox.Text, hex, StringComparison.OrdinalIgnoreCase) Then hexBox.Text = hex
 
+                Dim channelFields = Me.FindControl(Of ColorChannelFields)("ChannelFields")
+                If channelFields IsNot Nothing AndAlso channelFields.Color <> c Then channelFields.Color = c
+
                 Dim current = Me.FindControl(Of Border)("CurrentSwatch")
                 If current IsNot Nothing Then current.Background = New SolidColorBrush(c)
                 Dim original = Me.FindControl(Of Border)("OriginalSwatch")
@@ -122,6 +151,13 @@ Namespace Controls
             Dim wheel = TryCast(sender, ColorWheel)
             If wheel Is Nothing Then Return
             Color = wheel.Color
+        End Sub
+
+        Private Sub OnChannelFieldsPropertyChanged(sender As Object, e As AvaloniaPropertyChangedEventArgs)
+            If _suppressSync OrElse e.Property IsNot ColorChannelFields.ColorProperty Then Return
+            Dim channelFields = TryCast(sender, ColorChannelFields)
+            If channelFields Is Nothing Then Return
+            Color = channelFields.Color
         End Sub
 
         Private Sub OnWheelPointerReleased(sender As Object, e As PointerReleasedEventArgs)
@@ -165,6 +201,7 @@ Namespace Controls
             Dim text = If(hexBox.Text, "").Trim()
             Dim parsed As Color
             If text.Length > 0 AndAlso Avalonia.Media.Color.TryParse(text, parsed) Then
+                If Not ShowAlpha Then parsed = Avalonia.Media.Color.FromArgb(255, parsed.R, parsed.G, parsed.B)
                 Color = parsed
                 ColorPickerButton.RegisterRecent(parsed)
             End If

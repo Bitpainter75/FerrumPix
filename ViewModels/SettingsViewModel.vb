@@ -670,8 +670,8 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Stichwoerter, Bewertung und Farbetikett aus der .pp3 oder .arp neben dem Bild lesen
-        ''' (Standard AUS, siehe Pp3SidecarService).</summary>
+        ''' <summary>Stichwoerter, Bewertung und Farbetikett aus der .pp3, .arp oder .rrdata neben dem
+        ''' Bild lesen (Standard AUS, siehe Pp3SidecarService und RrdataSidecarService).</summary>
         Public Property ReadPp3Sidecars As Boolean
             Get
                 Return _readPp3Sidecars
@@ -7080,8 +7080,7 @@ Namespace ViewModels
             For Each n In {NameOf(FolderSummaryText),
                            NameOf(LensDatabaseInfo), NameOf(AdjustmentGroupItems),
                            NameOf(InfoPanelRowItems), NameOf(InfoPanelSectionItems),
-                           NameOf(ModelGroups), NameOf(GpuAccelerationStatusText),
-                           NameOf(SystemLibraryFallbackRows)}
+                           NameOf(ModelGroups), NameOf(GpuAccelerationStatusText)}
                 Me.RaisePropertyChanged(n)
             Next
             ' Die Zeilen tragen ihre Texte selbst (Titel, Zahlen, "Ordner fehlt") und lesen sie beim

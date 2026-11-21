@@ -33,6 +33,7 @@ Namespace Services
         Private ReadOnly _xmp As New Dictionary(Of String, String)(PathIdentity.Comparer)
         Private ReadOnly _fpxmp As New Dictionary(Of String, String)(PathIdentity.Comparer)
         Private ReadOnly _pp3 As New Dictionary(Of String, String)(PathIdentity.Comparer)
+        Private ReadOnly _rrdata As New Dictionary(Of String, String)(PathIdentity.Comparer)
         Private _listingFailed As Boolean
 
         ''' <summary>Der Ordner, fuer den die Auflistung gilt.</summary>
@@ -86,12 +87,19 @@ Namespace Services
                     For Each arp In Directory.EnumerateFiles(folderPath, "*" & Pp3SidecarService.ArpExtension, SearchOptions)
                         result._pp3(arp) = File.GetLastWriteTime(arp).ToString("o")
                     Next
+                    ' Die .rrdata eines anderen Entwicklers am selben Schalter, wie sie auch nur
+                    ' damit gelesen wird (RrdataSidecarService). Virtuelle Kopien kommen mit in die
+                    ' Liste, gefragt wird aber nur nach der Datei des Originals.
+                    For Each rrdata In Directory.EnumerateFiles(folderPath, "*" & RrdataSidecarService.Extension, SearchOptions)
+                        result._rrdata(rrdata) = File.GetLastWriteTime(rrdata).ToString("o")
+                    Next
                 End If
             Catch
                 result._listingFailed = True
                 result._xmp.Clear()
                 result._fpxmp.Clear()
                 result._pp3.Clear()
+                result._rrdata.Clear()
             End Try
             Return result
         End Function
@@ -117,9 +125,9 @@ Namespace Services
             Dim arpOnly As String = Nothing
             If Not _pp3.TryGetValue(Pp3SidecarService.ArpPathFor(imagePath), arpOnly) Then arpOnly = ""
             Dim pp3Stamp = Pp3SidecarService.ComposeStamp(pp3Only, arpOnly)
-            If String.IsNullOrEmpty(xmpStamp) AndAlso String.IsNullOrEmpty(fpxmpStamp) AndAlso String.IsNullOrEmpty(pp3Stamp) Then Return ""
-            Return xmpStamp & If(String.IsNullOrEmpty(fpxmpStamp), "|-", "|fpxmp:" & fpxmpStamp) &
-                   If(String.IsNullOrEmpty(pp3Stamp), "", "|pp3:" & pp3Stamp)
+            Dim rrdataStamp As String = Nothing
+            If Not _rrdata.TryGetValue(RrdataSidecarService.PathFor(imagePath), rrdataStamp) Then rrdataStamp = ""
+            Return LibraryService.ComposeSidecarStamp(xmpStamp, fpxmpStamp, pp3Stamp, rrdataStamp)
         End Function
 
     End Class

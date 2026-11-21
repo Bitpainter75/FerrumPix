@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.ColorChannelFields">
+    <!-- Rot, Gruen, Blau und Alpha als Zahlen von 0 bis 255, in vier gleich breiten Spalten. Die
+         Felder sind mit 38 schmaler als die Zahlenfelder neben den Reglern (Klasse slider-value,
+         dort 44) und stehen rechts in ihrer Spalte: vier passen so auch in den 220 breiten
+         Aufklapper, ohne umzubrechen. Ohne Deckung (ShowAlpha aus) faellt das Feld A weg, und der
+         Code setzt seine Spalte auf Auto, damit R, G und B die Breite teilen. -->
+    <Grid Name="ChannelGrid" ColumnDefinitions="*,*,*,*" ColumnSpacing="4">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="3">
+            <TextBlock Text="R" Classes="no-translate" VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" />
+            <icons:SliderValueUpDown Grid.Column="1" Name="RedValue" Classes="slider-value"
+                                     Width="38" MinWidth="38" HorizontalAlignment="Right"
+                                     Minimum="0" Maximum="255" Increment="1" CoarseIncrement="16"
+                                     ClipValueToMinMax="True" DeferTextCommit="True"
+                                     FormatString="F0" ToolTip.Tip="Rot" />
+        </Grid>
+        <Grid Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="3">
+            <TextBlock Text="G" Classes="no-translate" VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" />
+            <icons:SliderValueUpDown Grid.Column="1" Name="GreenValue" Classes="slider-value"
+                                     Width="38" MinWidth="38" HorizontalAlignment="Right"
+                                     Minimum="0" Maximum="255" Increment="1" CoarseIncrement="16"
+                                     ClipValueToMinMax="True" DeferTextCommit="True"
+                                     FormatString="F0" ToolTip.Tip="Grün" />
+        </Grid>
+        <Grid Grid.Column="2" ColumnDefinitions="Auto,*" ColumnSpacing="3">
+            <TextBlock Text="B" Classes="no-translate" VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" />
+            <icons:SliderValueUpDown Grid.Column="1" Name="BlueValue" Classes="slider-value"
+                                     Width="38" MinWidth="38" HorizontalAlignment="Right"
+                                     Minimum="0" Maximum="255" Increment="1" CoarseIncrement="16"
+                                     ClipValueToMinMax="True" DeferTextCommit="True"
+                                     FormatString="F0" ToolTip.Tip="Blau" />
+        </Grid>
+        <Grid Grid.Column="3" Name="AlphaColumn" ColumnDefinitions="Auto,*" ColumnSpacing="3">
+            <TextBlock Text="A" Classes="no-translate" VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" />
+            <icons:SliderValueUpDown Grid.Column="1" Name="AlphaChannelValue" Classes="slider-value"
+                                     Width="38" MinWidth="38" HorizontalAlignment="Right"
+                                     Minimum="0" Maximum="255" Increment="1" CoarseIncrement="16"
+                                     ClipValueToMinMax="True" DeferTextCommit="True"
+                                     FormatString="F0" ToolTip.Tip="Deckkraft" />
+        </Grid>
+    </Grid>
+</UserControl>

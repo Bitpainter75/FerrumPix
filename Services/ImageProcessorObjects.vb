@@ -1807,11 +1807,11 @@ Namespace Services
                         ' Ein Text-Wasserzeichen verwendet dieselbe Deckkraft wie jedes andere
                         ' Textobjekt. Die frühere Sonderregel begrenzte eine volle Füllfarbe hier
                         ' auf Alpha 130 (ca. 51 %) – unabhängig von der Deckkraft-Einstellung.
-                        DrawAnnotationText(canvas, watermark, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, gradient, annotation.TextPathKind, annotation.TextPathInverted, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.TextAlignment, annotation.PathPoints, annotation.PathClosed)
+                        DrawAnnotationText(canvas, watermark, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, gradient, annotation.TextPathKind, annotation.TextPathInverted, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.TextAlignment, annotation.PathPoints, annotation.PathClosed, annotation.LineSpacingPercent)
                     End If
                 Case Else
                     If Not String.IsNullOrWhiteSpace(annotation.Text) Then
-                        DrawAnnotationText(canvas, annotation.DisplayText(), x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, gradient, annotation.TextPathKind, annotation.TextPathInverted, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.TextAlignment, annotation.PathPoints, annotation.PathClosed)
+                        DrawAnnotationText(canvas, annotation.DisplayText(), x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, gradient, annotation.TextPathKind, annotation.TextPathInverted, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.TextAlignment, annotation.PathPoints, annotation.PathClosed, annotation.LineSpacingPercent)
                     End If
             End Select
         End Sub
@@ -2267,6 +2267,15 @@ Namespace Services
             End SyncLock
         End Function
 
+        ''' <summary>Der Familienname des Schnitts, mit dem das Zeichnen Text in dieser Schrift
+        ''' tatsächlich setzt (<see cref="GetTypeface"/>); fehlt die Schrift, der der Ersatzschrift,
+        ''' die das System dafür liefert. Für Meldungen, die die Ersatzschrift beim Namen nennen.</summary>
+        Friend Shared Function ResolveTextFamilyName(fontFamily As String) As String
+            Dim typeface = GetTypeface(fontFamily)
+            If typeface Is Nothing OrElse String.IsNullOrEmpty(typeface.FamilyName) Then Return If(fontFamily, "")
+            Return typeface.FamilyName
+        End Function
+
         ''' <summary>Erzeugt einen Font und ersetzt ihn bei fehlenden Glyphen durch den passenden
         ''' System-Fallback. Das ist besonders auf Linux wichtig: die TextBox nutzt Fontconfig-
         ''' Fallbacks, das gebackene Skia-Rendering sonst aber nicht.</summary>
@@ -2328,7 +2337,7 @@ Namespace Services
             Return ""
         End Function
 
-        Private Shared Sub DrawAnnotationText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, fontFamily As String, bounds As SKRect, Optional gradient As GradientFillSpec = Nothing, Optional textPathKind As String = "", Optional textPathInverted As Boolean = False, Optional textPathBend As Single = 0, Optional textPathStartOffset As Single = 0, Optional letterSpacingPercent As Single = 0, Optional bold As Boolean = False, Optional italic As Boolean = False, Optional textAlignment As String = "Left", Optional pathPoints As String = "", Optional pathClosed As Boolean = False)
+        Private Shared Sub DrawAnnotationText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, fontFamily As String, bounds As SKRect, Optional gradient As GradientFillSpec = Nothing, Optional textPathKind As String = "", Optional textPathInverted As Boolean = False, Optional textPathBend As Single = 0, Optional textPathStartOffset As Single = 0, Optional letterSpacingPercent As Single = 0, Optional bold As Boolean = False, Optional italic As Boolean = False, Optional textAlignment As String = "Left", Optional pathPoints As String = "", Optional pathClosed As Boolean = False, Optional lineSpacingPercent As Single = 0)
             ' Text an Pfad: EIN Zweig fuer Kontur und Fuellung, damit beide exakt dieselben
             ' Glyphenpositionen bekommen (und damit auch die Effekt-Maske, die ueber dieselbe
             ' Routine laeuft - Regel "Objektinhalt nur aus GENAU EINEM Renderpfad").
@@ -2415,7 +2424,7 @@ Namespace Services
                             If path IsNot Nothing Then
                                 DrawTextOnPathSpaced(canvas, pathText, path, font, strokePaint, spacing)
                             Else
-                                DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, font, strokePaint, spacing, textAlignment)
+                                DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, font, strokePaint, spacing, textAlignment, lineSpacingPercent)
                             End If
                         End Using
                     End If
@@ -2432,7 +2441,7 @@ Namespace Services
                         If path IsNot Nothing Then
                             DrawTextOnPathSpaced(canvas, pathText, path, font, fillPaint, spacing)
                         Else
-                            DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, font, fillPaint, spacing, textAlignment)
+                            DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, font, fillPaint, spacing, textAlignment, lineSpacingPercent)
                         End If
                     End Using
 
@@ -2441,7 +2450,7 @@ Namespace Services
                             If path IsNot Nothing Then
                                 DrawTextOnPathSpaced(canvas, pathText, path, font, strokePaint, spacing)
                             Else
-                                DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, font, strokePaint, spacing, textAlignment)
+                                DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, font, strokePaint, spacing, textAlignment, lineSpacingPercent)
                             End If
                         End Using
                     End If
@@ -3531,12 +3540,13 @@ Namespace Services
         ''' schneidet wieder ab.</summary>
         Friend Shared Function MeasureAnnotationTextExtent(text As String, fontFamily As String, fontSize As Single,
                                                            letterSpacingPercent As Single, bold As Boolean, italic As Boolean,
-                                                           strokeWidth As Single) As SKRect
+                                                           strokeWidth As Single,
+                                                           Optional lineSpacingPercent As Single = 0) As SKRect
             If String.IsNullOrEmpty(text) OrElse fontSize <= 0 Then Return SKRect.Empty
             Using font = CreateTextFont(fontFamily, fontSize, text, bold, italic)
                 Dim spacing = font.Size * letterSpacingPercent / 100.0F
                 Dim metrics = font.Metrics
-                Dim lineHeight = GetLineHeight(metrics)
+                Dim lineHeight = GetTextLineHeight(font, lineSpacingPercent)
                 Dim lines = text.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)
                 Dim widest = 0.0F
                 For Each line In lines
@@ -3558,11 +3568,12 @@ Namespace Services
         Friend Shared Function MeasureAnnotationTextInk(text As String, fontFamily As String, fontSize As Single,
                                                         letterSpacingPercent As Single, bold As Boolean, italic As Boolean,
                                                         strokeWidth As Single, Optional alignment As String = "Left",
-                                                        Optional lineWidth As Single = 0.0F) As SKRect
+                                                        Optional lineWidth As Single = 0.0F,
+                                                        Optional lineSpacingPercent As Single = 0) As SKRect
             If String.IsNullOrEmpty(text) OrElse fontSize <= 0 Then Return SKRect.Empty
             Using font = CreateTextFont(fontFamily, fontSize, text, bold, italic)
                 Dim spacing = font.Size * letterSpacingPercent / 100.0F
-                Dim lineHeight = GetLineHeight(font.Metrics)
+                Dim lineHeight = GetTextLineHeight(font, lineSpacingPercent)
                 Dim ink = SKRect.Empty
                 Dim baseline = fontSize
                 Dim lines = text.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)
@@ -3608,7 +3619,8 @@ Namespace Services
         ''' <summary>Schreibmarke im selben Zeichnungsraum und mit derselben Formung wie der Bildtext.</summary>
         Friend Shared Function MeasureAnnotationCaret(text As String, index As Integer, fontFamily As String,
                                                        fontSize As Single, spacing As Single, bold As Boolean, italic As Boolean,
-                                                       alignment As String, width As Single) As SKPoint
+                                                       alignment As String, width As Single,
+                                                       Optional lineSpacingPercent As Single = 0) As SKPoint
             text = If(text, "")
             index = Math.Max(0, Math.Min(index, text.Length))
             Dim before = text.Substring(0, index)
@@ -3648,7 +3660,7 @@ Namespace Services
                     Dim fraction = If(nextStart > clusterStart, CSng(localIndex - clusterStart) / (nextStart - clusterStart), 0.0F)
                     x += If(rtl, right + (left - right) * fraction, left + (right - left) * fraction)
                 End If
-                Return New SKPoint(x, lineIndex * GetLineHeight(font.Metrics))
+                Return New SKPoint(x, lineIndex * GetTextLineHeight(font, lineSpacingPercent))
             End Using
         End Function
 
@@ -3659,10 +3671,12 @@ Namespace Services
         ''' (Geist ausserhalb des uebergebenen Rechtecks). Neue Zeilen entstehen ausschliesslich
         ''' ueber echte Zeilenumbrueche im Text (Strg+Enter in den Eingabefeldern).
         ''' <paramref name="maxWidth"/> bleibt in der Signatur, weil die Aufrufer sie fuer Formen
-        ''' weiterreichen - fuer Text ist sie bewusst ohne Wirkung.</summary>
-        Private Shared Sub DrawWrappedText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, font As SKFont, paint As SKPaint, Optional spacing As Single = 0, Optional alignment As String = "Left")
+        ''' weiterreichen - fuer Text ist sie bewusst ohne Wirkung.
+        ''' Der Abstand der Zeilen kommt aus <see cref="GetTextLineHeight"/>; die erste Grundlinie
+        ''' liegt unabhaengig davon einen Grad unter der Oberkante.</summary>
+        Private Shared Sub DrawWrappedText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, font As SKFont, paint As SKPaint, Optional spacing As Single = 0, Optional alignment As String = "Left", Optional lineSpacingPercent As Single = 0)
             If String.IsNullOrEmpty(text) Then Return
-            Dim lineHeight = GetLineHeight(font.Metrics)
+            Dim lineHeight = GetTextLineHeight(font, lineSpacingPercent)
             Dim baseline = y + fontSize
 
             Dim lines = text.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)

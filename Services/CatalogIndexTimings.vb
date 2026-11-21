@@ -236,7 +236,7 @@ Namespace Services
                 $"image recognition while indexing {OnOff(ImageTaggingService.Enabled)}",
                 $"image recognition model {If(ImageTaggingService.Available, "loaded", "not loaded")}",
                 $"recognised keywords to XMP {OnOff(s.WriteAiTagsToXmp)}",
-                $"read .pp3/.arp {OnOff(Pp3SidecarService.IsEnabled)}",
+                $"read .pp3/.arp/.rrdata {OnOff(Pp3SidecarService.IsEnabled)}",
                 $"develop RAW thumbnails {OnOff(s.DevelopRawThumbnails)}",
                 $"LibRaw {If(RawDecodeService.IsAvailable, "available", "missing")}",
                 $"index on startup {OnOff(s.CatalogIndexOnStartup)}"

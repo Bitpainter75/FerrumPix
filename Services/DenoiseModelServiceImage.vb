@@ -19,8 +19,9 @@ Namespace Services
         ''' <summary>Der Schluessel des Modells fuer fertige Bilder im Register.</summary>
         Public Const ImageModelFile As String = "nafnet"
 
-        ''' <summary>Wie weit sich zwei Kacheln des Bildmodells ueberlappen. Uebernommen wird nur der
-        ''' innere Teil, der Rand dient als Anlauf. Gemessen an einem echten RAW: der Sprung an der
+        ''' <summary>Wie weit eine Kachel des Bildmodells ueber ihren inneren Teil hinausreicht, je
+        ''' Seite; zwei Nachbarn teilen sich also doppelt so viele Punkte, und dort wird weich
+        ''' ueberblendet (DenoiseTile). Gemessen an einem echten RAW, damals hart geschnitten: der Sprung an der
         ''' Kachelgrenze liegt bei 16 Punkten unter dem, was im Bild ohnehin von Spalte zu Spalte
         ''' passiert; bei 8 wird es messbar schlechter.</summary>
         Private Const ImageTileOverlap As Integer = 16
@@ -167,6 +168,8 @@ Namespace Services
                 Dim stride = Math.Max(1, edge - 2 * ImageTileOverlap)
                 Dim tileCount = ((tiledSource.Width + stride - 1) \ stride) * ((tiledSource.Height + stride - 1) \ stride)
                 Dim name = session.InputMetadata.Keys.First()
+                ' Der Versatz fuer dunkle Stellen, EINMAL fuer das ganze Bild (siehe DarkLiftMap).
+                Dim liftMap = DarkLiftMap.Measure(tiledSource)
                 Dim clock = Diagnostics.Stopwatch.StartNew()
                 Dim done = 0
 
@@ -201,7 +204,7 @@ Namespace Services
                         If r - l = edge AndAlso b - t = edge AndAlso
                            keepR > keepL AndAlso keepB > keepT Then
                             DenoiseTile(session, name, tiledSource, result,
-                                        New SKRectI(l, t, r, b), New SKRectI(keepL, keepT, keepR, keepB), amount)
+                                        New SKRectI(l, t, r, b), New SKRectI(keepL, keepT, keepR, keepB), amount, liftMap)
                             done += 1
                             Progress?.Invoke(done, tileCount)
                         End If
@@ -252,33 +255,121 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Unterhalb dieses mittleren Tonwerts wird eine Kachel fuer das schnelle Modell
-        ''' angehoben, siehe <see cref="DenoiseTile"/>.</summary>
+        ''' <summary>Unterhalb dieses mittleren Tonwerts wird eine Stelle fuer das schnelle Modell
+        ''' angehoben, siehe <see cref="DarkLiftMap"/>.</summary>
         Friend Const DarkTileLevel As Single = 48.0F
 
-        ''' <summary>Eine Kachel durch das Modell und nur ihren INNEREN Teil zurueckschreiben.
+        ''' <summary>Kante der Zellen, ueber die <see cref="DarkLiftMap"/> die Helligkeit mittelt.</summary>
+        Private Const DarkLiftCell As Integer = 32
+
+        ''' <summary>Der Versatz fuer dunkle Stellen, als glatte Flaeche ueber das GANZE Bild.
         '''
-        ''' DAS MODELL ZERSTOERT SEHR DUNKLE KACHELN. Liegt der mittlere Tonwert einer Kachel unter rund
-        ''' 20 und traegt sie wenig Rauschen, gibt NAFNet ein buntes Gitter zurueck statt eines Bildes,
-        ''' am Konzertfoto im Pruefbestand ein ganzer Vorhang. Eine solche Kachel wird deshalb vor dem
+        ''' DAS MODELL ZERSTOERT SEHR DUNKLE STELLEN. Liegt der Tonwert einer Flaeche unter rund 20 und
+        ''' traegt sie wenig Rauschen, gibt NAFNet ein buntes Gitter zurueck statt eines Bildes, am
+        ''' Konzertfoto im Pruefbestand ein ganzer Vorhang. Eine solche Stelle wird deshalb vor dem
         ''' Modell um einen VERSATZ angehoben und danach um denselben Betrag abgesenkt. Ein Versatz und
         ''' keine Verstaerkung, weil er das Rauschen unveraendert laesst: das Modell soll genau das
         ''' Rauschen sehen, das im Bild steht. Beschnitten wird dabei nichts, der Eingang ist
-        ''' Fliesskomma und darf ueber 1 gehen.</summary>
+        ''' Fliesskomma und darf ueber 1 gehen.
+        '''
+        ''' FRUEHER JE KACHEL aus deren mittlerem Tonwert, und das traf genau die Nachtaufnahme nicht:
+        ''' eine Kachel halb mit schwarzem Himmel und halb mit beleuchteter Fassade hat ein Mittel ueber
+        ''' der Schwelle, der Himmel darin bekam kaum Versatz und das Modell faerbte ihn als scharf
+        ''' begrenztes Rechteck lila oder gruen ein. Dazu sprang der Versatz von Kachel zu Kachel und
+        ''' mit ihm die Antwort des Modells, sichtbar als Stufe an der Kachelgrenze. Heute gilt der
+        ''' Versatz je Zelle von 32 Punkten, auf die Nachbarzellen ausgedehnt (eine dunkle Stelle am
+        ''' Rand einer hellen bekommt ihn ganz) und zwischen den Zellmitten weich verlaufend. Weil die
+        ''' Zellen am Bild haengen und nicht an der Kachel, bekommt ein Bildpunkt in jeder Kachel, die
+        ''' ihn enthaelt, denselben Versatz.</summary>
+        Private NotInheritable Class DarkLiftMap
+            Private ReadOnly _lift As Single()
+            Private ReadOnly _columns As Integer
+            Private ReadOnly _rows As Integer
+
+            Private Sub New(lift As Single(), columns As Integer, rows As Integer)
+                _lift = lift
+                _columns = columns
+                _rows = rows
+            End Sub
+
+            ''' <summary>Misst das Bild (Bgra8888) Zelle fuer Zelle.</summary>
+            Public Shared Function Measure(image As SKBitmap) As DarkLiftMap
+                Dim columns = (image.Width + DarkLiftCell - 1) \ DarkLiftCell
+                Dim rows = (image.Height + DarkLiftCell - 1) \ DarkLiftCell
+                Dim sums(columns * rows - 1) As Double
+                Dim counts(columns * rows - 1) As Integer
+                Dim stride = image.RowBytes
+                Dim line(stride - 1) As Byte
+                Dim pixels = image.GetPixels()
+                For y = 0 To image.Height - 1
+                    Runtime.InteropServices.Marshal.Copy(RowStart(pixels, y, stride), line, 0, stride)
+                    Dim cellRow = (y \ DarkLiftCell) * columns
+                    For x = 0 To image.Width - 1
+                        Dim p = x * 4
+                        Dim c = cellRow + x \ DarkLiftCell
+                        sums(c) += 0.2126 * line(p + 2) + 0.7152 * line(p + 1) + 0.0722 * line(p)
+                        counts(c) += 1
+                    Next
+                Next
+                Dim own(columns * rows - 1) As Single
+                For i = 0 To own.Length - 1
+                    own(i) = Math.Max(0.0F, DarkTileLevel - CSng(sums(i) / Math.Max(1, counts(i))))
+                Next
+                ' Auf die Nachbarzellen ausgedehnt: der hoechste Versatz der drei mal drei Zellen.
+                Dim lift(columns * rows - 1) As Single
+                For cy = 0 To rows - 1
+                    For cx = 0 To columns - 1
+                        Dim m = 0.0F
+                        For ny = Math.Max(0, cy - 1) To Math.Min(rows - 1, cy + 1)
+                            For nx = Math.Max(0, cx - 1) To Math.Min(columns - 1, cx + 1)
+                                m = Math.Max(m, own(ny * columns + nx))
+                            Next
+                        Next
+                        lift(cy * columns + cx) = m
+                    Next
+                Next
+                Return New DarkLiftMap(lift, columns, rows)
+            End Function
+
+            ''' <summary>Der Versatz an einem Bildpunkt in Tonwerten, zwischen den Zellmitten
+            ''' bilinear.</summary>
+            Public Function At(x As Integer, y As Integer) As Single
+                Dim fx = Math.Max(0.0F, Math.Min(_columns - 1.0F, (x + 0.5F) / DarkLiftCell - 0.5F))
+                Dim fy = Math.Max(0.0F, Math.Min(_rows - 1.0F, (y + 0.5F) / DarkLiftCell - 0.5F))
+                Dim x0 = CInt(Math.Floor(fx)), y0 = CInt(Math.Floor(fy))
+                Dim x1 = Math.Min(_columns - 1, x0 + 1), y1 = Math.Min(_rows - 1, y0 + 1)
+                Dim tx = fx - x0, ty = fy - y0
+                Dim top = _lift(y0 * _columns + x0) * (1.0F - tx) + _lift(y0 * _columns + x1) * tx
+                Dim bottom = _lift(y1 * _columns + x0) * (1.0F - tx) + _lift(y1 * _columns + x1) * tx
+                Return top * (1.0F - ty) + bottom * ty
+            End Function
+        End Class
+
+        ''' <summary>Eine Kachel durch das Modell und ihren Teil zurueckschreiben: den INNEREN Teil
+        ''' ganz, die Ueberlappung mit den schon geschriebenen Nachbarn links und oben WEICH
+        ''' ueberblendet (linear ueber die ganze Breite der Ueberlappung), und die Ueberlappung nach
+        ''' rechts und unten vorab, damit die naechste Kachel dort ueberblenden kann. Frueher wurde
+        ''' hart geschnitten; was das Modell am Kachelrand anders rechnet, stand dann als Stufe im
+        ''' Bild. Den Versatz fuer dunkle Stellen liefert <see cref="DarkLiftMap"/>.</summary>
         Private Shared Sub DenoiseTile(session As InferenceSession, name As String,
                                        source As SKBitmap, target As SKBitmap,
-                                       window As SKRectI, keep As SKRectI, amount As Single)
+                                       window As SKRectI, keep As SKRectI, amount As Single,
+                                       liftMap As DarkLiftMap)
             Dim w = window.Width, h = window.Height
             Dim layer = w * h
             Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, h, w})
             Dim z = tensor.Buffer.Span
+            ' Der Versatz je Bildpunkt des Fensters in Tonwerten, und das Original (BGR): das
+            ' Ziel traegt in der Ueberlappung schon das Ergebnis des Nachbarn, die Staerke misst
+            ' aber gegen das Bild vor dem Modell.
+            Dim lifts(layer - 1) As Single
+            Dim original(layer * 3 - 1) As Byte
 
             ' Zeilenweise ueber den Speicher, nicht ueber GetPixel - bei einem ganzen Foto ist das
             ' der Unterschied zwischen Sekunden und Minuten allein fuer das Einlesen.
             Dim srcStride = source.RowBytes
             Dim row(srcStride - 1) As Byte
             Dim srcPixels = source.GetPixels()
-            Dim lumaSum = 0.0
             For yy = 0 To h - 1
                 Runtime.InteropServices.Marshal.Copy(
                     RowStart(srcPixels, window.Top + yy, srcStride), row, 0, srcStride)
@@ -286,24 +377,25 @@ Namespace Services
                 For xx = 0 To w - 1
                     Dim p = (window.Left + xx) * 4
                     Dim i = line + xx
+                    Dim offset = liftMap.At(window.Left + xx, window.Top + yy)
+                    lifts(i) = offset
                     ' BGRA im Speicher, das Modell erwartet RGB in 0 bis 1.
-                    z(i) = row(p + 2) / 255.0F
-                    z(layer + i) = row(p + 1) / 255.0F
-                    z(layer * 2 + i) = row(p) / 255.0F
-                    lumaSum += 0.2126 * row(p + 2) + 0.7152 * row(p + 1) + 0.0722 * row(p)
+                    z(i) = (row(p + 2) + offset) / 255.0F
+                    z(layer + i) = (row(p + 1) + offset) / 255.0F
+                    z(layer * 2 + i) = (row(p) + offset) / 255.0F
+                    original(i * 3) = row(p)
+                    original(i * 3 + 1) = row(p + 1)
+                    original(i * 3 + 2) = row(p + 2)
                 Next
             Next
 
-            ' Der Versatz in Tonwerten; null fuer jede Kachel, die hell genug ist.
-            Dim lift = 0.0F
-            Dim mean = CSng(lumaSum / Math.Max(1, layer))
-            If mean < DarkTileLevel Then
-                lift = DarkTileLevel - mean
-                Dim offset = lift / 255.0F
-                For i = 0 To layer * 3 - 1
-                    z(i) += offset
-                Next
-            End If
+            ' Was diese Kachel schreibt: ihr Inneres samt der Ueberlappung zu jedem Nachbarn.
+            Dim overlap = ImageTileOverlap
+            Dim hasLeft = keep.Left > 0, hasTop = keep.Top > 0
+            Dim writeL = Math.Max(window.Left, If(hasLeft, keep.Left - overlap, keep.Left))
+            Dim writeT = Math.Max(window.Top, If(hasTop, keep.Top - overlap, keep.Top))
+            Dim writeR = Math.Min(window.Right, If(keep.Right < target.Width, keep.Right + overlap, keep.Right))
+            Dim writeB = Math.Min(window.Bottom, If(keep.Bottom < target.Height, keep.Bottom + overlap, keep.Bottom))
 
             Using run = session.Run(New List(Of NamedOnnxValue) From {
                     NamedOnnxValue.CreateFromTensor(name, tensor)})
@@ -319,14 +411,22 @@ Namespace Services
                 Dim targetPixels = target.GetPixels()
                 Dim targetRow(dstStride - 1) As Byte
                 Dim premultiplied = target.AlphaType = SKAlphaType.Premul
-                For yy = keep.Top To keep.Bottom - 1
+                For yy = writeT To writeB - 1
                     Runtime.InteropServices.Marshal.Copy(
                         RowStart(targetPixels, yy, dstStride), targetRow, 0, dstStride)
                     Dim sy = Math.Min(yy - window.Top, rh - 1)
-                    For xx = keep.Left To keep.Right - 1
+                    ' Anteil dieser Kachel in der Ueberlappung mit dem Nachbarn oben: von 0 an
+                    ' dessen Rand bis 1 an ihrem eigenen.
+                    Dim weightY = 1.0F
+                    If hasTop AndAlso yy < keep.Top + overlap Then
+                        weightY = Math.Max(0.0F, Math.Min(1.0F, (yy - (keep.Top - overlap) + 0.5F) / (2.0F * overlap)))
+                    End If
+                    For xx = writeL To writeR - 1
                         Dim sx = Math.Min(xx - window.Left, rw - 1)
                         Dim i = sy * rw + sx
                         Dim p = xx * 4
+                        Dim own = (yy - window.Top) * w + (xx - window.Left)
+                        Dim lift = lifts(own)
                         Dim newRed = values(i) * 255.0F - lift
                         Dim newGreen = values(rLayer + i) * 255.0F - lift
                         Dim newBlue = values(rLayer * 2 + i) * 255.0F - lift
@@ -347,9 +447,22 @@ Namespace Services
                         ' Bei Staerke 1 ist die Verschiebung null und es steht Bildpunkt fuer
                         ' Bildpunkt dasselbe da wie vorher, als noch alle drei Kanaele gleich
                         ' gemischt wurden.
-                        Dim oldLuma = 0.2126F * targetRow(p + 2) + 0.7152F * targetRow(p + 1) + 0.0722F * targetRow(p)
+                        Dim oldLuma = 0.2126F * original(own * 3 + 2) + 0.7152F * original(own * 3 + 1) + 0.0722F * original(own * 3)
                         Dim newLuma = 0.2126F * newRed + 0.7152F * newGreen + 0.0722F * newBlue
                         Dim shift = (oldLuma - newLuma) * (1.0F - amount)
+                        newRed += shift
+                        newGreen += shift
+                        newBlue += shift
+                        ' In der Ueberlappung mit einem schon geschriebenen Nachbarn ueberblendet.
+                        Dim weight = weightY
+                        If hasLeft AndAlso xx < keep.Left + overlap Then
+                            weight *= Math.Max(0.0F, Math.Min(1.0F, (xx - (keep.Left - overlap) + 0.5F) / (2.0F * overlap)))
+                        End If
+                        If weight < 1.0F Then
+                            newBlue = targetRow(p) + (newBlue - targetRow(p)) * weight
+                            newGreen = targetRow(p + 1) + (newGreen - targetRow(p + 1)) * weight
+                            newRed = targetRow(p + 2) + (newRed - targetRow(p + 2)) * weight
+                        End If
                         ' MIT DITHER GERUNDET. Das Modell nimmt genau das Rauschen weg, das vorher
                         ' selbst als Dither wirkte; hart gerundet kommt ein glatter dunkler Verlauf
                         ' als Treppe zurueck, und das Anheben der Tiefen in der Reglerkette dahinter
@@ -357,9 +470,9 @@ Namespace Services
                         ' Dieselbe Schwelle fuer alle drei Kanaele, sonst faerbt sich Grau ein, und
                         ' dieselbe Matrix wie die Punktoperationskette.
                         Dim dither = ImageProcessor.DitherMatrix(((yy And 7) << 3) Or (xx And 7))
-                        targetRow(p) = ToByte(newBlue + shift + dither)
-                        targetRow(p + 1) = ToByte(newGreen + shift + dither)
-                        targetRow(p + 2) = ToByte(newRed + shift + dither)
+                        targetRow(p) = ToByte(newBlue + dither)
+                        targetRow(p + 1) = ToByte(newGreen + dither)
+                        targetRow(p + 2) = ToByte(newRed + dither)
                         ' VORMULTIPLIZIERT heisst: kein Kanal darf ueber der Deckung liegen. Das
                         ' Modell weiss davon nichts - es bekommt an einem halbdurchsichtigen Rand
                         ' die bereits gedaempften Werte und kann sie anheben. Ein Bildpunkt mit mehr

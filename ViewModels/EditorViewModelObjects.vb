@@ -360,6 +360,67 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Zeilenabstand in Prozent des Grads (50 bis 300), wie ihn Regler und Zahlenfeld
+        ''' zeigen. Automatisch (am Objekt 0, siehe <see cref="ImageAnnotation.LineSpacingPercent"/>)
+        ''' steht hier der Abstand, den die Schrift mitbringt
+        ''' (<see cref="AnnotationLineSpacingAutomaticPercent"/>). Wer genau diesen Wert einstellt,
+        ''' auch per Doppelklick auf den Regler, stellt auf automatisch zurück: das Objekt folgt dann
+        ''' wieder der Schrift, auch wenn sie später wechselt.</summary>
+        Public Property AnnotationLineSpacingPercent As Double
+            Get
+                If _annotationLineSpacingPercent > 0 Then Return _annotationLineSpacingPercent
+                Return AnnotationLineSpacingAutomaticPercent
+            End Get
+            Set(value As Double)
+                Dim stored As Double = ImageAnnotation.NormalizeLineSpacingPercent(value)
+                If stored > 0 AndAlso Math.Abs(stored - AnnotationLineSpacingAutomaticPercent) < 0.05 Then stored = 0
+                If stored = _annotationLineSpacingPercent Then Return
+                _annotationLineSpacingPercent = stored
+                ' Erst ins Objekt schreiben, dann melden (wie ApplyTextStyleToggle): der Rahmen
+                ' sitzt an den Glyphen und wird beim Melden am gespeicherten Objekt gemessen.
+                UpdatePendingTextAnnotationSize()
+                SyncSelectedAnnotation(NameOf(AnnotationLineSpacingPercent))
+                RaiseAnnotationLineSpacingChanged()
+            End Set
+        End Property
+
+        ''' <summary>Der automatische Zeilenabstand der eingestellten Schrift samt Schnitt, in
+        ''' Prozent des Grads: Ausgangsstellung und Doppelklickwert des Reglers.</summary>
+        Public ReadOnly Property AnnotationLineSpacingAutomaticPercent As Double
+            Get
+                Dim key = $"{_annotationFontFamily}|{_annotationBold}|{_annotationItalic}"
+                If Not String.Equals(key, _lineSpacingAutomaticKey, StringComparison.Ordinal) Then
+                    _lineSpacingAutomaticKey = key
+                    ' Bei 100 Bildpunkten Grad ist der Abstand in Bildpunkten zugleich das Prozent.
+                    Dim probe As New ImageAnnotation With {
+                        .Kind = "Text", .FontFamily = _annotationFontFamily, .FontSizePixels = 100.0F,
+                        .Bold = _annotationBold, .Italic = _annotationItalic
+                    }
+                    _lineSpacingAutomaticPercent = Math.Round(ImageProcessor.GetTextAnnotationLineHeight(probe), 1)
+                End If
+                Return _lineSpacingAutomaticPercent
+            End Get
+        End Property
+
+        ''' <summary>Steht der Zeilenabstand auf automatisch? Das Panel schreibt es dann unter den
+        ''' Namen des Reglers.</summary>
+        Public ReadOnly Property AnnotationLineSpacingIsAutomatic As Boolean
+            Get
+                Return _annotationLineSpacingPercent <= 0
+            End Get
+        End Property
+
+        Private _lineSpacingAutomaticKey As String = Nothing
+        Private _lineSpacingAutomaticPercent As Double = 120
+
+        ''' <summary>Meldet den Zeilenabstand neu, auch wenn sich nur die Schrift geändert hat: der
+        ''' automatische Wert hängt an ihr.</summary>
+        Private Sub RaiseAnnotationLineSpacingChanged()
+            Me.RaisePropertyChanged(NameOf(AnnotationLineSpacingPercent))
+            Me.RaisePropertyChanged(NameOf(AnnotationLineSpacingAutomaticPercent))
+            Me.RaisePropertyChanged(NameOf(AnnotationLineSpacingIsAutomatic))
+        End Sub
+
         ''' <summary>Fett/Kursiv des Text-Objekts. Wirkt nur, wenn die gewaehlte Schriftfamilie
         ''' einen solchen Schnitt mitbringt - Skia erzeugt keinen synthetischen.</summary>
         Public Property AnnotationBold As Boolean
@@ -408,6 +469,7 @@ Namespace ViewModels
             UpdatePendingTextAnnotationSize()
             SyncSelectedAnnotation(propertyName)
             Me.RaisePropertyChanged(propertyName)
+            RaiseAnnotationLineSpacingChanged()
         End Sub
 
         ''' <summary>Die Pfad-Zeile gilt fuer alles, was Text zeichnet - also auch fuer das

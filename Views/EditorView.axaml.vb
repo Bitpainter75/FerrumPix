@@ -2093,6 +2093,7 @@ Namespace Views
                      NameOf(EditorViewModel.AnnotationAllCaps),
                      NameOf(EditorViewModel.AnnotationTextAlignment),
                      NameOf(EditorViewModel.AnnotationLetterSpacingPercent),
+                     NameOf(EditorViewModel.AnnotationLineSpacingPercent),
                      NameOf(EditorViewModel.AnnotationOpacity),
                      NameOf(EditorViewModel.AnnotationRotation),
                      NameOf(EditorViewModel.AnnotationDisplayFlipHorizontal),
@@ -7042,8 +7043,11 @@ Namespace Views
                 editor.Foreground = Brushes.Transparent
                 editor.CaretBrush = Brushes.Transparent
                 ' Mit "Alle Großbuchstaben" zeichnet die Schreibmarke auch die Auswahl: die der
-                ' Textbox stünde an der kleingeschriebenen, schmaleren Fassung.
-                editor.Classes.Set("all-caps", vm.AnnotationAllCaps)
+                ' Textbox stünde an der kleingeschriebenen, schmaleren Fassung. Ebenso bei
+                ' eingestelltem Zeilenabstand: die Textbox setzt ihre Zeilen im Abstand der Schrift
+                ' (siehe oben), ihre Auswahl läge ab der zweiten Zeile neben dem Text.
+                Dim ownSelection = vm.AnnotationAllCaps OrElse Not vm.AnnotationLineSpacingIsAutomatic
+                editor.Classes.Set("all-caps", ownSelection)
                 Dim caret = Me.FindControl(Of TextOverlayCaret)("TextOverlayCaret")
                 If caret IsNot Nothing Then
                     caret.Editor = editor
@@ -7052,7 +7056,8 @@ Namespace Views
                     Dim caretBox = If(editorBox.HasValue, editorBox.Value, New Avalonia.Rect(0, 0, frameWidth, 0))
                     caret.SetLayout(caretBox.TopLeft, caretBox.Width, vm.AnnotationFontFamily, displayFontSize,
                                     editor.LetterSpacing, vm.AnnotationBold, vm.AnnotationItalic,
-                                    If(vm.AnnotationTextAlignment, "Left").Trim(), vm.AnnotationAllCaps)
+                                    If(vm.AnnotationTextAlignment, "Left").Trim(), vm.AnnotationAllCaps,
+                                    If(vm.AnnotationLineSpacingIsAutomatic, 0.0, vm.AnnotationLineSpacingPercent), ownSelection)
                 End If
                 ' Skia hängt die erste Zeile an der Grundlinie unter der Oberkante auf, Avalonia an der
                 ' Glyphen-Oberkante - ohne diesen Versatz säße der Live-Text über dem gebackenen.

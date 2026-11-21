@@ -228,7 +228,9 @@
                         <Ellipse Width="14" Height="14" Fill="{Binding LightSwatchBrush}" Stroke="{DynamicResource FP.Border.Strong}" StrokeThickness="1" />
                         <TextBlock Text="Lichtfarbe" FontWeight="SemiBold" VerticalAlignment="Center" />
                     </StackPanel>
+                    <!-- Das Licht kennt keine Deckung (LightColorValue schreibt immer FF), also kein Deckkraftregler. -->
                     <icons:ColorPickerButton Grid.Column="1" SelectedColor="{Binding LightColorValue, Mode=TwoWay}"
+                                             ShowAlpha="False"
                                              IsVisible="{Binding LightUseColor}" />
                 </Grid>
                 <CheckBox Content="Farbtemperatur" IsChecked="{Binding LightUseTemperature}"

@@ -14,8 +14,6 @@ Namespace Services
     '''   nicht mehr ab - ohne diese Zeile wäre der Fehler dafür spurlos verschwunden. Die Datei ist
     '''   auf <see cref="MaxErrorLogBytes"/> gedeckelt und wird bei Überschreitung EINMAL rotiert,
     '''   damit daraus nichts Wachsendes wird.
-    ''' - <see cref="LogNotice"/> schreibt ebenfalls IMMER nach errors.log, fuer seltene Befunde
-    '''   ohne Ausnahme, die ein Nutzer auch ohne Diagnoseprotokoll nachlesen koennen soll.
     ''' </summary>
     Public NotInheritable Class DiagnosticLogService
         Private Sub New()
@@ -188,29 +186,6 @@ Namespace Services
                 SyncLock _writeLock
                     Directory.CreateDirectory(LogDirectory)
                     File.AppendAllText(LogPath, entry)
-                End SyncLock
-            Catch
-            End Try
-        End Sub
-
-        ''' <summary>Schreibt eine Zeile IMMER, wie <see cref="LogException"/> nach errors.log und bei
-        ''' eingeschaltetem Diagnoseprotokoll zusaetzlich nach diagnostics.log. Fuer Befunde, die
-        ''' auch im Normalbetrieb nachlesbar sein muessen, ohne Ausnahme zu sein: etwa dass eine
-        ''' mitgelieferte Bibliothek an einer Datei scheiterte und die des Systems einsprang
-        ''' (<see cref="SystemLibraryFallback"/>). Wer das ruft, deckelt selbst, wie oft; die Datei
-        ''' ist zwar gedeckelt, aber eine Zeile je Bild eines grossen Ordners verdraengte darin jeden
-        ''' echten Fehler.</summary>
-        Public Shared Sub LogNotice(area As String, message As String)
-            If String.IsNullOrEmpty(message) Then Return
-            Dim entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{area}] {message}" & Environment.NewLine
-            Dim verbose = IsVerboseEnabled
-            EchoToConsole(entry)
-            Try
-                SyncLock _writeLock
-                    Directory.CreateDirectory(LogDirectory)
-                    If verbose Then File.AppendAllText(LogPath, entry)
-                    RotateIfTooLarge()
-                    File.AppendAllText(ErrorLogPath, entry)
                 End SyncLock
             Catch
             End Try

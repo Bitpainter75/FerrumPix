@@ -446,14 +446,14 @@ Namespace Services
             ' Verwerfen/Behalten aus einer fremden XMP-Beistelldatei (xmpDM:good, Bewertung -1),
             ' nach derselben Regel wie im Ordnerlauf der Galerie: die .fpxmp geht vor, gefuellt wird
             ' nur, was im Katalog leer ist. Nur lesen, nichts anlegen.
+            ' Gelesen wird sie EINMAL: Bewertung und Etikett unten fragen sie ebenfalls, vor den
+            ' fremden Quellen, wie im Ordnerlauf der Galerie.
             Dim sidecarPath = XmpSidecarService.FindSidecar(filePath)
-            If Not String.IsNullOrEmpty(sidecarPath) AndAlso
-               (fpxmpCatalog Is Nothing OrElse Not fpxmpCatalog.PickState.HasValue) Then
-                Dim sidecar = XmpSidecarService.ReadSidecar(sidecarPath)
-                If sidecar IsNot Nothing AndAlso sidecar.PickState.HasValue AndAlso
-                   LibraryService.Instance.GetPickState(filePath) = 0 Then
-                    LibraryService.Instance.SetPickStateForMany({filePath}, sidecar.PickState.Value, catalogOnly:=True)
-                End If
+            Dim sidecar = If(String.IsNullOrEmpty(sidecarPath), Nothing, XmpSidecarService.ReadSidecar(sidecarPath))
+            If sidecar IsNot Nothing AndAlso sidecar.PickState.HasValue AndAlso
+               (fpxmpCatalog Is Nothing OrElse Not fpxmpCatalog.PickState.HasValue) AndAlso
+               LibraryService.Instance.GetPickState(filePath) = 0 Then
+                LibraryService.Instance.SetPickStateForMany({filePath}, sidecar.PickState.Value, catalogOnly:=True)
             End If
 
             ' Und die Stichwoerter aus der Beistelldatei UND aus der Bilddatei selbst - derselbe Weg,
@@ -467,23 +467,28 @@ Namespace Services
             ' Nothing): ihre Stichwoerter gehen in denselben Import, Bewertung und Etikett fuellen
             ' wie alles hier nur, was im Katalog leer ist.
             ' Darin steckt auch, was ein eingestellter Katalog des Referenzprogramms zum Foto sagt, samt
-            ' Markierung; die geht wie die der Beistelldatei nur in die Katalogspalte.
+            ' Markierung; die geht wie die der Beistelldatei nur in die Katalogspalte. Und, an
+            ' derselben Einstellung, als letzte Quelle die .rrdata eines anderen Entwicklers.
             Dim pp3 = Pp3SidecarService.Read(filePath)
-            KeywordImportService.Import(filePath, data?.EmbeddedKeywords, KeywordImportService.ReadSidecarKeywords(filePath), pp3)
+            KeywordImportService.Import(filePath, data?.EmbeddedKeywords, sidecar?.Keywords, pp3)
             If pp3 IsNot Nothing AndAlso pp3.PickState.HasValue AndAlso
                (fpxmpCatalog Is Nothing OrElse Not fpxmpCatalog.PickState.HasValue) AndAlso
                LibraryService.Instance.GetPickState(filePath) = 0 Then
                 LibraryService.Instance.SetPickStateForMany({filePath}, pp3.PickState.Value, catalogOnly:=True)
             End If
-            If pp3 IsNot Nothing AndAlso Not String.IsNullOrEmpty(pp3.ColorLabel) AndAlso
+            ' Das Etikett: XMP-Beistelldatei vor den fremden Quellen, die .fpxmp vor allem.
+            Dim label = {sidecar?.ColorLabel, pp3?.ColorLabel}.FirstOrDefault(Function(l) Not String.IsNullOrEmpty(l))
+            If Not String.IsNullOrEmpty(label) AndAlso
                (fpxmpCatalog Is Nothing OrElse fpxmpCatalog.ColorLabel Is Nothing) AndAlso
                String.IsNullOrEmpty(LibraryService.Instance.GetColorLabel(filePath)) Then
-                LibraryService.Instance.SetColorLabelForMany({filePath}, pp3.ColorLabel)
+                LibraryService.Instance.SetColorLabelForMany({filePath}, label)
             End If
 
-            ' Die erste Quelle MIT Bewertung: eine 0 in der .pp3 heisst "keine" und verdeckt die
-            ' Sterne der Datei nicht, wie im Ordnerlauf der Galerie.
-            Dim rating = {pp3?.Rating, ExifService.GetXmpRating(data)}.FirstOrDefault(Function(r) r.HasValue AndAlso r.Value > 0)
+            ' Die erste Quelle MIT Bewertung: eine 0 in Beistelldatei oder .pp3 heisst "keine" und
+            ' verdeckt die Sterne der Datei nicht, wie im Ordnerlauf der Galerie. Nennt die .fpxmp
+            ' eine Bewertung, auch 0, entscheidet sie.
+            Dim rating = If(fpxmpCatalog?.Rating.HasValue, CType(Nothing, Integer?),
+                            {sidecar?.Rating, pp3?.Rating, ExifService.GetXmpRating(data)}.FirstOrDefault(Function(r) r.HasValue AndAlso r.Value > 0))
             If rating.HasValue AndAlso rating.Value > 0 AndAlso
                LibraryService.Instance.GetRating(filePath) = 0 Then
                 LibraryService.Instance.SetRating(filePath, rating.Value)

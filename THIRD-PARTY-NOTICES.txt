@@ -123,7 +123,7 @@ libraries are part of this package.
 ---------------------------
 
   LibRaw
-  Copyright (c) 2008-2024 LibRaw LLC
+  Copyright (c) 2008-2026 LibRaw LLC
   Used under the GNU Lesser General Public License, version 2.1
   https://www.libraw.org/about
   Bundled in every package: on Windows, on macOS and in the AppImage, the
@@ -304,24 +304,6 @@ libraries are part of this package.
   https://github.com/AcademySoftwareFoundation/Imath) is used for one header
   only. All license texts and the exact build are in licenses/openexr/ in this
   package.
-
-  libjpeg-turbo (only its TurboJPEG library)
-  Copyright (c) the libjpeg-turbo Project and contributors, and
-  Copyright (c) Thomas G. Lane and Guido Vollbeding (Independent JPEG Group)
-  Used under the IJG License and the BSD 3-Clause License
-  https://libjpeg-turbo.org
-  This software is based in part on the work of the Independent JPEG Group.
-  Bundled on Windows (ferrumpix-turbojpeg.dll) and in every Linux package except
-  the Flatpak (libferrumpix-turbojpeg.so.0), renamed so it cannot be confused
-  with a libturbojpeg of the system. It reads 12-bit JPEG and lossless JPEG,
-  which the graphics library does not open; every other JPEG still goes through
-  that library. The Flatpak takes libturbojpeg.so.0 from its runtime. Built from
-  the unmodified libjpeg-turbo source release, which carries zlib (zlib License,
-  https://zlib.net) and libspng (BSD 2-Clause License, parts under the libpng
-  License 2.0, https://libspng.org), both compiled into the same file and used
-  only for its PNG functions. All license texts and the exact build, including
-  version, source checksum and build options, are in licenses/libjpeg-turbo/ in
-  this package. The file can be replaced by one of the same name.
 
   GCC runtime (libstdc++, libgcc)
   Copyright (c) the Free Software Foundation

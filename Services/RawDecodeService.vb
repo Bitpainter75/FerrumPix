@@ -103,7 +103,7 @@ Namespace Services
         Private Shared _library As IntPtr
 
         ' Die Einstiege der C-API (_init, _openFile, _unpack ...) sind Eigenschaften, die die
-        ' Bindung des laufenden Fadens liefern: siehe RawDecodeServiceFallback.vb.
+        ' Bindung der geladenen Bibliothek liefern: siehe RawDecodeServiceBinding.vb.
 
         ' ── Datenfehler beim Entpacken ───────────────────────────────────────────
         ' LibRaw meldet beschaedigte Rohdaten nicht ueber den Rueckgabewert von unpack, sondern ueber
@@ -455,9 +455,9 @@ Namespace Services
                 Dim reentrant = loadedName IsNot Nothing AndAlso
                                 (loadedName.Contains("_r.") OrElse OperatingSystem.IsWindows() OrElse OperatingSystem.IsMacOS())
 
-                ' Die Einstiege binden (BindExports, RawDecodeServiceFallback.vb). Fehlt ein
+                ' Die Einstiege binden (BindExports, RawDecodeServiceBinding.vb). Fehlt ein
                 ' Pflichteinstieg, ist die Bibliothek unbrauchbar und alles bleibt auf Anfang.
-                Dim bound = BindExports(handle, loadedName, reentrant)
+                Dim bound = BindExports(handle, reentrant)
                 If bound Is Nothing Then
                     NativeLibrary.Free(handle)
                     _library = IntPtr.Zero
@@ -465,8 +465,6 @@ Namespace Services
                 End If
                 _primaryBinding = bound
                 _library = handle
-                ' Fuer den Rueckfall je Datei (RawDecodeServiceFallback.vb): welche Datei laeuft.
-                RegisterPrimaryForFallback()
             End SyncLock
         End Sub
 
@@ -487,16 +485,12 @@ Namespace Services
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
             ' Lineares Licht traegt keine Vorschau; die Kachel entwickelt (TryRenderPreviewBitmap).
             If IsLinearLightSource(path) Then Return Nothing
-            ' Scheitert die mitgelieferte, versucht es die des Systems (RawDecodeServiceFallback.vb).
-            Return WithSystemFallback(path, FallbackStage.Thumbnail,
-                Function()
-                    If Not _reentrant Then
-                        SyncLock _nativeLock
-                            Return ExtractThumbnailCore(path)
-                        End SyncLock
-                    End If
+            If Not _reentrant Then
+                SyncLock _nativeLock
                     Return ExtractThumbnailCore(path)
-                End Function)
+                End SyncLock
+            End If
+            Return ExtractThumbnailCore(path)
         End Function
 
         Private Shared Function ExtractThumbnailCore(path As String) As MemoryStream
@@ -571,8 +565,6 @@ Namespace Services
         Public Shared Function TryExtractSmallestThumbnail(path As String, minShortSide As Integer) As MemoryStream
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable OrElse _unpackThumbEx Is Nothing Then Return Nothing
             If IsLinearLightSource(path) Then Return Nothing
-            ' KEIN Rueckfall hier: Nothing heisst oft nur "keine Vorschau gross genug", und die
-            ' Kachel fragt danach TryExtractThumbnail, das den Rueckfall traegt.
             If Not _reentrant Then
                 SyncLock _nativeLock
                     Return ExtractSmallestThumbnailCore(path, minShortSide)
@@ -814,16 +806,14 @@ Namespace Services
             Try
                 Dim baseEv = BaseExposureForFile(path) + exposureEv
                 Dim lens = LensCorrectionForFile(path, lensChoice)
-                ' Scheitert die mitgelieferte, versucht es die des Systems (RawDecodeServiceFallback.vb).
-                Dim decoded = WithSystemFallback(path, FallbackStage.Develop,
-                    Function()
-                        If _reentrant Then
-                            Return DecodeCore(path, baseEv, lens, useHalfSize:=True, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv)
-                        End If
-                        SyncLock _nativeLock
-                            Return DecodeCore(path, baseEv, lens, useHalfSize:=True, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv)
-                        End SyncLock
-                    End Function)
+                Dim decoded As SKBitmap
+                If _reentrant Then
+                    decoded = DecodeCore(path, baseEv, lens, useHalfSize:=True, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv)
+                Else
+                    SyncLock _nativeLock
+                        decoded = DecodeCore(path, baseEv, lens, useHalfSize:=True, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv)
+                    End SyncLock
+                End If
                 Return WithDistortion(WithSensorEdgeCrop(decoded, path, lensChoice, halfSize:=True), lens)
             Catch
                 Return Nothing
@@ -886,18 +876,16 @@ Namespace Services
 
                 ' Ohne reentrante libraw laufen die nativen Aufrufe nacheinander - die
                 ' Thumbnail-Erzeugung ruft aus mehreren Threads hier herein (Parallel.For).
-                ' Scheitert die mitgelieferte, versucht es die des Systems (RawDecodeServiceFallback.vb).
-                Dim decoded = WithSystemFallback(path, FallbackStage.Develop,
-                    Function()
-                        If _reentrant Then
-                            Return DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv,
-                                              modelDenoise:=modelDenoise)
-                        End If
-                        SyncLock _nativeLock
-                            Return DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv,
-                                              modelDenoise:=modelDenoise)
-                        End SyncLock
-                    End Function)
+                Dim decoded As SKBitmap
+                If _reentrant Then
+                    decoded = DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv,
+                                         modelDenoise:=modelDenoise)
+                Else
+                    SyncLock _nativeLock
+                        decoded = DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv,
+                                             modelDenoise:=modelDenoise)
+                    End SyncLock
+                End If
                 If decoded Is Nothing Then Return Nothing
                 Dim coreMs = clock.Elapsed.TotalMilliseconds
 
@@ -1586,16 +1574,12 @@ Namespace Services
             If IsLinearLightSource(path) Then Return LinearLightMetadata(path)
             If Not IsAvailable Then Return Nothing
             If _getIparams Is Nothing OrElse _getImgOther Is Nothing Then Return Nothing
-            Return WithSystemFallback(path, FallbackStage.Metadata,
-                Function()
-                    If _getIparams Is Nothing OrElse _getImgOther Is Nothing Then Return Nothing
-                    If Not _reentrant Then
-                        SyncLock _nativeLock
-                            Return ReadFileMetadataCore(path)
-                        End SyncLock
-                    End If
+            If Not _reentrant Then
+                SyncLock _nativeLock
                     Return ReadFileMetadataCore(path)
-                End Function)
+                End SyncLock
+            End If
+            Return ReadFileMetadataCore(path)
         End Function
 
         Private Shared Function ReadFileMetadataCore(path As String) As FileMetadata

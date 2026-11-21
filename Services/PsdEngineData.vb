@@ -38,6 +38,19 @@ Namespace Services
         ''' <see cref="PathTextIndices"/>), und <see cref="PsdLayerReader"/> trägt es hier nach.</summary>
         Public Property IsOnPath As Boolean
 
+        ''' <summary>Warum ein Textobjekt diese Ebene nicht treu tragen kann, oder "", wenn es
+        ''' kann (siehe <see cref="FindUnsupportedFormatting"/>). Nur für Protokoll und Probe; der
+        ''' Anwender sieht nur die Zahl solcher Ebenen.</summary>
+        Public Property UnsupportedReason As String = ""
+        ''' <summary>Die Zeilen des Wortlauts, nach den harten Umbrüchen gezählt, ohne den
+        ''' abschliessenden Umbruch, den Photoshop jedem Text anhängt; 0, wenn kein Wortlaut in den
+        ''' Textdaten steht.</summary>
+        Public Property LineCount As Integer
+        ''' <summary>Der Zeilenabstand des Textes im Dokument (wie <see cref="FontSize"/> mit der
+        ''' Matrix umgerechnet): fest eingestellt der Wert selbst, automatisch der Anteil des
+        ''' Absatzes (Vorgabe 120 Prozent) mal Grad. NaN, wenn er nicht zu bestimmen ist.</summary>
+        Public Property Leading As Double = Double.NaN
+
         Private Sub New()
         End Sub
 
@@ -86,8 +99,9 @@ Namespace Services
                         result.Justification = CInt(justification)
                     End If
                 End If
-                Dim index = Number(style, "Font")
                 Dim fonts = Arr(Dict(root, "ResourceDict"), "FontSet")
+                result.UnsupportedReason = FindUnsupportedFormatting(root, engine, runs, lengths, fonts, result)
+                Dim index = Number(style, "Font")
                 If fonts IsNot Nothing AndAlso index >= 0 AndAlso index = Math.Truncate(index) AndAlso index < fonts.Count Then
                     Dim font = TryCast(fonts(CInt(index)), Dictionary(Of String, Object))
                     If font IsNot Nothing AndAlso font.ContainsKey("Name") Then result.FontName = TryCast(font("Name"), String)
@@ -109,6 +123,211 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Prüft, ob ein Textobjekt diesen Text treu tragen kann, und liefert sonst den
+        ''' ersten Grund ("" heißt: es kann). Nebenbei werden Zeilenzahl und Zeilenabstand gesetzt.
+        '''
+        ''' Ein Textobjekt trägt für den GANZEN Text: eine Schrift samt echtem Schnitt, einen Grad,
+        ''' eine Farbe, „Alle Großbuchstaben", einen Zeichenabstand, einen Zeilenabstand und eine
+        ''' Ausrichtung, gesetzt als
+        ''' Punkttext ohne Umbruch, waagerecht. Alles andere hat dort kein Gegenstück und käme still
+        ''' falsch: ein Textrahmen bräche nicht um, senkrechter Satz liefe waagerecht, und von
+        ''' mehreren Stilläufen bliebe nur einer. Dann bleibt die Ebene das Bild, das Photoshop in
+        ''' die Ebenendaten gelegt hat.
+        '''
+        ''' Verglichen werden die Läufe untereinander, nicht mit dem ersten allein. Läufe aus nichts
+        ''' als Zeilenumbrüchen zählen nicht mit (Photoshop schließt jeden Text mit einem Umbruch in
+        ''' eigenem Lauf ab), bei Läufen aus Leerraum die Farbe nicht, weil sie unsichtbar bleibt.
+        ''' Was in einem Lauf fehlt, gilt aus dem Grundstil des Dokuments, sonst mit Photoshops
+        ''' Vorgabe. Der Zeilenabstand muss in allen Läufen und Absätzen derselbe sein; ob das
+        ''' Textobjekt ihn tragen kann, entscheidet der Import (<see cref="Leading"/>).</summary>
+        Private Shared Function FindUnsupportedFormatting(root As Dictionary(Of String, Object),
+                                                          engine As Dictionary(Of String, Object),
+                                                          runs As List(Of Object), lengths As List(Of Object),
+                                                          fonts As List(Of Object),
+                                                          result As PsdEngineData) As String
+            Dim shapes = Dict(Dict(engine, "Rendered"), "Shapes")
+            ' Senkrechter Satz: Schreibrichtung 2. Ein Textobjekt setzt nur waagerecht.
+            If Number(shapes, "WritingDirection") = 2 Then Return "vertical"
+            Dim children = Arr(shapes, "Children")
+            If children IsNot Nothing AndAlso children.Count > 0 Then
+                ' Art 1 ist ein Textrahmen mit Umbruch an seiner Breite, 0 ein Punkttext. Der
+                ' Text am Pfad ist ebenfalls Art 1, fällt aber schon vorher als verzerrt heraus.
+                If Number(TryCast(children(0), Dictionary(Of String, Object)), "ShapeType") = 1 Then Return "paragraph"
+            End If
+
+            Dim text = TryCast(Value(Dict(engine, "Editor"), "Text"), String)
+            If text Is Nothing Then text = ""
+            Dim normalizedText = text.Replace(vbCrLf, vbCr).Replace(vbLf, vbCr)
+            Dim trimmed = normalizedText.TrimEnd(ChrW(13), ChrW(0))
+            result.LineCount = If(trimmed.Length = 0, 0, trimmed.Split(ChrW(13)).Length)
+            Dim multiLine = result.LineCount > 1
+
+            Dim resources = Dict(root, "ResourceDict")
+            Dim normalStyle = Dict(SheetAt(resources, "StyleSheetSet", "TheNormalStyleSheet"), "StyleSheetData")
+            Dim normalParagraph = Dict(SheetAt(resources, "ParagraphSheetSet", "TheNormalParagraphSheet"), "Properties")
+
+            ' Die Absätze: eine Ausrichtung und ein automatischer Zeilenabstand für alle, keine
+            ' Einzüge, kein Abstand zwischen Absätzen.
+            Dim paragraphs = Arr(Dict(engine, "ParagraphRun"), "RunArray")
+            Dim firstParagraph As Dictionary(Of String, Object) = Nothing
+            If paragraphs IsNot Nothing Then
+                For p = 0 To paragraphs.Count - 1
+                    Dim properties = Dict(Dict(TryCast(paragraphs(p), Dictionary(Of String, Object)), "ParagraphSheet"), "Properties")
+                    If p = 0 Then firstParagraph = properties
+                    For Each key In {"FirstLineIndent", "StartIndent", "EndIndent"}
+                        Dim indent = NumberOr(properties, normalParagraph, key, 0)
+                        If Math.Abs(indent) > 0.001 Then Return "indent"
+                    Next
+                    If paragraphs.Count > 1 Then
+                        For Each key In {"SpaceBefore", "SpaceAfter"}
+                            If Math.Abs(NumberOr(properties, normalParagraph, key, 0)) > 0.001 Then Return "paragraph-spacing"
+                        Next
+                    End If
+                    If p > 0 Then
+                        For Each key In {"Justification", "AutoLeading"}
+                            If Not SameValue(ValueOr(properties, normalParagraph, key), ValueOr(firstParagraph, normalParagraph, key)) Then Return "paragraphs:" & key
+                        Next
+                    End If
+                Next
+            End If
+            ' Blocksatz streckt im Textobjekt jede Zeile außer der letzten auf die Rahmenbreite;
+            ' ein Punkttext in Photoshop kennt keine Rahmenbreite und streckt nichts.
+            If multiLine AndAlso NumberOr(firstParagraph, normalParagraph, "Justification", 0) >= 3 Then Return "justify"
+
+            ' Die Stilläufe, nur die mit sichtbarem Inhalt.
+            Dim reference As Dictionary(Of String, Object) = Nothing
+            Dim referenceColor As Object = Nothing
+            Dim haveColor = False
+            Dim offset = 0
+            For i = 0 To runs.Count - 1
+                Dim segment = ""
+                If lengths IsNot Nothing AndAlso lengths.Count = runs.Count AndAlso TypeOf lengths(i) Is Double Then
+                    Dim length = CInt(Math.Max(0, Math.Min(CDbl(lengths(i)), normalizedText.Length - offset)))
+                    segment = normalizedText.Substring(offset, length)
+                    offset += length
+                Else
+                    segment = "?"
+                End If
+                If segment.Length > 0 AndAlso segment.Trim(ChrW(13), ChrW(0)).Length = 0 Then Continue For
+                Dim data = Dict(Dict(TryCast(runs(i), Dictionary(Of String, Object)), "StyleSheet"), "StyleSheetData")
+                If data Is Nothing Then data = New Dictionary(Of String, Object)()
+
+                ' Was ein Textobjekt gar nicht kennt, auch nicht für den ganzen Text.
+                For Each key In {"FauxBold", "FauxItalic"}
+                    If IsTrue(ValueOr(data, normalStyle, key)) Then Return "faux"
+                Next
+                For Each key In {"Underline", "Strikethrough"}
+                    If IsTrue(ValueOr(data, normalStyle, key)) Then Return "underline"
+                Next
+                If IsTrue(ValueOr(data, normalStyle, "StrokeFlag")) Then Return "stroke"
+                If IsFalse(ValueOr(data, normalStyle, "FillFlag")) Then Return "nofill"
+                For Each key In {"HorizontalScale", "VerticalScale"}
+                    If Math.Abs(NumberOr(data, normalStyle, key, 1) - 1.0) > 0.001 Then Return "scale"
+                Next
+                If Math.Abs(NumberOr(data, normalStyle, "BaselineShift", 0)) > 0.001 Then Return "baseline"
+                If NumberOr(data, normalStyle, "FontBaseline", 0) <> 0 Then Return "baseline"
+                ' Kapitälchen (1); „Alle Großbuchstaben" (2) trägt das Textobjekt.
+                If NumberOr(data, normalStyle, "FontCaps", 0) = 1 Then Return "smallcaps"
+                ' Der Zeichenabstand des Textobjekts reicht von -20 bis 200 Prozent des Grads.
+                Dim tracking = NumberOr(data, normalStyle, "Tracking", 0)
+                If tracking < -200 OrElse tracking > 2000 Then Return "tracking"
+
+                Dim autoLeading = Not IsFalse(ValueOr(data, normalStyle, "AutoLeading"))
+                Dim fontSize = NumberOr(data, normalStyle, "FontSize", -1)
+                If reference Is Nothing Then
+                    reference = data
+                    Dim factor = NumberOr(firstParagraph, normalParagraph, "AutoLeading", 1.2)
+                    Dim leading = If(autoLeading, factor * fontSize, NumberOr(data, normalStyle, "Leading", -1))
+                    If fontSize > 0 AndAlso leading > 0 AndAlso Double.IsFinite(leading) Then result.Leading = leading
+                Else
+                    For Each key In {"FontSize", "FontCaps", "Tracking", "AutoLeading"}
+                        If Not SameValue(ValueOr(data, normalStyle, key), ValueOr(reference, normalStyle, key)) Then Return "runs:" & key
+                    Next
+                    If Not autoLeading AndAlso
+                       Not SameValue(ValueOr(data, normalStyle, "Leading"), ValueOr(reference, normalStyle, "Leading")) Then Return "runs:Leading"
+                    ' Die Schrift über ihren Namen: zwei Einträge im Schriftsatz können dieselbe
+                    ' meinen.
+                    If Not String.Equals(FontNameAt(fonts, ValueOr(data, normalStyle, "Font")),
+                                         FontNameAt(fonts, ValueOr(reference, normalStyle, "Font")), StringComparison.Ordinal) Then Return "runs:Font"
+                End If
+                If segment.Trim().Length > 0 Then
+                    Dim color = ValueOr(data, normalStyle, "FillColor")
+                    If Not haveColor Then
+                        referenceColor = color
+                        haveColor = True
+                    ElseIf Not SameValue(color, referenceColor) Then
+                        Return "runs:FillColor"
+                    End If
+                End If
+            Next
+            Return ""
+        End Function
+
+        ''' Der Eintrag eines Stilsatzes, auf den der Grundstil des Dokuments zeigt.
+        Private Shared Function SheetAt(resources As Dictionary(Of String, Object), setKey As String, indexKey As String) As Dictionary(Of String, Object)
+            Dim sheets = Arr(resources, setKey)
+            Dim index = Number(resources, indexKey)
+            If sheets Is Nothing OrElse index < 0 OrElse index >= sheets.Count OrElse index <> Math.Truncate(index) Then Return Nothing
+            Return TryCast(sheets(CInt(index)), Dictionary(Of String, Object))
+        End Function
+
+        Private Shared Function FontNameAt(fonts As List(Of Object), index As Object) As String
+            If fonts Is Nothing OrElse Not TypeOf index Is Double Then Return ""
+            Dim i = CDbl(index)
+            If i < 0 OrElse i >= fonts.Count OrElse i <> Math.Truncate(i) Then Return ""
+            Return If(TryCast(Value(TryCast(fonts(CInt(i)), Dictionary(Of String, Object)), "Name"), String), "")
+        End Function
+
+        Private Shared Function Value(d As Dictionary(Of String, Object), key As String) As Object
+            If d Is Nothing OrElse Not d.ContainsKey(key) Then Return Nothing
+            Return d(key)
+        End Function
+
+        ''' Der Wert aus dem Lauf, sonst aus dem Grundstil; Nothing, wenn beide schweigen.
+        Private Shared Function ValueOr(d As Dictionary(Of String, Object), fallback As Dictionary(Of String, Object), key As String) As Object
+            Dim v = Value(d, key)
+            Return If(v, Value(fallback, key))
+        End Function
+
+        Private Shared Function NumberOr(d As Dictionary(Of String, Object), fallback As Dictionary(Of String, Object),
+                                         key As String, defaultValue As Double) As Double
+            Dim v = ValueOr(d, fallback, key)
+            If TypeOf v Is Double AndAlso Double.IsFinite(CDbl(v)) Then Return CDbl(v)
+            Return defaultValue
+        End Function
+
+        ''' Wahrheitswerte stehen als Wort da, nicht als Zahl.
+        Private Shared Function IsTrue(v As Object) As Boolean
+            Return String.Equals(TryCast(v, String), "true", StringComparison.Ordinal)
+        End Function
+
+        Private Shared Function IsFalse(v As Object) As Boolean
+            Return String.Equals(TryCast(v, String), "false", StringComparison.Ordinal)
+        End Function
+
+        ''' Gleich nach Inhalt: Zahlen bis auf Rundung, Listen und Verzeichnisse Eintrag für Eintrag.
+        Private Shared Function SameValue(a As Object, b As Object) As Boolean
+            If a Is Nothing OrElse b Is Nothing Then Return a Is Nothing AndAlso b Is Nothing
+            If TypeOf a Is Double AndAlso TypeOf b Is Double Then Return Math.Abs(CDbl(a) - CDbl(b)) <= 0.001
+            Dim listA = TryCast(a, List(Of Object)), listB = TryCast(b, List(Of Object))
+            If listA IsNot Nothing OrElse listB IsNot Nothing Then
+                If listA Is Nothing OrElse listB Is Nothing OrElse listA.Count <> listB.Count Then Return False
+                For i = 0 To listA.Count - 1
+                    If Not SameValue(listA(i), listB(i)) Then Return False
+                Next
+                Return True
+            End If
+            Dim dictA = TryCast(a, Dictionary(Of String, Object)), dictB = TryCast(b, Dictionary(Of String, Object))
+            If dictA IsNot Nothing OrElse dictB IsNot Nothing Then
+                If dictA Is Nothing OrElse dictB Is Nothing OrElse dictA.Count <> dictB.Count Then Return False
+                For Each kv In dictA
+                    If Not dictB.ContainsKey(kv.Key) OrElse Not SameValue(kv.Value, dictB(kv.Key)) Then Return False
+                Next
+                Return True
+            End If
+            Return String.Equals(a.ToString(), b.ToString(), StringComparison.Ordinal)
+        End Function
+
         ''' <summary>Welche Textobjekte des dokumentweiten Textblocks ("Txt2") an einem Pfad laufen,
         ''' als Menge ihrer Nummern (<see cref="TextIndex"/>). Leer, wenn keines oder der Block
         ''' nicht lesbar ist.
@@ -119,7 +338,27 @@ Namespace Services
         ''' (<c>/1/0</c>, je Eintrag die Nummer unter <c>/0</c>), und in der Rahmenliste (<c>/0/8/0</c>) die Art des Rahmens
         ''' (<c>/0/2/0</c>): ohne Eintrag Punkttext, 1 Rahmentext, 2 Text am Pfad.</summary>
         Public Shared Function PathTextIndices(data As Byte()) As HashSet(Of Integer)
-            Dim result As New HashSet(Of Integer)()
+            Return ReadDocumentText(data).OnPath
+        End Function
+
+        ''' <summary>Was der dokumentweite Textblock über die Textobjekte sagt, das in ihren Ebenen
+        ''' nicht steht.</summary>
+        Public NotInheritable Class DocumentTextFlags
+            ''' Textobjekte an einem Pfad (siehe <see cref="PathTextIndices"/>).
+            Public ReadOnly Property OnPath As New HashSet(Of Integer)()
+            ''' <summary>Textobjekte mit einem Lauf, der nicht nach den Paarabständen der Schrift
+            ''' unterschneidet: ohne Unterschneidung (0) oder optisch (2). Photoshop schreibt das
+            ''' nur hierher; in den Textdaten der Ebene steht weiter „automatisch". Das Textobjekt
+            ''' unterschneidet immer nach der Schrift.</summary>
+            Public ReadOnly Property OtherKerning As New HashSet(Of Integer)()
+        End Class
+
+        ''' <summary>Liest beides aus dem Block in einem Durchgang. Die Stilläufe eines Textobjekts
+        ''' liegen unter <c>/0/6/0</c>, je Lauf die Stilwerte unter <c>/0/0/6</c>; die Art der
+        ''' Unterschneidung ist dort der Schlüssel <c>/11</c> (1 nach der Schrift). Fehlt er, gilt
+        ''' die Vorgabe, also nach der Schrift. Leer, wenn der Block fehlt oder nicht lesbar ist.</summary>
+        Public Shared Function ReadDocumentText(data As Byte()) As DocumentTextFlags
+            Dim result As New DocumentTextFlags()
             If data Is Nothing OrElse data.Length = 0 OrElse data.Length > 32_000_000 Then Return result
             Try
                 Dim wrapped(data.Length + 3) As Byte
@@ -132,9 +371,19 @@ Namespace Services
                 Dim root = TryCast(parser.ReadValue(0), Dictionary(Of String, Object))
                 Dim frames = Arr(Dict(Dict(root, "0"), "8"), "0")
                 Dim objects = Arr(Dict(root, "1"), "1")
-                If frames Is Nothing OrElse objects Is Nothing Then Return result
+                If objects Is Nothing Then Return result
                 For i = 0 To objects.Count - 1
-                    Dim frameIndices = Arr(Dict(TryCast(objects(i), Dictionary(Of String, Object)), "1"), "0")
+                    Dim textObject = TryCast(objects(i), Dictionary(Of String, Object))
+                    Dim styleRuns = Arr(Dict(Dict(textObject, "0"), "6"), "0")
+                    If styleRuns IsNot Nothing Then
+                        For Each run In styleRuns
+                            Dim values = Dict(Dict(Dict(TryCast(run, Dictionary(Of String, Object)), "0"), "0"), "6")
+                            Dim kerning = Number(values, "11")
+                            If kerning >= 0 AndAlso kerning <> 1 Then result.OtherKerning.Add(i)
+                        Next
+                    End If
+                    If frames Is Nothing Then Continue For
+                    Dim frameIndices = Arr(Dict(textObject, "1"), "0")
                     If frameIndices Is Nothing Then Continue For
                     For Each entry In frameIndices
                         ' Jeder Eintrag ist selbst ein Verzeichnis, die Nummer des Rahmens steht
@@ -142,11 +391,11 @@ Namespace Services
                         Dim frameIndex = Number(TryCast(entry, Dictionary(Of String, Object)), "0")
                         If frameIndex < 0 OrElse frameIndex >= frames.Count OrElse frameIndex <> Math.Truncate(frameIndex) Then Continue For
                         Dim frame = Dict(Dict(TryCast(frames(CInt(frameIndex)), Dictionary(Of String, Object)), "0"), "2")
-                        If Number(frame, "0") = 2 Then result.Add(i)
+                        If Number(frame, "0") = 2 Then result.OnPath.Add(i)
                     Next
                 Next
             Catch
-                result.Clear()
+                result = New DocumentTextFlags()
             End Try
             Return result
         End Function

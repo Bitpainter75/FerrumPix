@@ -27,9 +27,15 @@
 # frischen gehoeren danach ins Build-Repo, samt Pruefsummen in ci/binaries.sha256. Fehlen sie dort,
 # bricht package.sh ab: ohne den Schalter gibt es dann keine Mac-Pakete.
 #
+# OPENJPEG UND OPENEXRCORE (JPEG 2000 und EXR) baut derselbe Schalter mit, im selben Job
+# (openjpeg/build-macos.sh und openexr/build-macos.sh, Ladeprobe mit ojp_check.c und exr_check.c).
+# Anders als libheif und libjxl sind sie im Paket keine Pflicht: package.sh nimmt sie mit, sobald
+# sie unter packaging/openjpeg/osx-* und packaging/openexr/osx-* eingecheckt sind, und laesst sie
+# sonst weg (dann bleiben auf dem Mac nur JPEG 2000 und EXR zu).
+#
 # Die Pakete selbst entstehen auf Ubuntu, wie bisher im Release: package.sh setzt GNU-Werkzeuge
 # und eine neue bash voraus, die macOS nicht mitbringt, und dotnet publish baut fuer osx-* auch
-# unter Linux. Nur die drei nativen Bibliotheken brauchen einen Mac.
+# unter Linux. Nur die fuenf nativen Bibliotheken brauchen einen Mac.
 #
 # Im oeffentlichen Repo, weil macOS-Minuten in einem privaten zehnfach zaehlen.
 
@@ -48,7 +54,7 @@ on:
         required: false
         default: ""
       bildformate_neu:
-        description: "libheif und libjxl vorher auf Macs neu bauen und einpacken (sonst die eingecheckten)"
+        description: "libheif, libjxl, OpenJPEG und OpenEXRCore vorher auf Macs neu bauen und einpacken (sonst die eingecheckten)"
         type: boolean
         default: false
       veroeffentlichen:
@@ -94,6 +100,8 @@ jobs:
           brew list autoconf automake libtool >/dev/null 2>&1 || brew install autoconf automake libtool
           command -v cmake >/dev/null || brew install cmake
 
+      # Ohne libraw_version die Vorgabe des Skripts (VERSION dort, ein fester Snapshot-Commit) mit
+      # dem X3F-Leser (USE_X3FTOOLS); macos_check.c verlangt dessen Faehigkeitsbit 0x10.
       - name: Bauen und pruefen
         run: packaging/libraw/build-macos.sh ${{ matrix.arch }} ${{ inputs.libraw_version }}
 
@@ -109,7 +117,7 @@ jobs:
           retention-days: 14
 
   bildformate:
-    name: libheif und libjxl ${{ matrix.arch }}
+    name: Bildformate ${{ matrix.arch }}
     if: ${{ inputs.bildformate_neu }}
     strategy:
       fail-fast: true
@@ -120,7 +128,8 @@ jobs:
           - arch: x64
             runner: macos-15-intel
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 60
+    # Vier Bibliotheken nacheinander; OpenEXRCore uebersetzt OpenJPH, libdeflate und zstd mit.
+    timeout-minutes: 90
     permissions:
       contents: read
 
@@ -133,20 +142,34 @@ jobs:
           path: packaging
           ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
 
+      # Mit dem JPEG-Dekoder: build-macos.sh liest dav1d.sh und jpeg.sh aus seinem Ordner, die
+      # Fassung von libjpeg-turbo steht in jpeg.sh.
       - name: libheif bauen und pruefen
         run: packaging/libheif/build-macos.sh ${{ matrix.arch }}
 
       - name: libjxl bauen und pruefen
         run: packaging/libjxl/build-macos.sh ${{ matrix.arch }}
 
-      # Zwei Pfade, gemeinsamer Elternordner packaging/: im Artefakt liegen sie danach unter
-      # libheif/osx-<arch>-build und libjxl/osx-<arch>-build, jeweils mit licenses/.
+      # Beide Skripte pruefen selbst: nur Eigenname, libSystem (OpenEXRCore dazu libc++), minos,
+      # Exporte nur opj_* beziehungsweise exr_*, dann die Ladeprobe mit ojp_check.c (Selbsttest
+      # J2K und JP2) und exr_check.c (Dateien aus dem Quellarchiv). Lizenztexte und HERKUNFT.txt
+      # liegen danach in <lib>/osx-<arch>-build/licenses.
+      - name: OpenJPEG bauen und pruefen
+        run: packaging/openjpeg/build-macos.sh ${{ matrix.arch }}
+
+      - name: OpenEXRCore bauen und pruefen
+        run: packaging/openexr/build-macos.sh ${{ matrix.arch }}
+
+      # Vier Pfade, gemeinsamer Elternordner packaging/: im Artefakt liegen sie danach unter
+      # libheif/, libjxl/, openjpeg/ und openexr/, je osx-<arch>-build mit licenses/.
       - uses: actions/upload-artifact@v7
         with:
           name: bildformate-osx-${{ matrix.arch }}
           path: |
             packaging/libheif/osx-${{ matrix.arch }}-build/
             packaging/libjxl/osx-${{ matrix.arch }}-build/
+            packaging/openjpeg/osx-${{ matrix.arch }}-build/
+            packaging/openexr/osx-${{ matrix.arch }}-build/
           if-no-files-found: error
           retention-days: 14
 
@@ -216,18 +239,23 @@ jobs:
 
       # Ebenfalls erst nach der Pruefung. Der Ordner wird ganz ersetzt, damit kein Lizenztext einer
       # frueheren Fassung neben dem neuen liegen bleibt.
-      - name: Frisch gebaute libheif und libjxl einsetzen
+      # Die Dateien von OpenJPEG und OpenEXRCore heissen nicht wie ihr Ordner.
+      - name: Frisch gebaute libheif, libjxl, OpenJPEG und OpenEXRCore einsetzen
         if: ${{ inputs.bildformate_neu }}
         run: |
           for arch in arm64 x64; do
-            for lib in libheif libjxl; do
+            for pair in libheif:libheif.dylib libjxl:libjxl.dylib \
+                        openjpeg:libopenjp2.dylib openexr:libOpenEXRCore.dylib; do
+              lib="${pair%%:*}"
+              file="${pair#*:}"
               src="bildformate-neu/bildformate-osx-$arch/$lib/osx-$arch-build"
               dst="packaging/$lib/osx-$arch"
-              test -s "$src/$lib.dylib" || { echo "Fehlt im Artefakt: $src/$lib.dylib" >&2; exit 1; }
+              test -s "$src/$file" || { echo "Fehlt im Artefakt: $src/$file" >&2; exit 1; }
+              test -s "$src/licenses/HERKUNFT.txt" || { echo "Fehlt im Artefakt: $src/licenses/HERKUNFT.txt" >&2; exit 1; }
               rm -rf "$dst"
               mkdir -p "$dst"
               cp -R "$src/." "$dst/"
-              echo "$lib osx-$arch: $(sha256sum "$dst/$lib.dylib" | cut -d' ' -f1)"
+              echo "$lib osx-$arch: $(sha256sum "$dst/$file" | cut -d' ' -f1)"
             done
           done
 

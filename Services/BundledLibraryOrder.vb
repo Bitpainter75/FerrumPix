@@ -9,12 +9,7 @@ Namespace Services
     '''
     ''' DIE MITGELIEFERTE KOMMT UEBERALL ZUERST, auf jeder Plattform und in jedem Paket, das eine
     ''' mitbringt. Die Bibliothek des Systems oder aus Homebrew ist nur noch der Rueckfall, falls die
-    ''' eigene fehlt oder nicht laedt. Unter Linux ausserhalb des Flatpak kommt ein zweiter Rueckfall
-    ''' JE DATEI dazu: scheitert die mitgelieferte an einer bestimmten Datei, wird die des Systems
-    ''' zusaetzlich geladen und diese Datei damit gelesen (<see cref="SystemLibraryFallback"/>). An
-    ''' der Reihenfolge hier aendert das nichts; die des Systems wird dafuer gesondert gesucht und in
-    ''' einen eigenen Namensraum des Laders geholt, getrennt von der mitgelieferten.
-    ''' Der Grund ist der Support: auf jedem Rechner entwickelt und dekodiert dieselbe Fassung,
+    ''' eigene fehlt oder nicht laedt. Der Grund ist der Support: auf jedem Rechner entwickelt und dekodiert dieselbe Fassung,
     ''' ein Befund laesst sich also ohne die Frage nachstellen, welche Bibliothek gerade geladen ist.
     ''' Bei LibRaw kommt dazu, dass die mitgelieferte ein Snapshot ist und Kameras kennt, die das
     ''' letzte Release der Distribution noch nicht kennt (Nikon High Efficiency etwa), und dass Ubuntu

@@ -228,16 +228,11 @@ Namespace Views
             ' STRG: die Form als Auswahl laden. Woher die Form kommt, sagt die angeklickte Kachel -
             ' am Maskensymbol (und an der Zeile einer Masken- oder Auswahlebene, deren Miniatur IHRE
             ' Maske ist) die Maske, an der Zeilenminiatur eines Objekts seine eigene Deckung.
+            ' Die Tasten dazu sagen, was mit der laufenden Auswahl geschieht, wie in üblichen
+            ' Bildbearbeitungen: STRG ersetzt, STRG+SHIFT fügt hinzu, STRG+ALT zieht ab,
+            ' STRG+SHIFT+ALT schneidet. Ohne STRG behalten SHIFT und ALT ihre eigene Bedeutung.
             If loadsSelection Then
-                Dim meansMask = fromMaskIcon OrElse row.AdjustmentLayer IsNot Nothing
-                If meansMask AndAlso (row.HasMask OrElse row.AdjustmentLayer IsNot Nothing) Then
-                    If Not Object.ReferenceEquals(row, vm.SelectedLayerRow) Then vm.SelectedLayerRow = row
-                    If row.HasMask AndAlso row.AdjustmentLayer Is Nothing Then vm.UseAnnotationMask()
-                    vm.LoadCurrentMaskAsSelection()
-                    Return True
-                End If
-                If row.Annotation IsNot Nothing Then Return vm.LoadSelectionFromAnnotationAlpha(row.Annotation)
-                Return False
+                Return vm.LoadLayerShapeAsSelection(row, fromMaskIcon, LoadSelectionCombineMode(modifiers))
             End If
 
             If Not showsMaskOnly AndAlso Not turnsMaskOff Then Return False
@@ -249,6 +244,16 @@ Namespace Views
             If showsMaskOnly Then vm.IsMaskGrayscaleView = Not vm.IsMaskGrayscaleView
             If turnsMaskOff Then vm.IsMaskDisabled = Not vm.IsMaskDisabled
             Return True
+        End Function
+
+        ''' <summary>Die Verknüpfung beim Laden einer Form als Auswahl aus den Tasten neben STRG.</summary>
+        Friend Shared Function LoadSelectionCombineMode(modifiers As KeyModifiers) As String
+            Dim adds = modifiers.HasFlag(KeyModifiers.Shift)
+            Dim subtracts = modifiers.HasFlag(KeyModifiers.Alt)
+            If adds AndAlso subtracts Then Return "Intersect"
+            If adds Then Return "Add"
+            If subtracts Then Return "Subtract"
+            Return "New"
         End Function
 
         ''' <summary>Klick auf das Maskensymbol EINER ZEILE: erst diese Zeile markieren, dann ihre
@@ -289,6 +294,12 @@ Namespace Views
             Dim rowIsInSelection = (row.Annotation IsNot Nothing AndAlso vm.IsAnnotationSelected(row.Annotation)) OrElse
                                    (row.AdjustmentLayer IsNot Nothing AndAlso vm.IsAdjustmentLayerSelected(row.AdjustmentLayer)) OrElse
                                    (row.IsGroupHeader AndAlso Object.ReferenceEquals(row, vm.SelectedLayerRow))
+            ' Die laufende Auswahl VOR dem Markieren festhalten: markiert der Rechtsklick eine Masken-
+            ' oder Auswahlebene, wird ihre Maske zur laufenden Auswahl, und mit der Auswahl von vorher
+            ' liesse sich danach nichts mehr verknüpfen (siehe EditorViewModel.SelectionBeforeLoad).
+            ' Das Festhalten legt keinen Rückgängig-Schritt an und beendet keinen Reglerzug; die
+            ' Kopie der Auswahl gibt das Schließen des Menüs frei (ReleaseOnMenuClosed).
+            Dim selectionBefore = If(vm.CanLoadLayerShapeAsSelection(row), vm.CaptureSelectionBeforeLoad(), Nothing)
             If Not rowIsInSelection Then vm.SelectedLayerRow = row
 
             Dim items As New List(Of Control)()
@@ -334,6 +345,9 @@ Namespace Views
             If vm.SelectedAnnotationHasMask Then
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Ebenenmaske bearbeiten"), "paint-brush", vm.EditAnnotationMaskCommand))
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Ebenenmaske entfernen"), "x-circle", vm.RemoveAnnotationMaskCommand))
+            End If
+            If selectionBefore IsNot Nothing AndAlso Not mehrere Then
+                items.Add(MakeLoadAsSelectionMenuItem(vm, row, selectionBefore))
             End If
             ' Eigene Anpassungen der Ebene verwerfen. Ausschalten geht am Symbol der Zeile; hier
             ' steht der endgültige Weg, denn ein Symbol, das zwei Dinge tut, tut keines davon
@@ -407,9 +421,48 @@ Namespace Views
 
             Dim menu As New ContextMenu()
             menu.ItemsSource = items
+            ReleaseOnMenuClosed(menu, selectionBefore)
             list.ContextMenu = menu
             menu.Open(list)
         End Sub
+
+        ''' <summary>Gibt den beim Öffnen festgehaltenen Stand der Auswahl frei, sobald das Menü zu
+        ''' ist, ob mit oder ohne "Als Auswahl laden". Nachgereicht über den Dispatcher: das Laden
+        ''' läuft im Klick des Eintrags, und der Stand muss bis dahin noch da sein. Hat das Laden
+        ''' ihn schon freigegeben, geschieht nichts mehr.</summary>
+        Public Shared Sub ReleaseOnMenuClosed(menu As ContextMenu, before As EditorViewModel.SelectionBeforeLoad)
+            If menu Is Nothing OrElse before Is Nothing Then Return
+            AddHandler menu.Closed, Sub(s, e) Dispatcher.UIThread.Post(Sub() before.Release(), DispatcherPriority.Background)
+        End Sub
+
+        ''' <summary>"Als Auswahl laden" im Menü der Ebenenzeile: die Maske einer Masken- oder
+        ''' Auswahlebene, sonst die Form des Objekts. Läuft vorher eine Auswahl, ist es ein
+        ''' Untermenü mit den vier Verknüpfungen, sonst ein einzelner Eintrag - ein Untermenü für
+        ''' eine Zeile kostete nur einen Schritt. Dieselben vier gibt es mit STRG, SHIFT und ALT an den
+        ''' Miniaturen (<see cref="ApplyMaskGesture"/>).</summary>
+        Private Function MakeLoadAsSelectionMenuItem(vm As EditorViewModel, row As LayerPanelRow,
+                                                     before As EditorViewModel.SelectionBeforeLoad) As MenuItem
+            Dim header = LocalizationService.T("Als Auswahl laden")
+            If Not before.HasSelection OrElse before.IsShapeOf(row) Then
+                Dim singleItem = MakeLayerMenuItem(header, "selection", Nothing)
+                AddHandler singleItem.Click, Sub(s2, e2) vm.LoadLayerShapeAsSelection(row, False, "New", before)
+                Return singleItem
+            End If
+            Dim parent = MakeLayerMenuItem(header, "selection", Nothing)
+            ' Jeder Text als eigenes Literal, damit der Sammler der Übersetzung ihn findet.
+            Dim entries = {
+                (LocalizationService.T("Auswahl ersetzen"), "square", "New"),
+                (LocalizationService.T("Zur bestehenden Auswahl hinzufügen"), "plus-square", "Add"),
+                (LocalizationService.T("Von der bestehenden Auswahl abziehen"), "minus-square", "Subtract"),
+                (LocalizationService.T("Schnittmenge mit bestehender Auswahl bilden"), "intersect", "Intersect")}
+            For Each entry In entries
+                Dim mode = entry.Item3
+                Dim child = MakeLayerMenuItem(entry.Item1, entry.Item2, Nothing)
+                AddHandler child.Click, Sub(s2, e2) vm.LoadLayerShapeAsSelection(row, False, mode, before)
+                parent.Items.Add(child)
+            Next
+            Return parent
+        End Function
 
         ''' <summary>Die Ebenenzeile unter dem Zeiger. Treffertest an der Zeigerposition und dann durch
         ''' den SICHTBAREN Baum nach oben - der logische Elternteil ist in einer virtualisierten Liste

@@ -11271,11 +11271,11 @@
   <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
     <value>Henter nøkkelord, vurdering og fargeetikett fra .pp3- eller .arp-filen ved siden av bildet inn i katalogen. Filene blir bare lest, aldri endret.</value>
   </data>
-  <data name="Daten_aus_RawTherapee_ART_und_Lightroom_lesen_daa38c70" xml:space="preserve">
-    <value>Les data fra RawTherapee, ART og Lightroom</value>
+  <data name="Daten_aus_RawTherapee_ART_RapidRAW_und_Lightroom_79203497" xml:space="preserve">
+    <value>Les data fra RawTherapee, ART, RapidRAW og Lightroom</value>
   </data>
-  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7a90dbbf" xml:space="preserve">
-    <value>Henter nøkkelord, vurdering og fargeetikett fra .pp3- eller .arp-filen ved siden av bildet og fra Lightroom-katalogen nedenfor inn i katalogen. De leses bare, ingenting endres der.</value>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_bc06a21b" xml:space="preserve">
+    <value>Henter nøkkelord, vurdering og fargeetikett fra .pp3-, .arp- eller .rrdata-filen ved siden av bildet og fra Lightroom-katalogen nedenfor inn i katalogen, fra .rrdata-filen også markeringen. De leses bare, ingenting endres der.</value>
   </data>
   <data name="Lightroom_Classic_Katalog_941f2bc5" xml:space="preserve">
     <value>Lightroom Classic-katalog</value>
@@ -12079,45 +12079,6 @@
   <data name="Hex_Wert_und_R_G_B_92c85fbe" xml:space="preserve">
     <value>Hexverdi og R G B</value>
   </data>
-  <data name="R_ckfall_auf_die_Bibliotheken_des_Systems_31361321" xml:space="preserve">
-    <value>Reserve: systemets biblioteker</value>
-  </data>
-  <data name="Scheitert_eine_mitgelieferte_Bibliothek_an_einer_485ef676" xml:space="preserve">
-    <value>Hvis et medfølgende bibliotek ikke kan åpne en fil, prøver FerrumPix den samme filen med versjonen som er installert på systemet. Dette finnes bare på Linux utenfor Flatpak. Hver gang det skjer, føres det i denne filen, også uten diagnoselogg:</value>
-  </data>
-  <data name="Im_Flatpak_nicht_vorgesehen_dort_gibt_es_keine_B_65e7c67b" xml:space="preserve">
-    <value>Finnes ikke i Flatpak, der er det ingen systembiblioteker</value>
-  </data>
-  <data name="Auf_diesem_Betriebssystem_nicht_vorgesehen_3d1fa0cf" xml:space="preserve">
-    <value>Finnes ikke på dette operativsystemet</value>
-  </data>
-  <data name="Nicht_n_tig_es_l_uft_keine_mitgelieferte_Fassung_984da18e" xml:space="preserve">
-    <value>Ikke nødvendig, ingen medfølgende versjon kjører</value>
-  </data>
-  <data name="Keine_Fassung_des_Systems_gefunden_5a9d7db3" xml:space="preserve">
-    <value>Fant ingen systemversjon</value>
-  </data>
-  <data name="Bereit_Fassung_0_unter_1_sie_wird_erst_geladen_w_cf809f06" xml:space="preserve">
-    <value>Klar: versjon {0} i {1}, lastes først når den medfølgende ikke klarer en fil</value>
-  </data>
-  <data name="Geladen_Fassung_0_unter_1_bisher_2_Dateien_damit_97ceb6db" xml:space="preserve">
-    <value>Lastet: versjon {0} i {1}, hittil {2} filer lest med den</value>
-  </data>
-  <data name="Gefunden_unter_0_aber_nicht_nutzbar_der_Grund_st_ebdf3fd2" xml:space="preserve">
-    <value>Funnet i {0}, men ikke brukbar, årsaken står i loggen</value>
-  </data>
-  <data name="libjpeg_turbo_8d5bdfd8" xml:space="preserve">
-    <value>libjpeg-turbo</value>
-  </data>
-  <data name="JPEG_mit_12_Bit_und_verlustfreies_JPEG_lesen_f9bc12ae" xml:space="preserve">
-    <value>Les 12-biters og tapsfri JPEG</value>
-  </data>
-  <data name="IJG_BSD_3_Clause_Zlib_84203779" xml:space="preserve">
-    <value>IJG, BSD-3-Clause, Zlib</value>
-  </data>
-  <data name="libjpeg_turbo_liest_JPEG_Dateien_mit_12_Bit_und__425706e0" xml:space="preserve">
-    <value>libjpeg-turbo leser 12-biters JPEG-filer og tapsfrie JPEG-filer som programmets grafikkbibliotek ikke åpner; alle andre JPEG-filer leses fortsatt av det. Den er lisensiert under IJG- og BSD-lisensen, medfølgende deler under zlib-lisensen. Alle pakker unntatt Flatpak har den med og foretrekker den fremfor systemets libjpeg-turbo; Flatpak henter den fra kjøretidsmiljøet sitt. Mangler den, forblir bare disse filene uåpnet.</value>
-  </data>
   <data name="JPEG_2000_Dateien_lesen_b1019379" xml:space="preserve">
     <value>Lesing av JPEG 2000-filer</value>
   </data>
@@ -12138,5 +12099,50 @@
   </data>
   <data name="Bilder_die_eine_HEIF_Datei_als_JPEG_tr_gt_etwa_d_9b9571ac" xml:space="preserve">
     <value>Bilder som en HEIF-fil lagrer som JPEG, for eksempel forhåndsvisningene fra enkelte kameraer, leser libheif med den innebygde libjpeg-turbo, Flatpak med libheif fra sitt kjøremiljø.</value>
+  </data>
+  <data name="Auswahl_ersetzen_cbe152e5" xml:space="preserve">
+    <value>Erstatt merking</value>
+  </data>
+  <data name="Als_Auswahl_geladen_ee91a059" xml:space="preserve">
+    <value>Lastet inn som merking</value>
+  </data>
+  <data name="Zur_Auswahl_hinzugef_gt_27c6e5ad" xml:space="preserve">
+    <value>Lagt til i merkingen</value>
+  </data>
+  <data name="Von_der_Auswahl_abgezogen_e6f277f6" xml:space="preserve">
+    <value>Trukket fra merkingen</value>
+  </data>
+  <data name="Mit_der_Auswahl_geschnitten_743fe0ee" xml:space="preserve">
+    <value>Snitt med merkingen</value>
+  </data>
+  <data name="0_Textebenen_stehen_in_einem_Textrahmen_laufen_s_6939c020" xml:space="preserve">
+    <value>{0} tekstlag står i en tekstramme, går loddrett eller har formatering som et tekstobjekt ikke kan gjengi, for eksempel flere skrifter eller farger. De kommer inn som bilde, teksten kan ikke redigeres.</value>
+  </data>
+  <data name="Das_Bild_sieht_nicht_nach_einem_Negativ_aus_kein_1cbade35" xml:space="preserve">
+    <value>Bildet ser ikke ut som et negativ: ingen oransje filmbase og kontrast helt ned i svart, heller et lysbilde eller et foto. Et positiv trenger ikke snus.</value>
+  </data>
+  <data name="0_Datei_en_sehen_nicht_nach_einem_Negativ_aus_ke_9cef9624" xml:space="preserve">
+    <value>{0} fil(er) ser ikke ut som et negativ: ingen oransje filmbase og kontrast helt ned i svart. Snuingen er likevel slått på der.</value>
+  </data>
+  <data name="0_l_uft_als_Snap_und_darf_Dateien_au_erhalb_des__99f3b768" xml:space="preserve">
+    <value>{0} kjører som Snap og kan bare lese filer utenfor hjemmemappen etter tillatelse. For minnekort og USB-stasjoner: snap connect {1}:removable-media</value>
+  </data>
+  <data name="Zeilenabstand_fb489798" xml:space="preserve">
+    <value>Linjeavstand</value>
+  </data>
+  <data name="0_1_Ebene_a1ddd057" xml:space="preserve">
+    <value>{0} (1 lag)</value>
+  </data>
+  <data name="0_1_Ebenen_44a37c60" xml:space="preserve">
+    <value>{0} ({1} lag)</value>
+  </data>
+  <data name="Auf_diesem_Rechner_fehlen_Schriften_0_Der_Text_b_3b27b355" xml:space="preserve">
+    <value>Disse skriftene mangler på denne datamaskinen: {0}. Teksten kan fortsatt redigeres, men settes med {1} og kan derfor se annerledes ut.</value>
+  </data>
+  <data name="Text_d3bc9a37" xml:space="preserve">
+    <value>, </value>
+  </data>
+  <data name="Schriften_fehlen_41c5e549" xml:space="preserve">
+    <value>Manglende skrifter</value>
   </data>
 </root>

@@ -58,9 +58,44 @@ Namespace Services
             ''' Bild kamen, unabhängig von der Wahl; ob das einen Hinweis wert ist, entscheidet der
             ''' Aufrufer, der weiß, was gewählt wurde.</summary>
             Public Property StretchedTextLayers As Integer
+            ''' <summary>Textebenen mit Bildpunkten, die ein Textobjekt nicht treu trägt: Textrahmen,
+            ''' senkrechter Satz, mehrere Stilläufe oder ein Merkmal ohne Gegenstück
+            ''' (<see cref="UnsupportedTextReason"/>). Sie kommen als Bild, unabhängig von der Wahl;
+            ''' wie bei <see cref="StretchedTextLayers"/> entscheidet der Aufrufer über den Hinweis.</summary>
+            Public Property UnsupportedTextLayers As Integer
+            ''' <summary>Die Schriften der Textebenen, die als Text kamen und deren Schrift auf dem
+            ''' Rechner fehlt (<see cref="FindInstalledFamily"/>): je Familie ein Eintrag mit der Zahl
+            ''' der Ebenen, in der Reihenfolge des Stapels. Der Text bleibt Text und wird mit
+            ''' <see cref="FallbackFontFamily"/> gesetzt; ob das einen Hinweis wert ist, entscheidet
+            ''' der Aufrufer. Beim eigenen Rezeptblock zählt <see cref="FindMissingFonts"/> die
+            ''' Textobjekte des Blocks.</summary>
+            Public Property MissingFonts As New List(Of MissingFont)()
+            ''' <summary>Die Schrift, mit der der Text fehlender Schriften tatsächlich gesetzt wird:
+            ''' bei fremden Textebenen der Familienname des Schnitts, den das Zeichnen für die
+            ''' Vorgabeschrift des Textobjekts bekommt; beim eigenen Rezeptblock die Ersatzschriften
+            ''' je fehlender Familie (<see cref="MissingFont.FallbackFamily"/>). Leer, wenn keine
+            ''' Schrift fehlt.</summary>
+            Public Property FallbackFontFamily As String = ""
             ''' <summary>True, wenn die Datei den eigenen Rezeptblock trug und die Bearbeitung
             ''' vollständig zurückkam - Text als Text statt als Bildpunkte.</summary>
             Public Property FromOwnRecipe As Boolean
+        End Class
+
+        ''' <summary>Eine Schrift, die auf dem Rechner fehlt, und wie viele Textebenen sie nennen.
+        ''' Dieselbe Form für fremde Textebenen einer PSD und für die Textobjekte eines Rezepts
+        ''' (.fpx, eigener Rezeptblock einer PSD).</summary>
+        Public Class MissingFont
+            ''' <summary>Der Name der Familie, wie er dem Anwender etwas sagt ("Myriad Pro"): bei
+            ''' einer fremden Textebene aus dem PostScript-Namen der Datei abgeleitet
+            ''' (<see cref="DisplayFamilyName"/>), bei einem Textobjekt sein gespeicherter
+            ''' Familienname.</summary>
+            Public Property FamilyName As String = ""
+            ''' <summary>Wie viele Textebenen oder Textobjekte diese Schrift nennen, auch die in
+            ''' Gruppen.</summary>
+            Public Property LayerCount As Integer
+            ''' <summary>Die Schrift, mit der dieser Text tatsächlich gesetzt wird
+            ''' (<see cref="ImageProcessor.ResolveTextFamilyName"/>).</summary>
+            Public Property FallbackFamily As String = ""
         End Class
 
         ''' <summary>Wie viele Ebenen der Datei einen Wortlaut tragen. Damit lässt sich vor dem Öffnen
@@ -76,8 +111,10 @@ Namespace Services
             If doc.HasRecipeBlock Then Return 0
             Dim count = 0
             For Each layer In doc.Layers
-                ' Verzerrter Text kommt ohnehin als Bild, nach ihm muss niemand gefragt werden.
-                If Not String.IsNullOrWhiteSpace(layer.TextContent) AndAlso Not IsDistortedText(layer.TextStyle) Then count += 1
+                ' Verzerrter und nicht treu abbildbarer Text kommt ohnehin als Bild, nach ihm muss
+                ' niemand gefragt werden.
+                If Not String.IsNullOrWhiteSpace(layer.TextContent) AndAlso Not IsDistortedText(layer.TextStyle) AndAlso
+                   UnsupportedTextReason(layer.TextStyle, layer.TextContent).Length = 0 Then count += 1
             Next
             Return count
         End Function
@@ -175,13 +212,20 @@ Namespace Services
                         End If
                         If ok Then
                             success = True
+                            ' Text aus dem Block behält seine Familie, auch wenn sie hier fehlt;
+                            ' gesetzt wird er dann mit der Ersatzschrift des Systems. Gezählt wie
+                            ' bei einem .fpx, gemeldet vom Aufrufer.
+                            Dim recipeMissingFonts = FindMissingFonts(fromRecipe.Annotations)
+                            LogMissingFonts("PsdImport.MissingFonts", psdPath, recipeMissingFonts)
                             Return New PsdImportResult With {
                                 .BaseImagePath = basePath,
                                 .Adjustments = fromRecipe,
                                 .TempDir = tempDir,
                                 .LayerCount = If(fromRecipe.Annotations?.Count, 0),
                                 .SkippedLayers = 0,
-                                .FromOwnRecipe = True
+                                .FromOwnRecipe = True,
+                                .MissingFonts = recipeMissingFonts,
+                                .FallbackFontFamily = String.Join(", ", recipeMissingFonts.Select(Function(m) m.FallbackFamily).Distinct(StringComparer.OrdinalIgnoreCase))
                             }
                         End If
                     End If
@@ -226,6 +270,9 @@ Namespace Services
                 Dim index = 0
                 Dim droppedTextLayers = 0
                 Dim stretchedTextLayers = 0
+                Dim unsupportedTextLayers = 0
+                ' Fehlende Schriften der Ebenen, die als Text kommen, je Familie einmal gezählt.
+                Dim missingFonts As New List(Of MissingFont)()
                 ' Die offenen Gruppen, von außen nach innen. Die letzte ist die, in der gerade
                 ' gelesen wird - dorthin gehört jede Ebene, die jetzt kommt.
                 Dim openGroups As New List(Of AnnotationGroup)()
@@ -242,17 +289,20 @@ Namespace Services
                     ' nichts zu zeigen. Kommt sie nicht als Text (Wahl "als Bild", oder verzerrt),
                     ' fehlt sie - gezählt, damit die Rückfrage beim Öffnen es sagt. Eine gewöhnliche
                     ' leere Bildebene bleibt dagegen; sie wird unten eine leere Malebene.
-                    Dim asText = textAsText AndAlso Not String.IsNullOrWhiteSpace(layer.TextContent) AndAlso
-                                 Not IsDistortedText(layer.TextStyle)
+                    Dim hasText = Not String.IsNullOrWhiteSpace(layer.TextContent)
+                    Dim distorted = hasText AndAlso IsDistortedText(layer.TextStyle)
+                    Dim unsupported = hasText AndAlso Not distorted AndAlso
+                                      UnsupportedTextReason(layer.TextStyle, layer.TextContent).Length > 0
+                    Dim asText = textAsText AndAlso hasText AndAlso Not distorted AndAlso Not unsupported
                     If layer.Pixels Is Nothing AndAlso Not asText AndAlso Not layer.IsEmptyLayer Then
-                        If Not String.IsNullOrWhiteSpace(layer.TextContent) Then droppedTextLayers += 1
+                        If hasText Then droppedTextLayers += 1
                         Continue For
                     End If
-                    ' Verzerrter Text kommt als Bild, auch wenn Text als Text gewählt ist; gezählt,
-                    ' damit der Editor sagen kann, warum dieser Wortlaut fest ist.
-                    If Not String.IsNullOrWhiteSpace(layer.TextContent) AndAlso IsDistortedText(layer.TextStyle) Then
-                        stretchedTextLayers += 1
-                    End If
+                    ' Verzerrter und nicht treu abbildbarer Text kommt als Bild, auch wenn Text als
+                    ' Text gewählt ist; gezählt, damit der Editor sagen kann, warum dieser Wortlaut
+                    ' fest ist. Die Bildpunkte sind die, die Photoshop gesetzt hat.
+                    If distorted Then stretchedTextLayers += 1
+                    If unsupported Then unsupportedTextLayers += 1
                     Dim groupId = If(openGroups.Count > 0, openGroups(openGroups.Count - 1).Id, "")
 
                     ' Die leere Malebene deckt das ganze Bild, wie eine im Editor angelegte. Ihre
@@ -301,8 +351,9 @@ Namespace Services
                         }
                         If style IsNot Nothing Then
                             annotation.AllCaps = style.AllCaps
-                            ApplyPsdFont(annotation, style.FontName)
+                            CountMissingFont(missingFonts, ApplyPsdFont(annotation, style.FontName))
                             ApplyPsdTextLayout(annotation, style)
+                            ApplyPsdLineSpacing(annotation, style)
                         End If
                         adjustments.Annotations.Add(annotation)
                         index += 1
@@ -378,6 +429,18 @@ Namespace Services
                     If layer.HasEffects AndAlso layer.IsVisible AndAlso layer.SectionType <> 3 Then effectLayers += 1
                 Next
 
+                ' Womit der Text fehlender Schriften wirklich gesetzt wird: die Vorgabeschrift des
+                ' Textobjekts, so wie das Zeichnen sie auflöst. Fehlt auch sie (Arial unter Linux),
+                ' nennt das die Ersatzschrift des Systems statt eines Namens, der nirgends steht.
+                Dim fallbackFamily = ""
+                If missingFonts.Count > 0 Then
+                    fallbackFamily = ImageProcessor.ResolveTextFamilyName(New ImageAnnotation().FontFamily)
+                    For Each missing In missingFonts
+                        missing.FallbackFamily = fallbackFamily
+                    Next
+                    LogMissingFonts("PsdImport.MissingFonts", psdPath, missingFonts)
+                End If
+
                 success = True
                 Return New PsdImportResult With {
                     .BaseImagePath = baseImagePath,
@@ -390,7 +453,10 @@ Namespace Services
                     .AdjustmentLayers = doc.AdjustmentLayers,
                     .MissingContentLayers = doc.MissingContentLayers,
                     .DroppedTextLayers = droppedTextLayers,
-                    .StretchedTextLayers = stretchedTextLayers
+                    .StretchedTextLayers = stretchedTextLayers,
+                    .UnsupportedTextLayers = unsupportedTextLayers,
+                    .MissingFonts = missingFonts,
+                    .FallbackFontFamily = fallbackFamily
                 }
             Catch
                 Return Nothing
@@ -573,35 +639,243 @@ Namespace Services
             Return Math.Max(0, totalRecords - deliveredLayers)
         End Function
 
-        ''' <summary>Schätzt den Schriftgrad aus der Höhe des Ebenenrechtecks. Das Rechteck umfasst
-        ''' alle Zeilen samt Ober- und Unterlängen; ein Anteil davon je Zeile kommt dem Schriftgrad
-        ''' nahe genug, um den Text an seinem Platz stehen zu lassen. Genau ist das nicht und kann es
-        ''' nicht sein - der wahre Wert steht in einem Block, der sich nicht verlässlich lesen lässt.</summary>
-        Private Shared Sub ApplyPsdFont(annotation As ImageAnnotation, postscriptName As String)
-            If String.IsNullOrWhiteSpace(postscriptName) Then Return
-            Dim parts = postscriptName.Split("-"c, 2)
-            Dim familyKey = parts(0).Replace(" ", "")
-            Dim families = SKFontManager.Default.FontFamilies
-            Dim family = FindFamily(families, familyKey)
-            ' Manche Schriften tragen ihren Hersteller als Endung im PostScript-Namen: "ArialMT",
-            ' "TimesNewRomanPSMT", "TimesNewRomanPS-BoldMT". Die Familie heisst ohne diese Endung;
-            ' ohne den zweiten Versuch kam Text in Times New Roman in der Vorgabeschrift.
-            If family Is Nothing Then
-                For Each suffix In {"PSMT", "MT", "PS"}
-                    If familyKey.Length > suffix.Length AndAlso familyKey.EndsWith(suffix, StringComparison.Ordinal) Then
-                        family = FindFamily(families, familyKey.Substring(0, familyKey.Length - suffix.Length))
-                        If family IsNot Nothing Then Exit For
-                    End If
-                Next
-            End If
-            If family Is Nothing Then Return
+        ''' <summary>Schrift und Schnitt aus dem PostScript-Namen der Textebene. Gibt "" zurück, wenn
+        ''' die Schrift da ist oder die Datei keine nennt; fehlt sie, den Namen ihrer Familie
+        ''' (<see cref="DisplayFamilyName"/>). Dann behält das Textobjekt seine Vorgabeschrift, und
+        ''' der Aufrufer zählt die Lücke (<see cref="PsdImportResult.MissingFonts"/>).</summary>
+        Private Shared Function ApplyPsdFont(annotation As ImageAnnotation, postscriptName As String) As String
+            If String.IsNullOrWhiteSpace(postscriptName) Then Return ""
+            Dim family = FindInstalledFamily(postscriptName)
+            If family Is Nothing Then Return DisplayFamilyName(postscriptName)
             annotation.FontFamily = family
+            Dim parts = postscriptName.Split("-"c, 2)
             If parts.Length > 1 Then
                 annotation.Bold = parts(1).IndexOf("bold", StringComparison.OrdinalIgnoreCase) >= 0
                 annotation.Italic = parts(1).IndexOf("italic", StringComparison.OrdinalIgnoreCase) >= 0 OrElse
                                     parts(1).IndexOf("oblique", StringComparison.OrdinalIgnoreCase) >= 0
             End If
+            Return ""
+        End Function
+
+        ''' <summary>Die installierte Familie zum PostScript-Namen einer Textebene, oder Nothing, wenn
+        ''' die Schrift auf dem Rechner fehlt.
+        '''
+        ''' Gefragt wird zuerst die Liste der installierten Familien, nicht
+        ''' <c>SKTypeface.FromFamilyName</c> oder <c>SKFontManager.MatchFamily</c>: beide liefern für
+        ''' eine fehlende Familie gern eine Ersatzschrift (über Fontconfig etwa Noto Sans für
+        ''' "Roboto"), und an ihrem blossen Dasein ist die Lücke nicht zu erkennen. Photoshop nennt
+        ''' die Schrift mit dem PostScript-Namen ("Roboto-Regular", "MyriadPro-Bold"); die Familie
+        ''' ist der Teil vor dem Bindestrich, ohne Leerzeichen verglichen ("MyriadPro" gegen
+        ''' "Myriad Pro"), notfalls ohne Herstellerendung.
+        '''
+        ''' Erst danach der PostScript-Name selbst, für eine Familie, deren Name anders lautet als
+        ''' der Anfang ihres PostScript-Namens. Dort zählt der gelieferte Schnitt nur, wenn ER genau
+        ''' diesen Namen trägt, nicht weil überhaupt einer kam.
+        '''
+        ''' Mit <paramref name="isPostScriptName"/> = False ist der Name ein Familienname, wie ihn
+        ''' ein Textobjekt im Rezept trägt ("Noto Sans", auch mit Bindestrich im Namen). Dann
+        ''' zählt allein die Liste der installierten Familien: kein Schnitt am Bindestrich, keine
+        ''' Herstellerendung, kein Rückgriff auf den PostScript-Namen.
+        '''
+        ''' In beiden Fällen gilt zuletzt eine maßgleiche Ersatzschrift als vorhanden
+        ''' (<see cref="FindMetricCompatibleFamily"/>); zurück kommt dann der gefragte Name, nicht
+        ''' der des Ersatzes.</summary>
+        Public Shared Function FindInstalledFamily(fontName As String, Optional isPostScriptName As Boolean = True) As String
+            If String.IsNullOrWhiteSpace(fontName) Then Return Nothing
+            Dim name = fontName.Trim()
+            Dim families = SKFontManager.Default.FontFamilies
+            Dim resolve As Func(Of String, String) = AddressOf ImageProcessor.ResolveTextFamilyName
+            If Not isPostScriptName Then
+                Dim plainKey = name.Replace(" ", "")
+                Return If(FindFamily(families, plainKey), FindMetricCompatibleFamily(plainKey, families, resolve))
+            End If
+            Dim familyKey = name.Split("-"c, 2)(0).Replace(" ", "")
+            Dim family = FindFamily(families, familyKey)
+            ' Manche Schriften tragen ihren Hersteller als Endung im PostScript-Namen: "ArialMT",
+            ' "TimesNewRomanPSMT", "TimesNewRomanPS-BoldMT". Die Familie heisst ohne diese Endung;
+            ' ohne den zweiten Versuch kam Text in Times New Roman in der Vorgabeschrift.
+            Dim keys As New List(Of String) From {familyKey}
+            For Each suffix In {"PSMT", "MT", "PS"}
+                If familyKey.Length > suffix.Length AndAlso familyKey.EndsWith(suffix, StringComparison.Ordinal) Then
+                    keys.Add(familyKey.Substring(0, familyKey.Length - suffix.Length))
+                End If
+            Next
+            If family Is Nothing Then
+                For Each key In keys.Skip(1)
+                    family = FindFamily(families, key)
+                    If family IsNot Nothing Then Exit For
+                Next
+            End If
+            If family IsNot Nothing Then Return family
+            ' Nicht freigeben: Skia gibt für denselben Schnitt dieselbe verwaltete Hülle heraus, die
+            ' dann womöglich im Schriftzwischenspeicher des Zeichnens steckt.
+            Dim byName = SKTypeface.FromFamilyName(name)
+            If byName IsNot Nothing AndAlso Not String.IsNullOrEmpty(byName.FamilyName) AndAlso
+               String.Equals(byName.PostScriptName, name, StringComparison.OrdinalIgnoreCase) Then
+                Return If(FindFamily(families, byName.FamilyName.Replace(" ", "")), byName.FamilyName)
+            End If
+            For Each key In keys
+                Dim compatible = FindMetricCompatibleFamily(key, families, resolve)
+                If compatible IsNot Nothing Then Return compatible
+            Next
+            Return Nothing
+        End Function
+
+        ''' <summary>Die drei Schriften, für die es einen maßgleichen freien Ersatz gibt, und dieser
+        ''' Ersatz. Liberation Sans, Serif und Mono sind ausdrücklich so gebaut, dass jedes Zeichen
+        ''' dieselbe Vorschubbreite hat wie in Arial, Times New Roman und Courier New; Arimo, Tinos
+        ''' und Cousine sind dieselben Entwürfe unter dem Namen, den ChromeOS verwendet (fontconfig
+        ''' kennt beide als Alias für dieselben drei Familien). Zeilen umbrechen deshalb an derselben
+        ''' Stelle, und der Text passt in denselben Rahmen; nur die Formen der Zeichen weichen ab.
+        '''
+        ''' Bewusst eine feste Liste und keine Ähnlichkeitsregel: maßgleich ist eine Zusage der
+        ''' Schrift, keine Eigenschaft, die sich am Namen oder an einer Ähnlichkeit ablesen ließe.
+        ''' Helvetica gehört nicht dazu, auch wenn fontconfig sie oft auf Liberation Sans lenkt;
+        ''' belegt ist die Maßgleichheit nur für diese drei Paare.</summary>
+        Private Shared ReadOnly MetricCompatibleFamilies As New Dictionary(Of String, String())(StringComparer.OrdinalIgnoreCase) From {
+            {"Arial", {"Liberation Sans", "Arimo"}},
+            {"Times New Roman", {"Liberation Serif", "Tinos"}},
+            {"Courier New", {"Liberation Mono", "Cousine"}}
+        }
+
+        ''' <summary>Der gefragte Familienname, wenn die Familie selbst fehlt, ihr maßgleicher Ersatz
+        ''' (<see cref="MetricCompatibleFamilies"/>) aber installiert ist UND das Zeichnen für den
+        ''' gefragten Namen tatsächlich diesen Ersatz bekommt; sonst Nothing. Ohne die zweite
+        ''' Bedingung wäre der Ersatz zwar da, gesetzt würde aber mit etwas anderem, und das muss
+        ''' weiter gemeldet werden.
+        '''
+        ''' <paramref name="familyKey"/> ist der Name ohne Leerzeichen ("TimesNewRoman"),
+        ''' <paramref name="installedFamilies"/> die Liste der installierten Familien,
+        ''' <paramref name="resolveFamily"/> liefert zum Namen die Familie, mit der das Zeichnen
+        ''' setzt (in der Anwendung <see cref="ImageProcessor.ResolveTextFamilyName"/>). Beides ist
+        ''' übergeben, damit sich die Regel auch auf einem Rechner prüfen lässt, auf dem Arial
+        ''' installiert ist.</summary>
+        Public Shared Function FindMetricCompatibleFamily(familyKey As String, installedFamilies As IEnumerable(Of String),
+                                                          resolveFamily As Func(Of String, String)) As String
+            If String.IsNullOrWhiteSpace(familyKey) OrElse installedFamilies Is Nothing OrElse resolveFamily Is Nothing Then Return Nothing
+            For Each pair In MetricCompatibleFamilies
+                If Not String.Equals(pair.Key.Replace(" ", ""), familyKey.Replace(" ", ""), StringComparison.OrdinalIgnoreCase) Then Continue For
+                Dim resolved = If(resolveFamily(pair.Key), "").Trim()
+                If resolved.Length = 0 Then Return Nothing
+                Dim isSubstitute = pair.Value.Any(Function(s) String.Equals(s.Replace(" ", ""), resolved.Replace(" ", ""), StringComparison.OrdinalIgnoreCase))
+                If isSubstitute AndAlso FindFamily(installedFamilies, resolved.Replace(" ", "")) IsNot Nothing Then Return pair.Key
+                Return Nothing
+            Next
+            Return Nothing
+        End Function
+
+        ''' <summary>Der Name der Familie, wie er dem Anwender etwas sagt, aus dem PostScript-Namen:
+        ''' der Teil vor dem Bindestrich, ohne Herstellerendung, mit Leerzeichen an den Wortgrenzen
+        ''' ("MyriadPro-Bold" wird "Myriad Pro", "TimesNewRomanPS-BoldMT" wird "Times New Roman").
+        ''' Nur für die Meldung; gesucht wird mit <see cref="FindInstalledFamily"/>.</summary>
+        Public Shared Function DisplayFamilyName(postscriptName As String) As String
+            Dim key = If(postscriptName, "").Trim().Split("-"c, 2)(0).Trim()
+            For Each suffix In {"PSMT", "MT", "PS"}
+                ' Nur hinter einem Kleinbuchstaben: "ArialMT" ja, eine Abkürzung in Versalien nein.
+                If key.Length > suffix.Length AndAlso key.EndsWith(suffix, StringComparison.Ordinal) AndAlso
+                   Char.IsLower(key(key.Length - suffix.Length - 1)) Then
+                    key = key.Substring(0, key.Length - suffix.Length)
+                    Exit For
+                End If
+            Next
+            Dim builder As New Text.StringBuilder()
+            For i = 0 To key.Length - 1
+                Dim c = key(i)
+                If i > 0 AndAlso Char.IsUpper(c) AndAlso
+                   (Char.IsLower(key(i - 1)) OrElse Char.IsDigit(key(i - 1)) OrElse
+                    (Char.IsUpper(key(i - 1)) AndAlso i + 1 < key.Length AndAlso Char.IsLower(key(i + 1)))) Then
+                    builder.Append(" "c)
+                End If
+                builder.Append(c)
+            Next
+            Return If(builder.Length > 0, builder.ToString(), If(postscriptName, "").Trim())
+        End Function
+
+        ''' <summary>Zählt eine fehlende Schrift je Familie einmal; "" zählt nicht.</summary>
+        Private Shared Sub CountMissingFont(missingFonts As List(Of MissingFont), familyName As String)
+            If String.IsNullOrEmpty(familyName) Then Return
+            For Each entry In missingFonts
+                If String.Equals(entry.FamilyName, familyName, StringComparison.OrdinalIgnoreCase) Then
+                    entry.LayerCount += 1
+                    Return
+                End If
+            Next
+            missingFonts.Add(New MissingFont With {.FamilyName = familyName, .LayerCount = 1})
         End Sub
+
+        ''' <summary>Die Schriften der Textobjekte eines Rezepts, die auf dem Rechner fehlen: je
+        ''' Familie ein Eintrag mit der Zahl der Objekte, in der Reihenfolge des Stapels, und der
+        ''' Ersatzschrift, mit der das Zeichnen sie tatsächlich setzt. Für .fpx und den eigenen
+        ''' Rezeptblock einer PSD.
+        '''
+        ''' Gezählt wird jedes Objekt, das Text mit seiner Schrift zeichnet: Text und ein
+        ''' Wasserzeichen ohne Bild. Objekte in Gruppen zählen mit, denn sie liegen in derselben
+        ''' Liste und verweisen nur auf ihre Gruppe. Ein Objekt ohne Familie zählt nicht, es nimmt
+        ''' ohnehin die Vorgabe des Systems. Gesucht wird über <see cref="FindInstalledFamily"/>
+        ''' mit dem Familiennamen, damit die Ersatzschrift des Systems nicht als vorhanden gilt.</summary>
+        Public Shared Function FindMissingFonts(annotations As IEnumerable(Of ImageAnnotation)) As List(Of MissingFont)
+            Dim missingFonts As New List(Of MissingFont)()
+            If annotations Is Nothing Then Return missingFonts
+            ' Je Familie einmal fragen: die Liste der installierten Familien ist nicht umsonst.
+            Dim installed As New Dictionary(Of String, Boolean)(StringComparer.OrdinalIgnoreCase)
+            For Each annotation In annotations
+                If annotation Is Nothing OrElse Not DrawsOwnText(annotation) Then Continue For
+                Dim family = If(annotation.FontFamily, "").Trim()
+                If family.Length = 0 Then Continue For
+                Dim present As Boolean
+                If Not installed.TryGetValue(family, present) Then
+                    present = FindInstalledFamily(family, isPostScriptName:=False) IsNot Nothing
+                    installed(family) = present
+                End If
+                If Not present Then CountMissingFont(missingFonts, family)
+            Next
+            For Each entry In missingFonts
+                entry.FallbackFamily = ImageProcessor.ResolveTextFamilyName(entry.FamilyName)
+            Next
+            Return missingFonts
+        End Function
+
+        ''' <summary>Ob das Objekt Text in seiner eigenen Schrift zeichnet: ein Textobjekt, oder ein
+        ''' Wasserzeichen, das kein Bild trägt.</summary>
+        Private Shared Function DrawsOwnText(annotation As ImageAnnotation) As Boolean
+            Dim kind = If(annotation.Kind, "").Trim()
+            If String.Equals(kind, "Text", StringComparison.OrdinalIgnoreCase) Then Return True
+            Return String.Equals(kind, "Watermark", StringComparison.OrdinalIgnoreCase) AndAlso
+                   String.IsNullOrWhiteSpace(annotation.ImagePath)
+        End Function
+
+        ''' <summary>Die Protokollzeile zu fehlenden Schriften, auch dort, wo nichts gemeldet wird
+        ''' (beim Blättern). Ohne fehlende Schrift keine Zeile.</summary>
+        Public Shared Sub LogMissingFonts(marker As String, sourcePath As String, missingFonts As IEnumerable(Of MissingFont))
+            If missingFonts Is Nothing OrElse Not missingFonts.Any() Then Return
+            Dim listed = missingFonts.Select(Function(m) m.FamilyName & "=" & m.LayerCount.ToString(Globalization.CultureInfo.InvariantCulture))
+            Dim fallbacks = missingFonts.Select(Function(m) m.FallbackFamily).Distinct(StringComparer.OrdinalIgnoreCase)
+            DiagnosticLogService.LogAlways(marker,
+                $"{Path.GetFileName(If(sourcePath, ""))} missing={String.Join(", ", listed)} fallback={String.Join(", ", fallbacks)}")
+        End Sub
+
+        ''' <summary>Der Satz für die Rückfrage beim Öffnen: welche Schriften fehlen, wie viele
+        ''' Ebenen je Schrift, und womit der Text bis dahin gesetzt wird. "", wenn keine fehlt.
+        ''' Ein Text mit Platzhaltern je Teil, damit jede Sprache ihre Wortstellung behält.
+        ''' Derselbe Satz für fremde Textebenen einer PSD und für die Textobjekte eines .fpx oder
+        ''' des eigenen Rezeptblocks; ein Textobjekt ist im Ebenenpanel eine Ebene.</summary>
+        Public Shared Function MissingFontsNotice(missingFonts As IEnumerable(Of MissingFont)) As String
+            If missingFonts Is Nothing OrElse Not missingFonts.Any() Then Return ""
+            Dim listed As New List(Of String)()
+            For Each entry In missingFonts
+                listed.Add(If(entry.LayerCount = 1,
+                              String.Format(LocalizationService.T("{0} (1 Ebene)"), entry.FamilyName),
+                              String.Format(LocalizationService.T("{0} ({1} Ebenen)"), entry.FamilyName, entry.LayerCount)))
+            Next
+            ' Je fehlender Familie kann das System eine andere Ersatzschrift liefern; genannt wird
+            ' jede einmal.
+            Dim fallbacks = missingFonts.Select(Function(m) m.FallbackFamily).
+                Where(Function(f) Not String.IsNullOrWhiteSpace(f)).
+                Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+            Dim fallback = If(fallbacks.Count = 0, New ImageAnnotation().FontFamily, String.Join(LocalizationService.T(", "), fallbacks))
+            Return String.Format(LocalizationService.T("Auf diesem Rechner fehlen Schriften: {0}. Der Text bleibt bearbeitbar, wird aber mit {1} gesetzt und kann deshalb anders aussehen."),
+                                 String.Join(LocalizationService.T(", "), listed), fallback)
+        End Function
 
         ''' <summary>Die installierte Familie, deren Name ohne Leerzeichen dem Schlüssel gleicht,
         ''' ohne Rücksicht auf Groß- und Kleinschreibung; Nothing, wenn es keine gibt.</summary>
@@ -637,6 +911,47 @@ Namespace Services
             Return m(0) * m(3) - m(1) * m(2) < 0
         End Function
 
+        ''' <summary>Warum ein Textobjekt diese Textebene nicht treu setzen kann, oder "", wenn es
+        ''' kann. Dann bleibt sie das Bild aus den Ebenendaten, auch bei der Wahl „Als Text".
+        '''
+        ''' Die meisten Gründe stehen schon in den Textdaten (<see cref="PsdEngineData.UnsupportedReason"/>:
+        ''' Textrahmen, senkrechter Satz, abweichende Stilläufe, Merkmale ohne Gegenstück, darunter
+        ''' ein anderer Zeilenabstand in einem Lauf oder Absatz). Hier kommt der Zeilenabstand des
+        ''' ganzen Textes dazu: das Textobjekt trägt EINEN, eingestellt in Prozent des Grads
+        ''' (<see cref="ImageAnnotation.LineSpacingPercent"/>), und der Import übernimmt ihn
+        ''' (<see cref="ApplyPsdLineSpacing"/>). Mehrzeiliger Text kommt deshalb nur dann als Bild,
+        ''' wenn der Abstand nicht zu bestimmen ist oder außerhalb von 50 bis 300 Prozent liegt.
+        '''
+        ''' Ohne lesbare Textdaten (Nothing) bleibt es beim alten Weg: Text mit geschätztem Grad.</summary>
+        Public Shared Function UnsupportedTextReason(style As PsdEngineData, text As String) As String
+            If style Is Nothing Then Return ""
+            If Not String.IsNullOrEmpty(style.UnsupportedReason) Then Return style.UnsupportedReason
+            If style.LineCount > 1 AndAlso style.FontSize > 0 AndAlso style.FontSize <= 100_000 Then
+                If Not Double.IsFinite(style.Leading) OrElse style.Leading <= 0 Then Return "leading"
+                Dim percent = style.Leading / style.FontSize * 100.0
+                If percent < 50.0 OrElse percent > 300.0 Then Return "leading"
+            End If
+            Return ""
+        End Function
+
+        ''' <summary>Der Zeilenabstand der Textebene am Textobjekt. Photoshop setzt die erste
+        ''' Grundlinie eines Punkttexts auf den Ursprung und jede weitere um den Zeilenabstand
+        ''' tiefer, automatisch ist das der Anteil des Absatzes (meist 120 Prozent) mal Grad, fest
+        ''' der eingestellte Wert. Das Textobjekt setzt genauso, mit dem Abstand in Prozent des
+        ''' Grads. Liegt der Abstand der Datei auf dem automatischen der gefundenen Schrift, bleibt
+        ''' das Objekt auf automatisch: so schreibt FerrumPix selbst seine Textebenen, und sie kommen
+        ''' unverändert zurück. Schrift und Grad müssen schon am Objekt stehen.</summary>
+        Private Shared Sub ApplyPsdLineSpacing(annotation As ImageAnnotation, style As PsdEngineData)
+            If Not Double.IsFinite(style.Leading) OrElse style.Leading <= 0 Then Return
+            If style.FontSize <= 0 OrElse style.FontSize > 100_000 Then Return
+            Dim percent = style.Leading / style.FontSize * 100.0
+            If percent < 50.0 OrElse percent > 300.0 Then Return
+            annotation.LineSpacingPercent = 0
+            Dim automatic = ImageProcessor.GetTextAnnotationLineHeight(annotation)
+            If automatic > 0 AndAlso Math.Abs(style.Leading - automatic) <= 0.01 Then Return
+            annotation.LineSpacingPercent = CSng(percent)
+        End Sub
+
         ''' <summary>Lage, Drehung, Ausrichtung und Zeichenabstand aus der Textebene.
         '''
         ''' Das Ebenenrechteck umschliesst nur die gezeichneten Bildpunkte, bei gedrehtem Text sogar
@@ -664,11 +979,20 @@ Namespace Services
             If Math.Abs(m(0) * m(2) + m(1) * m(3)) > 0.001 * scaleX * scaleY Then Return
             If m(0) * m(3) - m(1) * m(2) <= 0 Then Return
 
+            ' Die erste Grundlinie eines Punkttexts liegt im Textraum auf der Höhe 0; das Textobjekt
+            ' setzt sie einen Schriftgrad unter die Oberkante seines Rahmens. Die Oberkante kommt
+            ' deshalb aus dem Grad und nicht aus dem Rahmen der Datei: Photoshop legt dessen
+            ' Oberkante an die Oberlänge der Schrift, und der Text stand um die Differenz zu tief
+            ' (bei Arial 24 drei Bildpunkte). Was FerrumPix selbst schreibt, trägt ohnehin genau
+            ' diese Oberkante (BuildPsdTextBlock).
+            Dim boundsTop = style.BoundsTop
+            Dim localSize = style.FontSize / scaleY
+            If Double.IsFinite(localSize) AndAlso localSize > 0 AndAlso -localSize < style.BoundsBottom Then boundsTop = -localSize
             Dim width = (style.BoundsRight - style.BoundsLeft) * scaleX
-            Dim height = (style.BoundsBottom - style.BoundsTop) * scaleY
+            Dim height = (style.BoundsBottom - boundsTop) * scaleY
             If Not Double.IsFinite(width) OrElse Not Double.IsFinite(height) OrElse width < 1 OrElse height < 1 Then Return
             Dim localX = (style.BoundsLeft + style.BoundsRight) / 2.0
-            Dim localY = (style.BoundsTop + style.BoundsBottom) / 2.0
+            Dim localY = (boundsTop + style.BoundsBottom) / 2.0
             Dim centerX = m(0) * localX + m(2) * localY + m(4)
             Dim centerY = m(1) * localX + m(3) * localY + m(5)
             If Not Double.IsFinite(centerX) OrElse Not Double.IsFinite(centerY) Then Return
@@ -680,6 +1004,10 @@ Namespace Services
             annotation.RotationDegrees = CSng(Math.Atan2(m(1), m(0)) * 180.0 / Math.PI)
         End Sub
 
+        ''' <summary>Schätzt den Schriftgrad aus der Höhe des Ebenenrechtecks. Das Rechteck umfasst
+        ''' alle Zeilen samt Ober- und Unterlängen; ein Anteil davon je Zeile kommt dem Schriftgrad
+        ''' nahe genug, um den Text an seinem Platz stehen zu lassen. Genau ist das nicht und kann es
+        ''' nicht sein - der wahre Wert steht in einem Block, der sich nicht verlässlich lesen lässt.</summary>
         Private Shared Function EstimateFontSize(layerHeight As Integer, text As String) As Single
             Dim lines = 1
             If Not String.IsNullOrEmpty(text) Then

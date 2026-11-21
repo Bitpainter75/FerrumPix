@@ -45,8 +45,9 @@ Namespace Services
             ' Die Beistelldatei zuerst: sie ist die speziellere Angabe, und bei gleicher Schreibweise
             ' behaelt die Vereinigung den ERSTEN Eintrag.
             If sidecarKeywords IsNot Nothing Then all.AddRange(sidecarKeywords)
-            ' Dann die .pp3 des fremden Entwicklers, nur mit eingeschalteter Einstellung (Read gibt
-            ' sonst Nothing). Wer sie schon gelesen hat, reicht sie herein.
+            ' Dann die .pp3 des fremden Entwicklers und die .rrdata eines anderen, beide nur mit
+            ' eingeschalteter Einstellung (Pp3SidecarService.Read). Wer sie schon gelesen hat,
+            ' reicht sie herein.
             If pp3 Is Nothing Then pp3 = Pp3SidecarService.Read(filePath)
             If pp3 IsNot Nothing Then all.AddRange(pp3.Keywords)
             If embeddedKeywords IsNot Nothing Then all.AddRange(embeddedKeywords)

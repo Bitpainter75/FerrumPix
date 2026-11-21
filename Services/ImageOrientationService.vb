@@ -430,8 +430,6 @@ Namespace Services
                TiffPreviewService.IsSupportedTiff(filePath) OrElse IcoPreviewService.IsSupportedIco(filePath) Then
                 Return ForeignToAvaloniaBitmap(filePath, 0)
             End If
-            ' Ein JPEG mit 12 Bit oder verlustfrei liest Skia ebenso wenig; der Kopf entscheidet.
-            If JpegTurboDecodeService.IsTurboJpeg(filePath) Then Return ForeignToAvaloniaBitmap(filePath, 0)
             ' JPEG 2000 ebenso (Jpeg2000DecodeService).
             If Jpeg2000DecodeService.IsSupportedJpeg2000(filePath) Then Return ForeignToAvaloniaBitmap(filePath, 0)
             If SvgPreviewService.IsSupportedSvg(filePath) Then

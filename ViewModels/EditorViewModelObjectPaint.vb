@@ -577,44 +577,29 @@ Namespace ViewModels
         '''
         ''' Eine Ebene OHNE Bild (Text, Form, SVG) liefert ihr Rechteck; das ist ehrlicher als gar
         ''' nichts und deckt sich mit dem, was die Begrenzung dort tut. Der Decode läuft hier auf dem
-        ''' UI-Faden: es ist ein bewusster Klick, kein Zeigerzug, und der Griff soll sofort greifen.</summary>
-        Public Function LoadSelectionFromAnnotationAlpha(annotation As ImageAnnotation) As Boolean
-            If annotation Is Nothing OrElse Not annotation.IsVisible Then Return False
-            If Not _annotations.Contains(annotation) Then Return False
+        ''' UI-Faden: es ist ein bewusster Klick, kein Zeigerzug, und der Griff soll sofort greifen.
+        '''
+        ''' <paramref name="combineMode"/> sagt, was mit einer laufenden Auswahl geschieht: ersetzen
+        ''' ("New"), hinzufügen, abziehen oder schneiden. Der Weg selbst ist derselbe wie beim Laden
+        ''' einer Maske (<see cref="LoadShapeAsSelection"/>).</summary>
+        Public Function LoadSelectionFromAnnotationAlpha(annotation As ImageAnnotation,
+                                                         Optional combineMode As String = "New") As Boolean
+            Return LoadShapeAsSelection(Nothing, annotation, combineMode, Nothing)
+        End Function
 
+        ''' <summary>Die Form einer Ebene als Maske für das Laden als Auswahl, samt Rechteck im
+        ''' Anzeigeraum. Nothing, wenn die Ebene nichts liefert (unsichtbar, nicht mehr im Stapel,
+        ''' Bild nicht lesbar und kein Rechteck).</summary>
+        Private Function BuildAnnotationShapeForSelection(annotation As ImageAnnotation, ByRef rect As SKRectI) As SKBitmap
+            rect = SKRectI.Empty
+            If annotation Is Nothing OrElse Not annotation.IsVisible Then Return Nothing
+            If Not _annotations.Contains(annotation) Then Return Nothing
             Dim plan = BuildAnnotationConfinePlan(annotation)
-            If plan Is Nothing Then Return False
+            If plan Is Nothing Then Return Nothing
             Dim mask = BuildAnnotationConfineMask(plan)
-            If mask Is Nothing Then Return False
-            ' Verrechnet sich die Form mit einer vorhandenen Auswahl, gehört das Ergebnis nicht mehr
-            ' allein zu dieser Ebene - dann merkt es sich keine Herkunft.
-            Dim replacesSelection = Not _hasActiveSelection OrElse _selectionCombineMode = "New"
-            Try
-                ' Als AUSWAHL, nicht als Maske: es sind Laufameisen um die Form der Ebene, und sie
-                ' verrechnet sich mit dem eingestellten Verknüpfungsmodus wie jede andere Auswahl.
-                ApplySelectionCandidate(mask, plan.Rect, "MagicWand", Nothing, Nothing)
-            Finally
-                mask.Dispose()
-            End Try
-            ' ERST NACH dem Übernehmen: jede Änderung an der Auswahlmaske vergisst die Herkunft.
-            _selectionSourceAnnotationId = If(replacesSelection AndAlso IsPaintableImageAnnotation(annotation),
-                                              annotation.Id, "")
-
-            ' DANACH GEHÖRT DIE BÜHNE DER AUSWAHL, NICHT DER EBENE. Die Ebene wird dafür abgewählt und
-            ' der Editor stellt auf Auswahl/Verschieben:
-            ' - Ihr Rahmen läge sonst über dem Bild, bei einer Malebene über dem GANZEN Bild, und
-            '   verdeckte genau die Ameisenlinie, die man gerade geholt hat.
-            ' - Und ein Zug darin verschöbe die EBENE statt der Auswahl - der Rahmen fängt jeden
-            '   Druck ab (siehe IsLayerPlacementTool).
-            ' Erst die Auswahl, dann das Werkzeug: der Wechsel ins Auswahl-Werkzeug setzt den
-            ' Verknüpfungsmodus zurück, und der galt noch für DIESEN Zug.
-            CurrentTool = EditorTool.Selection
-            SelectionMode = "Move"
-            SelectedAnnotationIndex = -1
-            ' KEIN Historien-Schritt: die Auswahl aus der Ebene zu holen setzt keinen
-            ' Rueckgaengig-Punkt (ApplySelectionCandidate sichert nichts), es gaebe also keinen
-            ' Schritt, den der Name meinen koennte.
-            Return True
+            If mask Is Nothing Then Return Nothing
+            rect = plan.Rect
+            Return mask
         End Function
 
         ''' <summary>Die Bildebene, aus der die aktive Auswahl geladen wurde (siehe

@@ -1165,15 +1165,25 @@ Namespace Services
         Public Property NegativeGamma As Single = 0
         ''' <summary>Rechenweg der Umkehr. 0 ist der Weg bis 0.9.88 und gilt fuer jedes Rezept ohne das
         ''' Feld: der Logarithmus laeuft auf den KODIERTEN Werten des Arbeitsbilds, und eine RAW kommt
-        ''' mit Grundbelichtung, ACR3-Kurve und Lichterschulter in die Umkehr. 1
-        ''' (<see cref="CurrentNegativeModel"/>): der Logarithmus laeuft auf linearem Licht in
-        ''' Gleitkomma, und eine RAW entwickelt die RAW-Stufe dafuer linear
-        ''' (<see cref="NegativeDevelopsLinear"/>). Der Editor setzt es beim Einschalten der Umkehr und
-        ''' nimmt es beim Ausschalten auf 0 zurueck; gespeicherte Bearbeitungen behalten so ihren Weg
-        ''' und sehen bitgleich aus wie zuvor.</summary>
+        ''' mit Grundbelichtung, ACR3-Kurve und Lichterschulter in die Umkehr. 1: der Logarithmus
+        ''' laeuft auf linearem Licht in Gleitkomma, und eine RAW entwickelt die RAW-Stufe dafuer
+        ''' linear (<see cref="NegativeDevelopsLinear"/>). 2 (<see cref="CurrentNegativeModel"/>):
+        ''' wie 1, danach der Graufarbausgleich aus <see cref="NegativeGrayBalance"/>. Der Editor
+        ''' setzt es beim Einschalten der Umkehr und nimmt es beim Ausschalten auf 0 zurueck;
+        ''' gespeicherte Bearbeitungen behalten so ihren Weg und sehen bitgleich aus wie zuvor.</summary>
         Public Property NegativeModel As Integer = 0
         ''' <summary>Das Modell, das eine neu eingeschaltete Umkehr bekommt (siehe <see cref="NegativeModel"/>).</summary>
-        Public Const CurrentNegativeModel As Integer = 1
+        Public Const CurrentNegativeModel As Integer = 2
+        ''' <summary>Graufarbausgleich der Umkehr ab Modell 2: je eine streng steigende Kurve fuer Rot
+        ''' und Blau nach der Umkehr, "r0,...,rK|b0,...,bK" als Stuetzstellen bei k/K; Gruen bleibt.
+        ''' Gemessen wie Basis und Dichtepunkt einmal im Editor
+        ''' (<see cref="ImageProcessor.MeasureFilmNegativeGrayBalance"/>), damit Vorschau und Export
+        ''' gleich rechnen. "none": gemessen, aber das Bild traegt zu wenig Grau, die Umkehr bleibt
+        ''' wie im Modell 1. Leer: wird beim Verarbeiten aus dem Bild gemessen. Unter Modell 0 und
+        ''' 1 und im Schwarzweiss-Modus ohne Wirkung. Gehoert dem Motiv und wandert beim Uebertragen
+        ''' auf ein anderes Bild nicht mit (<see cref="ExtractTransferableAdjustments"/>,
+        ''' <see cref="ForgetTransferredNegativeGrayBalance"/>); Clone behaelt ihn.</summary>
+        Public Property NegativeGrayBalance As String = ""
 
         Public Property CurveRgbPoints As String = "0,0;255,255"
         Public Property CurveRedPoints As String = "0,0;255,255"
@@ -1806,9 +1816,15 @@ Namespace Services
         ''' Nur ein sichtbarer Rahmen mit Stärke: wer ihn in der Rahmengruppe abgehakt hat, will ihn
         ''' nicht übertragen. Gruppe, Ebenenmaske und Schnittmaske gehören dem Quellbild und bleiben
         ''' zurück. Ohne Rahmen ist das Ergebnis dasselbe wie <see cref="ExtractPixelAdjustments"/>,
-        ''' eine alte Ablage ohne Objekte also gleichwertig.</summary>
+        ''' eine alte Ablage ohne Objekte also gleichwertig.
+        '''
+        ''' DER GRAUFARBAUSGLEICH DER UMKEHR BLEIBT ZU HAUSE (<see cref="NegativeGrayBalance"/>): er
+        ''' ist aus den grauen Stellen DIESES Motivs gemessen und trifft auf einem anderen nicht zu.
+        ''' Die Ablage traegt ihn leer, das Ziel misst ihn selbst (siehe
+        ''' <see cref="ForgetTransferredNegativeGrayBalance"/>).</summary>
         Public Function ExtractTransferableAdjustments() As ImageAdjustments
             Dim result = ExtractPixelAdjustments()
+            result.NegativeGrayBalance = ""
             Dim frame = If(Annotations, New List(Of ImageAnnotation)()).
                 FirstOrDefault(Function(a) IsFrameAnnotation(a) AndAlso a.IsVisible AndAlso a.FrameSizePercent > 0)
             If frame IsNot Nothing Then
@@ -1821,6 +1837,22 @@ Namespace Services
             End If
             Return result
         End Function
+
+        ''' <summary>Nach dem Uebertragen eines Looks aus <paramref name="look"/> (Einfuegen, Vorlage,
+        ''' Stapel): der Graufarbausgleich dieses Rezepts wird geleert und danach am ZIELBILD neu
+        ''' gemessen, einmal und gleich ins Rezept (im Editor MeasurePendingFilmNegativeGrayBalance,
+        ''' sonst ImageProcessor.MeasureFilmNegativeGrayBalanceFor). Er haengt am Motiv und an Basis
+        ''' und Dichtepunkt, die der Look mitbringen kann.
+        '''
+        ''' Nur wenn der Look eine Umkehr oder einen Ausgleich mitbringt. Eine Ablage oder Vorlage
+        ''' von vor dieser Regel traegt noch den Ausgleich ihres Quellbilds; ohne diesen Schritt kaeme
+        ''' er beim Mischen der gesetzten Regler (MergeNonDefaultPixelAdjustmentsFrom) doch an. Ein
+        ''' Look ohne Umkehr laesst den eigenen Ausgleich des Ziels stehen. Klonen innerhalb desselben
+        ''' Bildes (Verlauf, Vorschau, Ebenen) laeuft nicht hierueber und behaelt den Wert.</summary>
+        Public Sub ForgetTransferredNegativeGrayBalance(look As ImageAdjustments)
+            If look Is Nothing Then Return
+            If look.NegativeEnabled OrElse Not String.IsNullOrEmpty(look.NegativeGrayBalance) Then NegativeGrayBalance = ""
+        End Sub
 
         ''' <summary>Setzt den Rahmen aus <paramref name="other"/> (Ablage oder Vorlage) in dieses
         ''' Rezept, als Gegenstück zu <see cref="ExtractTransferableAdjustments"/>. Die
@@ -2126,6 +2158,7 @@ Namespace Services
                 .NegativeDensityColor = NegativeDensityColor,
                 .NegativeGamma = NegativeGamma,
                 .NegativeModel = NegativeModel,
+                .NegativeGrayBalance = NegativeGrayBalance,
                 .CurveRgbPoints = CurveRgbPoints,
                 .CurveRedPoints = CurveRedPoints,
                 .CurveGreenPoints = CurveGreenPoints,

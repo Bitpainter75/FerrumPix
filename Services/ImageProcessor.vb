@@ -261,11 +261,6 @@ Namespace Services
                 Dim tiff = TiffPreviewService.ExtractPreview(path)
                 If tiff IsNot Nothing Then Return tiff
             End If
-            ' JPEG mit 12 Bit oder verlustfrei: Skia liest es nicht, libjpeg-turbo schon.
-            If JpegTurboDecodeService.IsTurboJpeg(path) Then
-                Dim turbo = JpegTurboDecodeService.ExtractPreview(path)
-                If turbo IsNot Nothing Then Return turbo
-            End If
             ' JPEG 2000 kennt Skia nicht, OpenJPEG schon.
             If Jpeg2000DecodeService.IsSupportedJpeg2000(path) AndAlso Jpeg2000DecodeService.IsAvailable Then
                 Dim jp2 = Jpeg2000DecodeService.ExtractPreview(path)
@@ -1921,7 +1916,8 @@ Namespace Services
                 Dim textExtent = MeasureAnnotationTextExtent(textForExtent, annotation.FontFamily,
                                                              Math.Max(8.0F, annotation.FontSizePixels),
                                                              annotation.LetterSpacingPercent,
-                                                             annotation.Bold, annotation.Italic, annotation.StrokeWidth)
+                                                             annotation.Bold, annotation.Italic, annotation.StrokeWidth,
+                                                             annotation.LineSpacingPercent)
                 If Not textExtent.IsEmpty Then
                     textExtent.Offset(rect.Left, rect.Top)
                     rect.Union(textExtent)
@@ -2064,7 +2060,7 @@ Namespace Services
             Dim fontSize = Math.Max(8.0F, annotation.FontSizePixels)
             Dim ink = MeasureAnnotationTextInk(text, annotation.FontFamily, fontSize,
                                                annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic,
-                                               0.0F, annotation.TextAlignment, frame.Width)
+                                               0.0F, annotation.TextAlignment, frame.Width, annotation.LineSpacingPercent)
             If ink.IsEmpty Then Return Nothing
             ink.Offset(frame.Left, frame.Top)
 
@@ -2366,7 +2362,8 @@ Namespace Services
                                                          Math.Max(8.0F, renderAnnotation.FontSizePixels),
                                                          renderAnnotation.LetterSpacingPercent,
                                                          renderAnnotation.Bold, renderAnnotation.Italic,
-                                                         renderAnnotation.StrokeWidth)
+                                                         renderAnnotation.StrokeWidth,
+                                                         renderAnnotation.LineSpacingPercent)
                 If Not extent.IsEmpty Then
                     leftPad += CInt(Math.Ceiling(Math.Max(0.0F, -extent.Left)))
                     topPad += CInt(Math.Ceiling(Math.Max(0.0F, -extent.Top)))
@@ -2562,12 +2559,34 @@ Namespace Services
             Return -metrics.Ascent + metrics.Descent + metrics.Leading
         End Function
 
+        ''' <summary>Der Abstand von Grundlinie zu Grundlinie, mit dem ein Textobjekt seine Zeilen
+        ''' setzt: eingestellt (<see cref="ImageAnnotation.LineSpacingPercent"/> größer 0) in Prozent
+        ''' des Grads, sonst automatisch aus den Metriken der Schrift wie bisher. Alle Wege, die
+        ''' Zeilen setzen oder messen, gehen hierüber, damit Bild, Rahmen und Schreibmarke dieselben
+        ''' Grundlinien haben.</summary>
+        Friend Shared Function GetTextLineHeight(font As SKFont, lineSpacingPercent As Single) As Single
+            If lineSpacingPercent > 0 Then Return font.Size * lineSpacingPercent / 100.0F
+            Return GetLineHeight(font.Metrics)
+        End Function
+
         ''' <summary>Zeilenabstand in Pixeln für einen Schriftschnitt - für die Größenschätzung des
         ''' Textrechtecks im EditorViewModel.</summary>
-        Public Shared Function GetBakedTextLineHeight(fontFamily As String, fontSize As Single) As Double
+        Public Shared Function GetBakedTextLineHeight(fontFamily As String, fontSize As Single,
+                                                      Optional lineSpacingPercent As Single = 0) As Double
             If fontSize <= 0 Then Return 0
             Using font = CreateFont(fontFamily, fontSize)
-                Return GetLineHeight(font.Metrics)
+                Return GetTextLineHeight(font, lineSpacingPercent)
+            End Using
+        End Function
+
+        ''' <summary>Der Zeilenabstand, mit dem DrawWrappedText dieses Textobjekt setzt: derselbe
+        ''' Schnitt samt Ersatzschrift für fehlende Zeichen, derselbe Grad, der eingestellte
+        ''' Zeilenabstand. Der PSD-Import fragt damit den automatischen Abstand der Schrift ab.</summary>
+        Public Shared Function GetTextAnnotationLineHeight(annotation As ImageAnnotation) As Double
+            If annotation Is Nothing OrElse annotation.FontSizePixels <= 0 Then Return 0
+            Using font = CreateTextFont(annotation.FontFamily, annotation.FontSizePixels, annotation.DisplayText(),
+                                        annotation.Bold, annotation.Italic)
+                Return GetTextLineHeight(font, annotation.LineSpacingPercent)
             End Using
         End Function
 
@@ -2943,7 +2962,6 @@ Namespace Services
             If HeifDecodeService.IsSupportedHeif(path) Then Return HeifDecodeService.TryGetSize(path)
             If TiffPreviewService.IsSupportedTiff(path) Then Return TiffPreviewService.TryGetSize(path)
             If PsdPreviewService.IsSupportedPsd(path) Then Return PsdPreviewService.TryGetSize(path)
-            If JpegTurboDecodeService.IsTurboJpeg(path) Then Return JpegTurboDecodeService.TryGetSize(path)
             If Jpeg2000DecodeService.IsSupportedJpeg2000(path) Then Return Jpeg2000DecodeService.TryGetSize(path)
             Return (0, 0)
         End Function
@@ -2963,12 +2981,6 @@ Namespace Services
             If TiffPreviewService.IsSupportedTiff(imagePath) Then
                 Dim tiffSize = TiffPreviewService.TryGetSize(imagePath)
                 If tiffSize.Width > 0 AndAlso tiffSize.Height > 0 Then Return tiffSize
-            End If
-            ' Ein JPEG mit 12 Bit oder verlustfrei: SKCodec kennt es nicht, der Kopf schon. Wie bei
-            ' jedem JPEG hier die Masse, wie sie gespeichert sind, ohne die Drehung aus dem EXIF.
-            If JpegTurboDecodeService.IsJpegExtension(imagePath) Then
-                Dim turboSize = JpegTurboDecodeService.TryGetEncodedSize(imagePath)
-                If turboSize.Width > 0 AndAlso turboSize.Height > 0 Then Return turboSize
             End If
             ' JPEG 2000 aus seinem Kopf; lineares Licht (EXR, Radiance, TIFF mit Gleitkomma) aus dem
             ' Kopf seines Lesers, so wie die RAW-Stufe es ausgibt.
@@ -5427,6 +5439,7 @@ Namespace Services
             state.NegativeEnabled = neutral.NegativeEnabled : state.NegativeMonochrome = neutral.NegativeMonochrome
             state.NegativeBaseColor = neutral.NegativeBaseColor : state.NegativeDensityColor = neutral.NegativeDensityColor
             state.NegativeGamma = neutral.NegativeGamma : state.NegativeModel = neutral.NegativeModel
+            state.NegativeGrayBalance = neutral.NegativeGrayBalance
             ' Die Farbvorgaben sind eine Matrix der Punktkette; "weich" hat NeutralizeDetailStages schon geleert.
             state.FilterPreset = neutral.FilterPreset : state.FilterStrength = neutral.FilterStrength
             state.LutPath = neutral.LutPath : state.LutStrength = neutral.LutStrength
@@ -5553,7 +5566,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 ExtensionsKey(adj),
                 adj.Grain, adj.GrainSize, adj.GrainFrequency, adj.GrainColor, adj.Clarity,
                 adj.NegativeEnabled, adj.NegativeMonochrome, adj.NegativeBaseColor, adj.NegativeDensityColor, adj.NegativeGamma,
-                adj.NegativeModel,
+                adj.NegativeModel, adj.NegativeGrayBalance,
                 adj.CurveRgbPoints, adj.CurveRedPoints, adj.CurveGreenPoints, adj.CurveBluePoints, adj.CurveLuminancePoints,
                 adj.RedHue, adj.RedSaturation, adj.RedLuminance, adj.OrangeHue, adj.OrangeSaturation, adj.OrangeLuminance,
                 adj.YellowHue, adj.YellowSaturation, adj.YellowLuminance, adj.GreenHue, adj.GreenSaturation, adj.GreenLuminance,

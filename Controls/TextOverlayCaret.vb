@@ -29,6 +29,8 @@ Namespace Controls
         Private _italic As Boolean
         Private _allCaps As Boolean
         Private _alignment As String = "Left"
+        Private _lineSpacingPercent As Double
+        Private _drawsSelection As Boolean
 
         ''' Dieselbe Farbe wie die Auswahl der Textbox (Stil overlay-editor in FerrumPixTheme).
         Private Shared ReadOnly SelectionFill As IBrush = New SolidColorBrush(Color.FromArgb(&H55, &HF0, &H8A, &H1A))
@@ -61,9 +63,14 @@ Namespace Controls
         ''' <param name="allCaps">Der Renderer zeichnet den Text in Großbuchstaben. Gemessen wird
         ''' dann an dieser Fassung, und die Auswahl zeichnet dieses Steuerelement selbst: die der
         ''' Textbox läge an der kleingeschriebenen, schmaleren Fassung.</param>
+        ''' <param name="lineSpacingPercent">Zeilenabstand in Prozent des Grads, 0 automatisch
+        ''' (<see cref="ImageAnnotation.LineSpacingPercent"/>).</param>
+        ''' <param name="drawsSelection">Die Auswahl zeichnet dieses Steuerelement statt der Textbox:
+        ''' bei „Alle Großbuchstaben" und bei eingestelltem Zeilenabstand, den die Textbox nicht
+        ''' mitmacht.</param>
         Public Sub SetLayout(boxOrigin As Point, lineWidth As Double, fontFamily As String, fontSize As Double,
                              spacing As Double, bold As Boolean, italic As Boolean, alignment As String,
-                             allCaps As Boolean)
+                             allCaps As Boolean, lineSpacingPercent As Double, drawsSelection As Boolean)
             _boxOrigin = boxOrigin
             _lineWidth = lineWidth
             _fontFamily = If(fontFamily, "")
@@ -73,6 +80,8 @@ Namespace Controls
             _italic = italic
             _allCaps = allCaps
             _alignment = If(alignment, "Left")
+            _lineSpacingPercent = lineSpacingPercent
+            _drawsSelection = drawsSelection
             _visible = True
             InvalidateVisual()
         End Sub
@@ -102,7 +111,8 @@ Namespace Controls
             ' Die Großschreibung behält die Länge, die Zeichenstelle gilt also für beide Fassungen.
             text = ImageAnnotation.ApplyCaps(text, _allCaps)
             Return ImageProcessor.MeasureAnnotationCaret(text, index, _fontFamily, CSng(_fontSize), CSng(_spacing),
-                                                         _bold, _italic, _alignment, CSng(_lineWidth))
+                                                         _bold, _italic, _alignment, CSng(_lineWidth),
+                                                         CSng(_lineSpacingPercent))
         End Function
 
         ''' <summary>Die Zeichenstelle, die einem Punkt dieses Steuerelements am nächsten liegt.</summary>
@@ -132,7 +142,7 @@ Namespace Controls
             If _fontSize <= 0 Then Return
             Dim ink = CapInk()
             If ink.IsEmpty Then Return
-            If _allCaps Then DrawSelection(context, ink)
+            If _allCaps OrElse _drawsSelection Then DrawSelection(context, ink)
             Dim hit = CaretAt(_editor.Text, _editor.CaretIndex)
             Dim x = _boxOrigin.X + hit.X
             Dim top = _boxOrigin.Y + hit.Y + ink.Top

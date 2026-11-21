@@ -128,7 +128,7 @@ and checksums of each. flatpak-builder places their license texts in
 /app/share/licenses/io.github.bitpainter75.ferrumpix/.
 
   LibRaw
-  Copyright (c) 2008-2024 LibRaw LLC
+  Copyright (c) 2008-2026 LibRaw LLC
   Used under the GNU Lesser General Public License, version 2.1
   https://www.libraw.org/about
   Built as a module of this Flatpak from a fixed commit of
@@ -196,16 +196,6 @@ Used from the org.freedesktop.Platform runtime and not shipped in this Flatpak:
   Used under the BSD 2-Clause License
   https://github.com/uclouvain/openjpeg
   Reads JPEG 2000 files. It comes from the runtime (OpenJPEG 2.5.4).
-
-  libjpeg-turbo (TurboJPEG library, libturbojpeg.so.0)
-  Copyright (c) the libjpeg-turbo Project and contributors, and
-  Copyright (c) Thomas G. Lane and Guido Vollbeding (Independent JPEG Group)
-  Used under the IJG License and the BSD 3-Clause License
-  https://libjpeg-turbo.org
-  This software is based in part on the work of the Independent JPEG Group.
-  Reads 12-bit JPEG and lossless JPEG, which the graphics library does not
-  open. It comes from the runtime (libjpeg-turbo 3.2.0) and is loaded
-  dynamically.
 
 
 4. Data and assets

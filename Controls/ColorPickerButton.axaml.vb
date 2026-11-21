@@ -11,7 +11,7 @@ Imports FerrumPix.ViewModels
 Namespace Controls
 
     ''' Zentraler, wiederverwendbarer Farbwähler:
-    ''' Farbfeld+Hex-Button mit Flyout (Farbrad, Hex-Eingabe, zuletzt verwendete Farben) sowie eine
+    ''' Farbfeld+Hex-Button mit Flyout (Farbrad, Deckkraft, Hex-Eingabe, Kanalwerte R G B, zuletzt verwendete Farben) sowie eine
     ''' eingebaute Pipette, die die Farbe direkt aus dem bearbeiteten Bild aufnimmt. Ersetzt die vormals
     ''' pro Eigenschaften-Panel einzeln kopierten Button+Flyout+ColorPicker-Blöcke - einfach per
     ''' SelectedColor="{Binding ...Value, Mode=TwoWay}" verwenden.
@@ -35,6 +35,12 @@ Namespace Controls
         ''' Dialoge ohne Bild) gibt es nichts aufzunehmen, dort wird sie ausgeblendet.</summary>
         Public Shared ReadOnly ShowEyedropperProperty As StyledProperty(Of Boolean) =
             AvaloniaProperty.Register(Of ColorPickerButton, Boolean)(NameOf(ShowEyedropper), True)
+
+        ''' <summary>Kennt die Farbe eine Deckung? Aus, wo der Besitzer Alpha verwirft (Lichtfarbe,
+        ''' Farbe ersetzen): der Aufklapper zeigt dann keine Zeile Deckkraft. Siehe
+        ''' <see cref="ColorEditor.ShowAlpha"/>.</summary>
+        Public Shared ReadOnly ShowAlphaProperty As StyledProperty(Of Boolean) =
+            AvaloniaProperty.Register(Of ColorPickerButton, Boolean)(NameOf(ShowAlpha), True)
 
         ' Zuletzt verwendete Farben werden STATISCH (über alle Instanzen hinweg) geteilt, damit die
         ' Pipette/Farbrad-Auswahl in einem Panel auch im Flyout eines anderen Farbfelds auftaucht -
@@ -137,6 +143,15 @@ Namespace Controls
             End Set
         End Property
 
+        Public Property ShowAlpha As Boolean
+            Get
+                Return GetValue(ShowAlphaProperty)
+            End Get
+            Set(value As Boolean)
+                SetValue(ShowAlphaProperty, value)
+            End Set
+        End Property
+
         Protected Overrides Sub OnPropertyChanged(change As AvaloniaPropertyChangedEventArgs)
             MyBase.OnPropertyChanged(change)
             If change.Property = SelectedColorProperty Then
@@ -144,6 +159,9 @@ Namespace Controls
             ElseIf change.Property = ShowEyedropperProperty Then
                 Dim eyedropperButton = Me.FindControl(Of Button)("EyedropperButton")
                 If eyedropperButton IsNot Nothing Then eyedropperButton.IsVisible = ShowEyedropper
+            ElseIf change.Property = ShowAlphaProperty Then
+                Dim editor = Me.FindControl(Of ColorEditor)("Editor")
+                If editor IsNot Nothing Then editor.ShowAlpha = ShowAlpha
             End If
         End Sub
 

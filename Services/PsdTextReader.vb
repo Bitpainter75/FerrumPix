@@ -36,8 +36,10 @@ Namespace Services
             Dim scale = Math.Sqrt(Math.Abs(xx * yy - xy * yx))
             If Double.IsFinite(scale) AndAlso scale > 0 AndAlso scale <= 1000 Then
                 style.FontSize *= scale
+                style.Leading *= scale
             Else
                 style.FontSize = 0
+                style.Leading = Double.NaN
             End If
 
             Dim matrix = {xx, xy, yx, yy, MatrixValue(block, 34), MatrixValue(block, 42)}

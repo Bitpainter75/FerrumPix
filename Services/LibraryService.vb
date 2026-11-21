@@ -1813,12 +1813,24 @@ Namespace Services
                 ' Die .pp3 nur mit eingeschalteter Einstellung, und nur als Anhang: ohne sie bleibt der
                 ' Stempel Zeichen fuer Zeichen derselbe wie vorher, kein Bestand wird neu eingelesen.
                 Dim pp3Stamp = Pp3SidecarService.StampFor(filePath)
-                If String.IsNullOrEmpty(xmpStamp) AndAlso String.IsNullOrEmpty(fpxmpStamp) AndAlso String.IsNullOrEmpty(pp3Stamp) Then Return ""
-                Return xmpStamp & If(String.IsNullOrEmpty(fpxmpStamp), "|-", "|fpxmp:" & fpxmpStamp) &
-                       If(String.IsNullOrEmpty(pp3Stamp), "", "|pp3:" & pp3Stamp)
+                ' Die .rrdata ebenso nur mit eingeschalteter Einstellung, nur als Anhang, und nur,
+                ' wenn eine daliegt.
+                Dim rrdataStamp = RrdataSidecarService.StampFor(filePath)
+                Return ComposeSidecarStamp(xmpStamp, fpxmpStamp, pp3Stamp, rrdataStamp)
             Catch
                 Return ""
             End Try
+        End Function
+
+        ''' <summary>Setzt die Anteile des Frische-Stempels zusammen. EINE Stelle fuer
+        ''' <see cref="SidecarStamp"/> und <see cref="FolderSidecarStamps.StampFor"/>, die
+        ''' zeichengleich sein muessen.</summary>
+        Public Shared Function ComposeSidecarStamp(xmpStamp As String, fpxmpStamp As String, pp3Stamp As String, rrdataStamp As String) As String
+            If String.IsNullOrEmpty(xmpStamp) AndAlso String.IsNullOrEmpty(fpxmpStamp) AndAlso
+               String.IsNullOrEmpty(pp3Stamp) AndAlso String.IsNullOrEmpty(rrdataStamp) Then Return ""
+            Return If(xmpStamp, "") & If(String.IsNullOrEmpty(fpxmpStamp), "|-", "|fpxmp:" & fpxmpStamp) &
+                   If(String.IsNullOrEmpty(pp3Stamp), "", "|pp3:" & pp3Stamp) &
+                   If(String.IsNullOrEmpty(rrdataStamp), "", "|rr:" & rrdataStamp)
         End Function
 
         Private Shared Function NullableEquals(Of T As Structure)(a As T?, b As T?) As Boolean

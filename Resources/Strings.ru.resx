@@ -11271,11 +11271,11 @@
   <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
     <value>Переносит в каталог ключевые слова, оценку и цветовую метку из файла .pp3 или .arp рядом с изображением. Файлы только читаются и никогда не изменяются.</value>
   </data>
-  <data name="Daten_aus_RawTherapee_ART_und_Lightroom_lesen_daa38c70" xml:space="preserve">
-    <value>Читать данные из RawTherapee, ART и Lightroom</value>
+  <data name="Daten_aus_RawTherapee_ART_RapidRAW_und_Lightroom_79203497" xml:space="preserve">
+    <value>Читать данные из RawTherapee, ART, RapidRAW и Lightroom</value>
   </data>
-  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7a90dbbf" xml:space="preserve">
-    <value>Переносит в каталог ключевые слова, оценку и цветовую метку из файла .pp3 или .arp рядом с изображением и из каталога Lightroom ниже. Они только читаются, в них ничего не меняется.</value>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_bc06a21b" xml:space="preserve">
+    <value>Переносит в каталог ключевые слова, оценку и цветовую метку из файла .pp3, .arp или .rrdata рядом с изображением и из каталога Lightroom ниже, а из файла .rrdata также отметку. Они только читаются, в них ничего не меняется.</value>
   </data>
   <data name="Lightroom_Classic_Katalog_941f2bc5" xml:space="preserve">
     <value>Каталог Lightroom Classic</value>
@@ -12079,45 +12079,6 @@
   <data name="Hex_Wert_und_R_G_B_92c85fbe" xml:space="preserve">
     <value>Шестнадцатеричное значение и R G B</value>
   </data>
-  <data name="R_ckfall_auf_die_Bibliotheken_des_Systems_31361321" xml:space="preserve">
-    <value>Резервные системные библиотеки</value>
-  </data>
-  <data name="Scheitert_eine_mitgelieferte_Bibliothek_an_einer_485ef676" xml:space="preserve">
-    <value>Если встроенная библиотека не может открыть файл, FerrumPix пробует тот же файл с версией, установленной в системе. Это доступно только в Linux вне Flatpak. Каждый такой случай записывается в этот файл, даже без журнала диагностики:</value>
-  </data>
-  <data name="Im_Flatpak_nicht_vorgesehen_dort_gibt_es_keine_B_65e7c67b" xml:space="preserve">
-    <value>Недоступно во Flatpak, там нет системных библиотек</value>
-  </data>
-  <data name="Auf_diesem_Betriebssystem_nicht_vorgesehen_3d1fa0cf" xml:space="preserve">
-    <value>Недоступно в этой операционной системе</value>
-  </data>
-  <data name="Nicht_n_tig_es_l_uft_keine_mitgelieferte_Fassung_984da18e" xml:space="preserve">
-    <value>Не требуется, встроенная версия не используется</value>
-  </data>
-  <data name="Keine_Fassung_des_Systems_gefunden_5a9d7db3" xml:space="preserve">
-    <value>Системная версия не найдена</value>
-  </data>
-  <data name="Bereit_Fassung_0_unter_1_sie_wird_erst_geladen_w_cf809f06" xml:space="preserve">
-    <value>Готово: версия {0} в {1}, загружается, только если встроенная не справится с файлом</value>
-  </data>
-  <data name="Geladen_Fassung_0_unter_1_bisher_2_Dateien_damit_97ceb6db" xml:space="preserve">
-    <value>Загружена: версия {0} в {1}, прочитано файлов: {2}</value>
-  </data>
-  <data name="Gefunden_unter_0_aber_nicht_nutzbar_der_Grund_st_ebdf3fd2" xml:space="preserve">
-    <value>Найдена в {0}, но непригодна; причина указана в журнале</value>
-  </data>
-  <data name="libjpeg_turbo_8d5bdfd8" xml:space="preserve">
-    <value>libjpeg-turbo</value>
-  </data>
-  <data name="JPEG_mit_12_Bit_und_verlustfreies_JPEG_lesen_f9bc12ae" xml:space="preserve">
-    <value>Чтение 12-битных JPEG и JPEG без потерь</value>
-  </data>
-  <data name="IJG_BSD_3_Clause_Zlib_84203779" xml:space="preserve">
-    <value>IJG, BSD-3-Clause, Zlib</value>
-  </data>
-  <data name="libjpeg_turbo_liest_JPEG_Dateien_mit_12_Bit_und__425706e0" xml:space="preserve">
-    <value>libjpeg-turbo читает 12-битные файлы JPEG и JPEG без потерь, которые графическая библиотека приложения не открывает; все остальные JPEG по-прежнему читает она. Распространяется по лицензиям IJG и BSD, входящие в неё части по лицензии zlib. Каждый пакет, кроме Flatpak, включает её и предпочитает её системной libjpeg-turbo; Flatpak берёт её из своей среды выполнения. Если её нет, не открываются только эти файлы.</value>
-  </data>
   <data name="JPEG_2000_Dateien_lesen_b1019379" xml:space="preserve">
     <value>Чтение файлов JPEG 2000</value>
   </data>
@@ -12138,5 +12099,50 @@
   </data>
   <data name="Bilder_die_eine_HEIF_Datei_als_JPEG_tr_gt_etwa_d_9b9571ac" xml:space="preserve">
     <value>Изображения, которые файл HEIF хранит в формате JPEG, например превью некоторых камер, libheif читает с помощью встроенной libjpeg-turbo, а Flatpak с помощью libheif из своей среды выполнения.</value>
+  </data>
+  <data name="Auswahl_ersetzen_cbe152e5" xml:space="preserve">
+    <value>Заменить выделение</value>
+  </data>
+  <data name="Als_Auswahl_geladen_ee91a059" xml:space="preserve">
+    <value>Загружено как выделение</value>
+  </data>
+  <data name="Zur_Auswahl_hinzugef_gt_27c6e5ad" xml:space="preserve">
+    <value>Добавлено к выделению</value>
+  </data>
+  <data name="Von_der_Auswahl_abgezogen_e6f277f6" xml:space="preserve">
+    <value>Вычтено из выделения</value>
+  </data>
+  <data name="Mit_der_Auswahl_geschnitten_743fe0ee" xml:space="preserve">
+    <value>Пересечено с выделением</value>
+  </data>
+  <data name="0_Textebenen_stehen_in_einem_Textrahmen_laufen_s_6939c020" xml:space="preserve">
+    <value>{0} текстовых слоёв находятся в текстовой рамке, идут вертикально или несут оформление, которое текстовый объект не может воспроизвести, например несколько шрифтов или цветов. Они загружаются как изображение, их текст нельзя редактировать.</value>
+  </data>
+  <data name="Das_Bild_sieht_nicht_nach_einem_Negativ_aus_kein_1cbade35" xml:space="preserve">
+    <value>Изображение не похоже на негатив: нет оранжевой основы плёнки, а контраст доходит до чёрного, скорее это слайд или фотография. Позитив не нужно обращать.</value>
+  </data>
+  <data name="0_Datei_en_sehen_nicht_nach_einem_Negativ_aus_ke_9cef9624" xml:space="preserve">
+    <value>Файлов, не похожих на негатив: {0}. Нет оранжевой основы плёнки, а контраст доходит до чёрного. Обращение для них всё равно включено.</value>
+  </data>
+  <data name="0_l_uft_als_Snap_und_darf_Dateien_au_erhalb_des__99f3b768" xml:space="preserve">
+    <value>{0} работает как Snap и может читать файлы вне домашней папки только с разрешения. Для карт памяти и USB-накопителей: snap connect {1}:removable-media</value>
+  </data>
+  <data name="Zeilenabstand_fb489798" xml:space="preserve">
+    <value>Межстрочный интервал</value>
+  </data>
+  <data name="0_1_Ebene_a1ddd057" xml:space="preserve">
+    <value>{0} (1 слой)</value>
+  </data>
+  <data name="0_1_Ebenen_44a37c60" xml:space="preserve">
+    <value>{0} (слоёв: {1})</value>
+  </data>
+  <data name="Auf_diesem_Rechner_fehlen_Schriften_0_Der_Text_b_3b27b355" xml:space="preserve">
+    <value>На этом компьютере нет шрифтов: {0}. Текст остаётся редактируемым, но набирается шрифтом {1} и поэтому может выглядеть иначе.</value>
+  </data>
+  <data name="Text_d3bc9a37" xml:space="preserve">
+    <value>, </value>
+  </data>
+  <data name="Schriften_fehlen_41c5e549" xml:space="preserve">
+    <value>Нет шрифтов</value>
   </data>
 </root>

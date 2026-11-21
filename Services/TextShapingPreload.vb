@@ -55,13 +55,18 @@ Namespace Services
 
         ''' <summary>Laedt die Bibliothek. Das Handle bleibt bis zum Ende des Prozesses offen, das
         ''' ist die Absicht. Ein Fehlschlag haelt den Start nicht auf: dann gilt, was ohne diesen
-        ''' Schritt galt.</summary>
+        ''' Schritt galt.
+        '''
+        ''' JEDER vorhandene Ort wird geladen, nicht nur der erste. Liegt die Datei an beiden (ein
+        ''' Bau mit deps.json, der sie zusaetzlich neben sich kopiert), nimmt die Laufzeit die unter
+        ''' runtimes, und fuer dlopen sind das zwei verschiedene Bibliotheken: geschuetzt waere dann
+        ''' nur die, die niemand benutzt. Gemessen im Pruefstand, der genau so gebaut ist.</summary>
         Public Shared Sub Apply()
             If Not OperatingSystem.IsLinux() Then Return
             Try
                 For Each candidate In CandidatePaths()
                     If Not File.Exists(candidate) Then Continue For
-                    If OpenLibrary(candidate, BindNow) <> IntPtr.Zero Then Return
+                    OpenLibrary(candidate, BindNow)
                 Next
             Catch ex As Exception
                 DiagnosticLogService.LogException("App.TextShapingPreload", ex)

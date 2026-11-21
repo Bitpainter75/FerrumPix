@@ -11229,11 +11229,11 @@
   <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
     <value>将图像旁 .pp3 或 .arp 文件中的关键词、评分和颜色标签导入目录。这些文件只会被读取，绝不会被修改。</value>
   </data>
-  <data name="Daten_aus_RawTherapee_ART_und_Lightroom_lesen_daa38c70" xml:space="preserve">
-    <value>读取来自 RawTherapee、ART 和 Lightroom 的数据</value>
+  <data name="Daten_aus_RawTherapee_ART_RapidRAW_und_Lightroom_79203497" xml:space="preserve">
+    <value>读取来自 RawTherapee、ART、RapidRAW 和 Lightroom 的数据</value>
   </data>
-  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7a90dbbf" xml:space="preserve">
-    <value>将图像旁 .pp3 或 .arp 文件以及下方 Lightroom 目录中的关键词、评分和颜色标签导入目录。它们只会被读取，不会被修改。</value>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_bc06a21b" xml:space="preserve">
+    <value>将图像旁 .pp3、.arp 或 .rrdata 文件以及下方 Lightroom 目录中的关键词、评分和颜色标签导入目录，.rrdata 中的标记也一并导入。它们只会被读取，不会被修改。</value>
   </data>
   <data name="Lightroom_Classic_Katalog_941f2bc5" xml:space="preserve">
     <value>Lightroom Classic 目录</value>
@@ -12037,45 +12037,6 @@
   <data name="Hex_Wert_und_R_G_B_92c85fbe" xml:space="preserve">
     <value>十六进制值和 R G B</value>
   </data>
-  <data name="R_ckfall_auf_die_Bibliotheken_des_Systems_31361321" xml:space="preserve">
-    <value>回退到系统库</value>
-  </data>
-  <data name="Scheitert_eine_mitgelieferte_Bibliothek_an_einer_485ef676" xml:space="preserve">
-    <value>如果随附的库无法打开某个文件，FerrumPix 会用系统中安装的版本再次尝试该文件。此功能仅在 Flatpak 之外的 Linux 上提供。每次回退都会记录在此文件中，即使未开启诊断日志：</value>
-  </data>
-  <data name="Im_Flatpak_nicht_vorgesehen_dort_gibt_es_keine_B_65e7c67b" xml:space="preserve">
-    <value>Flatpak 中不提供，那里没有系统库</value>
-  </data>
-  <data name="Auf_diesem_Betriebssystem_nicht_vorgesehen_3d1fa0cf" xml:space="preserve">
-    <value>此操作系统上不提供</value>
-  </data>
-  <data name="Nicht_n_tig_es_l_uft_keine_mitgelieferte_Fassung_984da18e" xml:space="preserve">
-    <value>不需要，当前未使用随附的版本</value>
-  </data>
-  <data name="Keine_Fassung_des_Systems_gefunden_5a9d7db3" xml:space="preserve">
-    <value>未找到系统版本</value>
-  </data>
-  <data name="Bereit_Fassung_0_unter_1_sie_wird_erst_geladen_w_cf809f06" xml:space="preserve">
-    <value>就绪：版本 {0}，位于 {1}，仅在随附的版本无法打开文件时加载</value>
-  </data>
-  <data name="Geladen_Fassung_0_unter_1_bisher_2_Dateien_damit_97ceb6db" xml:space="preserve">
-    <value>已加载：版本 {0}，位于 {1}，目前已用它读取 {2} 个文件</value>
-  </data>
-  <data name="Gefunden_unter_0_aber_nicht_nutzbar_der_Grund_st_ebdf3fd2" xml:space="preserve">
-    <value>在 {0} 找到，但无法使用，原因见日志</value>
-  </data>
-  <data name="libjpeg_turbo_8d5bdfd8" xml:space="preserve">
-    <value>libjpeg-turbo</value>
-  </data>
-  <data name="JPEG_mit_12_Bit_und_verlustfreies_JPEG_lesen_f9bc12ae" xml:space="preserve">
-    <value>读取 12 位 JPEG 和无损 JPEG</value>
-  </data>
-  <data name="IJG_BSD_3_Clause_Zlib_84203779" xml:space="preserve">
-    <value>IJG, BSD-3-Clause, Zlib</value>
-  </data>
-  <data name="libjpeg_turbo_liest_JPEG_Dateien_mit_12_Bit_und__425706e0" xml:space="preserve">
-    <value>libjpeg-turbo 用于读取应用的图形库无法打开的 12 位 JPEG 文件和无损 JPEG 文件；其他所有 JPEG 仍由该图形库读取。它采用 IJG 和 BSD 许可证，其中包含的部分采用 zlib 许可证。除 Flatpak 外，每个软件包都附带它，并优先于系统中的 libjpeg-turbo 使用；Flatpak 则从其运行时获取。缺少它时，只有这些文件无法打开。</value>
-  </data>
   <data name="JPEG_2000_Dateien_lesen_b1019379" xml:space="preserve">
     <value>读取 JPEG 2000 文件</value>
   </data>
@@ -12096,5 +12057,50 @@
   </data>
   <data name="Bilder_die_eine_HEIF_Datei_als_JPEG_tr_gt_etwa_d_9b9571ac" xml:space="preserve">
     <value>HEIF 文件中以 JPEG 存储的图像，例如某些相机的预览图，由 libheif 通过其内置的 libjpeg-turbo 读取，Flatpak 版则使用其运行时中的 libheif。</value>
+  </data>
+  <data name="Auswahl_ersetzen_cbe152e5" xml:space="preserve">
+    <value>替换选区</value>
+  </data>
+  <data name="Als_Auswahl_geladen_ee91a059" xml:space="preserve">
+    <value>已载入为选区</value>
+  </data>
+  <data name="Zur_Auswahl_hinzugef_gt_27c6e5ad" xml:space="preserve">
+    <value>已添加到选区</value>
+  </data>
+  <data name="Von_der_Auswahl_abgezogen_e6f277f6" xml:space="preserve">
+    <value>已从选区减去</value>
+  </data>
+  <data name="Mit_der_Auswahl_geschnitten_743fe0ee" xml:space="preserve">
+    <value>已与选区相交</value>
+  </data>
+  <data name="0_Textebenen_stehen_in_einem_Textrahmen_laufen_s_6939c020" xml:space="preserve">
+    <value>{0} 个文字图层位于文本框中、竖排，或带有文字对象无法再现的格式（例如多种字体或颜色），将作为图像导入，其文字无法编辑。</value>
+  </data>
+  <data name="Das_Bild_sieht_nicht_nach_einem_Negativ_aus_kein_1cbade35" xml:space="preserve">
+    <value>这张图像看起来不像负片：没有橙色片基，对比度一直延伸到黑色，更像反转片或普通照片。正片不需要反转。</value>
+  </data>
+  <data name="0_Datei_en_sehen_nicht_nach_einem_Negativ_aus_ke_9cef9624" xml:space="preserve">
+    <value>{0} 个文件看起来不像负片：没有橙色片基，对比度一直延伸到黑色。这些文件仍然开启了反转。</value>
+  </data>
+  <data name="0_l_uft_als_Snap_und_darf_Dateien_au_erhalb_des__99f3b768" xml:space="preserve">
+    <value>{0} 以 Snap 方式运行，只有获得授权后才能读取主文件夹以外的文件。存储卡和 USB 驱动器请运行：snap connect {1}:removable-media</value>
+  </data>
+  <data name="Zeilenabstand_fb489798" xml:space="preserve">
+    <value>行距</value>
+  </data>
+  <data name="0_1_Ebene_a1ddd057" xml:space="preserve">
+    <value>{0}（1 个图层）</value>
+  </data>
+  <data name="0_1_Ebenen_44a37c60" xml:space="preserve">
+    <value>{0}（{1} 个图层）</value>
+  </data>
+  <data name="Auf_diesem_Rechner_fehlen_Schriften_0_Der_Text_b_3b27b355" xml:space="preserve">
+    <value>此计算机缺少以下字体：{0}。文字仍可编辑，但会以 {1} 排版，因此外观可能不同。</value>
+  </data>
+  <data name="Text_d3bc9a37" xml:space="preserve">
+    <value>、</value>
+  </data>
+  <data name="Schriften_fehlen_41c5e549" xml:space="preserve">
+    <value>缺少字体</value>
   </data>
 </root>

@@ -164,6 +164,12 @@ Namespace Services
 
             Try
                 Dim info = CreateStartInfo(program.ProgramPath.Trim(), program.Arguments, files)
+                ' Die Befehlszeile ins Protokoll: was das Programm danach mit der Datei tut, sieht
+                ' FerrumPix nicht, und ohne diese Zeile laesst sich eine Meldung wie "das Programm
+                ' nimmt die Datei nicht an" nicht von einem falschen Aufruf unterscheiden.
+                DiagnosticLogService.LogAlways("OpenWith",
+                    $"{info.FileName} {String.Join(" ", info.ArgumentList.Select(Function(a) """" & a & """"))}" &
+                    If(String.IsNullOrEmpty(SnapNameOf(program.ProgramPath)), "", $" (Snap {SnapNameOf(program.ProgramPath)})"))
                 ShellOpenService.PassActivationToken(info)
                 Using Process.Start(info)
                 End Using
@@ -172,6 +178,85 @@ Namespace Services
                 DiagnosticLogService.LogException(source, ex)
                 Return False
             End Try
+        End Function
+
+        ''' <summary>Der Name des Snaps, wenn das Programm unter Linux als Snap laeuft, sonst leer.
+        '''
+        ''' Ein Snap liest ausserhalb des Benutzerordners nur, was ihm freigegeben ist; Speicherkarten
+        ''' und USB-Laufwerke (/media, /run/media, /mnt) erst nach "snap connect NAME:removable-media".
+        ''' Ueber den eigenen Dateidialog geht es trotzdem, weil der ueber das Portal laeuft und die
+        ''' gewaehlte Datei einzeln freigibt. Ein Pfad als Startparameter bekommt diese Freigabe nicht:
+        ''' das Programm startet, oeffnet die Datei aber nicht.
+        '''
+        ''' Erkannt wird ein Snap an seinem Starter: /snap/bin/NAME oder NAME.APP, ein Verweis auf
+        ''' /usr/bin/snap, oder ausdruecklich "snap run NAME" im Programmfeld.</summary>
+        Friend Shared Function SnapNameOf(programField As String) As String
+            If Not OperatingSystem.IsLinux() Then Return ""
+            Dim split = SplitProgramField(programField)
+            Dim program = split.Program
+            If String.IsNullOrWhiteSpace(program) Then Return ""
+            If String.Equals(IO.Path.GetFileName(program), "snap", StringComparison.Ordinal) Then
+                If split.Leading.Count >= 2 AndAlso split.Leading(0) = "run" Then Return SnapBaseName(split.Leading(1))
+                Return ""
+            End If
+            Dim resolved = ResolveOnPath(program)
+            If resolved Is Nothing Then Return ""
+            If String.Equals(IO.Path.GetDirectoryName(resolved), "/snap/bin", StringComparison.Ordinal) Then
+                Return SnapBaseName(IO.Path.GetFileName(resolved))
+            End If
+            Try
+                Dim target = File.ResolveLinkTarget(resolved, returnFinalTarget:=True)
+                If target IsNot Nothing AndAlso String.Equals(target.FullName, "/usr/bin/snap", StringComparison.Ordinal) Then
+                    Return SnapBaseName(IO.Path.GetFileName(resolved))
+                End If
+            Catch
+                ' Ein Verweis, der sich nicht aufloesen laesst, ist kein Snap-Starter.
+            End Try
+            Return ""
+        End Function
+
+        ''' <summary>Aus "gimp" oder "gimp.gimp" der Name des Snaps.</summary>
+        Private Shared Function SnapBaseName(launcher As String) As String
+            Dim name = If(launcher, "")
+            Dim dot = name.IndexOf("."c)
+            Return If(dot > 0, name.Substring(0, dot), name)
+        End Function
+
+        ''' <summary>Ein Programmname wie die Shell ihn findet: ein Pfad bleibt ein Pfad, ein blosser
+        ''' Name wird im Suchpfad gesucht. Nothing, wenn es ihn nicht gibt.</summary>
+        Private Shared Function ResolveOnPath(program As String) As String
+            If program.Contains("/"c) Then Return If(File.Exists(program) OrElse New FileInfo(program).LinkTarget IsNot Nothing, program, Nothing)
+            For Each folder In If(Environment.GetEnvironmentVariable("PATH"), "").Split(IO.Path.PathSeparator)
+                If String.IsNullOrWhiteSpace(folder) Then Continue For
+                Dim candidate = IO.Path.Combine(folder, program)
+                If File.Exists(candidate) Then Return candidate
+            Next
+            Return Nothing
+        End Function
+
+        ''' <summary>Liegt die Datei dort, wo ein Snap mit der Standardfreigabe "home" sie lesen kann:
+        ''' im Benutzerordner und nicht in einem versteckten Ordner darin?</summary>
+        Friend Shared Function IsReadableForSnap(filePath As String, Optional homeFolder As String = Nothing) As Boolean
+            Dim home = If(homeFolder, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))
+            If String.IsNullOrEmpty(home) OrElse String.IsNullOrEmpty(filePath) Then Return False
+            Dim full = IO.Path.GetFullPath(filePath)
+            Dim root = home.TrimEnd("/"c) & "/"
+            If Not full.StartsWith(root, StringComparison.Ordinal) Then Return False
+            Return Not full.Substring(root.Length).Split("/"c).Any(Function(part) part.StartsWith("."c))
+        End Function
+
+        ''' <summary>Der Hinweis nach dem Start, wenn das Programm ein Snap ist und eine der Dateien
+        ''' ausserhalb dessen liegt, was es ohne weitere Freigabe lesen darf; sonst leer. Der Start
+        ''' selbst gelingt in diesem Fall, nur bekommt das Programm die Datei nicht zu lesen, und
+        ''' ohne den Hinweis sieht das aus, als lehne es das Format ab.</summary>
+        Public Shared Function AccessHint(program As OpenWithProgramSettings, filePaths As IEnumerable(Of String)) As String
+            If program Is Nothing OrElse filePaths Is Nothing Then Return ""
+            Dim snap = SnapNameOf(program.ProgramPath)
+            If snap.Length = 0 Then Return ""
+            If filePaths.All(Function(p) IsReadableForSnap(p)) Then Return ""
+            Return String.Format(
+                LocalizationService.T("{0} läuft als Snap und darf Dateien außerhalb des Benutzerordners nur nach Freigabe lesen. Für Speicherkarten und USB-Laufwerke: snap connect {1}:removable-media"),
+                DisplayName(program), snap)
         End Function
 
         ''' <summary>Die Werte fuer "open", wenn das Programm auf dem Mac ein .app-Buendel ist.

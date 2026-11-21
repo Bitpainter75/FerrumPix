@@ -1339,11 +1339,6 @@ Namespace Services
                 Dim tiff = TiffPreviewService.ExtractPreview(filePath)
                 If tiff IsNot Nothing Then Return tiff
             End If
-            ' JPEG mit 12 Bit oder verlustfrei (der Kopf entscheidet): Skia liest es nicht.
-            If JpegTurboDecodeService.IsTurboJpeg(filePath) Then
-                Dim turbo = JpegTurboDecodeService.ExtractPreview(filePath)
-                If turbo IsNot Nothing Then Return turbo
-            End If
             ' JPEG 2000 verkleinert gelesen: nur die Aufloesungsstufen, die die Kachel braucht.
             If Jpeg2000DecodeService.IsSupportedJpeg2000(filePath) AndAlso Jpeg2000DecodeService.IsAvailable Then
                 Dim jp2 = Jpeg2000DecodeService.ExtractPreview(filePath, width)

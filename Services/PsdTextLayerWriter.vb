@@ -264,7 +264,8 @@ Namespace Services
         Private Shared Function StyleSheetData(spec As TextLayerSpec) As List(Of (String, Object))
             Dim values As New List(Of Object) From {
                 CObj(spec.ColorA / 255.0), CObj(spec.ColorR / 255.0), CObj(spec.ColorG / 255.0), CObj(spec.ColorB / 255.0)}
-            ' Den Zeilenabstand ausdrücklich: der eigene Renderer nimmt ihn aus der Schrift, die
+            ' Den Zeilenabstand ausdrücklich, als festen Wert: der eigene Renderer nimmt ihn
+            ' automatisch aus der Schrift, sonst aus dem eingestellten Prozent des Grads; die
             ' Vorgabe von Photoshop wären 120 Prozent des Grads.
             Return Dict(
                 ("Font", CObj(0)),

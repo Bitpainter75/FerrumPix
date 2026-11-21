@@ -270,9 +270,17 @@ Namespace Services
                 Dim gamma = CSng(Math.Pow(2.0, adj.NegativeGamma / 100.0))
                 ' Ab Modell 1 der Logarithmus auf linearem Licht (siehe ImageAdjustments.NegativeModel).
                 Dim linearLight = adj.NegativeModel >= 1
-                chain.NegR = BuildPointOpFilmNegativeTable(stats.BaseColor.Red, stats.DensityColor.Red, gamma, linearLight)
+                ' Ab Modell 2 der Graufarbausgleich auf Rot und Blau, in dieselbe Tabelle gefaltet
+                ' (ImageProcessorNegativeBalance). Im Schwarzweiss-Modus bliebe davon nichts uebrig.
+                Dim balance As (Red As Double(), Blue As Double())? = Nothing
+                If adj.NegativeModel >= 2 AndAlso Not adj.NegativeMonochrome Then
+                    balance = ResolveFilmNegativeGrayBalance(measured, adj, stats.BaseColor, stats.DensityColor)
+                End If
+                chain.NegR = BuildPointOpFilmNegativeTable(stats.BaseColor.Red, stats.DensityColor.Red, gamma, linearLight,
+                                                           If(balance.HasValue, balance.Value.Red, Nothing))
                 chain.NegG = BuildPointOpFilmNegativeTable(stats.BaseColor.Green, stats.DensityColor.Green, gamma, linearLight)
-                chain.NegB = BuildPointOpFilmNegativeTable(stats.BaseColor.Blue, stats.DensityColor.Blue, gamma, linearLight)
+                chain.NegB = BuildPointOpFilmNegativeTable(stats.BaseColor.Blue, stats.DensityColor.Blue, gamma, linearLight,
+                                                           If(balance.HasValue, balance.Value.Blue, Nothing))
                 chain.NegMonochrome = adj.NegativeMonochrome
                 chain.IsIdentity = False
             End If
@@ -620,10 +628,15 @@ Namespace Services
         ''' den Grossteil des Bereichs kuerzt sich die Kodierung als fester Faktor heraus, im linearen
         ''' Fuss der sRGB-Kurve aber nicht, und genau dort liegt der Blaukanal eines Farbnegativs in
         ''' den dichten Stellen. Das Ergebnis ist in beiden Faellen die normierte Dichte, kodiert
-        ''' weitergegeben wie bisher: Kurven, Look und Regler danach greifen auf dieselbe Art.</summary>
+        ''' weitergegeben wie bisher: Kurven, Look und Regler danach greifen auf dieselbe Art.
+        '''
+        ''' <paramref name="grayBalance"/> (Modell 2, nur Rot und Blau): die Kurve des
+        ''' Graufarbausgleichs auf die normierte Dichte, VOR der Gradation, die auf alle Kanaele
+        ''' gleich wirkt. Ohne sie rechnet die Tabelle wortgleich wie im Modell 1.</summary>
         Private Shared Function BuildPointOpFilmNegativeTable(baseValue As Byte, densityValue As Byte,
                                                               gamma As Single,
-                                                              Optional linearLight As Boolean = False) As Single()
+                                                              Optional linearLight As Boolean = False,
+                                                              Optional grayBalance As Double() = Nothing) As Single()
             Dim baseLevel = Math.Max(2.0, CDbl(baseValue))
             Dim densityLevel = Math.Min(Math.Max(1.0, CDbl(densityValue)), baseLevel - 1.0)
             Dim span = Math.Log(baseLevel / densityLevel)
@@ -639,6 +652,9 @@ Namespace Services
                 For i = 0 To PointOpTableSize - 1
                     Dim level = Math.Max(floor, SrgbToLinear(i / CDbl(PointOpTableSize - 1)))
                     Dim t = Clamp(CSng(Math.Log(baseLinear / level) / linearSpan), 0.0F, 1.0F)
+                    If grayBalance IsNot Nothing Then
+                        t = Clamp(CSng(EvaluateGrayBalanceCurve(grayBalance, t)), 0.0F, 1.0F)
+                    End If
                     table(i) = Clamp(CSng(Math.Pow(t, invGamma)), 0.0F, 1.0F)
                 Next
                 Return table

@@ -2239,7 +2239,11 @@ Namespace ViewModels
             If Not OpenWithService.Launch(program, paths, "Gallery.OpenWith") Then
                 StatusText = String.Format(LocalizationService.T("{0} konnte nicht gestartet werden"),
                                            OpenWithService.DisplayName(program))
+                Return
             End If
+            ' Gestartet heisst nicht gelesen: ein Snap bekommt eine Datei auf der Speicherkarte nicht.
+            Dim hint = OpenWithService.AccessHint(program, paths)
+            If hint.Length > 0 Then StatusText = hint
         End Sub
         Public ReadOnly Property CopyPathCommand As ICommand
         Public ReadOnly Property ToggleFavoriteCommand As ICommand
@@ -14716,15 +14720,9 @@ Namespace ViewModels
                    FpxService.IsFpx(path)
         End Function
 
-        ''' <summary>Laesst sich diese Datei an Ort und Stelle ueberschreiben? Die Endung allein
-        ''' reicht nicht: ein JPEG mit 12 Bit oder verlustfrei endet ebenfalls auf .jpg, SaveImage
-        ''' lehnt es als Ziel aber ab, weil Skia es nur als gewoehnliches 8-Bit-JPEG schreiben
-        ''' koennte. Ohne diese Frage bot der Stapel "Originale ueberschreiben" an, und die Datei
-        ''' zaehlte danach als nicht geschrieben.</summary>
         Public Shared Function IsBatchImageEditWritable(path As String) As Boolean
             If String.IsNullOrWhiteSpace(path) Then Return False
-            If Not BatchImageEditWritableExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant()) Then Return False
-            Return Not JpegTurboDecodeService.IsTurboJpeg(path)
+            Return BatchImageEditWritableExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant())
         End Function
 
         ''' <summary>Bekommt dieses Element beim Ueberschreiben in "Anpassungen anwenden" sein REZEPT
@@ -14784,13 +14782,46 @@ Namespace ViewModels
             Dim wasEdited = RawSidecarService.IsEditedFile(recipeKey)
             Dim reference = If(startValues, makeStartValues())
 
+            ' Wie die Vorlage auf das Rezept kommt. Eingefuegte Anpassungen ERSETZEN die
+            ' Bildanpassungen, wie "Anpassungen einfuegen" im Editor; eine Vorlage legt nur ihre
+            ' gesetzten Regler auf. Der Graufarbausgleich der Vorlage gehoert ihrem Quellbild und
+            ' faellt weg (ForgetTransferredNegativeGrayBalance).
+            Dim applyLook = Sub(a As ImageAdjustments)
+                                If replacePixelAdjustments Then
+                                    a.CopyPixelAdjustmentsFrom(template)
+                                Else
+                                    a.MergeNonDefaultPixelAdjustmentsFrom(template)
+                                End If
+                                a.ForgetTransferredNegativeGrayBalance(template)
+                            End Sub
+            Dim lookBase = If(existing, startValues)
+            Dim lookBaseKey = FpxService.SerializeAdjustments(lookBase)
+
+            ' Bringt die Vorlage eine Umkehr, wird der Graufarbausgleich EINMAL an dieser Datei
+            ' gemessen und ins Rezept geschrieben, mit Basis und Dichtepunkt des neuen Rezepts.
+            ' Kachel, Betrachter und Editor rechnen danach mit demselben festen Wert. Auch das ist
+            ' ein Decode und laeuft deshalb vor der Sperre, auf dem vorab gelesenen Stand.
+            Dim balanceAhead As String = Nothing
+            Dim balanceProbe = lookBase.Clone()
+            applyLook(balanceProbe)
+            If ImageProcessor.NeedsFilmNegativeGrayBalance(balanceProbe) Then
+                ImageProcessor.MeasureFilmNegativeGrayBalanceFor(balanceProbe, source)
+                If balanceProbe.NegativeGrayBalance.Length > 0 Then balanceAhead = balanceProbe.NegativeGrayBalance
+            End If
+
             Dim measured As ImageAdjustments = Nothing
-            Dim measuredBase As String = Nothing
             If isAutoEnhance Then
-                Dim base = If(existing, startValues)
-                measuredBase = FpxService.SerializeAdjustments(base)
-                measured = base.Clone()
+                measured = lookBase.Clone()
                 measured.MergeNonDefaultPixelAdjustmentsFrom(template)
+                ' Der Graufarbausgleich gehoert dem Motiv: die Automatik misst das Positiv mit dem
+                ' dieser Datei, nicht mit dem der Vorlage.
+                measured.ForgetTransferredNegativeGrayBalance(template)
+                If Not replacePixelAdjustments AndAlso balanceAhead IsNot Nothing AndAlso
+                   ImageProcessor.NeedsFilmNegativeGrayBalance(measured) Then
+                    measured.NegativeGrayBalance = balanceAhead
+                Else
+                    ImageProcessor.MeasureFilmNegativeGrayBalanceFor(measured, source)
+                End If
                 ImageProcessor.ApplyAutoAdjustmentsTo(measured, source)
             End If
 
@@ -14806,16 +14837,19 @@ Namespace ViewModels
                 Sub(adj)
                     ' Vorlage und Messung setzen nur Pixelregler; stimmt der Stand, ist das Kopieren
                     ' dieser Regler dasselbe wie Mischen und Messen.
-                    If measured IsNot Nothing AndAlso
-                       String.Equals(FpxService.SerializeAdjustments(adj), measuredBase, StringComparison.Ordinal) Then
+                    Dim unchanged = String.Equals(FpxService.SerializeAdjustments(adj), lookBaseKey, StringComparison.Ordinal)
+                    If measured IsNot Nothing AndAlso unchanged Then
                         adj.CopyPixelAdjustmentsFrom(measured)
                     Else
-                        ' Eingefuegte Anpassungen ERSETZEN die Bildanpassungen, wie "Anpassungen
-                        ' einfuegen" im Editor; eine Vorlage legt nur ihre gesetzten Regler auf.
-                        If replacePixelAdjustments Then
-                            adj.CopyPixelAdjustmentsFrom(template)
-                        Else
-                            adj.MergeNonDefaultPixelAdjustmentsFrom(template)
+                        applyLook(adj)
+                        ' Der vorab gemessene Ausgleich gilt nur fuer den vorab gelesenen Stand;
+                        ' hat sich das Rezept dazwischen geaendert, wird hier neu gemessen.
+                        If ImageProcessor.NeedsFilmNegativeGrayBalance(adj) Then
+                            If unchanged AndAlso balanceAhead IsNot Nothing Then
+                                adj.NegativeGrayBalance = balanceAhead
+                            Else
+                                ImageProcessor.MeasureFilmNegativeGrayBalanceFor(adj, source)
+                            End If
                         End If
                         If isAutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)
                     End If
@@ -15273,6 +15307,11 @@ Namespace ViewModels
             ' Bildern die Korrektur des ersten.
             Dim isAutoEnhance = String.Equals(result.SourceKind, BatchFilterDialogResult.SourceAuto, StringComparison.OrdinalIgnoreCase)
             Dim cancel = BeginBatchRun(targetItems.Count)
+            ' Schaltet die Vorlage die Umkehr ein: die Diaerkennung VOR dem Schreiben, wie beim
+            ' Einfuegen. Serverbilder liegen nicht auf der Platte und bleiben draussen.
+            ReportPositivesForNegative(Await FindPositivesForNegativeAsync(
+                targetItems.Where(Function(i) Not i.IsRemoteAsset).Select(Function(i) i.FilePath).ToList(),
+                adjustmentsTemplate, replacePixelAdjustments:=False))
             Dim writer = Function(source As String, target As String)
                              ' Rezept als Grundlage, der Look kommt oben drauf - und zwar nur mit
                              ' den Reglern, die er wirklich setzt (siehe MergeNonDefault...).
@@ -15280,6 +15319,9 @@ Namespace ViewModels
                              adj.MergeNonDefaultPixelAdjustmentsFrom(adjustmentsTemplate)
                              ' Der Rahmen einer Anpassungsvorlage ersetzt den des Rezepts.
                              adj.ApplyTransferredFrameFrom(adjustmentsTemplate)
+                             ' Graufarbausgleich einmal an diesem Bild, nicht der des Quellbilds.
+                             adj.ForgetTransferredNegativeGrayBalance(adjustmentsTemplate)
+                             ImageProcessor.MeasureFilmNegativeGrayBalanceFor(adj, source)
                              If isAutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)
                              ' Das Entrauschen misst bei der Automatik JE BILD, und zwar erst im
                              ' Speicherweg am frisch entwickelten Bild - hier gibt es noch keine Pixel.
@@ -15492,6 +15534,42 @@ Namespace ViewModels
             RefreshContextActions()
         End Sub
 
+        ''' <summary>Die Diaerkennung im Stapel: welche Dateien sehen nach einem Positiv aus (Dia,
+        ''' gewoehnliches Foto), obwohl <paramref name="template"/> die Umkehr einschaltet? Dieselbe
+        ''' Pruefung wie im Editor (ImageProcessor.CheckFilmNegative), gemessen an jeder Datei selbst.
+        ''' Nur wenn die Vorlage die Umkehr bringt: eine Umkehr, die schon im Rezept stand, hat der
+        ''' Nutzer dort selbst eingeschaltet. Eine Datei nach der anderen, eine RAW halb gross.</summary>
+        ''' <param name="replacePixelAdjustments">Wie die Vorlage auf das Rezept kommt: ersetzend
+        ''' (Einfuegen) oder nur mit ihren gesetzten Reglern (Anpassungen anwenden).</param>
+        Private Async Function FindPositivesForNegativeAsync(paths As IList(Of String), template As ImageAdjustments,
+                                                             replacePixelAdjustments As Boolean) As Task(Of List(Of String))
+            Dim found As New List(Of String)()
+            If template Is Nothing OrElse Not template.NegativeEnabled OrElse paths Is Nothing OrElse paths.Count = 0 Then Return found
+            Await Task.Run(Sub()
+                               For Each source In paths
+                                   If BatchWasCancelled() Then Exit For
+                                   Dim adj = BatchBaseAdjustments(source)
+                                   If replacePixelAdjustments Then
+                                       adj.CopyPixelAdjustmentsFrom(template)
+                                   Else
+                                       adj.MergeNonDefaultPixelAdjustmentsFrom(template)
+                                   End If
+                                   If ImageProcessor.CheckFilmNegativeFile(source, adj).LooksPositive Then found.Add(source)
+                               Next
+                           End Sub)
+            Return found
+        End Function
+
+        ''' <summary>Meldet die Dateien aus <see cref="FindPositivesForNegativeAsync"/> in der Warnung
+        ''' des Fensters, wie die uebrigen Stapelmeldungen: die Zahl nennt alle, die Liste die ersten
+        ''' zehn. Geschrieben wird trotzdem; der Hinweis aendert nichts an den Bildern.</summary>
+        Private Sub ReportPositivesForNegative(paths As List(Of String))
+            If paths Is Nothing OrElse paths.Count = 0 Then Return
+            _mainVm.ReportFileWarning(String.Join(ControlChars.Lf,
+                {String.Format(LocalizationService.T("{0} Datei(en) sehen nicht nach einem Negativ aus: keine orange Filmbasis und Kontrast bis ins Schwarz. Die Umkehr ist dort trotzdem eingeschaltet."), paths.Count)}.
+                Concat(paths.Take(10))))
+        End Sub
+
         ''' <summary>Die Ablage auf die Auswahl einfügen. RAW und PSD bekommen sie ins Rezept, also
         ''' ohne Verlust und rückgängig zu machen; JPG, PNG und WebP bekommen neue Bildpunkte, und
         ''' davor wird gefragt, weil das die Originale überschreibt.</summary>
@@ -15533,11 +15611,16 @@ Namespace ViewModels
             Dim cancel = BeginBatchRun(targets.Count)
             Try
                 StatusText = LocalizationService.T("Wende Anpassungen an...")
+                ' VOR dem Schreiben: ein JPG wird gleich ueberschrieben und waere danach schon umgekehrt.
+                ReportPositivesForNegative(Await FindPositivesForNegativeAsync(
+                    targets.Select(Function(i) i.FilePath).ToList(), template, replacePixelAdjustments:=True))
                 Dim quality = AppSettingsService.Load().JpgSaveQuality
                 Dim writer = Function(source As String, target As String)
                                  Dim adj = BatchBaseAdjustments(source)
                                  adj.CopyPixelAdjustmentsFrom(template)
                                  adj.ApplyTransferredFrameFrom(template)
+                                 adj.ForgetTransferredNegativeGrayBalance(template)
+                                 ImageProcessor.MeasureFilmNegativeGrayBalanceFor(adj, source)
                                  Return ImageProcessor.SaveImage(source, target, adj, quality, preserveMetadata:=True,
                                                                  developRaw:=BatchDevelopsRaw(source),
                                                                  cancel:=cancel,
@@ -16116,6 +16199,7 @@ Namespace ViewModels
                 .GradientOffsetYPercent = CSng(preset.GradientOffsetYPercent),
                 .GradientRepeat = If(preset.GradientRepeat, ""),
                 .LetterSpacingPercent = CSng(preset.LetterSpacingPercent),
+                .LineSpacingPercent = CSng(preset.LineSpacingPercent),
                 .Bold = preset.Bold,
                 .Italic = preset.Italic,
                 .AllCaps = preset.AllCaps,
@@ -16277,6 +16361,16 @@ Namespace ViewModels
                         ' Abbruch VOR dem naechsten Bild: das laufende steigt selbst an der
                         ' naechsten Kachelgrenze aus (siehe SaveImage).
                         If BatchWasCancelled() Then Exit For
+                        ' Die Nachbardatei geht danach ueber das Original, und dort sieht SaveImage
+                        ' nur die Nachbardatei. Ob das Original ersetzt werden darf, fragt deshalb
+                        ' dieser Weg selbst, vor jeder Arbeit: was abgewiesen wird, zaehlt als nicht
+                        ' geschrieben und steht so in der Ergebniszeile des Stapels.
+                        If Not ImageProcessor.CanReplaceOriginal(source) Then
+                            DiagnosticLogService.LogAlways("Gallery.RewriteInPlace",
+                                $"refused: Original darf nicht ersetzt werden source={IO.Path.GetFileName(source)}")
+                            ReportBatchFileDone()
+                            Continue For
+                        End If
                         Dim ext = IO.Path.GetExtension(source)
                         Dim temp = IO.Path.Combine(IO.Path.GetDirectoryName(source), $".{IO.Path.GetFileNameWithoutExtension(source)}.ferrumpix-{Guid.NewGuid():N}{ext}")
                         Try
@@ -17123,6 +17217,8 @@ Namespace ViewModels
                              ' Der Rahmen einer Anpassungsvorlage ersetzt den des Rezepts, statt
                              ' als zweiter darueber zu liegen; das Wasserzeichen kommt dazu.
                              adj.ApplyTransferredFrameFrom(template)
+                             adj.ForgetTransferredNegativeGrayBalance(template)
+                             ImageProcessor.MeasureFilmNegativeGrayBalanceFor(adj, source)
                              If template.Annotations IsNot Nothing Then
                                  For Each item In template.Annotations
                                      If item IsNot Nothing AndAlso Not ImageAdjustments.IsFrameAnnotation(item) Then adj.Annotations.Add(item.Clone())
@@ -17672,6 +17768,11 @@ Namespace ViewModels
                 ' Die angehaengte XMP in der Schreibweise, in der sie daliegt (auch "foto.cr2.XMP").
                 companions.Add((If(XmpSidecarService.ExistingXmpPath(target & ".xmp", strict:=False), target & ".xmp"), aside & ".xmp"))
                 companions.Add((ModelDenoiseFileService.PathFor(target), ModelDenoiseFileService.PathFor(aside)))
+                ' Die .rrdata eines anderen Entwicklers samt virtuellen Kopien gehoert ebenso nur
+                ' diesem Ziel; blieb sie, scheiterte das Mitnehmen der Quelle an ihr.
+                For Each rrdata In RawSidecarService.ExistingRrdataFiles(target)
+                    companions.Add((rrdata, RrdataSidecarService.RenamedFor(rrdata, target, aside)))
+                Next
                 ownedStem = RawSidecarService.OwnedStemXmp(target)
                 If ownedStem IsNot Nothing Then companions.Add((ownedStem, aside & ".stem.xmp"))
             End If

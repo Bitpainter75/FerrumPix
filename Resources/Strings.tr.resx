@@ -11275,11 +11275,11 @@
   <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
     <value>Görüntünün yanındaki .pp3 veya .arp dosyasından anahtar kelimeleri, puanı ve renk etiketini kataloğa aktarır. Dosyalar yalnızca okunur, asla değiştirilmez.</value>
   </data>
-  <data name="Daten_aus_RawTherapee_ART_und_Lightroom_lesen_daa38c70" xml:space="preserve">
-    <value>RawTherapee, ART ve Lightroom verilerini oku</value>
+  <data name="Daten_aus_RawTherapee_ART_RapidRAW_und_Lightroom_79203497" xml:space="preserve">
+    <value>RawTherapee, ART, RapidRAW ve Lightroom verilerini oku</value>
   </data>
-  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7a90dbbf" xml:space="preserve">
-    <value>Görüntünün yanındaki .pp3 veya .arp dosyasından ve aşağıdaki Lightroom kataloğundan anahtar kelimeleri, puanı ve renk etiketini kataloğa aktarır. Bunlar yalnızca okunur, orada hiçbir şey değiştirilmez.</value>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_bc06a21b" xml:space="preserve">
+    <value>Görüntünün yanındaki .pp3, .arp veya .rrdata dosyasından ve aşağıdaki Lightroom kataloğundan anahtar kelimeleri, puanı ve renk etiketini, .rrdata dosyasından ayrıca işareti kataloğa aktarır. Bunlar yalnızca okunur, orada hiçbir şey değiştirilmez.</value>
   </data>
   <data name="Lightroom_Classic_Katalog_941f2bc5" xml:space="preserve">
     <value>Lightroom Classic kataloğu</value>
@@ -12083,45 +12083,6 @@
   <data name="Hex_Wert_und_R_G_B_92c85fbe" xml:space="preserve">
     <value>Onaltılık değer ve R G B</value>
   </data>
-  <data name="R_ckfall_auf_die_Bibliotheken_des_Systems_31361321" xml:space="preserve">
-    <value>Sistem kitaplıklarına geri dönüş</value>
-  </data>
-  <data name="Scheitert_eine_mitgelieferte_Bibliothek_an_einer_485ef676" xml:space="preserve">
-    <value>Birlikte gelen bir kitaplık bir dosyayı açamazsa FerrumPix aynı dosyayı sistemde kurulu sürümle dener. Bu yalnızca Flatpak dışındaki Linux'ta vardır. Her geri dönüş, tanılama günlüğü kapalı olsa bile bu dosyaya yazılır:</value>
-  </data>
-  <data name="Im_Flatpak_nicht_vorgesehen_dort_gibt_es_keine_B_65e7c67b" xml:space="preserve">
-    <value>Flatpak'ta yok, orada sistem kitaplıkları bulunmaz</value>
-  </data>
-  <data name="Auf_diesem_Betriebssystem_nicht_vorgesehen_3d1fa0cf" xml:space="preserve">
-    <value>Bu işletim sisteminde yok</value>
-  </data>
-  <data name="Nicht_n_tig_es_l_uft_keine_mitgelieferte_Fassung_984da18e" xml:space="preserve">
-    <value>Gerekmiyor, birlikte gelen bir sürüm çalışmıyor</value>
-  </data>
-  <data name="Keine_Fassung_des_Systems_gefunden_5a9d7db3" xml:space="preserve">
-    <value>Sistem sürümü bulunamadı</value>
-  </data>
-  <data name="Bereit_Fassung_0_unter_1_sie_wird_erst_geladen_w_cf809f06" xml:space="preserve">
-    <value>Hazır: {1} konumunda sürüm {0}, yalnızca birlikte gelen bir dosyada başarısız olursa yüklenir</value>
-  </data>
-  <data name="Geladen_Fassung_0_unter_1_bisher_2_Dateien_damit_97ceb6db" xml:space="preserve">
-    <value>Yüklendi: {1} konumunda sürüm {0}, şimdiye kadar {2} dosya okundu</value>
-  </data>
-  <data name="Gefunden_unter_0_aber_nicht_nutzbar_der_Grund_st_ebdf3fd2" xml:space="preserve">
-    <value>{0} konumunda bulundu ama kullanılamıyor, nedeni günlükte</value>
-  </data>
-  <data name="libjpeg_turbo_8d5bdfd8" xml:space="preserve">
-    <value>libjpeg-turbo</value>
-  </data>
-  <data name="JPEG_mit_12_Bit_und_verlustfreies_JPEG_lesen_f9bc12ae" xml:space="preserve">
-    <value>12 bit ve kayıpsız JPEG okuma</value>
-  </data>
-  <data name="IJG_BSD_3_Clause_Zlib_84203779" xml:space="preserve">
-    <value>IJG, BSD-3-Clause, Zlib</value>
-  </data>
-  <data name="libjpeg_turbo_liest_JPEG_Dateien_mit_12_Bit_und__425706e0" xml:space="preserve">
-    <value>libjpeg-turbo, uygulamanın grafik kitaplığının açmadığı 12 bit JPEG dosyalarını ve kayıpsız JPEG dosyalarını okur; diğer tüm JPEG dosyalarını yine o kitaplık okur. IJG ve BSD lisansı altındadır, içerdiği parçalar zlib lisansı altındadır. Flatpak dışındaki her paket onu birlikte getirir ve sistemdeki libjpeg-turbo yerine onu kullanır; Flatpak onu kendi çalışma ortamından alır. Yoksa yalnızca bu dosyalar açılmaz.</value>
-  </data>
   <data name="JPEG_2000_Dateien_lesen_b1019379" xml:space="preserve">
     <value>JPEG 2000 dosyalarını okuma</value>
   </data>
@@ -12142,5 +12103,50 @@
   </data>
   <data name="Bilder_die_eine_HEIF_Datei_als_JPEG_tr_gt_etwa_d_9b9571ac" xml:space="preserve">
     <value>Bir HEIF dosyasının JPEG olarak sakladığı görüntüleri, örneğin bazı kameraların önizlemelerini, libheif içindeki libjpeg-turbo ile, Flatpak ise kendi çalışma ortamındaki libheif ile okur.</value>
+  </data>
+  <data name="Auswahl_ersetzen_cbe152e5" xml:space="preserve">
+    <value>Seçimi değiştir</value>
+  </data>
+  <data name="Als_Auswahl_geladen_ee91a059" xml:space="preserve">
+    <value>Seçim olarak yüklendi</value>
+  </data>
+  <data name="Zur_Auswahl_hinzugef_gt_27c6e5ad" xml:space="preserve">
+    <value>Seçime eklendi</value>
+  </data>
+  <data name="Von_der_Auswahl_abgezogen_e6f277f6" xml:space="preserve">
+    <value>Seçimden çıkarıldı</value>
+  </data>
+  <data name="Mit_der_Auswahl_geschnitten_743fe0ee" xml:space="preserve">
+    <value>Seçimle kesiştirildi</value>
+  </data>
+  <data name="0_Textebenen_stehen_in_einem_Textrahmen_laufen_s_6939c020" xml:space="preserve">
+    <value>{0} metin katmanı bir metin kutusunda duruyor, dikey ilerliyor veya bir metin nesnesinin yansıtamayacağı biçimlendirme taşıyor, örneğin birden çok yazı tipi ya da renk. Görüntü olarak geliyor, metni düzenlenemez.</value>
+  </data>
+  <data name="Das_Bild_sieht_nicht_nach_einem_Negativ_aus_kein_1cbade35" xml:space="preserve">
+    <value>Görüntü bir negatife benzemiyor: turuncu film tabanı yok ve kontrast siyaha kadar iniyor, daha çok bir slayt ya da fotoğraf. Bir pozitifin ters çevrilmesi gerekmez.</value>
+  </data>
+  <data name="0_Datei_en_sehen_nicht_nach_einem_Negativ_aus_ke_9cef9624" xml:space="preserve">
+    <value>{0} dosya bir negatife benzemiyor: turuncu film tabanı yok ve kontrast siyaha kadar iniyor. Ters çevirme bu dosyalarda yine de açık.</value>
+  </data>
+  <data name="0_l_uft_als_Snap_und_darf_Dateien_au_erhalb_des__99f3b768" xml:space="preserve">
+    <value>{0} Snap olarak çalışıyor ve ev klasörü dışındaki dosyaları yalnızca izin verildikten sonra okuyabilir. Hafıza kartları ve USB sürücüler için: snap connect {1}:removable-media</value>
+  </data>
+  <data name="Zeilenabstand_fb489798" xml:space="preserve">
+    <value>Satır aralığı</value>
+  </data>
+  <data name="0_1_Ebene_a1ddd057" xml:space="preserve">
+    <value>{0} (1 katman)</value>
+  </data>
+  <data name="0_1_Ebenen_44a37c60" xml:space="preserve">
+    <value>{0} ({1} katman)</value>
+  </data>
+  <data name="Auf_diesem_Rechner_fehlen_Schriften_0_Der_Text_b_3b27b355" xml:space="preserve">
+    <value>Bu bilgisayarda şu yazı tipleri eksik: {0}. Metin düzenlenebilir kalır, ancak {1} ile dizilir ve bu yüzden farklı görünebilir.</value>
+  </data>
+  <data name="Text_d3bc9a37" xml:space="preserve">
+    <value>, </value>
+  </data>
+  <data name="Schriften_fehlen_41c5e549" xml:space="preserve">
+    <value>Eksik yazı tipleri</value>
   </data>
 </root>

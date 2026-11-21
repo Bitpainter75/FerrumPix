@@ -2,9 +2,14 @@
 
 ### Changes
 
-- JPEG files with 12 bits and lossless JPEG files now open in the gallery, viewer and editor
-  instead of staying empty, with their full tonal depth for 16-bit exports. Such a file is never
-  overwritten: Save keeps the edit beside it.
+- Text objects get a line spacing setting in the text panel, from 50 to 300 percent of the font
+  size; Automatic keeps the spacing of the font as before. It also applies to text watermarks.
+  Multi-line text from PSD files with one line spacing for the whole text now stays editable text
+  instead of becoming a picture, and exported PSD text layers keep the spacing.
+
+- Opening a PSD file or a FerrumPix project (.fpx) in the editor now tells you which fonts of its
+  text are missing on this computer and how many text layers use each, also inside groups. The
+  text stays editable text, set in the replacement font that is named in the message.
 
 - JPEG 2000 files (JP2, J2K, HTJ2K) now open in the gallery, viewer and editor, with their full
   tonal depth for 16-bit exports. Save keeps the edit beside the file.
@@ -14,9 +19,14 @@
   picture. The editor offers the RAW adjustments for them, Save keeps the edit beside the file.
   Not yet on macOS for JPEG 2000 and EXR.
 
-- The previews inside HEIF files from Fujifilm cameras now load on Windows and Linux without help
-  from the system, and the gallery placeholders of rotated HEIF pictures are upright like the
+- The previews inside HEIF files from Fujifilm cameras now load on Windows and Linux, and the gallery placeholders of rotated HEIF pictures are upright like the
   picture.
+
+- Ratings, pick marks, colour labels and keywords from RapidRAW's sidecar files (.rrdata) now show
+  in the gallery and can be searched once "Read data from RawTherapee, ART, RapidRAW and Lightroom"
+  is switched on in the catalog settings. FerrumPix only reads these files and never writes into
+  them; what you set in FerrumPix or in an XMP sidecar comes first. When you rename, move, copy or
+  delete a picture in FerrumPix, its .rrdata files go along with it, virtual copies included.
 
 - New setting in the editor settings: Save JPEG, PNG and WebP edits beside the picture. When on,
   Save keeps the original untouched and stores the edit in a sidecar file next to it, as for RAW.
@@ -68,7 +78,40 @@
   brighter and softer than before. Edits saved with an earlier version keep their look; switching
   the negative off and on again uses the new way.
 
+- Colour negatives keep greys neutral from the shadows to the highlights. The red and blue layers
+  of a film bend differently, so a grey used to turn slightly coloured between black and white;
+  the inversion now finds the grey areas of the picture and evens out red and blue there, green
+  keeps the tones. A picture without grey areas is inverted as before. Edits saved with an
+  earlier version keep their look.
+
+- When the film negative inversion is switched on for a picture that looks like a positive, such
+  as a slide scan or an ordinary photo, the editor says so below the checkbox. Pasting or applying
+  adjustments with the inversion to several pictures names the ones that look like a positive.
+  Colour negatives with their orange base and black and white negatives get no such note.
+
+- Loading the shape of a layer or the mask of a selection or mask layer as a selection can now
+  add to the current selection, subtract from it or keep only the overlap, not just replace it.
+  In the layers panel, CTRL+click on the thumbnail replaces, CTRL+SHIFT adds, CTRL+ALT subtracts
+  and CTRL+SHIFT+ALT intersects; the context menu of a layer offers the same as "Load as
+  selection". Each load is one step in the history and can be undone.
+
+- The colour picker and the colour mixer of objects now show red, green, blue and alpha as numbers
+  from 0 to 255 that can be typed in, next to the hex value and the opacity. Alpha and the opacity
+  slider always move together. Colours that have no opacity, such as the light colour and Replace
+  colour, no longer show an opacity slider or an alpha field.
+
+- Photoshop files with 32 bits per channel or in Lab colour now show their full picture in the
+  gallery, the viewer and the editor instead of the small, blurry preview stored inside. When
+  opening a 32-bit file whose layers cannot all be taken over, you can now choose to open the full
+  picture instead.
+
 ### Fixes
+
+- Text layers from Photoshop that a text object cannot reproduce faithfully, such as text in a
+  text box, vertical text, or text that mixes fonts, sizes, colours or styles, now come in as a
+  picture exactly as Photoshop drew it, and the notice when opening the file says so. Before,
+  they came in as editable text that looked different. Simple text layers now also sit at the
+  right height.
 
 - Scrolling the group view of the gallery is smooth again. Tiles that scrolled into view were
   often built from scratch instead of being reused, which made scrolling stutter.
@@ -92,10 +135,6 @@
 - Sigma X3F files now show in the gallery, the viewer and the editor, with camera and shot data,
   and are developed from the sensor data like other RAW files, with the RAW controls in the
   editor. Edits are kept beside the picture, as for RAW.
-
-- If a bundled decoder for RAW, HEIC, AVIF or JPEG XL cannot open a file, FerrumPix tries the one
-  installed on the system (Linux, not in the Flatpak). Settings, Technology shows which ones are
-  available.
 
 - Every eyedropper in the editor now shows the colour under its tip next to the pointer, also
   the colour range of masks and selections, and it shows the colour that a click would take. A
@@ -147,3 +186,22 @@
 
 - The ICC badge in the gallery no longer names the platform an embedded colour profile is meant
   for, which read as if Apple or Microsoft had made it. It shows who created the profile instead.
+
+- Removing noise with the model no longer leaves coloured patches and squares in dark areas next
+  to bright ones, as in night shots. A dark sky beside a lit building used to turn purple or green
+  in sharp-edged blocks.
+
+- Open with: when the chosen program is installed as a Snap and the picture is on a memory card,
+  a USB drive or elsewhere outside your home folder, the status line now says that the program
+  needs permission to read it, and how to give it. Before, the program started and quietly failed
+  to open the file.
+
+- Some damaged RAW files, above all Canon CR3, could crash the application while being developed.
+  They are now rejected or developed as far as they can be read.
+
+- Rotating a picture from Immich or Nextcloud in the viewer no longer offers to save the rotation.
+  It only went into the temporary copy on this computer and was lost later; now it stays a view,
+  and the picture on the server is unchanged.
+
+- Right-clicking a layer in the editor no longer ends a slider drag that is still in progress and
+  no longer adds anything to the history unless you actually choose "Load as selection".

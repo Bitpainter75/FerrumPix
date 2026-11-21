@@ -8,8 +8,9 @@
                           Width="200" Height="200"
                           HorizontalAlignment="Center" />
 
-        <!-- Dieselbe Deckkraft-Zeile wie im Farbmischer: das Rad laesst den Alphawert in Ruhe. -->
-        <Grid ColumnDefinitions="60,*,44" VerticalAlignment="Center">
+        <!-- Dieselbe Deckkraft-Zeile wie im Farbmischer: das Rad laesst den Alphawert in Ruhe.
+             Wo die Farbe keine Deckung kennt (ShowAlpha aus), faellt die ganze Zeile weg. -->
+        <Grid Name="AlphaRow" ColumnDefinitions="60,*,44" VerticalAlignment="Center">
             <TextBlock Text="Deckkraft" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             <icons:RoundSlider Grid.Column="1" Name="AlphaSlider"
@@ -34,6 +35,10 @@
             <TextBox Grid.Column="1" Name="HexTextBox" PlaceholderText="#AARRGGBB"
                      FontSize="{DynamicResource FP.Font.Small}" />
         </Grid>
+
+        <!-- Rot, Gruen, Blau und Alpha als Zahlen; dieselbe Farbe wie Rad, Deckkraft und Hex-Feld.
+             Das Feld A folgt ShowAlpha wie die Zeile Deckkraft. -->
+        <icons:ColorChannelFields Name="ChannelFields" />
 
         <ItemsControl Name="RecentColorsList">
             <ItemsControl.ItemsPanel>

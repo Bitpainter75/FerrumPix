@@ -4856,8 +4856,240 @@ Namespace ViewModels
             _editingLayerMaskId = ""
             SetActiveSelectionIsMask(False)
             StatusText = LocalizationService.T("Maske als Auswahl geladen")
+            NameHistoryStep(LoadedShapeHistoryLabel("New"))
             RaiseMaskComponentsChanged()
         End Sub
+
+        ''' <summary>Die laufende Auswahl, BEVOR eine Form als Auswahl geladen wird.
+        '''
+        ''' Festgehalten wird sie, weil der Weg zur Form sie selbst verdrängt: wer im Ebenenpanel eine
+        ''' Masken- oder Auswahlebene markiert, macht ihre Maske zur laufenden Auswahl. Beim
+        ''' Rechtsklick geschieht das schon, bevor das Menü aufgeht - festhalten muss also, wer das
+        ''' Menü baut, und zwar VOR dem Markieren der Zeile. Ohne diesen Stand gäbe es nichts, wozu
+        ''' hinzugefügt oder wovon abgezogen werden könnte, und Rückgängig führte nur zur
+        ''' geöffneten Maske zurück statt zur Auswahl von vorher.
+        '''
+        ''' NUR DIE AUSWAHL, KEIN RÜCKGÄNGIG-SCHRITT. Das Festhalten geschieht schon beim Öffnen des
+        ''' Menüs, und dort darf nichts passieren: ein vorbereiteter Schritt beendete einen offenen
+        ''' Reglerzug und die Preset-Stärke, auch wenn nie geladen wird. Den Schritt legt erst das
+        ''' Laden an (<see cref="LoadShapeAsSelection"/>), nachdem es diesen Stand wieder zur
+        ''' laufenden Auswahl gemacht hat. Die Kopie der Maske gibt <see cref="Release"/> frei: das
+        ''' Laden selbst, sonst das Schließen des Menüs.</summary>
+        Public NotInheritable Class SelectionBeforeLoad
+            Private _mask As SKBitmap
+            Friend ReadOnly Rect As SKRectI
+            ''' <summary>Die Maske, an der die laufende Auswahl hing (bearbeitete Ebenenmaske), sonst
+            ''' leer.</summary>
+            Friend ReadOnly MaskId As String
+
+            Friend Sub New(mask As SKBitmap, rect As SKRectI, maskId As String)
+                _mask = mask
+                Me.Rect = rect
+                Me.MaskId = If(maskId, "")
+            End Sub
+
+            ''' <summary>Die Kopie der laufenden Auswahl; Nothing ohne Auswahl oder nach
+            ''' <see cref="Release"/>.</summary>
+            Friend ReadOnly Property Mask As SKBitmap
+                Get
+                    Return _mask
+                End Get
+            End Property
+
+            ''' <summary>Lief vorher eine Auswahl, mit der sich verknüpfen lässt?</summary>
+            Public ReadOnly Property HasSelection As Boolean
+                Get
+                    Return _mask IsNot Nothing
+                End Get
+            End Property
+
+            ''' <summary>Ist die Kopie der Maske schon freigegeben (oder gab es nie eine)?</summary>
+            Public ReadOnly Property IsReleased As Boolean
+                Get
+                    Return _mask Is Nothing
+                End Get
+            End Property
+
+            ''' <summary>Gibt die Kopie der Maske frei. Mehrfach aufrufbar.</summary>
+            Public Sub Release()
+                Dim m = _mask
+                _mask = Nothing
+                m?.Dispose()
+            End Sub
+
+            ''' <summary>Ist die laufende Auswahl die Maske dieser Zeile selbst? Dann gibt es nichts zu
+            ''' verknüpfen: die Form mit sich selbst vereinigt, geschnitten oder abgezogen ist
+            ''' dieselbe Form oder nichts.</summary>
+            Public Function IsShapeOf(row As LayerPanelRow) As Boolean
+                If row?.AdjustmentLayer Is Nothing OrElse String.IsNullOrEmpty(MaskId) Then Return False
+                Return String.Equals(row.AdjustmentLayer.MaskId, MaskId, StringComparison.Ordinal)
+            End Function
+        End Class
+
+        ''' <summary>Hält die laufende Auswahl fest, siehe <see cref="SelectionBeforeLoad"/>. Ohne
+        ''' Nebenwirkung: kein Rückgängig-Schritt, kein Ende eines Reglerzugs.</summary>
+        Public Function CaptureSelectionBeforeLoad() As SelectionBeforeLoad
+            If Not _hasActiveSelection Then Return New SelectionBeforeLoad(Nothing, SKRectI.Empty, "")
+            Dim rect = SelectionRectPixels()
+            Dim mask = BuildCurrentSelectionMask()
+            If mask Is Nothing OrElse rect.Width <= 0 OrElse rect.Height <= 0 Then
+                mask?.Dispose()
+                Return New SelectionBeforeLoad(Nothing, SKRectI.Empty, "")
+            End If
+            Return New SelectionBeforeLoad(mask, rect, _editingLayerMaskId)
+        End Function
+
+        ''' <summary>Lässt sich die Form dieser Zeile als Auswahl laden? Eine Masken- oder
+        ''' Auswahlebene liefert ihre Maske, ein sichtbares Objekt seine Deckung. Für das Menü der
+        ''' Ebenenzeile; die Gesten an den Miniaturen entscheiden selbst, welche Kachel gemeint ist.</summary>
+        Public Function CanLoadLayerShapeAsSelection(row As LayerPanelRow) As Boolean
+            If row Is Nothing OrElse row.IsGroupHeader Then Return False
+            If row.AdjustmentLayer IsNot Nothing Then Return True
+            Return row.Annotation IsNot Nothing AndAlso row.Annotation.IsVisible
+        End Function
+
+        ''' <summary>DIE FORM EINER ZEILE ALS AUSWAHL, mit Verknüpfung. Am Maskensymbol (und an der
+        ''' Zeile einer Masken- oder Auswahlebene, deren Miniatur IHRE Maske ist) ist die Maske
+        ''' gemeint, an der Zeilenminiatur eines Objekts seine eigene Deckung.
+        '''
+        ''' <paramref name="combineMode"/>: "New" ersetzt die laufende Auswahl, "Add", "Subtract" und
+        ''' "Intersect" verknüpfen mit ihr - dieselbe Rechnung wie beim Aufziehen mit dem
+        ''' Auswahl-Werkzeug (<see cref="ApplySelectionCandidate"/>). <paramref name="before"/> ist der
+        ''' Stand vor dem Markieren der Zeile (Kontextmenü); ohne ihn wird er hier festgehalten.</summary>
+        Public Function LoadLayerShapeAsSelection(row As LayerPanelRow, fromMaskIcon As Boolean, combineMode As String,
+                                                  Optional before As SelectionBeforeLoad = Nothing) As Boolean
+            If row Is Nothing Then Return False
+            Dim meansMask = fromMaskIcon OrElse row.AdjustmentLayer IsNot Nothing
+            If meansMask AndAlso (row.HasMask OrElse row.AdjustmentLayer IsNot Nothing) Then
+                Return LoadShapeAsSelection(row, Nothing, combineMode, before)
+            End If
+            If row.Annotation IsNot Nothing Then Return LoadShapeAsSelection(Nothing, row.Annotation, combineMode, before)
+            Return False
+        End Function
+
+        ''' <summary>Der gemeinsame Weg für Maske und Ebenenform. Ablauf:
+        ''' 1. Stand vorher festhalten (laufende Auswahl und Rückgängig-Schritt).
+        ''' 2. Die Form holen. Bei einer Maske über das Öffnen der Maske, das die laufende Auswahl
+        '''    verdrängt - deshalb Schritt 1 zuerst.
+        ''' 3. Den Stand vorher als laufende Auswahl wiederherstellen, den Schritt ablegen und die Form
+        '''    mit der verlangten Verknüpfung darauf rechnen.
+        ''' Ein Schritt in der Historie, benannt nach der Verknüpfung.</summary>
+        Private Function LoadShapeAsSelection(maskRow As LayerPanelRow, annotation As ImageAnnotation,
+                                              combineMode As String, before As SelectionBeforeLoad) As Boolean
+            Dim mode = NormalizeSelectionCombineMode(combineMode)
+            If maskRow Is Nothing Then
+                If annotation Is Nothing OrElse Not annotation.IsVisible Then Return False
+                If Not _annotations.Contains(annotation) Then Return False
+            End If
+            ' Der Rückgängig-Schritt sichert den Stand VOR dem Laden. Ohne hereingereichten Stand
+            ' (Gesten an den Miniaturen) ist das genau jetzt. Aus dem Kontextmenü ist die Zeile schon
+            ' markiert; dort entsteht der Schritt weiter unten, nachdem der Stand von vorher wieder
+            ' die laufende Auswahl ist - erst der Klick auf "Als Auswahl laden" darf einen Reglerzug
+            ' beenden, nicht schon das Öffnen des Menüs.
+            Dim preparedUndo As UndoEntry = Nothing
+            If before Is Nothing Then
+                preparedUndo = PrepareUndo()
+                before = CaptureSelectionBeforeLoad()
+            End If
+            Dim shape As SKBitmap = Nothing
+            Dim shapeRect = SKRectI.Empty
+            Try
+                If maskRow IsNot Nothing Then
+                    ' Erst die Zeile markieren, dann ihre Maske öffnen: die Befehle des ViewModels
+                    ' arbeiten auf der markierten Ebene, und angeklickt wurde vielleicht eine andere.
+                    If Not Object.ReferenceEquals(maskRow, SelectedLayerRow) Then SelectedLayerRow = maskRow
+                    If maskRow.HasMask AndAlso maskRow.AdjustmentLayer Is Nothing Then UseAnnotationMask()
+                    Dim m = CurrentMaskForComponents()
+                    If m IsNot Nothing Then
+                        LoadMaskIntoSelection(m.Id, showAsMask:=False)
+                        ' Die geladene Auswahl haengt an keiner Ebene mehr - sonst schriebe der
+                        ' naechste Strich in die Maske zurueck, aus der sie nur ABGELEITET ist.
+                        _editingLayerMaskId = ""
+                        If _hasActiveSelection Then
+                            shape = BuildCurrentSelectionMask()
+                            shapeRect = SelectionRectPixels()
+                        End If
+                    End If
+                Else
+                    shape = BuildAnnotationShapeForSelection(annotation, shapeRect)
+                    If shape Is Nothing Then Return False
+                End If
+
+                ' Der Stand vorher wird wieder die laufende Auswahl, auch wenn das Öffnen der Maske
+                ' sie verdrängt hat.
+                RestoreSelectionBeforeLoad(before)
+                ' Ein Verlauf hat keine gemalte Form, die sich hier laden liesse: dann bleibt es
+                ' beim Stand vorher, ohne Schritt in der Historie.
+                If shape Is Nothing OrElse shapeRect.Width <= 0 OrElse shapeRect.Height <= 0 Then
+                    RaiseMaskComponentsChanged()
+                    Return True
+                End If
+
+                If preparedUndo Is Nothing Then preparedUndo = PrepareUndo()
+                CommitPreparedUndo(preparedUndo)
+                ' Als AUSWAHL, nicht als Maske: es sind Laufameisen um die Form.
+                ApplySelectionCandidate(shape, shapeRect, "MagicWand", Nothing, Nothing, combineModeOverride:=mode)
+                Dim label = LoadedShapeHistoryLabel(mode)
+                NameHistoryStep(label)
+                StatusText = label
+
+                If annotation IsNot Nothing Then
+                    ' ERST NACH dem Übernehmen: jede Änderung an der Auswahlmaske vergisst die
+                    ' Herkunft. Verrechnet sich die Form mit einer vorhandenen Auswahl, gehört das
+                    ' Ergebnis nicht mehr allein zu dieser Ebene - dann merkt es sich keine.
+                    Dim replacesSelection = mode = "New" OrElse Not before.HasSelection
+                    _selectionSourceAnnotationId = If(replacesSelection AndAlso _hasActiveSelection AndAlso
+                                                      IsPaintableImageAnnotation(annotation), annotation.Id, "")
+                    ' DANACH GEHÖRT DIE BÜHNE DER AUSWAHL, NICHT DER EBENE. Die Ebene wird dafür
+                    ' abgewählt und der Editor stellt auf Auswahl/Verschieben:
+                    ' - Ihr Rahmen läge sonst über dem Bild, bei einer Malebene über dem GANZEN Bild,
+                    '   und verdeckte genau die Ameisenlinie, die man gerade geholt hat.
+                    ' - Und ein Zug darin verschöbe die EBENE statt der Auswahl - der Rahmen fängt
+                    '   jeden Druck ab (siehe IsLayerPlacementTool).
+                    CurrentTool = EditorTool.Selection
+                    SelectionMode = "Move"
+                    SelectedAnnotationIndex = -1
+                End If
+                RaiseMaskComponentsChanged()
+                Return True
+            Finally
+                shape?.Dispose()
+                before.Release()
+            End Try
+        End Function
+
+        ''' <summary>Setzt den festgehaltenen Stand wieder als laufende Auswahl, als Laufameisen und an
+        ''' keine Ebene gebunden. Ohne Auswahl vorher wird aufgehoben.</summary>
+        Private Sub RestoreSelectionBeforeLoad(before As SelectionBeforeLoad)
+            _editingLayerMaskId = ""
+            If before Is Nothing OrElse Not before.HasSelection Then
+                If _hasActiveSelection Then ClearSelection(captureUndo:=False)
+                SetActiveSelectionIsMask(False)
+                Return
+            End If
+            InvalidateSelectionLayerLink()
+            ClearSelectionMask()
+            SetSelectionBoundsFromPixels(before.Rect)
+            SetSelectionShape("MagicWand", Nothing, Nothing)
+            SetActiveSelectionIsMask(False)
+            SetSelectionMaskData(ImageProcessor.CopyBitmap(before.Mask), before.Rect)
+            HasActiveSelection = True
+        End Sub
+
+        ''' <summary>Der Name des Ladens in Historie und Statuszeile, je Verknüpfung. Jeder Text
+        ''' steht als eigenes Literal da, damit der Sammler der Übersetzung ihn findet.</summary>
+        Private Shared Function LoadedShapeHistoryLabel(mode As String) As String
+            Select Case mode
+                Case "Add"
+                    Return LocalizationService.T("Zur Auswahl hinzugefügt")
+                Case "Subtract"
+                    Return LocalizationService.T("Von der Auswahl abgezogen")
+                Case "Intersect"
+                    Return LocalizationService.T("Mit der Auswahl geschnitten")
+                Case Else
+                    Return LocalizationService.T("Als Auswahl geladen")
+            End Select
+        End Function
 
         Public Sub AddMaskToSelectedAnnotation()
             ' DIE GRUPPE GEHT VOR: ist ihre Kopfzeile markiert, ist sie gemeint und nicht eines

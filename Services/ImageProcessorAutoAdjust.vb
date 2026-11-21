@@ -184,6 +184,7 @@ Namespace Services
                 .NegativeDensityColor = adj.NegativeDensityColor,
                 .NegativeGamma = adj.NegativeGamma,
                 .NegativeModel = adj.NegativeModel,
+                .NegativeGrayBalance = adj.NegativeGrayBalance,
                 .RotationDegrees = adj.RotationDegrees,
                 .StraightenDegrees = adj.StraightenDegrees,
                 .StraightenExpandCanvas = adj.StraightenExpandCanvas,

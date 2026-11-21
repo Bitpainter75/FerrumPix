@@ -89,6 +89,10 @@
                           Width="168" Height="168"
                           HorizontalAlignment="Center" />
 
+        <!-- Rot, Gruen, Blau und Alpha der aktiven Farbe als Zahlen; A ist dieselbe Deckung wie
+             die Zeile Deckkraft darunter, nur in 0 bis 255. -->
+        <icons:ColorChannelFields Name="ChannelFields" />
+
         <!-- Der 36px hohe Regler trägt seine Klickfläche als Leerraum um die 4px-Spur; unten zieht der
              negative Rand die Zeile wieder an den Expander-Rahmen heran. -->
         <Grid ColumnDefinitions="60,*,44" VerticalAlignment="Center" Margin="0,0,0,-6">

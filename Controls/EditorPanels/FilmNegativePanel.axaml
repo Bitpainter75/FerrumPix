@@ -33,6 +33,12 @@
                       IsChecked="{Binding NegativeEnabled}"
                       FontSize="{DynamicResource FP.Font.Small}"
                       ToolTip.Tip="Gescanntes Filmnegativ umrechnen: die orange Maske des Filmträgers wird herausgerechnet, dann wird jeder Kanal umgekehrt." />
+            <!-- Die Diaerkennung (EditorViewModel.NegativeLooksPositive): nur ein Hinweis, das
+                 Bild bleibt, wie es ist. Ausgeschaltet wird am Haken direkt darueber. -->
+            <TextBlock Text="Das Bild sieht nicht nach einem Negativ aus: keine orange Filmbasis und Kontrast bis ins Schwarz, eher ein Dia oder ein Foto. Ein Positiv braucht keine Umkehr."
+                       Foreground="{DynamicResource FP.Text.Muted}"
+                       FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"
+                       IsVisible="{Binding NegativeLooksPositive}" />
             <CheckBox Content="Schwarzweiß-Negativ"
                       IsChecked="{Binding NegativeMonochrome}"
                       FontSize="{DynamicResource FP.Font.Small}"

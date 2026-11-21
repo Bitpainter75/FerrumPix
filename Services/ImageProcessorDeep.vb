@@ -202,7 +202,7 @@ Namespace Services
         ''' <summary>Kann aus dieser Quelle eine Datei mit 16 Bit entstehen? Aus einer RAW-Datei, die
         ''' durch die RAW-Stufe laeuft (dort liegen die Tonwerte feiner vor als 8 Bit), und aus einer
         ''' Datei, die selbst mehr als 8 Bit traegt und sich tief lesen laesst (<see cref="IsDeepFileSource"/>,
-        ''' heute TIFF, HEIF/AVIF und JPEG mit 12 Bit oder verlustfrei). Eine 8-Bit-Quelle (JPEG, WebP, PNG) bekommt keine Ausgabe in 16 Bit, und ein
+        ''' heute TIFF, HEIF/AVIF und JPEG 2000). Eine 8-Bit-Quelle (JPEG, WebP, PNG) bekommt keine Ausgabe in 16 Bit, und ein
         ''' PNG oder JPEG XL mit 16 Bit wird beim Lesen noch auf 8 gebracht.
         '''
         ''' Die Frage fuer die Dialoge: danach richtet sich, ob sie die Farbtiefe anbieten. Ob die
@@ -216,13 +216,12 @@ Namespace Services
 
         ''' <summary>Eine Bilddatei, die selbst mehr als 8 Bit je Kanal traegt und sich tief lesen
         ''' laesst: ein TIFF mit 16 Bit (TiffPreviewService.IsDeepTiff) oder ein HEIF/AVIF mit 10
-        ''' oder 12 Bit ohne Alpha (HeifDecodeService.IsDeepHeif) oder ein JPEG mit 12 Bit oder
-        ''' verlustfrei mit mehr als 8 Bit, ohne Alpha (JpegTurboDecodeService.IsDeepJpeg). Die
-        ''' zweite Herkunft eines tiefen Bilds neben der RAW-Stufe. Der Unterschied: hier gibt es
-        ''' keine Entwicklung mit Angaben aus dem Rezept, das tiefe Bild ist die Datei.</summary>
+        ''' oder 12 Bit ohne Alpha (HeifDecodeService.IsDeepHeif) oder ein JPEG 2000 mit mehr als
+        ''' 8 Bit (Jpeg2000DecodeService.IsDeepJpeg2000). Die zweite Herkunft eines tiefen Bilds
+        ''' neben der RAW-Stufe. Der Unterschied: hier gibt es keine Entwicklung mit Angaben aus dem
+        ''' Rezept, das tiefe Bild ist die Datei.</summary>
         Friend Shared Function IsDeepFileSource(path As String) As Boolean
             If HeifDecodeService.IsSupportedHeif(path) Then Return HeifDecodeService.IsDeepHeif(path)
-            If JpegTurboDecodeService.IsJpegExtension(path) Then Return JpegTurboDecodeService.IsDeepJpeg(path)
             If Jpeg2000DecodeService.IsSupportedJpeg2000(path) Then Return Jpeg2000DecodeService.IsDeepJpeg2000(path)
             Return TiffPreviewService.IsDeepTiff(path)
         End Function
@@ -230,7 +229,6 @@ Namespace Services
         ''' <summary>Das tiefe Bild einer solchen Datei, oder Nothing.</summary>
         Private Shared Function DecodeDeepFileSource(path As String) As SKBitmap
             If HeifDecodeService.IsSupportedHeif(path) Then Return HeifDecodeService.TryDecodeDeep(path)
-            If JpegTurboDecodeService.IsJpegExtension(path) Then Return JpegTurboDecodeService.TryDecodeDeep(path)
             If Jpeg2000DecodeService.IsSupportedJpeg2000(path) Then Return Jpeg2000DecodeService.TryDecodeDeep(path)
             Return TiffPreviewService.TryDecodeDeep(path)
         End Function

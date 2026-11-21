@@ -380,7 +380,9 @@
                         <TextBlock Text="Neue Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
                                    ToolTip.Tip="Farbton und Sättigung dieser Farbe ersetzen die des Bildes; Helligkeit und Struktur bleiben" />
+                        <!-- Farbe ersetzen nimmt nur Farbton und Saettigung, eine Deckung wirkte nicht. -->
                         <icons:ColorPickerButton Grid.Column="1"
+                                                 ShowAlpha="False"
                                                  SelectedColor="{Binding ReplaceColorValue, Mode=TwoWay}" />
                     </Grid>
                 </StackPanel>

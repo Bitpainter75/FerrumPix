@@ -1272,7 +1272,11 @@ Namespace ViewModels
                 If Not OpenWithService.Launch(program, {path}, "Viewer.OpenWith") Then
                     StatusInfo = String.Format(LocalizationService.T("{0} konnte nicht gestartet werden"),
                                                OpenWithService.DisplayName(program))
+                    Return
                 End If
+                ' Gestartet heisst nicht gelesen: ein Snap bekommt eine Datei auf der Speicherkarte nicht.
+                Dim hint = OpenWithService.AccessHint(program, {path})
+                If hint.Length > 0 Then StatusInfo = hint
             End Sub)
 
         ''' <summary>Das Untermenue "Metadaten" fuer das angezeigte Bild. Dieselben Ablaeufe wie in
@@ -3476,7 +3480,7 @@ Namespace ViewModels
             ' Korrektur. Direkt aus dem Bitmap, ohne PNG dazwischen (ForeignImageDecoder).
             If IcoPreviewService.IsSupportedIco(path) OrElse TiffPreviewService.IsSupportedTiff(path) OrElse
                HeifDecodeService.IsSupportedHeif(path) OrElse JxlDecodeService.IsSupportedJxl(path) OrElse
-               JpegTurboDecodeService.IsTurboJpeg(path) OrElse Jpeg2000DecodeService.IsSupportedJpeg2000(path) Then
+               Jpeg2000DecodeService.IsSupportedJpeg2000(path) Then
                 Return ImageOrientationService.ForeignToAvaloniaBitmap(path, 0)
             End If
             If FpxService.IsFpx(path) Then
@@ -4184,24 +4188,20 @@ Namespace ViewModels
             _hasPendingRotationSave = False
         End Sub
 
-        ''' <summary>Formate, in die der Viewer eine Drehung GEBACKEN zurückschreiben darf. Bewusst
-        ''' eine Whitelist (wie GalleryViewModel.BatchImageEditWritableExtensions): die Speicherroutine
-        ''' kann nur JPEG/PNG/WebP erzeugen, und ein Ziel mit fremder Endung bekäme still ein JPEG
-        ''' untergeschoben - bei RAW/PSD/SVG/.fpx wäre das Original damit vernichtet.</summary>
-        Private Shared ReadOnly RotationBakeableExtensions As String() = {".jpg", ".jpeg", ".png", ".webp"}
-
-        Private Shared Function CanBakeRotation(path As String) As Boolean
-            If String.IsNullOrWhiteSpace(path) Then Return False
-            Return RotationBakeableExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant())
-        End Function
-
         ''' <summary>Kann die Drehung dieses Bildes überhaupt dauerhaft werden - gebacken oder als
-        ''' Rezept neben der Datei? Ins Rezept geht sie, wo RawSidecarService.WritesRecipe es sagt:
-        ''' RAW und PSD, die nicht schreibbaren Rasterformate (TIFF, HEIC, JPEG XL ...), JPG, PNG und
-        ''' WebP mit der Einstellung "neben dem Bild speichern" und jedes Bild, das schon ein Rezept
-        ''' hat (sonst verrutschte dessen Zuschnitt auf den gedrehten Pixeln).</summary>
+        ''' Rezept neben der Datei? Gebacken wird nur, wo ImageProcessor.CanReplaceOriginal es
+        ''' erlaubt (JPEG, PNG, WebP): die Speicherroutine kann nur diese Formate an Ort und Stelle
+        ''' erzeugen. Ins Rezept geht sie, wo RawSidecarService.WritesRecipe es sagt: RAW und PSD,
+        ''' die nicht schreibbaren Rasterformate (TIFF, HEIC, JPEG XL ...), JPG, PNG und WebP mit der
+        ''' Einstellung "neben dem Bild speichern" und jedes Bild, das schon ein Rezept hat (sonst
+        ''' verrutschte dessen Zuschnitt auf den gedrehten Pixeln).
+        '''
+        ''' Die Arbeitskopie eines Serverbildes (Immich, Nextcloud) nie: weder die gedrehten Pixel
+        ''' noch ein Rezept daneben gehen von hier zum Server, und beim naechsten Aufraeumen des
+        ''' Temp-Ordners waere die Drehung fort. Dort bleibt sie reine Ansicht, wie bei PSD oder SVG.</summary>
         Private Shared Function CanPersistRotation(path As String) As Boolean
-            Return CanBakeRotation(path) OrElse RawSidecarService.WritesRecipe(path)
+            If LibraryService.IsServerTempPath(path) Then Return False
+            Return ImageProcessor.CanReplaceOriginal(path) OrElse RawSidecarService.WritesRecipe(path)
         End Function
 
         Public Async Function ConfirmPendingRotationAsync(actionDescription As String) As Task(Of Boolean)
@@ -4250,7 +4250,19 @@ Namespace ViewModels
             ' beim Editor. Viewer, Filmstreifen und Kacheln lesen sie beim Anzeigen wieder aus.
             ' Dasselbe fuer jedes Bild, dessen Bearbeitung neben ihm liegt oder liegen soll
             ' (RawSidecarService.WritesRecipe), auch fuer ein JPG.
-            If RawSidecarService.WritesRecipe(source) Then Return Await SaveRotationToSidecarAsync(source, angle)
+            If RawSidecarService.WritesRecipe(source) AndAlso Not LibraryService.IsServerTempPath(source) Then
+                Return Await SaveRotationToSidecarAsync(source, angle)
+            End If
+
+            ' Die Nachbardatei geht danach ueber das Original, und SaveImage sieht nur die
+            ' Nachbardatei. Ob das Original ersetzt werden darf, fragt deshalb dieser Weg selbst,
+            ' bevor er etwas rechnet; abgewiesen heisst nicht gespeichert, mit derselben Meldung.
+            If Not ImageProcessor.CanReplaceOriginal(source) Then
+                DiagnosticLogService.LogAlways("Viewer.RotationSave",
+                    $"refused: Original darf nicht ersetzt werden source={IO.Path.GetFileName(source)}")
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Drehung speichern"), LocalizationService.T("Bild konnte nicht gespeichert werden"))
+                Return False
+            End If
 
             Dim ext = IO.Path.GetExtension(source)
             Dim temp = IO.Path.Combine(IO.Path.GetDirectoryName(source), $".{IO.Path.GetFileNameWithoutExtension(source)}.ferrumpix-rotate-{Guid.NewGuid():N}{ext}")

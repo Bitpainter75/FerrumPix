@@ -274,6 +274,12 @@ Namespace ViewModels
         ''' Die Filmbasis kam von der Pipette und nicht aus der Messung. Dann misst ein neuer
         ''' Ausschnitt nur den Dichtepunkt nach; die angeklickte Basis bleibt, wie sie ist.
         Private _negativeBasePicked As Boolean = False
+        ''' Die letzte Diaerkennung am Foto (ImageProcessor.CheckFilmNegative): es sieht nach einem
+        ''' Positiv aus. Angezeigt nur, solange die Umkehr am Foto eingeschaltet ist.
+        Private _negativeLooksPositive As Boolean = False
+        ''' Der Hinweis ist neu und soll in der Statuszeile stehen, sobald die Vorschau fertig ist
+        ''' (siehe ReportPreviewReady).
+        Private _negativeLooksPositiveNoticePending As Boolean = False
         ''' Die Umkehr wurde auf einem Arbeitsbild vermessen, das die RAW-Stufe gleich ersetzt (siehe
         ''' MarkNegativeRemeasureAfterRawRebuild). Der naechste uebernommene Neuaufbau misst nach.
         Private _negativeRemeasureAfterRawRebuild As Boolean = False
@@ -281,6 +287,13 @@ Namespace ViewModels
         ''' Rechenweg der Umkehr (ImageAdjustments.NegativeModel): beim Einschalten das aktuelle
         ''' Modell, beim Ausschalten 0; ein geladenes Rezept bringt seins mit.
         Private _negativeModel As Integer = 0
+        ''' Graufarbausgleich der Umkehr ab Modell 2 (ImageAdjustments.NegativeGrayBalance), gemessen
+        ''' zusammen mit Basis und Dichtepunkt (MeasureFilmNegativeGrayBalance).
+        Private _negativeGrayBalance As String = ""
+        ''' Ein geladenes oder eingefuegtes Rezept bringt eine Umkehr im Modell 2 ohne Ausgleich mit
+        ''' (beim Uebertragen bleibt er beim Quellbild, ImageAdjustments.ExtractTransferableAdjustments).
+        ''' Gemessen wird am naechsten passenden Arbeitsbild (MeasurePendingFilmNegativeGrayBalance).
+        Private _negativeGrayBalancePending As Boolean = False
         ''' Solange die Pipette auf die Filmbasis wartet, muss die Umkehr aus der VORSCHAU heraus: die
         ''' Pipette liest die Farbe, die auf dem Schirm steht - im umgerechneten Positiv würde der Nutzer
         ''' also die Farbe des fertigen Bildes als "Filmbasis" setzen statt die des Filmträgers.
@@ -639,6 +652,7 @@ Namespace ViewModels
         Private _calibrationBlueSaturation As Double = 0
         Private _calibrationShadowTint As Double = 0
         Private _annotationLetterSpacingPercent As Double = 0
+        Private _annotationLineSpacingPercent As Double = 0
         Private _annotationBold As Boolean = False
         Private _annotationItalic As Boolean = False
         Private _annotationAllCaps As Boolean = False
@@ -2694,6 +2708,7 @@ Namespace ViewModels
             _annotationItalic = preset.Italic
             _annotationAllCaps = preset.AllCaps
             _annotationLetterSpacingPercent = preset.LetterSpacingPercent
+            _annotationLineSpacingPercent = ImageAnnotation.NormalizeLineSpacingPercent(preset.LineSpacingPercent)
             _annotationFlipH = preset.FlipHorizontal
             _annotationFlipV = preset.FlipVertical
             _annotationShadowEnabled = preset.ShadowEnabled
@@ -2761,6 +2776,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationItalic))
             Me.RaisePropertyChanged(NameOf(AnnotationAllCaps))
             Me.RaisePropertyChanged(NameOf(AnnotationLetterSpacingPercent))
+            RaiseAnnotationLineSpacingChanged()
             Me.RaisePropertyChanged(NameOf(AnnotationFlipHorizontal))
             Me.RaisePropertyChanged(NameOf(AnnotationFlipVertical))
             Me.RaisePropertyChanged(NameOf(AnnotationDisplayFlipHorizontal))
@@ -2872,6 +2888,7 @@ Namespace ViewModels
             existing.Italic = _annotationItalic
             existing.AllCaps = _annotationAllCaps
             existing.LetterSpacingPercent = _annotationLetterSpacingPercent
+            existing.LineSpacingPercent = _annotationLineSpacingPercent
             existing.FlipHorizontal = _annotationFlipH
             existing.FlipVertical = _annotationFlipV
             existing.ShadowEnabled = _annotationShadowEnabled
@@ -4783,6 +4800,7 @@ Namespace ViewModels
             AnnotationTextPathStartOffset = 0
             AnnotationTextAlignment = "Left"
             AnnotationLetterSpacingPercent = 0
+            AnnotationLineSpacingPercent = 0
             AnnotationBold = False
             AnnotationItalic = False
             AnnotationAllCaps = False
@@ -7084,6 +7102,40 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Der Hinweis in der Gruppe Filmnegativ: die Umkehr ist am Foto eingeschaltet, das
+        ''' Bild sieht aber nach einem Positiv aus (Dia oder gewoehnliches Foto, siehe
+        ''' ImageProcessor.CheckFilmNegative). Er aendert nichts am Bild; ausschalten laesst sich die
+        ''' Umkehr am Haken direkt darueber. Im Objekt- und Ebenenmodus gehoeren die Felder dem
+        ''' Objekt, gemessen wurde aber das Foto: dort kein Hinweis.</summary>
+        Public ReadOnly Property NegativeLooksPositive As Boolean
+            Get
+                Return _negativeLooksPositive AndAlso _negativeEnabled AndAlso
+                       Not IsObjectAdjustModeActive() AndAlso Not IsSelectionAdjustModeActive()
+            End Get
+        End Property
+
+        ''' <summary>Fragt die Diaerkennung neu, nach jeder Messung oder Aenderung der Umkehr (aus
+        ''' RaiseNegativePropertiesChanged). Erscheint der Hinweis neu, sagt es auch die Statuszeile:
+        ''' die Gruppe kann zugeklappt oder ausgeblendet sein.</summary>
+        Private Sub RefreshNegativeLooksPositive()
+            Dim looksPositive = False
+            If _negativeEnabled AndAlso Not IsObjectAdjustModeActive() AndAlso Not IsSelectionAdjustModeActive() Then
+                Dim source = GetPreviewSource()
+                If source IsNot Nothing Then
+                    looksPositive = ImageProcessor.CheckFilmNegative(source, GetCurrentAdjustments(forPreview:=True)).LooksPositive
+                End If
+            End If
+            If looksPositive = _negativeLooksPositive Then Return
+            _negativeLooksPositive = looksPositive
+            _negativeLooksPositiveNoticePending = looksPositive
+            If looksPositive Then StatusText = NegativeLooksPositiveNotice()
+        End Sub
+
+        ''' <summary>Der Text des Hinweises, derselbe Wortlaut wie in der Gruppe Filmnegativ.</summary>
+        Private Shared Function NegativeLooksPositiveNotice() As String
+            Return LocalizationService.T("Das Bild sieht nicht nach einem Negativ aus: keine orange Filmbasis und Kontrast bis ins Schwarz, eher ein Dia oder ein Foto. Ein Positiv braucht keine Umkehr.")
+        End Function
+
         Public Property ColorGradeShadowHue As Double
             Get
                 Return _colorGradeShadowHue
@@ -8137,6 +8189,7 @@ Namespace ViewModels
                                       hasAlphaHoles:=_newDocTransparentBackground,
                                       scheduleInitialRender:=True)
             RemeasureFilmNegativeAfterRawRebuild()
+            MeasurePendingFilmNegativeGrayBalance()
             DiagnosticLogService.LogAlways("Editor.RawExposureRebuild", String.Format(Globalization.CultureInfo.InvariantCulture,
                 "exposure={0}; knee={1:F3}; developed={2}; decode={3:F0}; aufbereiten={4:F0}; warten auf Anzeige={5:F0}; uebernehmen={6:F0}; gesamt={7:F0}",
                 _workingImageExposure, _workingImageKnee, prepared.RawDeveloped, decodeMs, prepareMs,
@@ -10922,6 +10975,7 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_annotationFontFamily, If(String.IsNullOrWhiteSpace(value), "Arial", value))
                 UpdatePendingTextAnnotationSize()
                 SyncSelectedAnnotation()
+                RaiseAnnotationLineSpacingChanged()
             End Set
         End Property
 
@@ -13405,18 +13459,24 @@ Namespace ViewModels
         ''' Klickpunkten, aus denen das Modell jedesmal die ganze Maske neu rechnet. Wuerde sie
         ''' zusaetzlich mit der vorigen vereinigt, koennte ein Abzugspunkt nie etwas wegnehmen -
         ''' die kleinere neue Maske ginge in der groesseren alten unter.</param>
+        ''' <param name="combineModeOverride">Die Verknüpfung für GENAU diesen Kandidaten statt der
+        ''' eingestellten des Werkzeugs. Für das Laden einer Form als Auswahl: dort sagt der Handgriff
+        ''' selbst (Taste oder Menüeintrag), ob ersetzt, hinzugefügt, abgezogen oder geschnitten wird,
+        ''' und der Modus des Auswahl-Werkzeugs hat damit nichts zu tun.</param>
         Private Sub ApplySelectionCandidate(candidateMask As SKBitmap,
                                             candidateRect As SKRectI,
                                             candidateShapeMode As String,
                                             candidateXsPercent As Double(),
                                             candidateYsPercent As Double(),
                                             Optional isMask As Boolean = False,
-                                            Optional forceNew As Boolean = False)
+                                            Optional forceNew As Boolean = False,
+                                            Optional combineModeOverride As String = Nothing)
             If candidateMask Is Nothing OrElse candidateRect.Width <= 0 OrElse candidateRect.Height <= 0 Then Return
             ' Die Auswahl/Maske ändert sich → sie ist nicht mehr die bereits promotete: eine NEUE Auswahl
             ' bekommt eine EIGENE Ebene, statt die zuvor erzeugte mitzufüllen.
             InvalidateSelectionLayerLink()
-            Dim combineMode = If(_hasActiveSelection AndAlso Not forceNew, _selectionCombineMode, "New")
+            Dim combineMode = If(_hasActiveSelection AndAlso Not forceNew,
+                                 If(combineModeOverride, _selectionCombineMode), "New")
             ' AUSWAHL und MASKE strikt trennen: wechselt die ART des Kandidaten
             ' gegenüber der aktiven Auswahl (Laufameisen ↔ gemalte Maske), wird NICHT kombiniert, sondern
             ' eine NEUE Auswahl begonnen. Sonst verrechnete Add/Subtract eine Geometrie-Auswahl mit einem
@@ -14240,6 +14300,8 @@ Namespace ViewModels
                                ' Der Dichtepunkt (das andere Ende der Kurve) bleibt gemessen - von Hand
                                ' ist er nicht sinnvoll zu treffen, er liegt irgendwo im Motiv.
                                If String.IsNullOrWhiteSpace(_negativeDensityColor) Then MeasureFilmNegative(baseToo:=False)
+                               ' Der Graufarbausgleich haengt an der Basis und wird mit ihr neu gemessen.
+                               MeasureFilmNegativeGrayBalance()
                                ' Schaltet die Pipette das Negativ ein, gilt dasselbe wie beim Haken:
                                ' die Startwerte der Kamera weichen denen des Films.
                                If Not _negativeEnabled Then
@@ -14277,6 +14339,48 @@ Namespace ViewModels
                 _negativeBasePicked = False
             End If
             _negativeDensityColor = SkColorToHex(measured.DensityColor)
+            MeasureFilmNegativeGrayBalance(committedGeometry)
+        End Sub
+
+        ''' <summary>Misst den Graufarbausgleich (Modell 2) zu Basis und Dichtepunkt, wie sie gerade
+        ''' stehen, und legt ihn ins Rezept, damit Vorschau und Export gleich rechnen. Gemessen wird
+        ''' fuer eine Umkehr, die das Modell 2 hat oder es beim Einschalten gleich bekommt (Haken,
+        ''' Pipette und "Automatisch" schalten erst nach der Messung ein). Ein geladenes Rezept mit
+        ''' aelterem Modell behaelt seinen Weg und bekommt keinen Ausgleich.</summary>
+        Private Sub MeasureFilmNegativeGrayBalance(Optional committedGeometry As Boolean = False)
+            Dim model = If(_negativeEnabled, _negativeModel, ImageAdjustments.CurrentNegativeModel)
+            If model < 2 Then
+                _negativeGrayBalance = ""
+                _negativeGrayBalancePending = False
+                Return
+            End If
+            Dim source = GetPreviewSource()
+            If source Is Nothing Then Return
+            _negativeGrayBalance = ImageProcessor.MeasureFilmNegativeGrayBalance(source, GetCurrentAdjustments(forPreview:=Not committedGeometry))
+            _negativeGrayBalancePending = False
+        End Sub
+
+        ''' <summary>Misst den vorgemerkten Graufarbausgleich (_negativeGrayBalancePending) an DIESEM
+        ''' Bild: nach dem Oeffnen eines Rezepts ohne Ausgleich, nach dem Einfuegen von Anpassungen
+        ''' und nach einer Vorlage. Der Ausgleich gehoert dem Motiv, ein Look von einem anderen Bild
+        ''' bringt ihn deshalb nicht mit (ImageAdjustments.ExtractTransferableAdjustments). Basis und
+        ''' Dichtepunkt bleiben, wie sie im Rezept stehen.
+        '''
+        ''' Wartet, solange das Arbeitsbild noch fehlt oder die RAW-Stufe es fuer die Umkehr gleich
+        ''' linear neu aufbaut: gemessen an dem alten Bild passte der Ausgleich nicht zur Umkehr.
+        ''' Der Quellwechsel und der Neuaufbau rufen hier wieder an. Kein Verlaufsschritt und keine
+        ''' Aenderung: das Rezept bekaeme denselben Wert sonst beim Rendern.</summary>
+        Private Sub MeasurePendingFilmNegativeGrayBalance()
+            If Not _negativeGrayBalancePending Then Return
+            If Not _negativeEnabled OrElse _negativeMonochrome OrElse _negativeModel < 2 OrElse
+               Not String.IsNullOrEmpty(_negativeGrayBalance) Then
+                _negativeGrayBalancePending = False
+                Return
+            End If
+            If Not HasDocument OrElse _workingImagePending OrElse IsObjectAdjustModeActive() OrElse
+               IsSelectionAdjustModeActive() OrElse NeedsRawExposureRebuild() Then Return
+            MeasureFilmNegativeGrayBalance()
+            If Not _negativeGrayBalancePending Then SchedulePreviewUpdate(markDirty:=False)
         End Sub
 
         ''' <summary>Nach einem neuen Ausschnitt die Umkehr am Ausschnitt neu vermessen.
@@ -14333,6 +14437,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(NegativeGamma))
             Me.RaisePropertyChanged(NameOf(NegativeBaseBrush))
             Me.RaisePropertyChanged(NameOf(HasNegativeBaseColor))
+            RefreshNegativeLooksPositive()
+            Me.RaisePropertyChanged(NameOf(NegativeLooksPositive))
         End Sub
 
         Private Sub ResetNegativeInternal()
@@ -14350,6 +14456,8 @@ Namespace ViewModels
             _negativeRemeasureAfterRawRebuild = False
             _negativeGamma = 0
             _negativeModel = 0
+            _negativeGrayBalance = ""
+            _negativeGrayBalancePending = False
             RaiseNegativePropertiesChanged()
             RaiseResetButtonStateChanged()
             Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
@@ -17233,6 +17341,15 @@ Namespace ViewModels
             ' deshalb durch ihren erfolgreichen Abschluss ersetzt werden. Andere Mitteilungen
             ' (Speichern, Werkzeugwechsel, Fehler) bleiben weiterhin unangetastet.
             If Not _statusIsIdle AndAlso Not _statusIsOwnPreviewPending Then Return
+            ' Der Hinweis der Diaerkennung kam zusammen mit der Vorschau, die ihn sofort mit ihrem
+            ' Zwischenstand ueberschrieb; er steht deshalb an der Stelle von "Vorschau bereit".
+            If _negativeLooksPositiveNoticePending Then
+                _negativeLooksPositiveNoticePending = False
+                If NegativeLooksPositive Then
+                    StatusText = NegativeLooksPositiveNotice()
+                    Return
+                End If
+            End If
             StatusText = LocalizationService.T("Vorschau bereit")
         End Sub
 
@@ -18554,7 +18671,10 @@ Namespace ViewModels
             Dim target = GetCurrentAdjustments()
             target.CopyPixelAdjustmentsFrom(gespeichert)
             target.ApplyTransferredFrameFrom(gespeichert)
+            ' Der Graufarbausgleich der Vorlage gehoert ihrem Quellbild; dieses misst seinen eigenen.
+            target.ForgetTransferredNegativeGrayBalance(gespeichert)
             ApplyAdjustments(target)
+            MeasurePendingFilmNegativeGrayBalance()
             _hasChanges = True
             Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
             RaiseResetButtonStateChanged()
@@ -18585,7 +18705,10 @@ Namespace ViewModels
             Dim target = GetCurrentAdjustments()
             target.CopyPixelAdjustmentsFrom(gespeichert)
             target.ApplyTransferredFrameFrom(gespeichert)
+            ' Der Graufarbausgleich der Ablage gehoert ihrem Quellbild; dieses misst seinen eigenen.
+            target.ForgetTransferredNegativeGrayBalance(gespeichert)
             ApplyAdjustments(target)
+            MeasurePendingFilmNegativeGrayBalance()
             _hasChanges = True
             ' Wie beim Einfuegen in der Galerie: die Kachel soll danach zeigen, was eingefuegt
             ' wurde, auch wenn die Einstellung fuer entwickelte RAW-Kacheln aus ist. Der Vermerk
@@ -20723,6 +20846,10 @@ Namespace ViewModels
                 newRenderSourcePathOverride = loaded.BaseImagePath
                 newFpxPath = path
                 newFpxTempDir = loaded.TempDir
+                ' Fehlende Schriften der Textobjekte: beim Blättern nur ins Protokoll, gesagt wird
+                ' es beim Öffnen (OpenImageAsync), wie beim PSD-Import.
+                PsdImportService.LogMissingFonts("Editor.FpxMissingFonts", path,
+                                                 PsdImportService.FindMissingFonts(loaded.Adjustments.Annotations))
                 ' Das Basisbild liegt zwar nur entpackt im Temp-Ordner, das Ziel ist aber die
                 ' originale .fpx-Projektdatei. FpxService.Save schreibt das Bündel atomar neu;
                 ' deshalb ist direktes Speichern hier ausdrücklich sicher und gewollt.
@@ -20834,6 +20961,8 @@ Namespace ViewModels
                     ' das der vierfache - die Datei wird beim Oeffnen aber einfach entwickelt.
                     ImageProcessor.ScaleRecipeToSource(fpxAdjustments, GetBaseWidth(), GetBaseHeight())
                     ApplyAdjustments(fpxAdjustments, resetTransientSelectionBinding:=True)
+                    ' Ein im Stapel eingefuegtes Rezept traegt keinen Graufarbausgleich: hier messen.
+                    MeasurePendingFilmNegativeGrayBalance()
                     _hasChanges = False
                     Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
                     SchedulePendingBakedOperationsQuestion()
@@ -20952,7 +21081,8 @@ Namespace ViewModels
             Dim ignoriert = Await OpenImageAsync(ItemPathFor(pfad), If(pfade.Count > 0, pfade, Nothing),
                                                  _thumbCacheScopeId, _thumbCacheScopeName, _forceSaveAsOnly,
                                                  nextcloudSource:=herkunft,
-                                                 displayFileName:=_sourceDisplayFileName)
+                                                 displayFileName:=_sourceDisplayFileName,
+                                                 reportMissingFonts:=False)
         End Function
 
         ''' <summary>Was beim Öffnen einer Photoshop-Datei herauskommt. <see cref="HasLayers"/> ist
@@ -21006,8 +21136,12 @@ Namespace ViewModels
         '''
         ''' Dieselbe Regel gilt für die Frage nach Ebeneneffekten und unlesbaren Ebenen: nur beim
         ''' Öffnen, beim Blättern bleibt es beim Ebenenstapel.</param>
+        ''' <param name="mayReportMissingFonts">Ob fehlende Schriften beim Öffnen gesagt werden.
+        ''' False, wenn der Editor dasselbe Dokument nur neu lädt (nach dem Speichern, nach den
+        ''' Einstellungen); siehe OpenImageAsync.</param>
         Private Async Function LoadPsdDocumentAsync(psdSource As String,
-                                                    Optional mayAskAboutText As Boolean = True) As Task(Of PsdDocumentLoad)
+                                                    Optional mayAskAboutText As Boolean = True,
+                                                    Optional mayReportMissingFonts As Boolean = True) As Task(Of PsdDocumentLoad)
             ' Die gespeicherte Bearbeitung, falls es eine gibt. Sie kommt ÜBER den Stapel und
             ' ersetzt ihn nicht; ohne Ebenen in der Datei bleibt sie allein übrig, genau wie bei
             ' einer RAW.
@@ -21066,11 +21200,26 @@ Namespace ViewModels
             ' Verzerrter Text kommt immer als Bild. Sagen muss man es nur, wer Text wollte: wer
             ' "Als Text" gewählt oder festgelegt hat, und wer gar nicht gefragt wurde, weil die
             ' Datei nur solche Textebenen trägt. Wer "Als Bild" wollte, bekommt genau das.
-            Dim stretchedNotice = importResult.StretchedTextLayers > 0 AndAlso
-                                  (takeTextAsText OrElse (textLayers = 0 AndAlso String.Equals(textImportMode, "Ask", StringComparison.Ordinal)))
-            If mayAskAboutText AndAlso (importResult.EffectLayers > 0 OrElse importResult.BrokenLayers > 0 OrElse
-                                        importResult.AdjustmentLayers > 0 OrElse importResult.DroppedTextLayers > 0 OrElse
-                                        importResult.MissingContentLayers > 0 OrElse stretchedNotice) Then
+            ' Ebenso Text, den ein Textobjekt nicht treu setzen kann (Textrahmen, senkrecht, mehrere
+            ' Stilläufe): er kommt als Bild, mit Photoshops eigenen Bildpunkten.
+            Dim wantedText = takeTextAsText OrElse (textLayers = 0 AndAlso String.Equals(textImportMode, "Ask", StringComparison.Ordinal))
+            Dim stretchedNotice = importResult.StretchedTextLayers > 0 AndAlso wantedText
+            Dim unsupportedTextNotice = importResult.UnsupportedTextLayers > 0 AndAlso wantedText
+            ' Text, dessen Schrift fehlt, bleibt Text und wird mit der Vorgabeschrift gesetzt. Gesagt
+            ' wird es in derselben Rückfrage, sonst allein in einer kurzen Meldung; wie alles hier
+            ' nur beim Öffnen, beim Blättern steht es im Protokoll (PsdImport.MissingFonts).
+            ' Trägt die Datei den eigenen Rezeptblock, behält der Text des Blocks seine Familie und
+            ' wird mit der Ersatzschrift des Systems gesetzt; gemeldet wird das ebenso, hier allein,
+            ' denn die übrigen Hinweise gibt es auf diesem Weg nicht.
+            Dim missingFontsNotice = If(mayReportMissingFonts, PsdImportService.MissingFontsNotice(importResult.MissingFonts), "")
+            Dim otherNotice = importResult.EffectLayers > 0 OrElse importResult.BrokenLayers > 0 OrElse
+                              importResult.AdjustmentLayers > 0 OrElse importResult.DroppedTextLayers > 0 OrElse
+                              importResult.MissingContentLayers > 0 OrElse stretchedNotice OrElse
+                              unsupportedTextNotice
+            If mayAskAboutText AndAlso Not otherNotice AndAlso missingFontsNotice.Length > 0 Then
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Schriften fehlen"), missingFontsNotice)
+            End If
+            If mayAskAboutText AndAlso otherNotice Then
                 Dim parts As New List(Of String)()
                 If importResult.EffectLayers > 0 Then
                     parts.Add(String.Format(LocalizationService.T("{0} Ebenen tragen Ebeneneffekte wie Schatten oder Kontur. FerrumPix zeigt diese Ebenen ohne ihre Effekte."), importResult.EffectLayers))
@@ -21087,13 +21236,17 @@ Namespace ViewModels
                 If stretchedNotice Then
                     parts.Add(String.Format(LocalizationService.T("{0} Textebenen sind verzerrt, verformt oder laufen an einem Pfad und kommen als Bild, ihr Wortlaut lässt sich nicht bearbeiten."), importResult.StretchedTextLayers))
                 End If
+                If unsupportedTextNotice Then
+                    parts.Add(String.Format(LocalizationService.T("{0} Textebenen stehen in einem Textrahmen, laufen senkrecht oder tragen Formatierungen, die ein Textobjekt nicht wiedergeben kann, etwa mehrere Schriften oder Farben. Sie kommen als Bild, ihr Wortlaut lässt sich nicht bearbeiten."), importResult.UnsupportedTextLayers))
+                End If
                 If importResult.DroppedTextLayers > 0 Then
                     parts.Add(String.Format(LocalizationService.T("{0} Textebenen ohne sichtbaren Inhalt lassen sich nicht übernehmen und fehlen."), importResult.DroppedTextLayers))
                 End If
+                If missingFontsNotice.Length > 0 Then parts.Add(missingFontsNotice)
                 ' Die Wahl gibt es nur, wenn die Datei ein Gesamtbild in voller Auflösung trägt.
-                ' Ohne „Kompatibilität maximieren" gespeichert (oder zu groß, 32 Bit, Lab) bliebe
-                ' sonst nur das eingebettete Vorschaubild oder gar nichts - dann wird gemeldet und
-                ' mit den Ebenen geöffnet.
+                ' Ohne „Kompatibilität maximieren" gespeichert (oder zu groß, oder Bitmap, Duplex,
+                ' Mehrkanal) bliebe sonst nur das eingebettete Vorschaubild oder gar nichts - dann
+                ' wird gemeldet und mit den Ebenen geöffnet.
                 Dim hasComposite = Await Task.Run(Function() PsdPreviewService.HasFullComposite(psdSource))
                 Dim keepLayers = True
                 If hasComposite Then
@@ -21146,9 +21299,13 @@ Namespace ViewModels
 
         ''' <summary><paramref name="displayFileName"/>: der Name, unter dem der Nutzer dieses Bild
         ''' kennt. Nur noetig, wenn <paramref name="imagePath"/> bloss eine Arbeitskopie ist - bei
-        ''' beiden Serverquellen also. Ohne ihn stuende der Name der Temp-Datei in der Fusszeile.</summary>
+        ''' beiden Serverquellen also. Ohne ihn stuende der Name der Temp-Datei in der Fusszeile.
+        ''' <paramref name="reportMissingFonts"/>: ob fehlende Schriften der Textobjekte gemeldet
+        ''' werden (.fpx, PSD). Nur wenn der Anwender die Datei öffnet; lädt der Editor dasselbe
+        ''' Dokument nach dem Speichern oder nach den Einstellungen neu, wurde es schon gesagt.</summary>
         Public Async Function OpenImageAsync(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing, Optional nextcloudSource As Models.NextcloudOrigin = Nothing, Optional deferFolderContext As Boolean = False, Optional displayFileName As String = Nothing,
-                                             Optional showLoadingState As Boolean = False) As Task(Of Boolean)
+                                             Optional showLoadingState As Boolean = False,
+                                             Optional reportMissingFonts As Boolean = True) As Task(Of Boolean)
             ' Der Schluessel einer zusaetzlichen Variante (Services.VariantKey): geoeffnet wird die
             ' Datei, gelesen und gespeichert das Rezept dieser Variante.
             Dim openVariantId As String = Nothing
@@ -21223,8 +21380,19 @@ Namespace ViewModels
                 newWorkingOverridePath = If(loaded.RetouchStagePath, "")
                 newWorkingOverrideHasAlpha = loaded.Adjustments.WorkingImageHasTransparency
                 newWorkingOverrideExposure = loaded.Adjustments.WorkingImageExposure
+                ' Ein Textobjekt behält seine Familie, auch wenn sie hier fehlt, und wird dann mit
+                ' der Ersatzschrift des Systems gesetzt. Gesagt wird das wie beim PSD-Import, mit
+                ' demselben Satz und nur beim Öffnen; eine andere Rückfrage gibt es auf diesem Weg
+                ' nicht. Beim Blättern steht es allein im Protokoll (LoadImageContent).
+                Dim fpxAnnotations = loaded.Adjustments.Annotations
+                Dim missingFonts = Await Task.Run(Function() PsdImportService.FindMissingFonts(fpxAnnotations))
+                PsdImportService.LogMissingFonts("Editor.FpxMissingFonts", fpxSource, missingFonts)
+                If reportMissingFonts AndAlso missingFonts.Count > 0 Then
+                    Await _mainVm.ShowMessageAsync(LocalizationService.T("Schriften fehlen"),
+                                                   PsdImportService.MissingFontsNotice(missingFonts))
+                End If
             ElseIf PsdPreviewService.IsSupportedPsd(imagePath) Then
-                Dim psdLoad = Await LoadPsdDocumentAsync(imagePath)
+                Dim psdLoad = Await LoadPsdDocumentAsync(imagePath, mayReportMissingFonts:=reportMissingFonts)
                 fpxAdjustments = psdLoad.Adjustments
                 If psdLoad.HasLayers Then
                     newRenderSourcePathOverride = psdLoad.BaseImagePath
@@ -21334,6 +21502,8 @@ Namespace ViewModels
                     ' das der vierfache - die Datei wird beim Oeffnen aber einfach entwickelt.
                     ImageProcessor.ScaleRecipeToSource(fpxAdjustments, GetBaseWidth(), GetBaseHeight())
                     ApplyAdjustments(fpxAdjustments, resetTransientSelectionBinding:=True)
+                    ' Ein im Stapel eingefuegtes Rezept traegt keinen Graufarbausgleich: hier messen.
+                    MeasurePendingFilmNegativeGrayBalance()
                     _hasChanges = False
                     Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
                     SchedulePendingBakedOperationsQuestion()
@@ -22840,6 +23010,8 @@ Namespace ViewModels
             ' Kam das Bild ohne die gewuenschte Belichtung (Uebergabe vom Betrachter), zieht der
             ' Neuaufbau sie nach.
             If adopted Then ScheduleRawExposureRebuild()
+            ' Wartete ein Graufarbausgleich auf das Arbeitsbild, steht es jetzt.
+            If adopted Then MeasurePendingFilmNegativeGrayBalance()
             Return adopted
         End Function
 
@@ -24837,11 +25009,13 @@ Namespace ViewModels
                         ' AddSavedFileToFilmstrip), bleibt die bisherige Nachbarschaft erhalten - auch
                         ' eine Such- oder Auswahlliste. Sonst wie bisher der Ordner der neuen Datei.
                         Dim keepsFilmstrip = _folderPaths.Any(Function(p) String.Equals(p, targetPath, PathIdentity.Comparison))
+                        ' Fehlende Schriften wurden beim Öffnen gesagt; die gespeicherte Datei trägt
+                        ' dieselben Textobjekte.
                         If keepsFilmstrip Then
                             Await OpenImageAsync(targetPath, New List(Of String)(_folderPaths), _thumbCacheScopeId, _thumbCacheScopeName,
-                                                 showLoadingState:=True)
+                                                 showLoadingState:=True, reportMissingFonts:=False)
                         Else
-                            Await OpenImageAsync(targetPath, showLoadingState:=True)
+                            Await OpenImageAsync(targetPath, showLoadingState:=True, reportMissingFonts:=False)
                         End If
                     Else
                         ' Derselbe Pfad: die Filmstreifen-Liste muss erhalten bleiben. Ohne sie
@@ -24853,7 +25027,8 @@ Namespace ViewModels
                         ' Arbeitskopie muss deshalb mit - sonst hiesse das Bild nach einem
                         ' Speichern wieder nach seiner Temp-Datei.
                         Await OpenImageAsync(targetPath, filmstripPaths, _thumbCacheScopeId, _thumbCacheScopeName,
-                                             displayFileName:=_sourceDisplayFileName, showLoadingState:=True)
+                                             displayFileName:=_sourceDisplayFileName, showLoadingState:=True,
+                                             reportMissingFonts:=False)
                     End If
                     StatusText = statusAfterSave
                     Return True
@@ -25554,6 +25729,7 @@ Namespace ViewModels
                 .NegativeDensityColor = _negativeDensityColor,
                 .NegativeGamma = CSng(_negativeGamma),
                 .NegativeModel = _negativeModel,
+                .NegativeGrayBalance = _negativeGrayBalance,
                 .CurveRgbPoints = PointsToCurveString(_curveRgbPoints),
                 .CurveRedPoints = PointsToCurveString(_curveRedPoints),
                 .CurveGreenPoints = PointsToCurveString(_curveGreenPoints),
@@ -26391,6 +26567,7 @@ Namespace ViewModels
                 Case NameOf(AnnotationItalic) : Return LocalizationService.T("Kursiv")
                 Case NameOf(AnnotationAllCaps) : Return LocalizationService.T("Alle Großbuchstaben")
                 Case NameOf(AnnotationLetterSpacingPercent) : Return LocalizationService.T("Zeichenabstand")
+                Case NameOf(AnnotationLineSpacingPercent) : Return LocalizationService.T("Zeilenabstand")
                 Case NameOf(AnnotationTextAlignment) : Return LocalizationService.T("Ausrichtung")
                 Case NameOf(AnnotationTextPathKind), NameOf(SetAnnotationTextPathKind)
                     Return LocalizationService.T("Pfad")
@@ -26716,6 +26893,9 @@ Namespace ViewModels
             _suppressUndoCapture = True
             Try
                 ApplyAdjustments(entry.Adjustments, resetTransientSelectionBinding:=True)
+                ' Ein Stand, der den Graufarbausgleich noch nicht gemessen hatte, holt das nach;
+                ' jeder gemessene bleibt, wie er war.
+                MeasurePendingFilmNegativeGrayBalance()
             Finally
                 _suppressUndoCapture = False
             End Try
@@ -26966,6 +27146,9 @@ Namespace ViewModels
             _suppressUndoCapture = True
             Try
                 ApplyAdjustments(entry.Adjustments, resetTransientSelectionBinding:=True)
+                ' Ein Stand, der den Graufarbausgleich noch nicht gemessen hatte, holt das nach;
+                ' jeder gemessene bleibt, wie er war.
+                MeasurePendingFilmNegativeGrayBalance()
             Finally
                 _suppressUndoCapture = False
             End Try
@@ -27188,6 +27371,11 @@ Namespace ViewModels
             _negativeDensityColor = adj.NegativeDensityColor
             _negativeGamma = adj.NegativeGamma
             _negativeModel = adj.NegativeModel
+            _negativeGrayBalance = If(adj.NegativeGrayBalance, "")
+            ' Eine Umkehr im Modell 2 ohne Ausgleich (eingefuegt, aus einer Vorlage, oder ein im
+            ' Stapel geschriebenes Rezept) misst ihn an diesem Bild nach.
+            _negativeGrayBalancePending = _negativeEnabled AndAlso Not _negativeMonochrome AndAlso
+                                          _negativeModel >= 2 AndAlso _negativeGrayBalance.Length = 0
             LoadCurvePointsFromString(_curveRgbPoints, adj.CurveRgbPoints)
             LoadCurvePointsFromString(_curveRedPoints, adj.CurveRedPoints)
             LoadCurvePointsFromString(_curveGreenPoints, adj.CurveGreenPoints)
@@ -27852,9 +28040,13 @@ Namespace ViewModels
             _negativeBaseColor = ""
             _negativeDensityColor = ""
             _negativeBasePicked = False
+            _negativeLooksPositive = False
+            _negativeLooksPositiveNoticePending = False
             _negativeRemeasureAfterRawRebuild = False
             _negativeGamma = 0
             _negativeModel = 0
+            _negativeGrayBalance = ""
+            _negativeGrayBalancePending = False
             ResetCurvePoints()
             ResetHslFields()
             _rotationDegrees = 0
@@ -28076,6 +28268,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationTextPathBend))
             Me.RaisePropertyChanged(NameOf(AnnotationTextPathStartOffset))
             Me.RaisePropertyChanged(NameOf(AnnotationLetterSpacingPercent))
+            RaiseAnnotationLineSpacingChanged()
             Me.RaisePropertyChanged(NameOf(AnnotationTextAlignment))
             Me.RaisePropertyChanged(NameOf(AnnotationBold))
             Me.RaisePropertyChanged(NameOf(AnnotationItalic))
@@ -28355,7 +28548,7 @@ Namespace ViewModels
                 ' dort entsteht die Luft von selbst aus Seitenvorbreite und Oberlänge. Mit dem Schriftgrad
                 ' skaliert, damit der Abstand bei jeder Größe gleich aussieht.
                 Dim padding = Math.Max(2.0, fontSizePx * 0.08)
-                Dim lineHeight = ImageProcessor.GetBakedTextLineHeight(fontFamily, CSng(fontSizePx))
+                Dim lineHeight = ImageProcessor.GetBakedTextLineHeight(fontFamily, CSng(fontSizePx), CSng(_annotationLineSpacingPercent))
                 Dim widthPx = maxLineWidth + padding
                 Dim heightPx = fontSizePx + (lineCount - 1) * lineHeight + Math.Max(0.0F, font.Metrics.Descent) + padding
                 Dim widthPercent = widthPx / baseWidth * 100.0
@@ -28375,20 +28568,22 @@ Namespace ViewModels
         ''' linken oberen Ecke des Rahmens.</summary>
         Private Function MeasureTextInk(text As String, fontSizePixels As Double, fontFamily As String) As SKRect
             Return MeasureTextInk(text, fontSizePixels, fontFamily, _annotationLetterSpacingPercent,
-                                  _annotationBold, _annotationItalic, _annotationStrokeWidth)
+                                  _annotationBold, _annotationItalic, _annotationStrokeWidth,
+                                  lineSpacingPercent:=_annotationLineSpacingPercent)
         End Function
 
         Private Shared Function MeasureTextInk(text As String, fontSizePixels As Double, fontFamily As String,
                                                letterSpacingPercent As Double, bold As Boolean, italic As Boolean,
                                                strokeWidth As Double, Optional alignment As String = "Left",
-                                               Optional lineWidthPixels As Double = 0.0) As SKRect
+                                               Optional lineWidthPixels As Double = 0.0,
+                                               Optional lineSpacingPercent As Double = 0.0) As SKRect
             ' Dieselbe Ersatzfüllung wie die Rahmenschätzung: ein leeres Textfeld hat den Rahmen von "Text".
             Dim content = If(String.IsNullOrWhiteSpace(text), "Text", text)
             Return ImageProcessor.MeasureAnnotationTextInk(content,
                                                            If(String.IsNullOrWhiteSpace(fontFamily), "Arial", fontFamily),
                                                            CSng(Math.Max(8.0, fontSizePixels)), CSng(letterSpacingPercent),
                                                            bold, italic, CSng(Math.Max(0.0, strokeWidth)), alignment,
-                                                           CSng(Math.Max(0.0, lineWidthPixels)))
+                                                           CSng(Math.Max(0.0, lineWidthPixels)), CSng(lineSpacingPercent))
         End Function
 
         ''' <summary>Wo im Rahmen des markierten Objekts die sichtbaren Glyphen stehen, in Prozent der
@@ -28445,7 +28640,7 @@ Namespace ViewModels
             Dim ink = MeasureTextInk(text, renderAnnotation.FontSizePixels, renderAnnotation.FontFamily,
                                      renderAnnotation.LetterSpacingPercent, renderAnnotation.Bold,
                                      renderAnnotation.Italic, renderAnnotation.StrokeWidth, renderAnnotation.TextAlignment,
-                                     box.Width / 100.0 * displaySize.Width)
+                                     box.Width / 100.0 * displaySize.Width, renderAnnotation.LineSpacingPercent)
             If ink.IsEmpty Then Return Nothing
             Return MirrorInkInBox(InkPixelsToPercent(ink, displaySize.Width, displaySize.Height),
                                   box.Width, box.Height, renderAnnotation.FlipHorizontal, renderAnnotation.FlipVertical)
@@ -31617,6 +31812,10 @@ Namespace ViewModels
                     AnnotationTextPathStartOffset = a.TextPathStartOffset
                     AnnotationTextAlignment = a.TextAlignment
                     AnnotationLetterSpacingPercent = a.LetterSpacingPercent
+                    ' Unmittelbar ins Feld: der Setter stellte einen Wert auf dem automatischen
+                    ' Abstand der Schrift auf automatisch um, und das Objekt soll unverändert bleiben.
+                    _annotationLineSpacingPercent = ImageAnnotation.NormalizeLineSpacingPercent(a.LineSpacingPercent)
+                    RaiseAnnotationLineSpacingChanged()
                     AnnotationBold = a.Bold
                     AnnotationItalic = a.Italic
                     AnnotationAllCaps = a.AllCaps
@@ -31813,6 +32012,7 @@ Namespace ViewModels
             a.TextPathStartOffset = CSng(_annotationTextPathStartOffset)
             a.TextAlignment = _annotationTextAlignment
             a.LetterSpacingPercent = CSng(_annotationLetterSpacingPercent)
+            a.LineSpacingPercent = CSng(_annotationLineSpacingPercent)
             a.Bold = _annotationBold
             a.Italic = _annotationItalic
             a.AllCaps = _annotationAllCaps
@@ -33087,7 +33287,7 @@ Namespace ViewModels
             For Each propertyName In {
                 NameOf(Clarity), NameOf(ActiveCurvePoints), NameOf(ActiveCurveHistogramCounts),
                 NameOf(NegativeEnabled), NameOf(NegativeMonochrome), NameOf(NegativeGamma),
-                NameOf(NegativeBaseBrush), NameOf(HasNegativeBaseColor),
+                NameOf(NegativeBaseBrush), NameOf(HasNegativeBaseColor), NameOf(NegativeLooksPositive),
                 NameOf(RedHue), NameOf(RedSaturation), NameOf(RedLuminance),
                 NameOf(OrangeHue), NameOf(OrangeSaturation), NameOf(OrangeLuminance),
                 NameOf(YellowHue), NameOf(YellowSaturation), NameOf(YellowLuminance),

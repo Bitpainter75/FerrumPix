@@ -543,7 +543,10 @@ Namespace Services
                     postScriptName = If(font.Typeface?.FamilyName, "Arial").Replace(" ", "") & "-Regular"
                 End If
                 fontType = If(HasCffOutlines(font.Typeface), 0, 1)
-                lineHeight = GetLineHeight(font.Metrics)
+                ' Der Abstand, mit dem das Bild die Zeilen setzt, als fester Zeilenabstand: auch
+                ' der automatische des Textobjekts ist der der Schrift und nicht Photoshops 120
+                ' Prozent. Der Import erkennt den Abstand der Schrift wieder als automatisch.
+                lineHeight = GetTextLineHeight(font, render.LineSpacingPercent)
                 ' Mittig und rechts weicht der Renderer bei einer Zeile, die breiter ist als der
                 ' Rahmen, auf linksbündig aus; ein Punkttext liefe dort über den linken Rand.
                 If alignCenter OrElse alignRight Then
@@ -742,16 +745,6 @@ Namespace Services
             If JxlDecodeService.IsSupportedJxl(targetPath) AndAlso Not JxlDecodeService.CanReplaceExisting(targetPath, wantsDeep) Then
                 DiagnosticLogService.LogAlways("ImageProcessor.Save",
                     $"refused: vorhandenes JPEG XL traegt mehr als 8 Bit, Gleitkomma oder eine Animation target={IO.Path.GetFileName(targetPath)}")
-                workingFull?.Dispose()
-                Return False
-            End If
-            ' Ein vorhandenes JPEG mit 12 Bit oder verlustfrei wird nie ersetzt, weder als Quelle
-            ' selbst noch als anderes Ziel: Skia schriebe ein verlustbehaftetes 8-Bit-JPEG darueber.
-            ' Gefragt wird der Kopf, nicht die Endung; "Speichern" im Editor geht fuer eine solche
-            ' Quelle ohnehin ins Rezept daneben (RawSidecarService.SavesRecipeBeside).
-            If JpegTurboDecodeService.IsTurboJpeg(targetPath) Then
-                DiagnosticLogService.LogAlways("ImageProcessor.Save",
-                    $"refused: vorhandenes JPEG mit mehr als 8 Bit oder verlustfrei target={IO.Path.GetFileName(targetPath)}")
                 workingFull?.Dispose()
                 Return False
             End If
@@ -1534,6 +1527,22 @@ Namespace Services
                 Case Else
                     Return False
             End Select
+        End Function
+
+        ''' <summary>Darf eine fertig geschriebene Nachbardatei ueber diese Datei gelegt werden? Die
+        ''' Frage des Wegs "neue Datei, dann ueber das Original" (Stapel mit Ueberschreiben, Drehen im
+        ''' Betrachter), bevor er das Original ersetzt. SaveImage selbst sieht dort nur die
+        ''' Nachbardatei als Ziel und kann das Original nicht schuetzen.
+        '''
+        ''' Ja nur fuer das, was SaveImage an Ort und Stelle schreiben darf (<see cref="IsRewritableInPlace"/>:
+        ''' JPEG, PNG, WebP), und nie fuer die Arbeitskopie eines Serverbildes (Immich, Nextcloud): was
+        ''' dort landet, geht nicht zum Server und ist beim naechsten Aufraeumen fort. Die Serverwege,
+        ''' die das Ergebnis wirklich hochladen, legen es nicht ueber die Arbeitskopie und fragen hier
+        ''' deshalb nicht.</summary>
+        Public Shared Function CanReplaceOriginal(originalPath As String) As Boolean
+            If String.IsNullOrWhiteSpace(originalPath) Then Return False
+            If LibraryService.IsServerTempPath(originalPath) Then Return False
+            Return IsRewritableInPlace(originalPath)
         End Function
 
         ' Je Faden: der Schreiber eines Stapels laeuft synchron auf dem Faden, der ihn ruft.

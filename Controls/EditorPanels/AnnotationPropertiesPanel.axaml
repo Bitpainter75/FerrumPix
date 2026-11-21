@@ -246,6 +246,27 @@
                                      Minimum="-20" Maximum="200" Increment="1"
                                      FormatString="F0" />
         </Grid>
+        <!-- Zeilenabstand in Prozent des Grads, von Grundlinie zu Grundlinie. Ausgangsstellung ist
+             der Abstand der Schrift; dann steht "Automatisch" unter dem Namen, und der Doppelklick
+             auf den Regler stellt dorthin zurück. Ohne Wirkung auf Text an einem Pfad, der ist
+             einzeilig. -->
+        <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+              IsVisible="{Binding ShowFontControls}">
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="Zeilenabstand" Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <TextBlock Text="Automatisch" Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" Opacity="0.7" TextWrapping="Wrap"
+                           IsVisible="{Binding AnnotationLineSpacingIsAutomatic}" />
+            </StackPanel>
+            <icons:RoundSlider Grid.Column="1" Minimum="50" Maximum="300"
+                               DefaultValue="{Binding AnnotationLineSpacingAutomaticPercent}"
+                               Value="{Binding AnnotationLineSpacingPercent}" Margin="0,0" />
+            <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                     Value="{Binding AnnotationLineSpacingPercent, Mode=TwoWay}"
+                                     Minimum="50" Maximum="300" Increment="1"
+                                     FormatString="F0" />
+        </Grid>
         <!-- Text an Pfad: vorgefertigte Pfadformen (aus dem Objektrechteck abgeleitet), dazu
              Krümmung und Startversatz. Nur bei echten Text-Objekten (ShowTextPathRow). -->
         <Grid ColumnDefinitions="92,*" VerticalAlignment="Center"

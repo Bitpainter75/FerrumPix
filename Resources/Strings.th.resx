@@ -11275,11 +11275,11 @@
   <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
     <value>นำคำสำคัญ คะแนน และป้ายสีจากไฟล์ .pp3 หรือ .arp ข้างรูปภาพเข้าสู่แคตตาล็อก ไฟล์จะถูกอ่านเท่านั้น ไม่มีการแก้ไข</value>
   </data>
-  <data name="Daten_aus_RawTherapee_ART_und_Lightroom_lesen_daa38c70" xml:space="preserve">
-    <value>อ่านข้อมูลจาก RawTherapee, ART และ Lightroom</value>
+  <data name="Daten_aus_RawTherapee_ART_RapidRAW_und_Lightroom_79203497" xml:space="preserve">
+    <value>อ่านข้อมูลจาก RawTherapee, ART, RapidRAW และ Lightroom</value>
   </data>
-  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7a90dbbf" xml:space="preserve">
-    <value>นำคำสำคัญ คะแนน และป้ายสีจากไฟล์ .pp3 หรือ .arp ข้างรูปภาพ และจากแคตตาล็อก Lightroom ด้านล่างเข้าสู่แคตตาล็อก ข้อมูลจะถูกอ่านเท่านั้น ไม่มีการแก้ไขใดๆ ที่นั่น</value>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_bc06a21b" xml:space="preserve">
+    <value>นำคำสำคัญ คะแนน และป้ายสีจากไฟล์ .pp3, .arp หรือ .rrdata ข้างรูปภาพ และจากแคตตาล็อก Lightroom ด้านล่างเข้าสู่แคตตาล็อก และนำเครื่องหมายจาก .rrdata มาด้วย ข้อมูลจะถูกอ่านเท่านั้น ไม่มีการแก้ไขใดๆ ที่นั่น</value>
   </data>
   <data name="Lightroom_Classic_Katalog_941f2bc5" xml:space="preserve">
     <value>แคตตาล็อก Lightroom Classic</value>
@@ -12083,45 +12083,6 @@
   <data name="Hex_Wert_und_R_G_B_92c85fbe" xml:space="preserve">
     <value>ค่าเลขฐานสิบหกและ R G B</value>
   </data>
-  <data name="R_ckfall_auf_die_Bibliotheken_des_Systems_31361321" xml:space="preserve">
-    <value>ใช้ไลบรารีของระบบแทน</value>
-  </data>
-  <data name="Scheitert_eine_mitgelieferte_Bibliothek_an_einer_485ef676" xml:space="preserve">
-    <value>หากไลบรารีที่มาพร้อมโปรแกรมเปิดไฟล์ไม่ได้ FerrumPix จะลองเปิดไฟล์เดียวกันด้วยเวอร์ชันที่ติดตั้งในระบบ ใช้ได้เฉพาะบน Linux นอก Flatpak การใช้แทนทุกครั้งจะถูกบันทึกในไฟล์นี้ แม้ไม่ได้เปิดบันทึกการวินิจฉัย:</value>
-  </data>
-  <data name="Im_Flatpak_nicht_vorgesehen_dort_gibt_es_keine_B_65e7c67b" xml:space="preserve">
-    <value>ไม่มีใน Flatpak เนื่องจากไม่มีไลบรารีของระบบ</value>
-  </data>
-  <data name="Auf_diesem_Betriebssystem_nicht_vorgesehen_3d1fa0cf" xml:space="preserve">
-    <value>ไม่มีในระบบปฏิบัติการนี้</value>
-  </data>
-  <data name="Nicht_n_tig_es_l_uft_keine_mitgelieferte_Fassung_984da18e" xml:space="preserve">
-    <value>ไม่จำเป็น ไม่ได้ใช้เวอร์ชันที่มาพร้อมโปรแกรม</value>
-  </data>
-  <data name="Keine_Fassung_des_Systems_gefunden_5a9d7db3" xml:space="preserve">
-    <value>ไม่พบเวอร์ชันของระบบ</value>
-  </data>
-  <data name="Bereit_Fassung_0_unter_1_sie_wird_erst_geladen_w_cf809f06" xml:space="preserve">
-    <value>พร้อม: เวอร์ชัน {0} ที่ {1} จะโหลดเมื่อเวอร์ชันที่มาพร้อมโปรแกรมเปิดไฟล์ไม่ได้เท่านั้น</value>
-  </data>
-  <data name="Geladen_Fassung_0_unter_1_bisher_2_Dateien_damit_97ceb6db" xml:space="preserve">
-    <value>โหลดแล้ว: เวอร์ชัน {0} ที่ {1} อ่านไฟล์ไปแล้ว {2} ไฟล์</value>
-  </data>
-  <data name="Gefunden_unter_0_aber_nicht_nutzbar_der_Grund_st_ebdf3fd2" xml:space="preserve">
-    <value>พบที่ {0} แต่ใช้ไม่ได้ ดูสาเหตุในบันทึก</value>
-  </data>
-  <data name="libjpeg_turbo_8d5bdfd8" xml:space="preserve">
-    <value>libjpeg-turbo</value>
-  </data>
-  <data name="JPEG_mit_12_Bit_und_verlustfreies_JPEG_lesen_f9bc12ae" xml:space="preserve">
-    <value>อ่าน JPEG 12 บิตและ JPEG แบบไม่สูญเสียข้อมูล</value>
-  </data>
-  <data name="IJG_BSD_3_Clause_Zlib_84203779" xml:space="preserve">
-    <value>IJG, BSD-3-Clause, Zlib</value>
-  </data>
-  <data name="libjpeg_turbo_liest_JPEG_Dateien_mit_12_Bit_und__425706e0" xml:space="preserve">
-    <value>libjpeg-turbo อ่านไฟล์ JPEG 12 บิตและ JPEG แบบไม่สูญเสียข้อมูลที่ไลบรารีกราฟิกของแอปเปิดไม่ได้ ส่วน JPEG อื่นทั้งหมดยังคงอ่านด้วยไลบรารีนั้น อยู่ภายใต้สัญญาอนุญาต IJG และ BSD ส่วนที่รวมมาด้วยอยู่ภายใต้สัญญาอนุญาต zlib ทุกแพ็กเกจยกเว้น Flatpak มีไลบรารีนี้มาด้วยและใช้ก่อน libjpeg-turbo ของระบบ ส่วน Flatpak ใช้จากรันไทม์ของตน หากไม่มี จะเปิดไม่ได้เฉพาะไฟล์เหล่านี้</value>
-  </data>
   <data name="JPEG_2000_Dateien_lesen_b1019379" xml:space="preserve">
     <value>การอ่านไฟล์ JPEG 2000</value>
   </data>
@@ -12142,5 +12103,50 @@
   </data>
   <data name="Bilder_die_eine_HEIF_Datei_als_JPEG_tr_gt_etwa_d_9b9571ac" xml:space="preserve">
     <value>ภาพที่ไฟล์ HEIF เก็บไว้เป็น JPEG เช่น ภาพตัวอย่างของกล้องบางรุ่น libheif จะอ่านด้วย libjpeg-turbo ที่รวมอยู่ภายใน ส่วน Flatpak จะใช้ libheif ของรันไทม์</value>
+  </data>
+  <data name="Auswahl_ersetzen_cbe152e5" xml:space="preserve">
+    <value>แทนที่การเลือก</value>
+  </data>
+  <data name="Als_Auswahl_geladen_ee91a059" xml:space="preserve">
+    <value>โหลดเป็นการเลือกแล้ว</value>
+  </data>
+  <data name="Zur_Auswahl_hinzugef_gt_27c6e5ad" xml:space="preserve">
+    <value>เพิ่มเข้าในการเลือกแล้ว</value>
+  </data>
+  <data name="Von_der_Auswahl_abgezogen_e6f277f6" xml:space="preserve">
+    <value>ลบออกจากการเลือกแล้ว</value>
+  </data>
+  <data name="Mit_der_Auswahl_geschnitten_743fe0ee" xml:space="preserve">
+    <value>ตัดกับการเลือกแล้ว</value>
+  </data>
+  <data name="0_Textebenen_stehen_in_einem_Textrahmen_laufen_s_6939c020" xml:space="preserve">
+    <value>เลเยอร์ข้อความ {0} รายการอยู่ในกรอบข้อความ วางแนวตั้ง หรือมีการจัดรูปแบบที่วัตถุข้อความแสดงไม่ได้ เช่น หลายฟอนต์หรือหลายสี จึงนำเข้าเป็นภาพและแก้ไขข้อความไม่ได้</value>
+  </data>
+  <data name="Das_Bild_sieht_nicht_nach_einem_Negativ_aus_kein_1cbade35" xml:space="preserve">
+    <value>ภาพนี้ไม่เหมือนเนกาทีฟ: ไม่มีเนื้อฟิล์มสีส้มและคอนทราสต์ลงไปถึงสีดำ ดูเหมือนสไลด์หรือภาพถ่ายมากกว่า ภาพโพสิทีฟไม่ต้องกลับสี</value>
+  </data>
+  <data name="0_Datei_en_sehen_nicht_nach_einem_Negativ_aus_ke_9cef9624" xml:space="preserve">
+    <value>{0} ไฟล์ไม่เหมือนเนกาทีฟ: ไม่มีเนื้อฟิล์มสีส้มและคอนทราสต์ลงไปถึงสีดำ แต่การกลับสียังเปิดอยู่ในไฟล์เหล่านั้น</value>
+  </data>
+  <data name="0_l_uft_als_Snap_und_darf_Dateien_au_erhalb_des__99f3b768" xml:space="preserve">
+    <value>{0} ทำงานแบบ Snap และอ่านไฟล์นอกโฟลเดอร์หลักได้เมื่อได้รับอนุญาตแล้วเท่านั้น สำหรับการ์ดหน่วยความจำและไดรฟ์ USB: snap connect {1}:removable-media</value>
+  </data>
+  <data name="Zeilenabstand_fb489798" xml:space="preserve">
+    <value>ระยะห่างระหว่างบรรทัด</value>
+  </data>
+  <data name="0_1_Ebene_a1ddd057" xml:space="preserve">
+    <value>{0} (1 เลเยอร์)</value>
+  </data>
+  <data name="0_1_Ebenen_44a37c60" xml:space="preserve">
+    <value>{0} ({1} เลเยอร์)</value>
+  </data>
+  <data name="Auf_diesem_Rechner_fehlen_Schriften_0_Der_Text_b_3b27b355" xml:space="preserve">
+    <value>คอมพิวเตอร์เครื่องนี้ไม่มีแบบอักษร: {0} ข้อความยังแก้ไขได้ แต่จะแสดงด้วย {1} จึงอาจดูแตกต่างออกไป</value>
+  </data>
+  <data name="Text_d3bc9a37" xml:space="preserve">
+    <value>, </value>
+  </data>
+  <data name="Schriften_fehlen_41c5e549" xml:space="preserve">
+    <value>ไม่มีแบบอักษร</value>
   </data>
 </root>

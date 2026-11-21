@@ -11271,11 +11271,11 @@
   <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
     <value>Neemt trefwoorden, waardering en kleurlabel uit het .pp3- of .arp-bestand naast de afbeelding over in de catalogus. De bestanden worden alleen gelezen, nooit gewijzigd.</value>
   </data>
-  <data name="Daten_aus_RawTherapee_ART_und_Lightroom_lesen_daa38c70" xml:space="preserve">
-    <value>Gegevens uit RawTherapee, ART en Lightroom lezen</value>
+  <data name="Daten_aus_RawTherapee_ART_RapidRAW_und_Lightroom_79203497" xml:space="preserve">
+    <value>Gegevens uit RawTherapee, ART, RapidRAW en Lightroom lezen</value>
   </data>
-  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7a90dbbf" xml:space="preserve">
-    <value>Neemt trefwoorden, waardering en kleurlabel over uit het .pp3- of .arp-bestand naast de afbeelding en uit de Lightroom-catalogus hieronder in de catalogus. Ze worden alleen gelezen, er wordt niets in gewijzigd.</value>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_bc06a21b" xml:space="preserve">
+    <value>Neemt trefwoorden, waardering en kleurlabel over uit het .pp3-, .arp- of .rrdata-bestand naast de afbeelding en uit de Lightroom-catalogus hieronder in de catalogus, uit het .rrdata-bestand ook de markering. Ze worden alleen gelezen, er wordt niets in gewijzigd.</value>
   </data>
   <data name="Lightroom_Classic_Katalog_941f2bc5" xml:space="preserve">
     <value>Lightroom Classic-catalogus</value>
@@ -12079,45 +12079,6 @@
   <data name="Hex_Wert_und_R_G_B_92c85fbe" xml:space="preserve">
     <value>Hexwaarde en R G B</value>
   </data>
-  <data name="R_ckfall_auf_die_Bibliotheken_des_Systems_31361321" xml:space="preserve">
-    <value>Terugval op de systeembibliotheken</value>
-  </data>
-  <data name="Scheitert_eine_mitgelieferte_Bibliothek_an_einer_485ef676" xml:space="preserve">
-    <value>Als een meegeleverde bibliotheek een bestand niet kan openen, probeert FerrumPix hetzelfde bestand met de versie die op het systeem is geïnstalleerd. Dit is alleen beschikbaar op Linux buiten de Flatpak. Elke terugval wordt in dit bestand vastgelegd, ook zonder diagnoselogboek:</value>
-  </data>
-  <data name="Im_Flatpak_nicht_vorgesehen_dort_gibt_es_keine_B_65e7c67b" xml:space="preserve">
-    <value>Niet beschikbaar in de Flatpak, daar zijn geen systeembibliotheken</value>
-  </data>
-  <data name="Auf_diesem_Betriebssystem_nicht_vorgesehen_3d1fa0cf" xml:space="preserve">
-    <value>Niet beschikbaar op dit besturingssysteem</value>
-  </data>
-  <data name="Nicht_n_tig_es_l_uft_keine_mitgelieferte_Fassung_984da18e" xml:space="preserve">
-    <value>Niet nodig, er draait geen meegeleverde versie</value>
-  </data>
-  <data name="Keine_Fassung_des_Systems_gefunden_5a9d7db3" xml:space="preserve">
-    <value>Geen systeemversie gevonden</value>
-  </data>
-  <data name="Bereit_Fassung_0_unter_1_sie_wird_erst_geladen_w_cf809f06" xml:space="preserve">
-    <value>Gereed: versie {0} in {1}, wordt pas geladen als de meegeleverde een bestand niet kan openen</value>
-  </data>
-  <data name="Geladen_Fassung_0_unter_1_bisher_2_Dateien_damit_97ceb6db" xml:space="preserve">
-    <value>Geladen: versie {0} in {1}, tot nu toe {2} bestanden mee gelezen</value>
-  </data>
-  <data name="Gefunden_unter_0_aber_nicht_nutzbar_der_Grund_st_ebdf3fd2" xml:space="preserve">
-    <value>Gevonden in {0}, maar niet bruikbaar; de reden staat in het logboek</value>
-  </data>
-  <data name="libjpeg_turbo_8d5bdfd8" xml:space="preserve">
-    <value>libjpeg-turbo</value>
-  </data>
-  <data name="JPEG_mit_12_Bit_und_verlustfreies_JPEG_lesen_f9bc12ae" xml:space="preserve">
-    <value>12-bits en lossless JPEG lezen</value>
-  </data>
-  <data name="IJG_BSD_3_Clause_Zlib_84203779" xml:space="preserve">
-    <value>IJG, BSD-3-Clause, Zlib</value>
-  </data>
-  <data name="libjpeg_turbo_liest_JPEG_Dateien_mit_12_Bit_und__425706e0" xml:space="preserve">
-    <value>libjpeg-turbo leest 12-bits JPEG-bestanden en lossless JPEG-bestanden die de grafische bibliotheek van de toepassing niet opent; elke andere JPEG blijft die bibliotheek lezen. Ze valt onder de IJG- en BSD-licentie, meegeleverde delen onder de zlib-licentie. Elk pakket behalve de Flatpak levert haar mee en verkiest haar boven een libjpeg-turbo van het systeem; de Flatpak neemt haar uit zijn runtime. Ontbreekt ze, dan blijven alleen deze bestanden ongeopend.</value>
-  </data>
   <data name="JPEG_2000_Dateien_lesen_b1019379" xml:space="preserve">
     <value>JPEG 2000-bestanden lezen</value>
   </data>
@@ -12138,5 +12099,50 @@
   </data>
   <data name="Bilder_die_eine_HEIF_Datei_als_JPEG_tr_gt_etwa_d_9b9571ac" xml:space="preserve">
     <value>Afbeeldingen die een HEIF-bestand als JPEG bevat, zoals de voorbeelden van sommige camera's, leest libheif met de ingebouwde libjpeg-turbo, de Flatpak met de libheif van zijn runtime.</value>
+  </data>
+  <data name="Auswahl_ersetzen_cbe152e5" xml:space="preserve">
+    <value>Selectie vervangen</value>
+  </data>
+  <data name="Als_Auswahl_geladen_ee91a059" xml:space="preserve">
+    <value>Als selectie geladen</value>
+  </data>
+  <data name="Zur_Auswahl_hinzugef_gt_27c6e5ad" xml:space="preserve">
+    <value>Aan selectie toegevoegd</value>
+  </data>
+  <data name="Von_der_Auswahl_abgezogen_e6f277f6" xml:space="preserve">
+    <value>Van selectie afgetrokken</value>
+  </data>
+  <data name="Mit_der_Auswahl_geschnitten_743fe0ee" xml:space="preserve">
+    <value>Doorsnede met selectie gemaakt</value>
+  </data>
+  <data name="0_Textebenen_stehen_in_einem_Textrahmen_laufen_s_6939c020" xml:space="preserve">
+    <value>{0} tekstlagen staan in een tekstkader, lopen verticaal of hebben opmaak die een tekstobject niet kan weergeven, bijvoorbeeld meerdere lettertypen of kleuren. Ze komen binnen als afbeelding, hun tekst kan niet worden bewerkt.</value>
+  </data>
+  <data name="Das_Bild_sieht_nicht_nach_einem_Negativ_aus_kein_1cbade35" xml:space="preserve">
+    <value>Het beeld lijkt niet op een negatief: geen oranje filmbasis en contrast tot in het zwart, eerder een dia of een foto. Een positief hoeft niet te worden omgekeerd.</value>
+  </data>
+  <data name="0_Datei_en_sehen_nicht_nach_einem_Negativ_aus_ke_9cef9624" xml:space="preserve">
+    <value>{0} bestand(en) lijken niet op een negatief: geen oranje filmbasis en contrast tot in het zwart. De omkering staat daar toch aan.</value>
+  </data>
+  <data name="0_l_uft_als_Snap_und_darf_Dateien_au_erhalb_des__99f3b768" xml:space="preserve">
+    <value>{0} draait als Snap en mag bestanden buiten je thuismap alleen na toestemming lezen. Voor geheugenkaarten en USB-schijven: snap connect {1}:removable-media</value>
+  </data>
+  <data name="Zeilenabstand_fb489798" xml:space="preserve">
+    <value>Regelafstand</value>
+  </data>
+  <data name="0_1_Ebene_a1ddd057" xml:space="preserve">
+    <value>{0} (1 laag)</value>
+  </data>
+  <data name="0_1_Ebenen_44a37c60" xml:space="preserve">
+    <value>{0} ({1} lagen)</value>
+  </data>
+  <data name="Auf_diesem_Rechner_fehlen_Schriften_0_Der_Text_b_3b27b355" xml:space="preserve">
+    <value>Op deze computer ontbreken lettertypen: {0}. De tekst blijft bewerkbaar, maar wordt gezet in {1} en kan er daardoor anders uitzien.</value>
+  </data>
+  <data name="Text_d3bc9a37" xml:space="preserve">
+    <value>, </value>
+  </data>
+  <data name="Schriften_fehlen_41c5e549" xml:space="preserve">
+    <value>Ontbrekende lettertypen</value>
   </data>
 </root>

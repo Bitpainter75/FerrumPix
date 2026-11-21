@@ -11230,11 +11230,11 @@
   <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
     <value>Importa para o catálogo as palavras-chave, a classificação e a etiqueta de cor do ficheiro .pp3 ou .arp junto à imagem. Os ficheiros são apenas lidos, nunca alterados.</value>
   </data>
-  <data name="Daten_aus_RawTherapee_ART_und_Lightroom_lesen_daa38c70" xml:space="preserve">
-    <value>Ler dados do RawTherapee, ART e Lightroom</value>
+  <data name="Daten_aus_RawTherapee_ART_RapidRAW_und_Lightroom_79203497" xml:space="preserve">
+    <value>Ler dados do RawTherapee, ART, RapidRAW e Lightroom</value>
   </data>
-  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7a90dbbf" xml:space="preserve">
-    <value>Importa para o catálogo as palavras-chave, a classificação e a etiqueta de cor do ficheiro .pp3 ou .arp ao lado da imagem e do catálogo do Lightroom abaixo. São apenas lidos, nada é alterado neles.</value>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_bc06a21b" xml:space="preserve">
+    <value>Importa para o catálogo as palavras-chave, a classificação e a etiqueta de cor do ficheiro .pp3, .arp ou .rrdata ao lado da imagem e do catálogo do Lightroom abaixo, e do ficheiro .rrdata também a marcação. São apenas lidos, nada é alterado neles.</value>
   </data>
   <data name="Lightroom_Classic_Katalog_941f2bc5" xml:space="preserve">
     <value>Catálogo do Lightroom Classic</value>
@@ -12038,45 +12038,6 @@
   <data name="Hex_Wert_und_R_G_B_92c85fbe" xml:space="preserve">
     <value>Valor hexadecimal e R G B</value>
   </data>
-  <data name="R_ckfall_auf_die_Bibliotheken_des_Systems_31361321" xml:space="preserve">
-    <value>Recurso às bibliotecas do sistema</value>
-  </data>
-  <data name="Scheitert_eine_mitgelieferte_Bibliothek_an_einer_485ef676" xml:space="preserve">
-    <value>Se uma biblioteca incluída não conseguir abrir um ficheiro, o FerrumPix tenta o mesmo ficheiro com a versão instalada no sistema. Isto só existe no Linux fora do Flatpak. Cada recurso fica registado neste ficheiro, mesmo sem o registo de diagnóstico:</value>
-  </data>
-  <data name="Im_Flatpak_nicht_vorgesehen_dort_gibt_es_keine_B_65e7c67b" xml:space="preserve">
-    <value>Não disponível no Flatpak, onde não há bibliotecas do sistema</value>
-  </data>
-  <data name="Auf_diesem_Betriebssystem_nicht_vorgesehen_3d1fa0cf" xml:space="preserve">
-    <value>Não disponível neste sistema operativo</value>
-  </data>
-  <data name="Nicht_n_tig_es_l_uft_keine_mitgelieferte_Fassung_984da18e" xml:space="preserve">
-    <value>Não é necessário, não está a ser usada nenhuma versão incluída</value>
-  </data>
-  <data name="Keine_Fassung_des_Systems_gefunden_5a9d7db3" xml:space="preserve">
-    <value>Nenhuma versão do sistema encontrada</value>
-  </data>
-  <data name="Bereit_Fassung_0_unter_1_sie_wird_erst_geladen_w_cf809f06" xml:space="preserve">
-    <value>Pronta: versão {0} em {1}, só é carregada quando a incluída falha num ficheiro</value>
-  </data>
-  <data name="Geladen_Fassung_0_unter_1_bisher_2_Dateien_damit_97ceb6db" xml:space="preserve">
-    <value>Carregada: versão {0} em {1}, até agora {2} ficheiros lidos com ela</value>
-  </data>
-  <data name="Gefunden_unter_0_aber_nicht_nutzbar_der_Grund_st_ebdf3fd2" xml:space="preserve">
-    <value>Encontrada em {0}, mas não utilizável; o motivo está no registo</value>
-  </data>
-  <data name="libjpeg_turbo_8d5bdfd8" xml:space="preserve">
-    <value>libjpeg-turbo</value>
-  </data>
-  <data name="JPEG_mit_12_Bit_und_verlustfreies_JPEG_lesen_f9bc12ae" xml:space="preserve">
-    <value>Ler JPEG de 12 bits e JPEG sem perdas</value>
-  </data>
-  <data name="IJG_BSD_3_Clause_Zlib_84203779" xml:space="preserve">
-    <value>IJG, BSD-3-Clause, Zlib</value>
-  </data>
-  <data name="libjpeg_turbo_liest_JPEG_Dateien_mit_12_Bit_und__425706e0" xml:space="preserve">
-    <value>libjpeg-turbo lê ficheiros JPEG de 12 bits e JPEG sem perdas que a biblioteca gráfica da aplicação não abre; qualquer outro JPEG continua a ser lido por ela. Está sob as licenças IJG e BSD, com partes incluídas sob a licença zlib. Cada pacote exceto o Flatpak tra-la consigo e usa-a antes da libjpeg-turbo do sistema; o Flatpak obtém-na do seu ambiente de execução. Se faltar, apenas esses ficheiros ficam por abrir.</value>
-  </data>
   <data name="JPEG_2000_Dateien_lesen_b1019379" xml:space="preserve">
     <value>Leitura de ficheiros JPEG 2000</value>
   </data>
@@ -12097,5 +12058,50 @@
   </data>
   <data name="Bilder_die_eine_HEIF_Datei_als_JPEG_tr_gt_etwa_d_9b9571ac" xml:space="preserve">
     <value>As imagens que um ficheiro HEIF guarda como JPEG, como as pré-visualizações de algumas câmaras, são lidas pela libheif com a libjpeg-turbo que inclui e, no Flatpak, pela libheif do seu ambiente de execução.</value>
+  </data>
+  <data name="Auswahl_ersetzen_cbe152e5" xml:space="preserve">
+    <value>Substituir seleção</value>
+  </data>
+  <data name="Als_Auswahl_geladen_ee91a059" xml:space="preserve">
+    <value>Carregado como seleção</value>
+  </data>
+  <data name="Zur_Auswahl_hinzugef_gt_27c6e5ad" xml:space="preserve">
+    <value>Adicionado à seleção</value>
+  </data>
+  <data name="Von_der_Auswahl_abgezogen_e6f277f6" xml:space="preserve">
+    <value>Subtraído da seleção</value>
+  </data>
+  <data name="Mit_der_Auswahl_geschnitten_743fe0ee" xml:space="preserve">
+    <value>Interseccionado com a seleção</value>
+  </data>
+  <data name="0_Textebenen_stehen_in_einem_Textrahmen_laufen_s_6939c020" xml:space="preserve">
+    <value>{0} camadas de texto estão numa caixa de texto, correm na vertical ou têm uma formatação que um objeto de texto não consegue reproduzir, por exemplo várias fontes ou cores. Chegam como imagem, o texto não pode ser editado.</value>
+  </data>
+  <data name="Das_Bild_sieht_nicht_nach_einem_Negativ_aus_kein_1cbade35" xml:space="preserve">
+    <value>A imagem não parece um negativo: sem base do filme laranja e com contraste até o preto, mais parecida com um slide ou uma foto. Um positivo não precisa de inversão.</value>
+  </data>
+  <data name="0_Datei_en_sehen_nicht_nach_einem_Negativ_aus_ke_9cef9624" xml:space="preserve">
+    <value>{0} arquivo(s) não parecem um negativo: sem base do filme laranja e com contraste até o preto. A inversão está ativada neles mesmo assim.</value>
+  </data>
+  <data name="0_l_uft_als_Snap_und_darf_Dateien_au_erhalb_des__99f3b768" xml:space="preserve">
+    <value>{0} é executado como Snap e só pode ler arquivos fora da sua pasta pessoal com permissão. Para cartões de memória e unidades USB: snap connect {1}:removable-media</value>
+  </data>
+  <data name="Zeilenabstand_fb489798" xml:space="preserve">
+    <value>Espaçamento entre linhas</value>
+  </data>
+  <data name="0_1_Ebene_a1ddd057" xml:space="preserve">
+    <value>{0} (1 camada)</value>
+  </data>
+  <data name="0_1_Ebenen_44a37c60" xml:space="preserve">
+    <value>{0} ({1} camadas)</value>
+  </data>
+  <data name="Auf_diesem_Rechner_fehlen_Schriften_0_Der_Text_b_3b27b355" xml:space="preserve">
+    <value>Faltam fontes neste computador: {0}. O texto continua editável, mas é composto com {1} e por isso pode parecer diferente.</value>
+  </data>
+  <data name="Text_d3bc9a37" xml:space="preserve">
+    <value>, </value>
+  </data>
+  <data name="Schriften_fehlen_41c5e549" xml:space="preserve">
+    <value>Fontes em falta</value>
   </data>
 </root>

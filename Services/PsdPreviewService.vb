@@ -15,10 +15,12 @@ Namespace Services
     ''' "Maximale Kompatibilität" (Standard) ablegt - Ebenen-Blending muss so nicht nachgebaut werden.
     ''' Aufbau: Header (8BPS, Version 1=PSD/2=PSB, Kanäle, Maße, Bittiefe, Farbmodus) → Farbmodus-Daten
     ''' überspringen → Bildressourcen überspringen → Ebenen-Sektion überspringen → Composite dekodieren
-    ''' (unkomprimiert oder RLE/PackBits, kanalweise planar). Abgedeckt: 8/16 Bit, RGB(+Alpha),
-    ''' Graustufen(+Alpha), CMYK (naiv nach RGB, Photoshop speichert CMYK invertiert). Fehlt das
-    ''' Composite (Kompatibilität beim Speichern deaktiviert) oder ist der Modus exotisch (Lab,
-    ''' indiziert, 32 Bit), fällt der Leser auf das eingebettete JPEG-Thumbnail (Bildressource 1036)
+    ''' (unkomprimiert, RLE/PackBits oder ZIP, kanalweise planar). Abgedeckt: 8/16 Bit, RGB(+Alpha),
+    ''' Graustufen(+Alpha), CMYK (naiv nach RGB, Photoshop speichert CMYK invertiert), indiziert,
+    ''' Lab (nach sRGB gerechnet, siehe ComposeLab) und 32 Bit Gleitkomma in RGB und Graustufen
+    ''' (mit derselben Abbildung wie die Ebenen). Fehlt das Composite (Kompatibilität beim
+    ''' Speichern deaktiviert), ist es zu groß oder der Modus exotisch (Bitmap, Duplex,
+    ''' Mehrkanal), fällt der Leser auf das eingebettete JPEG-Thumbnail (Bildressource 1036)
     ''' zurück; fehlt auch das, gibt es Nothing.
     ''' </summary>
     Public NotInheritable Class PsdPreviewService
@@ -43,6 +45,7 @@ Namespace Services
             Indexed = 2
             Rgb = 3
             Cmyk = 4
+            Lab = 9
         End Enum
 
         Private Structure PsdHeader
@@ -144,11 +147,16 @@ Namespace Services
         ''' <summary>Nur Bittiefen/Modi, die dieser Leser wirklich beherrscht - alles andere geht in
         ''' den Thumbnail-Fallback statt in ein falsch eingefärbtes Bild.</summary>
         Private Shared Function CompositeModeSupported(header As PsdHeader) As Boolean
+            ' 32 Bit ist Gleitkomma und gibt es nur in RGB und Graustufen.
+            If header.Depth = 32 Then
+                Return header.ColorMode = PsdColorMode.Rgb OrElse header.ColorMode = PsdColorMode.Grayscale
+            End If
             If header.Depth <> 8 AndAlso header.Depth <> 16 Then Return False
             If header.ColorMode <> PsdColorMode.Grayscale AndAlso
                header.ColorMode <> PsdColorMode.Rgb AndAlso
                header.ColorMode <> PsdColorMode.Cmyk AndAlso
-               header.ColorMode <> PsdColorMode.Indexed Then Return False
+               header.ColorMode <> PsdColorMode.Indexed AndAlso
+               header.ColorMode <> PsdColorMode.Lab Then Return False
             ' Indizierte Farbe gibt es nur mit acht Bit: ein Byte je Punkt ist der Index.
             Return header.ColorMode <> PsdColorMode.Indexed OrElse header.Depth = 8
         End Function
@@ -216,7 +224,8 @@ Namespace Services
             Dim layerLen = If(header.IsPsb, ReadU64(fs), CLng(ReadU32(fs)))
             If layerLen < 0 OrElse fs.Position + layerLen > fs.Length Then Return Nothing
             Dim layerSectionEnd = fs.Position + layerLen
-            Dim colorChannels = If(header.ColorMode = PsdColorMode.Rgb, 3, If(header.ColorMode = PsdColorMode.Grayscale, 1, 0))
+            Dim colorChannels = If(header.ColorMode = PsdColorMode.Rgb OrElse header.ColorMode = PsdColorMode.Lab, 3,
+                                   If(header.ColorMode = PsdColorMode.Grayscale, 1, 0))
             Dim mergedAlpha = colorChannels > 0 AndAlso header.Channels > colorChannels AndAlso
                               MergedImageHasAlpha(fs, header, layerSectionEnd, resources, header.Channels - colorChannels)
             fs.Position = layerSectionEnd
@@ -235,7 +244,7 @@ Namespace Services
             Dim neededChannels As Integer
             Dim hasAlpha As Boolean
             Select Case header.ColorMode
-                Case PsdColorMode.Rgb
+                Case PsdColorMode.Rgb, PsdColorMode.Lab
                     If header.Channels < 3 Then Return Nothing
                     hasAlpha = mergedAlpha
                     neededChannels = If(hasAlpha, 4, 3)
@@ -258,6 +267,21 @@ Namespace Services
             Dim bytesPerSample = header.Depth \ 8
             Dim rowBytes = header.Width * bytesPerSample
             Dim planeSize = header.Width * header.Height
+
+            ' 32 Bit: jede Zeile geht beim Lesen gleich durch dieselbe Abbildung wie die Ebenen
+            ' (PsdLayerReader.FloatSampleToByte), die Gleitkommawerte liegen also nie als Ganzes im
+            ' Speicher, und der Bedarf ist der eines 8-Bit-Bilds. Nur mit Transparenz in RGB nicht:
+            ' dann muss die weiße Hinterlegung herausgerechnet werden, bevor die Kennlinie greift,
+            ' und dafür bleibt die Farbe bis zum Transparenzkanal linear in 16 Bit stehen.
+            ' Lab in 16 Bit bleibt ebenfalls in 16 Bit stehen: a und b haben ihre Null bei 32768,
+            ' und mit dem oberen Byte allein lag das Ergebnis doppelt so weit neben dem RGB-Bild
+            ' derselben Datei wie bei acht Bit (gemessen am Prüfsatz aus Photoshop-Dateien).
+            Dim wide As UShort()() = Nothing
+            If (header.Depth = 32 AndAlso hasAlpha AndAlso header.ColorMode = PsdColorMode.Rgb) OrElse
+               (header.Depth = 16 AndAlso header.ColorMode = PsdColorMode.Lab) Then
+                If EstimatedPeakBytes(header) + CLng(planeSize) * 6 > MaxCompositeBytes Then Return Nothing
+                wide = New UShort(2)() {}
+            End If
 
             ' RLE: vorab die Zeilenlängen ALLER Kanäle (auch der verworfenen), sonst lässt sich ein
             ' unerwünschter Kanal nicht überspringen.
@@ -288,13 +312,28 @@ Namespace Services
 
                 For channel = 0 To header.Channels - 1
                     Dim keep = channel < neededChannels
-                    If keep Then planes(channel) = New Byte(planeSize - 1) {}
+                    Dim colorChannel = channel < colorChannels
+                    If keep Then
+                        If wide IsNot Nothing AndAlso colorChannel Then
+                            wide(channel) = New UShort(planeSize - 1) {}
+                        Else
+                            planes(channel) = New Byte(planeSize - 1) {}
+                        End If
+                    End If
 
                     If zip IsNot Nothing Then
                         For row = 0 To header.Height - 1
                             If Not ReadExactly(zip, rowBuffer, rowBytes) Then Return Nothing
-                            If compression = 3 Then UndoPrediction(rowBuffer, 0, header.Width, bytesPerSample)
-                            If keep Then StoreRow(planes(channel), row, header.Width, rowBuffer, bytesPerSample)
+                            If compression = 3 Then
+                                ' Bei Gleitkomma ist die Vorhersage eine andere: Byte-Ebenen je
+                                ' Zeile, wie beim Gleitkomma-Prädiktor von TIFF.
+                                If bytesPerSample = 4 Then
+                                    PsdLayerReader.UndoFloatPrediction(rowBuffer, 0, header.Width)
+                                Else
+                                    UndoPrediction(rowBuffer, 0, header.Width, bytesPerSample)
+                                End If
+                            End If
+                            If keep Then StoreCompositeRow(planes, wide, channel, row, header.Width, rowBuffer, bytesPerSample, colorChannel)
                         Next
                     ElseIf compression = 0 Then
                         If Not keep Then
@@ -303,7 +342,7 @@ Namespace Services
                         End If
                         For row = 0 To header.Height - 1
                             If Not ReadExactly(fs, rowBuffer, rowBytes) Then Return Nothing
-                            StoreRow(planes(channel), row, header.Width, rowBuffer, bytesPerSample)
+                            StoreCompositeRow(planes, wide, channel, row, header.Width, rowBuffer, bytesPerSample, colorChannel)
                         Next
                     Else
                         For row = 0 To header.Height - 1
@@ -315,7 +354,7 @@ Namespace Services
                             If packed.Length < packedLen Then ReDim packed(packedLen - 1)
                             If Not ReadExactly(fs, packed, packedLen) Then Return Nothing
                             If Not UnpackBits(packed, packedLen, rowBuffer, rowBytes) Then Return Nothing
-                            StoreRow(planes(channel), row, header.Width, rowBuffer, bytesPerSample)
+                            StoreCompositeRow(planes, wide, channel, row, header.Width, rowBuffer, bytesPerSample, colorChannel)
                         Next
                     End If
                 Next
@@ -323,8 +362,24 @@ Namespace Services
                 zip?.Dispose()
             End Try
 
-            Dim composed = ComposePlanes(header, planes, hasAlpha, palette, transparentIndex)
+            If wide IsNot Nothing AndAlso header.Depth = 32 Then UnmatteLinear(wide, planes, planeSize)
+
+            Dim composed As SKBitmap
+            If header.ColorMode = PsdColorMode.Lab Then
+                composed = ComposeLab(header, planes, wide, hasAlpha)
+            Else
+                ' Bei 32 Bit ist die Hinterlegung schon linear herausgerechnet (UnmatteLinear).
+                composed = ComposePlanes(header, planes, hasAlpha, palette, transparentIndex,
+                                         unmatteRgb:=header.Depth <> 32)
+            End If
             If composed Is Nothing Then Return Nothing
+
+            ' Lab ist nach der Wandlung schon sRGB; ein Profil der Datei beschreibt Lab und passte
+            ' nicht auf das Ergebnis.
+            If header.ColorMode = PsdColorMode.Lab Then
+                iccProfile?.Dispose()
+                Return composed
+            End If
 
             ' Photoshop legt seine Bilder oft in Adobe RGB ab. Ohne diese Wandlung kaeme das
             ' Gesamtbild als sRGB an - der Weg nach draussen fuehrt wie bei TIFF ueber einen
@@ -374,9 +429,125 @@ Namespace Services
             End If
         End Sub
 
+        ''' <summary>Legt eine entpackte Zeile des Gesamtbilds ab. Bei 8 und 16 Bit wie
+        ''' <see cref="StoreRow"/>; bei 32 Bit stehen Gleitkommazahlen, oberes Byte zuerst, und jede
+        ''' geht durch <see cref="PsdLayerReader.FloatSampleToByte"/>, dieselbe Abbildung wie bei
+        ''' den Ebenen. Ist <paramref name="wide"/> für diesen Kanal belegt, bleibt der Wert in 16 Bit
+        ''' stehen: bei 32 Bit linear (siehe <see cref="UnmatteLinear"/>), bei 16 Bit unverändert
+        ''' (Lab, siehe <see cref="ComposeLab"/>).</summary>
+        Private Shared Sub StoreCompositeRow(planes As Byte()(), wide As UShort()(), channel As Integer,
+                                             row As Integer, width As Integer, rowBuffer As Byte(),
+                                             bytesPerSample As Integer, colorChannel As Boolean)
+            Dim dst = row * width
+            Dim target = If(wide IsNot Nothing AndAlso colorChannel, wide(channel), Nothing)
+            If bytesPerSample = 2 AndAlso target IsNot Nothing Then
+                For x = 0 To width - 1
+                    target(dst + x) = CUShort((CInt(rowBuffer(x * 2)) << 8) Or CInt(rowBuffer(x * 2 + 1)))
+                Next
+                Return
+            End If
+            If bytesPerSample <> 4 Then
+                StoreRow(planes(channel), row, width, rowBuffer, bytesPerSample)
+                Return
+            End If
+            Dim plane = planes(channel)
+            For x = 0 To width - 1
+                Dim o = x * 4
+                Dim bits = (CInt(rowBuffer(o)) << 24) Or (CInt(rowBuffer(o + 1)) << 16) Or
+                           (CInt(rowBuffer(o + 2)) << 8) Or CInt(rowBuffer(o + 3))
+                Dim value = BitConverter.Int32BitsToSingle(bits)
+                If target IsNot Nothing Then
+                    target(dst + x) = If(Single.IsNaN(value) OrElse value <= 0.0F, 0US,
+                                         If(value >= 1.0F, UShort.MaxValue, CUShort(Math.Round(value * 65535.0F))))
+                Else
+                    plane(dst + x) = PsdLayerReader.FloatSampleToByte(value, colorChannel)
+                End If
+            Next
+        End Sub
+
+        ''' <summary>Rechnet bei 32 Bit mit Transparenz die weiße Hinterlegung aus der linearen
+        ''' Farbe heraus und bringt sie danach erst auf die Anzeige. Dieselbe Rückrechnung wie bei 8
+        ''' und 16 Bit (<see cref="UnmatteTable"/>), nur dort, wo Photoshop im 32-Bit-Modus mischt:
+        ''' im linearen Licht. An einer Datei belegt ist das nicht; der Prüfsatz aus Photoshop-Dateien
+        ''' hat kein 32-Bit-Gesamtbild mit Transparenz.</summary>
+        Private Shared Sub UnmatteLinear(linear As UShort()(), planes As Byte()(), count As Integer)
+            Dim alphaPlane = planes(3)
+            For channel = 0 To 2
+                Dim source = linear(channel)
+                Dim target(count - 1) As Byte
+                For i = 0 To count - 1
+                    Dim coverage = alphaPlane(i) / 255.0
+                    Dim matted = source(i) / 65535.0
+                    Dim straight = If(coverage > 0, (matted - (1.0 - coverage)) / coverage, matted)
+                    target(i) = PsdLayerReader.FloatSampleToByte(CSng(straight), True)
+                Next
+                planes(channel) = target
+                linear(channel) = Nothing
+            Next
+        End Sub
+
+        ''' <summary>Das Gesamtbild einer Lab-Datei als sRGB. Photoshop legt Lab mit Weißpunkt D50
+        ''' ab: L von 0 bis 255 für 0 bis 100, a und b mit 128 als Null; bei 16 Bit L von 0 bis 65535
+        ''' und a und b mit 32768 als Null, 256 Stufen je Einheit (<paramref name="wide"/>). Gerechnet
+        ''' wird Lab nach XYZ, dann mit der nach Bradford auf D50
+        ''' angepassten Matrix von sRGB ins lineare sRGB und zuletzt durch dieselbe Kennlinie wie bei
+        ''' 32 Bit (<see cref="PsdLayerReader.FloatSampleToByte"/>). Das ist farbmetrisch ohne
+        ''' Tiefenkompensierung; was außerhalb von sRGB liegt, wird abgeschnitten.
+        '''
+        ''' Mit Transparenz wird gegen Lab-Weiß (L 100, a und b 0) zurückgerechnet, wie bei RGB
+        ''' gegen Weiß; abgeleitet, nicht an einer Datei belegt.</summary>
+        Private Shared Function ComposeLab(header As PsdHeader, planes As Byte()(), wide As UShort()(),
+                                           hasAlpha As Boolean) As SKBitmap
+            Dim info = New SKImageInfo(header.Width, header.Height, SKColorType.Bgra8888,
+                                       If(hasAlpha, SKAlphaType.Unpremul, SKAlphaType.Opaque))
+            Dim bitmap = New SKBitmap(info)
+            Try
+                Dim count = header.Width * header.Height
+                Dim buffer(count * 4 - 1) As Byte
+                Const epsilon As Double = 6.0 / 29.0
+                For i = 0 To count - 1
+                    ' Alles auf die Skala von acht Bit, ohne zu runden: L bis 255, a und b um 128.
+                    Dim lightness As Double = If(wide IsNot Nothing, wide(0)(i) / 257.0, CDbl(planes(0)(i)))
+                    Dim aValue As Double = If(wide IsNot Nothing, wide(1)(i) / 256.0, CDbl(planes(1)(i)))
+                    Dim bValue As Double = If(wide IsNot Nothing, wide(2)(i) / 256.0, CDbl(planes(2)(i)))
+                    Dim alpha = If(hasAlpha, planes(3)(i), CByte(255))
+                    If hasAlpha AndAlso alpha > 0 AndAlso alpha < 255 Then
+                        Dim coverage = alpha / 255.0
+                        lightness = (lightness - 255.0 * (1.0 - coverage)) / coverage
+                        aValue = (aValue - 128.0 * (1.0 - coverage)) / coverage
+                        bValue = (bValue - 128.0 * (1.0 - coverage)) / coverage
+                    End If
+                    Dim fy = (lightness * 100.0 / 255.0 + 16.0) / 116.0
+                    Dim fx = fy + (aValue - 128.0) / 500.0
+                    Dim fz = fy - (bValue - 128.0) / 200.0
+                    Dim x = 0.96422 * LabInverse(fx, epsilon)
+                    Dim y = LabInverse(fy, epsilon)
+                    Dim z = 0.82521 * LabInverse(fz, epsilon)
+                    Dim r = 3.1338561 * x - 1.6168667 * y - 0.4906146 * z
+                    Dim g = -0.9787684 * x + 1.9161415 * y + 0.033454 * z
+                    Dim b = 0.0719453 * x - 0.2289914 * y + 1.4052427 * z
+                    buffer(i * 4) = PsdLayerReader.FloatSampleToByte(CSng(b), True)
+                    buffer(i * 4 + 1) = PsdLayerReader.FloatSampleToByte(CSng(g), True)
+                    buffer(i * 4 + 2) = PsdLayerReader.FloatSampleToByte(CSng(r), True)
+                    buffer(i * 4 + 3) = alpha
+                Next
+                Runtime.InteropServices.Marshal.Copy(buffer, 0, bitmap.GetPixels(), buffer.Length)
+                Return bitmap
+            Catch
+                bitmap.Dispose()
+                Return Nothing
+            End Try
+        End Function
+
+        Private Shared Function LabInverse(t As Double, epsilon As Double) As Double
+            If t > epsilon Then Return t * t * t
+            Return 3.0 * epsilon * epsilon * (t - 4.0 / 29.0)
+        End Function
+
         Private Shared Function ComposePlanes(header As PsdHeader, planes As Byte()(), hasAlpha As Boolean,
                                               Optional palette As Byte() = Nothing,
-                                              Optional transparentIndex As Integer = -1) As SKBitmap
+                                              Optional transparentIndex As Integer = -1,
+                                              Optional unmatteRgb As Boolean = True) As SKBitmap
             Dim info = New SKImageInfo(header.Width, header.Height, SKColorType.Bgra8888,
                                        If(hasAlpha, SKAlphaType.Unpremul, SKAlphaType.Opaque))
             Dim bitmap = New SKBitmap(info)
@@ -389,11 +560,16 @@ Namespace Services
                 ' Kanal steht Farbe mal Deckung plus Weiß mal Rest. Gelesen ohne Rückrechnung
                 ' bekäme jede halbdurchsichtige Kante einen hellen Saum. Die Rückrechnung geht über
                 ' eine Tafel je Deckung, nicht über eine Division je Punkt.
-                Dim unmatte = If(hasAlpha AndAlso header.ColorMode = PsdColorMode.Rgb, UnmatteTable(), Nothing)
+                Dim unmatte = If(hasAlpha AndAlso unmatteRgb AndAlso header.ColorMode = PsdColorMode.Rgb, UnmatteTable(), Nothing)
                 Select Case header.ColorMode
                     Case PsdColorMode.Rgb
                         For i = 0 To count - 1
-                            If hasAlpha Then
+                            If hasAlpha AndAlso unmatte Is Nothing Then
+                                buffer(i * 4) = planes(2)(i)      ' B
+                                buffer(i * 4 + 1) = planes(1)(i)  ' G
+                                buffer(i * 4 + 2) = planes(0)(i)  ' R
+                                buffer(i * 4 + 3) = planes(3)(i)
+                            ElseIf hasAlpha Then
                                 Dim row = unmatte(planes(3)(i))
                                 buffer(i * 4) = row(planes(2)(i))      ' B
                                 buffer(i * 4 + 1) = row(planes(1)(i))  ' G

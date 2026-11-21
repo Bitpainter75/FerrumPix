@@ -83,6 +83,8 @@ Namespace Services
         Public Property Italic As Boolean = False
         Public Property AllCaps As Boolean = False
         Public Property LetterSpacingPercent As Double = 0
+        ' Zeilenabstand in Prozent des Grads, 0 automatisch (ImageAnnotation.LineSpacingPercent).
+        Public Property LineSpacingPercent As Double = 0
         Public Property FlipHorizontal As Boolean = False
         Public Property FlipVertical As Boolean = False
         Public Property ShadowEnabled As Boolean = False
@@ -659,8 +661,9 @@ Namespace Services
         ''' die übrigen Dialoge fallen dort auf JPG zurück.
         Public Property DefaultSaveFormat As String = "JPG"
         Public Property PreserveMetadataOnSave As Boolean = True
-        ''' <summary>Stichwoerter, Bewertung und Farbetikett aus der .pp3 oder .arp neben dem Bild in den
-        ''' Katalog uebernehmen (Standard AUS). Nur lesen; siehe Pp3SidecarService.</summary>
+        ''' <summary>Stichwoerter, Bewertung und Farbetikett aus der .pp3, .arp oder .rrdata neben dem
+        ''' Bild in den Katalog uebernehmen, aus der .rrdata auch die Markierung (Standard AUS). Nur
+        ''' lesen; siehe Pp3SidecarService und RrdataSidecarService.</summary>
         Public Property ReadPp3Sidecars As Boolean = False
         ''' <summary>Die Aufnahmezeit eines Bildes mit bekannter Zeitzone in der Zone dieses Rechners
         ''' anzeigen (Standard AN); aus zeigt die Uhrzeit vor Ort. Gespeichert und sortiert wird immer
@@ -2824,6 +2827,7 @@ Namespace Services
                     .Italic = preset.Italic,
                     .AllCaps = preset.AllCaps,
                     .LetterSpacingPercent = Math.Max(-100, Math.Min(500, preset.LetterSpacingPercent)),
+                    .LineSpacingPercent = ImageAnnotation.NormalizeLineSpacingPercent(preset.LineSpacingPercent),
                     .FlipHorizontal = preset.FlipHorizontal,
                     .FlipVertical = preset.FlipVertical,
                     .ShadowEnabled = preset.ShadowEnabled,

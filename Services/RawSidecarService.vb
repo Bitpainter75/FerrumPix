@@ -90,9 +90,8 @@ Namespace Services
 
         ''' <summary>Geht "Speichern" im Editor fuer diese Datei ins Rezept daneben statt in die Datei?
         ''' Ja fuer RAW und PSD, fuer jedes Rasterformat, das sich nicht ueber das Original schreiben
-        ''' laesst (TIFF, HEIC/AVIF, JPEG XL, BMP, GIF, JPEG mit 12 Bit oder verlustfrei), und fuer
-        ''' JPG, PNG und WebP mit der Einstellung "neben dem Bild speichern"
-        ''' (AppSettings.SaveEditsBesideOriginal).
+        ''' laesst (TIFF, HEIC/AVIF, JPEG XL, BMP, GIF), und fuer JPG, PNG und WebP mit der
+        ''' Einstellung "neben dem Bild speichern" (AppSettings.SaveEditsBesideOriginal).
         '''
         ''' Arbeitskopien vom Server bleiben dabei, wie sie waren (nur RAW und PSD): ihre Begleitdatei
         ''' laege im Temp-Ordner und waere beim naechsten Aufraeumen fort. Den Weg zum Server kennt
@@ -103,10 +102,6 @@ Namespace Services
             Dim file = VariantKey.FileOf(path)
             If ImmichService.IsImmichTempPath(file) OrElse NextcloudService.IsNextcloudTempPath(file) Then Return False
             If Not ImageProcessor.CanEncodeToTargetExtension(file) Then Return True
-            ' Ein JPEG mit 12 Bit oder verlustfrei steht unter derselben Endung wie jedes andere,
-            ' laesst sich aber nicht ueber das Original schreiben (Skia schriebe 8 Bit). Gefragt
-            ' wird deshalb der Kopf, nicht die Endung, wie in ImageProcessor.SaveImage.
-            If JpegTurboDecodeService.IsTurboJpeg(file) Then Return True
             Return AppSettingsService.Load().SaveEditsBesideOriginal
         End Function
 
@@ -484,7 +479,8 @@ Namespace Services
         ' nimmt die Begleitdateien mit, und zwar ALLE drei: die eigene .fpxmp, die fremde XMP in der
         ' angehaengten Form ("foto.cr2.xmp") und in der ersetzten Form ("foto.xmp"). Frueher ging
         ' nur die .fpxmp mit; Bewertung, Stichwoerter und eine fremde Entwicklung blieben am alten
-        ' Ort liegen und wurden am neuen nicht mehr gefunden.
+        ' Ort liegen und wurden am neuen nicht mehr gefunden. Dazu kommen die .fpdnz und die
+        ' .rrdata eines anderen Entwicklers samt ihren virtuellen Kopien (CarryRrdataFiles).
         '
         ' Die fremde XMP zaehlt in jeder Schreibweise der Endung ("foto.cr2.XMP", "foto.Xmp"), nur
         ' der Name davor muss gleich sein (XmpSidecarService.ExistingXmpPath). Sie wandert unter der
@@ -512,6 +508,7 @@ Namespace Services
             End Try
             CarryModelDenoiseFile(sourcePath, targetPath, moveFile:=True, failed:=failed)
             CarryXmpCompanions(sourcePath, targetPath, moveFiles:=True, failed:=failed)
+            CarryRrdataFiles(sourcePath, targetPath, moveFiles:=True, failed:=failed)
             Return failed
         End Function
 
@@ -527,7 +524,67 @@ Namespace Services
             End Try
             CarryModelDenoiseFile(sourcePath, targetPath, moveFile:=False, failed:=failed)
             CarryXmpCompanions(sourcePath, targetPath, moveFiles:=False, failed:=failed)
+            CarryRrdataFiles(sourcePath, targetPath, moveFiles:=False, failed:=failed)
             Return failed
+        End Function
+
+        ''' <summary>Die .rrdata eines anderen Entwicklers geht mit wie die .fpxmp, die des Originals
+        ''' und jede virtuelle Kopie (RrdataSidecarService.BelongsTo), unabhaengig davon, ob die
+        ''' Einstellung zum Lesen an ist. Nur die Datei wird bewegt oder kopiert, ihr Inhalt bleibt
+        ''' bytegleich. Eine vorhandene am Ziel wird nie ueberschrieben, sie wird gemeldet.</summary>
+        Private Shared Sub CarryRrdataFiles(sourcePath As String, targetPath As String, moveFiles As Boolean,
+                                            failed As List(Of String))
+            Dim companions As List(Of String)
+            Try
+                companions = ExistingRrdataFiles(sourcePath)
+            Catch ex As Exception
+                ' Ordner nicht lesbar: ob eine daliegt, laesst sich nicht sagen, also gemeldet.
+                DiagnosticLogService.LogException("Sidecar.CarryRrdata", ex)
+                failed.Add(RrdataSidecarService.PathFor(sourcePath))
+                Return
+            End Try
+            For Each companion In companions
+                Try
+                    Dim target = RrdataSidecarService.RenamedFor(companion, sourcePath, targetPath)
+                    If moveFiles Then
+                        File.Move(companion, target, overwrite:=False)
+                        NoteInBatch(companion, added:=False)
+                    Else
+                        File.Copy(companion, target, overwrite:=False)
+                    End If
+                    NoteInBatch(target, added:=True)
+                Catch ex As FileNotFoundException
+                    ' Inzwischen von aussen entfernt (die Liste eines Stapels ist bis zu einer
+                    ' Sekunde alt): dann gibt es nichts mitzunehmen.
+                    NoteInBatch(companion, added:=False)
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Sidecar.CarryRrdata", ex)
+                    failed.Add(companion)
+                End Try
+            Next
+        End Sub
+
+        ''' <summary>Die .rrdata zu diesem Bild, wie sie daliegen: die des Originals und die virtuellen
+        ''' Kopien. Im Stapel aus der Liste des Ordners (StemListing, nach ihrer Gueltigkeit neu
+        ''' gelesen), sonst aus einer Aufzaehlung: ein Stapel ueber viele Bilder eines grossen Ordners
+        ''' liefe sonst fuer jedes Bild einmal durch den Bestand. Ist der Ordner nicht lesbar, fliegt
+        ''' die Ausnahme weiter; die Aufrufer melden die Datei dann, statt sie still zu uebergehen.</summary>
+        Friend Shared Function ExistingRrdataFiles(imagePath As String) As List(Of String)
+            Dim folder = Path.GetDirectoryName(imagePath)
+            If String.IsNullOrEmpty(folder) Then Return New List(Of String)()
+            Dim scope = _currentStemScope.Value
+            If scope Is Nothing Then
+                Return RrdataSidecarService.ExistingFor(imagePath,
+                    Directory.EnumerateFiles(folder, "*" & RrdataSidecarService.Extension))
+            End If
+            SyncLock scope.TargetListings
+                Dim listing As StemListing = Nothing
+                If Not scope.TargetListings.TryGetValue(folder, listing) OrElse listing.IsStale Then
+                    listing = StemListing.Read(folder)
+                    scope.TargetListings(folder) = listing
+                End If
+                Return RrdataSidecarService.ExistingFor(imagePath, listing.Files)
+            End SyncLock
         End Function
 
         ''' <summary>Die .fpdnz (ModelDenoiseFileService) geht mit wie die .fpxmp. Ihr Schluessel
@@ -590,6 +647,14 @@ Namespace Services
                     companions.Add(stemXmp)
                 End If
             End If
+            ' Die .rrdata eines anderen Entwicklers samt virtuellen Kopien, wie die .xmp in den
+            ' Papierkorb oder weg. Ordner nicht lesbar: gemeldet, nicht still uebergangen.
+            Try
+                companions.AddRange(ExistingRrdataFiles(rawPath))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Sidecar.AccompanyDelete", ex)
+                failed.Add(RrdataSidecarService.PathFor(rawPath))
+            End Try
             For Each listed In companions
                 Dim companion = listed
                 Try
@@ -754,6 +819,10 @@ Namespace Services
         Public Shared Function UnrelatedTargetSidecar(sourcePath As String, targetPath As String,
                                                       Optional replacingTarget As Boolean = False) As String
             If Not File.Exists(targetPath) AndAlso File.Exists(SidecarPathFor(targetPath)) Then Return SidecarPathFor(targetPath)
+            ' Ebenso eine verwaiste .rrdata eines anderen Entwicklers: das Bild bekaeme sonst ihre
+            ' Angaben, und die eigene bliebe am alten Ort.
+            If Not File.Exists(targetPath) AndAlso Not String.Equals(sourcePath, targetPath, PathIdentity.Comparison) AndAlso
+               File.Exists(RrdataSidecarService.PathFor(targetPath)) Then Return RrdataSidecarService.PathFor(targetPath)
             ' Die XMP in jeder Schreibweise der Endung (XmpSidecarService.ExistingXmpPath).
             If Not File.Exists(targetPath) AndAlso Not String.Equals(sourcePath, targetPath, PathIdentity.Comparison) Then
                 Dim targetAppended = XmpSidecarService.ExistingXmpPath(targetPath & ".xmp", strict:=False)
@@ -937,6 +1006,13 @@ Namespace Services
             Friend Function Contains(filePath As String) As Boolean
                 Return _all.Contains(filePath)
             End Function
+
+            ''' <summary>Alle Dateien des Ordners; nur unter der Sperre des Stapels lesen.</summary>
+            Friend ReadOnly Property Files As IEnumerable(Of String)
+                Get
+                    Return _all
+                End Get
+            End Property
 
             ''' <summary>Die Pfade mit diesem Stamm, als Kopie.</summary>
             Friend Function WithStem(stem As String) As List(Of String)

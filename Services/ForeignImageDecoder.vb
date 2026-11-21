@@ -5,7 +5,7 @@ Namespace Services
 
     ''' <summary>
     ''' Die Formate, die Skia selbst nicht lesen kann (JPEG XL, HEIF/AVIF, TIFF, PSD/PSB, ICO,
-    ''' JPEG mit 12 Bit oder verlustfrei und JPEG 2000), als
+    ''' JPEG 2000), als
     ''' fertiges Skia-Bitmap, OHNE PNG dazwischen.
     '''
     ''' Bis hierher reichte jeder Leser seinen Decode als PNG-Strom weiter, und der Abnehmer las ihn
@@ -38,7 +38,6 @@ Namespace Services
                    (HeifDecodeService.IsSupportedHeif(path) AndAlso HeifDecodeService.IsAvailable) OrElse
                    (JxlDecodeService.IsSupportedJxl(path) AndAlso JxlDecodeService.IsAvailable) OrElse
                    (TiffPreviewService.IsSupportedTiff(path) AndAlso Not TiffPreviewService.IsFloatTiff(path)) OrElse
-                   (JpegTurboDecodeService.IsTurboJpeg(path) AndAlso JpegTurboDecodeService.IsAvailable) OrElse
                    (Jpeg2000DecodeService.IsSupportedJpeg2000(path) AndAlso Jpeg2000DecodeService.IsAvailable)
         End Function
 
@@ -57,10 +56,6 @@ Namespace Services
                 raw = JxlDecodeService.TryDecode(path)
             ElseIf TiffPreviewService.IsSupportedTiff(path) Then
                 raw = TiffPreviewService.TryDecode(path)
-            ElseIf JpegTurboDecodeService.IsTurboJpeg(path) Then
-                ' JPEG mit 12 Bit oder verlustfrei: der Kopf entscheidet, nicht die Endung. Jedes
-                ' andere JPEG bleibt bei Skia und kommt hier nicht an.
-                raw = JpegTurboDecodeService.TryDecode(path)
             ElseIf Jpeg2000DecodeService.IsSupportedJpeg2000(path) Then
                 raw = Jpeg2000DecodeService.TryDecode(path)
             Else

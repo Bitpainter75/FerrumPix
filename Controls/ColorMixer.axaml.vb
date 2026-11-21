@@ -76,6 +76,9 @@ Namespace Controls
             Dim hexBox = Me.FindControl(Of TextBox)("HexTextBox")
             If hexBox IsNot Nothing Then AddHandler hexBox.LostFocus, AddressOf OnHexLostFocus
 
+            Dim channelFields = Me.FindControl(Of ColorChannelFields)("ChannelFields")
+            If channelFields IsNot Nothing Then AddHandler channelFields.PropertyChanged, AddressOf OnChannelFieldsPropertyChanged
+
             AddHandler Me.DataContextChanged, AddressOf OnOwnDataContextChanged
             UpdateVisuals()
         End Sub
@@ -239,6 +242,9 @@ Namespace Controls
                 Dim hexBox = Me.FindControl(Of TextBox)("HexTextBox")
                 If hexBox IsNot Nothing AndAlso Not String.Equals(hexBox.Text, hex, StringComparison.OrdinalIgnoreCase) Then hexBox.Text = hex
 
+                Dim channelFields = Me.FindControl(Of ColorChannelFields)("ChannelFields")
+                If channelFields IsNot Nothing AndAlso channelFields.Color <> active Then channelFields.Color = active
+
                 UpdatePreviewSwatch()
             Finally
                 _suppressSync = False
@@ -299,6 +305,13 @@ Namespace Controls
             Dim wheel = TryCast(sender, ColorWheel)
             If wheel Is Nothing Then Return
             ActiveColor = wheel.Color
+        End Sub
+
+        Private Sub OnChannelFieldsPropertyChanged(sender As Object, e As AvaloniaPropertyChangedEventArgs)
+            If _suppressSync OrElse e.Property IsNot ColorChannelFields.ColorProperty Then Return
+            Dim channelFields = TryCast(sender, ColorChannelFields)
+            If channelFields Is Nothing Then Return
+            ActiveColor = channelFields.Color
         End Sub
 
         Private Sub OnWheelPointerReleased(sender As Object, e As PointerReleasedEventArgs)

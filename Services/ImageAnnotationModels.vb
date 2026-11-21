@@ -402,6 +402,7 @@ Namespace Services
         Private _textPathStartOffset As Single
         Private _textAlignment As String = "Left"
         Private _letterSpacingPercent As Single
+        Private _lineSpacingPercent As Single
         Private _bold As Boolean
         Private _italic As Boolean = False
         Private _allCaps As Boolean = False
@@ -1264,6 +1265,27 @@ Namespace Services
             End Set
         End Property
 
+        ''' <summary>Zeilenabstand in PROZENT DES GRADS (50 bis 300), gemessen von Grundlinie zu
+        ''' Grundlinie, wie der Zeilenabstand in Satzprogrammen. 0 heisst automatisch: der Abstand,
+        ''' den die Schrift selbst mitbringt (Oberlaenge, Unterlaenge und Durchschuss aus ihren
+        ''' Metriken). Das ist die Vorgabe, und Rezepte ohne dieses Feld setzen damit genau wie
+        ''' frueher. Prozent statt Pixel aus demselben Grund wie beim Zeichenabstand.</summary>
+        Public Property LineSpacingPercent As Single
+            Get
+                Return _lineSpacingPercent
+            End Get
+            Set(value As Single)
+                SetField(_lineSpacingPercent, NormalizeLineSpacingPercent(value))
+            End Set
+        End Property
+
+        ''' <summary>Bringt einen Zeilenabstand in den gueltigen Bereich: 0 und alles, was keine
+        ''' Zahl oder nicht positiv ist, bleibt automatisch, sonst 50 bis 300 Prozent.</summary>
+        Public Shared Function NormalizeLineSpacingPercent(value As Double) As Single
+            If Not Double.IsFinite(value) OrElse value <= 0 Then Return 0.0F
+            Return CSng(Math.Max(50.0, Math.Min(300.0, value)))
+        End Function
+
         ''' <summary>Fetter Schriftschnitt. Wirkt nur, wenn die Familie einen hat - Skia stellt
         ''' keinen synthetischen her.</summary>
         Public Property Bold As Boolean
@@ -1629,6 +1651,7 @@ Namespace Services
                 .TextPathStartOffset = TextPathStartOffset,
                 .TextAlignment = TextAlignment,
                 .LetterSpacingPercent = LetterSpacingPercent,
+                .LineSpacingPercent = LineSpacingPercent,
                 .Bold = Bold,
                 .Italic = Italic,
                 .AllCaps = AllCaps,

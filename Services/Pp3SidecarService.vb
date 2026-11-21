@@ -39,8 +39,8 @@ Namespace Services
             Public Property Rating As Integer?
             ''' <summary>Der Hex-Wert unserer Palette, oder leer.</summary>
             Public Property ColorLabel As String = ""
-            ''' <summary>1 behalten, -1 verworfen, oder Nothing. Kommt nur aus dem Katalog des Referenzprogramms;
-            ''' die .pp3 und die .arp kennen keine Markierung.</summary>
+            ''' <summary>1 behalten, -1 verworfen, oder Nothing. Kommt aus dem Katalog des Referenzprogramms
+            ''' und aus der .rrdata; die .pp3 und die .arp kennen keine Markierung.</summary>
             Public Property PickState As Integer?
         End Class
 
@@ -73,11 +73,16 @@ Namespace Services
         '''
         ''' DER LIGHTROOM-KATALOG haengt an derselben Einstellung (ForeignCatalogService): kennt er
         ''' das Foto, kommen seine Angaben dazu, nach denen der Dateien neben dem Bild, die die
-        ''' speziellere Quelle sind. So gehen sie ueber dieselben Wege und Regeln in den Katalog.</summary>
+        ''' speziellere Quelle sind. So gehen sie ueber dieselben Wege und Regeln in den Katalog.
+        '''
+        ''' DIE ".rrdata" EINES ANDEREN ENTWICKLERS (RrdataSidecarService) haengt an derselben
+        ''' Einstellung und kommt als LETZTE Quelle: sie fuellt Bewertung, Etikett und Markierung
+        ''' nur, wo alles davor schweigt.</summary>
         Public Shared Function Read(imagePath As String) As Pp3Data
             If Not IsEnabled Then Return Nothing
             Dim result = Merge(ReadOne(PathFor(imagePath)), ReadOne(ArpPathFor(imagePath)))
-            Return Merge(result, FromForeignCatalog(imagePath))
+            result = Merge(result, FromForeignCatalog(imagePath))
+            Return Merge(result, RrdataSidecarService.Read(imagePath))
         End Function
 
         ''' <summary>Vereinigt zwei Ergebnisse; das erste geht bei Bewertung, Etikett und Markierung vor.</summary>

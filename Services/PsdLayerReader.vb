@@ -220,15 +220,23 @@ Namespace Services
         ''' im dokumentweiten Textblock "Txt2" hinter der globalen Maske; die Ebene verweist mit
         ''' ihrer Textnummer hinein.
         '''
+        ''' Aus demselben Block kommt die Art der Unterschneidung, die Photoshop nur dort ablegt
+        ''' (<see cref="PsdEngineData.DocumentTextFlags.OtherKerning"/>); sie macht den Text zu
+        ''' einem, den ein Textobjekt nicht treu setzt (<see cref="PsdEngineData.UnsupportedReason"/>).
+        '''
         ''' Gelesen wird nur, wenn überhaupt eine Textebene eine Nummer trägt. Ein fehlender oder
         ''' unlesbarer Block ändert nichts: dann gilt kein Text als Pfadtext, wie vorher.</summary>
         Private Shared Sub MarkPathText(fs As FileStream, doc As PsdDocumentInfo)
             If Not doc.Layers.Any(Function(l) l.TextStyle IsNot Nothing AndAlso l.TextStyle.TextIndex >= 0) Then Return
             Try
-                Dim onPath = PsdEngineData.PathTextIndices(ReadGlobalBlock(fs, "Txt2", 32_000_000))
-                If onPath.Count = 0 Then Return
+                Dim flags = PsdEngineData.ReadDocumentText(ReadGlobalBlock(fs, "Txt2", 32_000_000))
                 For Each layer In doc.Layers
-                    If layer.TextStyle IsNot Nothing AndAlso onPath.Contains(layer.TextStyle.TextIndex) Then layer.TextStyle.IsOnPath = True
+                    Dim style = layer.TextStyle
+                    If style Is Nothing Then Continue For
+                    If flags.OnPath.Contains(style.TextIndex) Then style.IsOnPath = True
+                    If flags.OtherKerning.Contains(style.TextIndex) AndAlso String.IsNullOrEmpty(style.UnsupportedReason) Then
+                        style.UnsupportedReason = "kerning"
+                    End If
                 Next
             Catch
                 ' Ein abgeschnittener Abschnitt lässt das Lesen werfen; die Ebenen stehen schon.
@@ -1528,8 +1536,10 @@ Namespace Services
         ''' <summary>Ein 32-Bit-Wert als Byte. Photoshop legt Farbe im 32-Bit-Modus LINEAR ab
         ''' (Gamma 1,0); sie wird nach sRGB umgerechnet, sonst käme jede Ebene viel zu dunkel. Was
         ''' über 1 hinausgeht, wird abgeschnitten - der Ebenenstapel kennt nur acht Bit. Transparenz
-        ''' und Masken sind dagegen Deckung und gehen unverändert auf 0 bis 255.</summary>
-        Private Shared Function FloatSampleToByte(value As Single, colorChannel As Boolean) As Byte
+        ''' und Masken sind dagegen Deckung und gehen unverändert auf 0 bis 255. Das Gesamtbild einer
+        ''' 32-Bit-Datei geht durch dieselbe Abbildung (<see cref="PsdPreviewService"/>), damit es zu
+        ''' den Ebenen passt.</summary>
+        Friend Shared Function FloatSampleToByte(value As Single, colorChannel As Boolean) As Byte
             If Single.IsNaN(value) OrElse value <= 0.0F Then Return 0
             If value >= 1.0F Then Return 255
             If Not colorChannel Then Return CByte(Math.Round(value * 255.0F))
@@ -1540,7 +1550,7 @@ Namespace Services
         ''' in Byte-Ebenen zerlegt (erst alle oberen Bytes, dann die zweiten und so fort), und über
         ''' die ganze Zeile steht je Byte die Differenz zum vorigen. Zurück geht es in derselben
         ''' Reihenfolge: aufsummieren, dann die Ebenen wieder zu Werten verschränken.</summary>
-        Private Shared Sub UndoFloatPrediction(raw As Byte(), offset As Integer, width As Integer)
+        Friend Shared Sub UndoFloatPrediction(raw As Byte(), offset As Integer, width As Integer)
             Dim rowBytes = width * 4
             For i = 1 To rowBytes - 1
                 raw(offset + i) = CByte((CInt(raw(offset + i)) + CInt(raw(offset + i - 1))) And &HFF)

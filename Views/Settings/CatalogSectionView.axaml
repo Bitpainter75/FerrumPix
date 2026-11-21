@@ -455,14 +455,14 @@
                                 </StackPanel>
                                 <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowCaptureTimeInLocalZone}" OnContent="" OffContent="" VerticalAlignment="Center"/>
                             </Grid>
-                            <!-- Die .pp3 und .arp der fremden Entwickler und ein Katalog des Referenzprogramms, nur
-                                 lesend und ab Werk aus. Die Namen stehen hier ausdruecklich: wer die
-                                 Programme benutzt, sucht danach. Der Katalog haengt am selben Schalter
-                                 (ForeignCatalogService), sein Pfad steht darunter. -->
+                            <!-- Die .pp3, .arp und .rrdata der fremden Entwickler und ein Katalog des
+                                 Referenzprogramms, nur lesend und ab Werk aus. Die Namen stehen in den
+                                 Texten ausdruecklich: wer die Programme benutzt, sucht danach. Der Katalog
+                                 haengt am selben Schalter (ForeignCatalogService), sein Pfad steht darunter. -->
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                    <TextBlock Text="Daten aus RawTherapee, ART und Lightroom lesen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Übernimmt Stichwörter, Bewertung und Farbetikett aus der .pp3 oder .arp neben dem Bild und aus dem Lightroom-Katalog darunter in den Katalog. Gelesen wird nur, geändert wird dort nichts." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="Daten aus RawTherapee, ART, RapidRAW und Lightroom lesen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Übernimmt Stichwörter, Bewertung und Farbetikett aus der .pp3, .arp oder .rrdata neben dem Bild und aus dem Lightroom-Katalog darunter in den Katalog, aus der .rrdata auch die Markierung. Gelesen wird nur, geändert wird dort nichts." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <ToggleSwitch Grid.Column="1" IsChecked="{Binding ReadPp3Sidecars}" OnContent="" OffContent="" VerticalAlignment="Center"/>
                             </Grid>
