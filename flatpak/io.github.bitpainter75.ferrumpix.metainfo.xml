@@ -112,6 +112,34 @@
 
   <releases>
 
+    <release version="0.9.89-1" date="2026-11-21">
+      <description>
+        <p>This update lets you save edits alongside photos without changing the originals, improves gallery scrolling and produces more faithful conversions of film negatives:</p>
+        <p xml:lang="de">Dieses Update ermöglicht es, Bearbeitungen neben den Fotos zu speichern, ohne die Originale zu verändern, macht das Scrollen in der Galerie flüssiger und verbessert die Umwandlung von Filmnegativen:</p>
+        <ul>
+          <li>A new setting lets you save edits to JPEG, PNG and WebP photos alongside the original files, leaving them untouched. For TIFF, HEIC, AVIF, JPEG XL, BMP and GIF, edits are always saved separately, so the Save command now works for these formats too. The gallery, viewer, printing, collages and exports all take these saved edits into account.</li>
+          <li xml:lang="de">Mit einer neuen Einstellung kannst du Bearbeitungen von JPEG-, PNG- und WebP-Fotos neben den Originaldateien speichern, ohne diese zu verändern. Bei TIFF, HEIC, AVIF, JPEG XL, BMP und GIF werden Bearbeitungen grundsätzlich separat gespeichert, sodass der Befehl Speichern jetzt auch für diese Formate funktioniert. Galerie, Betrachter, Druck, Collagen und Export berücksichtigen die gespeicherten Bearbeitungen.</li>
+
+          <li>If an edit cannot be saved alongside the photo in the usual way, Save now offers to store it as a separate project next to the original instead of being disabled. This also applies to RAW and PSD files.</li>
+          <li xml:lang="de">Wenn sich eine Bearbeitung nicht wie gewohnt neben dem Foto speichern lässt, bietet Speichern jetzt an, sie stattdessen als eigenes Projekt neben der Originaldatei abzulegen. Die Funktion bleibt also verfügbar, auch bei RAW- und PSD-Dateien.</li>
+
+          <li>Film negative conversion now works from the light that actually passed through the film. This preserves more accurate colours in dense areas of the negative and avoids exaggerating the film grain.</li>
+          <li xml:lang="de">Bei der Umwandlung von Filmnegativen wird jetzt das Licht berücksichtigt, das tatsächlich durch den Film gelangt ist. Dadurch bleiben die Farben in dichten Bereichen des Negativs natürlicher, und das Filmkorn wird nicht mehr übermäßig verstärkt.</li>
+
+          <li>Frames now remember their most recent settings and are included when copying adjustments or saving them as presets. The Keyline frame also has a new slider for adjusting the position of its fine inner line.</li>
+          <li xml:lang="de">Rahmen merken sich jetzt ihre zuletzt verwendeten Einstellungen und werden beim Kopieren von Anpassungen sowie beim Speichern als Vorgabe mit übernommen. Beim Keyline-Rahmen kannst du außerdem mit einem neuen Regler die Position der feinen Linie einstellen.</li>
+
+          <li>Gallery search now supports + and - operators: +word requires a match, while -word excludes matching results.</li>
+          <li xml:lang="de">Die Galeriesuche unterstützt jetzt die Operatoren + und -: Mit +Wort muss der Begriff vorkommen, mit -Wort werden entsprechende Treffer ausgeschlossen.</li>
+
+          <li>Scrolling through the gallery grid and group view is now smoother and uses significantly fewer GPU resources.</li>
+          <li xml:lang="de">Das Scrollen durch das Raster und die Gruppenansicht der Galerie läuft jetzt flüssiger und beansprucht die Grafikkarte deutlich weniger.</li>
+
+          <li>Fixed an issue that prevented AVIF images from opening in some parts of the application. HEIC and AVIF images with 10- or 12-bit depth now preserve their fine tonal gradations, and the viewer has a new focus peaking button in its bottom toolbar.</li>
+          <li xml:lang="de">Ein Fehler wurde behoben, durch den sich AVIF-Bilder in manchen Bereichen der Anwendung nicht öffnen ließen. HEIC- und AVIF-Bilder mit 10 oder 12 Bit behalten jetzt ihre feinen Tonwertabstufungen. Außerdem gibt es im Betrachter eine neue Schaltfläche für Fokus-Peaking in der unteren Werkzeugleiste.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.88-1" date="2026-11-19">
       <description>
         <p>This update makes editing RAW photos more responsive, adds two new frame styles and lets you download extensions directly from the settings:</p>
