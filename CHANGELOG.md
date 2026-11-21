@@ -17,10 +17,18 @@
 - OpenEXR, Radiance HDR and TIFF files with floating point values now open and are developed like
   a RAW: light brighter than white is kept, and Exposure and Highlights bring it back into the
   picture. The editor offers the RAW adjustments for them, Save keeps the edit beside the file.
-  Not yet on macOS for JPEG 2000 and EXR.
 
-- The previews inside HEIF files from Fujifilm cameras now load on Windows and Linux, and the gallery placeholders of rotated HEIF pictures are upright like the
-  picture.
+- Sigma X3F files now show in the gallery, the viewer and the editor, with camera and shot data,
+  and are developed from the sensor data like other RAW files, with the RAW controls in the
+  editor. Edits are kept beside the picture, as for RAW.
+
+- More picture endings show in the gallery and open in the viewer and the editor: JPEG saved as
+  .jfif or .jpe, as browsers on Windows often do, stereo JPEG (.jps) as the side by side pair,
+  animated PNG (.apng, first frame), WBMP and Windows cursors (.cur). Their edits are kept beside
+  the picture.
+
+- The previews inside HEIF files from Fujifilm cameras now load, and the gallery placeholders of
+  rotated HEIF pictures are upright like the picture.
 
 - Ratings, pick marks, colour labels and keywords from RapidRAW's sidecar files (.rrdata) now show
   in the gallery and can be searched once "Read data from RawTherapee, ART, RapidRAW and Lightroom"
@@ -100,16 +108,22 @@
   slider always move together. Colours that have no opacity, such as the light colour and Replace
   colour, no longer show an opacity slider or an alpha field.
 
-- Photoshop files with 32 bits per channel or in Lab colour now show their full picture in the
+- Every eyedropper in the editor now shows the colour under its tip next to the pointer, also
+  the colour range of masks and selections, and it shows the colour that a click would take. A
+  new editor setting chooses what it says: the hex value, R G B, or both, which is the default.
+  Where the eyedropper takes transparency along and the spot is not fully opaque, the value
+  includes alpha.
+
+- PSD files with 32 bits per channel or in Lab colour now show their full picture in the
   gallery, the viewer and the editor instead of the small, blurry preview stored inside. When
   opening a 32-bit file whose layers cannot all be taken over, you can now choose to open the full
   picture instead.
 
 ### Fixes
 
-- Text layers from Photoshop that a text object cannot reproduce faithfully, such as text in a
+- Text layers in PSD files that a text object cannot reproduce faithfully, such as text in a
   text box, vertical text, or text that mixes fonts, sizes, colours or styles, now come in as a
-  picture exactly as Photoshop drew it, and the notice when opening the file says so. Before,
+  picture exactly as stored in the file, and the notice when opening the file says so. Before,
   they came in as editable text that looked different. Simple text layers now also sit at the
   right height.
 
@@ -126,21 +140,6 @@
   loaded. In folders with more pictures than the thumbnail memory holds, the gallery kept loading
   and throwing away thumbnails, which slowed down the visible tiles while scrolling and drove up
   memory use.
-
-- More picture endings show in the gallery and open in the viewer and the editor: JPEG saved as
-  .jfif or .jpe, as browsers on Windows often do, stereo JPEG (.jps) as the side by side pair,
-  animated PNG (.apng, first frame), WBMP and Windows cursors (.cur). Their edits are kept beside
-  the picture.
-
-- Sigma X3F files now show in the gallery, the viewer and the editor, with camera and shot data,
-  and are developed from the sensor data like other RAW files, with the RAW controls in the
-  editor. Edits are kept beside the picture, as for RAW.
-
-- Every eyedropper in the editor now shows the colour under its tip next to the pointer, also
-  the colour range of masks and selections, and it shows the colour that a click would take. A
-  new editor setting chooses what it says: the hex value, R G B, or both, which is the default.
-  Where the eyedropper takes transparency along and the spot is not fully opaque, the value
-  includes alpha.
 
 - The tile ".." that leads up to the parent folder no longer shows a date in the gallery. Its date
   stood among the pictures as if it belonged to them. Sorting by date keeps it at the front.
@@ -182,7 +181,6 @@
   this now shows as a starting value of the exposure slider. Pentax models whose base brightness
   was measured on such pictures, among them the K-70, KF and KP, no longer develop other pictures
   a stop too bright.
-
 
 - The ICC badge in the gallery no longer names the platform an embedded colour profile is meant
   for, which read as if Apple or Microsoft had made it. It shows who created the profile instead.
