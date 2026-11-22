@@ -1761,7 +1761,7 @@ Namespace Services
             Try
                 rotated = New SKBitmap(New SKImageInfo(rw, rh, src.ColorType, src.AlphaType))
                 ' Wie in ApplyGeometryTransforms: fuer die ueblichen Farbtypen verwaltet umgesetzt.
-                If Not SerialGeometryForChecks AndAlso ReorderQuarterTurnSupported(src) AndAlso rotated.GetPixels() <> IntPtr.Zero Then
+                If Not SerialGeometryForChecks AndAlso ReorderQuarterTurnSupported(src) AndAlso ReorderQuarterTurnSupported(rotated) Then
                     ReorderQuarterTurn(src, rotated, n, False, False, New SKRectI(0, 0, rw, rh), New SKRectI(0, 0, rw, rh))
                     Return rotated
                 End If
@@ -8154,7 +8154,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' Vierteldrehung oder Spiegelung ohne Abtastung auf eine geleerte Flaeche, und fuer diese
         ''' Farbtypen mit vormultipliziertem oder deckendem Alpha ist das ein reines Umsetzen der
         ''' Bildpunkte. Unvormultipliziert rechnet Skia ueber das Vormultiplizieren und zurueck, das
-        ''' ist kein Umsetzen und bleibt bei der Zeichnung.</summary>
+        ''' ist kein Umsetzen und bleibt bei der Zeichnung. Gilt fuer Quelle und Ziel: der Weg liest
+        ''' und schreibt ueber eine Span ueber den ganzen Pixelspeicher, die Zeilenlaenge muss daher
+        ''' ein Vielfaches der Punktgroesse sein und der Speicher unter 2 GB bleiben. Darueber (ab
+        ''' rund 268 MP in 16 Bit) zeichnet Skia, mit demselben Ergebnis.</summary>
         Private Shared Function ReorderQuarterTurnSupported(bitmap As SKBitmap) As Boolean
             If bitmap Is Nothing Then Return False
             Dim info = bitmap.Info
@@ -8162,7 +8165,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             If info.AlphaType <> SKAlphaType.Premul AndAlso info.AlphaType <> SKAlphaType.Opaque Then Return False
             Select Case info.ColorType
                 Case SKColorType.Bgra8888, SKColorType.Rgba8888, SKColorType.Rgba16161616, SKColorType.Alpha8
-                    Return bitmap.GetPixels() <> IntPtr.Zero
+                    Dim length As IntPtr
+                    If bitmap.GetPixels(length) = IntPtr.Zero Then Return False
+                    If bitmap.RowBytes Mod info.BytesPerPixel <> 0 Then Return False
+                    Dim needed = CLng(bitmap.RowBytes) * (info.Height - 1) + CLng(info.Width) * info.BytesPerPixel
+                    Return length.ToInt64() >= needed AndAlso length.ToInt64() <= Integer.MaxValue
                 Case Else
                     Return False
             End Select
@@ -8176,70 +8183,127 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' bleibt der Punkt durchsichtig. Skia brauchte dafuer an einer Vorschau von 3072 Punkten
         ''' rund 110 ms mit 8 Bit und 230 bis 360 ms mit 16 Bit, die Umordnung rund 5 bis 9 ms
         ''' (Geometriemessung skia). <paramref name="result"/> hat die Masse des gedrehten Bilds und
-        ''' denselben Farbtyp; jeder Punkt wird geschrieben.</summary>
+        ''' denselben Farbtyp; jeder Punkt wird geschrieben. Beide Bitmaps muessen
+        ''' <see cref="ReorderQuarterTurnSupported"/> bestehen.
+        '''
+        ''' Gerechnet wird in Baendern zu <see cref="QuarterTurnTile"/> Zeilen des Ergebnisses, ab
+        ''' <see cref="ParallelPixelThreshold"/> auf mehreren Kernen, bei 90 und 270 Grad innerhalb
+        ''' des Bands in Kacheln zu ebenso vielen Spalten: eine Kachel liest dann nur so viele Zeilen
+        ''' der Quelle, und die bleiben im Zwischenspeicher. Gelesen und geschrieben wird ueber eine
+        ''' Span statt ueber Marshal je Punkt. Gemessen an 61 MP auf einem Kern Faktor 1,5 bis 3,
+        ''' auf allen Kernen begrenzt die Speicherbandbreite, dort bleibt es etwa gleich
+        ''' (Pruefstand, MESSUNG Vierteldrehung).</summary>
         Private Shared Sub ReorderQuarterTurn(source As SKBitmap, result As SKBitmap, quarter As Integer,
                                               flipHorizontal As Boolean, flipVertical As Boolean,
                                               rotatedClip As SKRectI, finalClip As SKRectI)
+            Dim rw = result.Width, rh = result.Height
+            Dim bands = (rh + QuarterTurnTile - 1) \ QuarterTurnTile
+            ' Eine Span darf nicht in einen Lambda; der Bandkoerper ist deshalb eine eigene Methode.
+            Dim band As Action(Of Integer) =
+                Sub(index As Integer)
+                    Dim y0 = index * QuarterTurnTile
+                    ReorderQuarterTurnBand(source, result, quarter, flipHorizontal, flipVertical, rotatedClip, finalClip,
+                                           y0, Math.Min(rh, y0 + QuarterTurnTile))
+                End Sub
+            If CLng(rw) * rh < ParallelPixelThreshold Then
+                For index = 0 To bands - 1
+                    band(index)
+                Next
+            Else
+                Parallel.For(0, bands, band)
+            End If
+            result.NotifyPixelsChanged()
+        End Sub
+
+        ''' <summary>Kantenlaenge der Kacheln von <see cref="ReorderQuarterTurn"/> in Punkten. 64 war
+        ''' in der Messung zum Umbau im Mittel die beste, 32 und 128 schwankten.</summary>
+        Private Const QuarterTurnTile As Integer = 64
+
+        ''' <summary>Ein Band von <see cref="ReorderQuarterTurn"/>, die Zeilen y0 bis y1 - 1 des
+        ''' Ergebnisses, nach der Punktgroesse auf den passenden Elementtyp verteilt.</summary>
+        Private Shared Sub ReorderQuarterTurnBand(source As SKBitmap, result As SKBitmap, quarter As Integer,
+                                                  flipHorizontal As Boolean, flipVertical As Boolean,
+                                                  rotatedClip As SKRectI, finalClip As SKRectI, y0 As Integer, y1 As Integer)
+            Select Case source.Info.BytesPerPixel
+                Case 4
+                    ReorderQuarterTurnBand(Of UInteger)(source, result, quarter, flipHorizontal, flipVertical, rotatedClip, finalClip, y0, y1)
+                Case 8
+                    ReorderQuarterTurnBand(Of ULong)(source, result, quarter, flipHorizontal, flipVertical, rotatedClip, finalClip, y0, y1)
+                Case Else
+                    ReorderQuarterTurnBand(Of Byte)(source, result, quarter, flipHorizontal, flipVertical, rotatedClip, finalClip, y0, y1)
+            End Select
+        End Sub
+
+        ''' <summary>Der Bandkoerper mit T als ganzem Bildpunkt (4, 8 oder 1 Byte). Alle Versaetze
+        ''' zaehlen in Punkten, nicht in Bytes; die Zeilenlaenge ist ein Vielfaches der
+        ''' Punktgroesse, das prueft <see cref="ReorderQuarterTurnSupported"/>.</summary>
+        Private Shared Sub ReorderQuarterTurnBand(Of T As Structure)(source As SKBitmap, result As SKBitmap, quarter As Integer,
+                                                                     flipHorizontal As Boolean, flipVertical As Boolean,
+                                                                     rotatedClip As SKRectI, finalClip As SKRectI,
+                                                                     y0 As Integer, y1 As Integer)
+            Dim bpp = source.Info.BytesPerPixel
             Dim sw = source.Width, sh = source.Height
             Dim rw = result.Width, rh = result.Height
-            Dim bpp = source.Info.BytesPerPixel
-            Dim sourceStride = CLng(source.RowBytes)
-            Dim resultStride = result.RowBytes
-            Dim sourceBase = source.GetPixels().ToInt64()
-            Dim resultBase = result.GetPixels()
-            Dim zeroRow(resultStride - 1) As Byte
-            ' Versatz in der Quelle fuer den Punkt (xf, yf) des gedrehten Bilds und die Schrittweite,
-            ' wenn xf um eins waechst.
-            Dim stepPerXf As Long
+            Dim sourceStride = source.RowBytes \ bpp
+            Dim resultStride = result.RowBytes \ bpp
+            Dim sourcePixels = MemoryMarshal.Cast(Of Byte, T)(source.GetPixelSpan())
+            Dim resultPixels = MemoryMarshal.Cast(Of Byte, T)(result.GetPixelSpan())
+            ' Schrittweite in der Quelle, wenn xf (die Spalte im gedrehten Bild) um eins waechst,
+            ' und mit dem waagerechten Spiegeln, wenn x im Ergebnis um eins waechst.
+            Dim stepPerX As Integer
             Select Case quarter
-                Case 1 : stepPerXf = -sourceStride
-                Case 2 : stepPerXf = -bpp
-                Case 3 : stepPerXf = sourceStride
-                Case Else : stepPerXf = bpp
+                Case 1 : stepPerX = -sourceStride
+                Case 2 : stepPerX = -1
+                Case 3 : stepPerX = sourceStride
+                Case Else : stepPerX = 1
             End Select
-            Dim stepPerX = If(flipHorizontal, -stepPerXf, stepPerXf)
+            If flipHorizontal Then stepPerX = -stepPerX
             ' Die Spalten des Ergebnisses, deren gespiegelter Punkt im Ausschnitt der Drehung liegt.
             Dim rotatedLeft = If(flipHorizontal, rw - rotatedClip.Right, rotatedClip.Left)
             Dim rotatedRight = If(flipHorizontal, rw - rotatedClip.Left, rotatedClip.Right)
             Dim runLeft = Math.Max(finalClip.Left, rotatedLeft)
             Dim runRight = Math.Min(finalClip.Right, rotatedRight)
-            ForEachRow(rw, rh,
-                Sub(y As Integer)
-                    Dim rowTarget = resultBase + y * resultStride
-                    Dim yf = If(flipVertical, rh - 1 - y, y)
-                    If y < finalClip.Top OrElse y >= finalClip.Bottom OrElse yf < rotatedClip.Top OrElse yf >= rotatedClip.Bottom OrElse
-                       runRight <= runLeft Then
-                        Marshal.Copy(zeroRow, 0, rowTarget, resultStride)
-                        Return
-                    End If
-                    If runLeft > 0 Then Marshal.Copy(zeroRow, 0, rowTarget, runLeft * bpp)
-                    If runRight < rw Then Marshal.Copy(zeroRow, 0, rowTarget + runRight * bpp, (rw - runRight) * bpp)
-                    ' Der Quellpunkt zur Spalte x = 0 (xf = 0 oder rw - 1).
-                    Dim xf0 = If(flipHorizontal, rw - 1, 0)
-                    Dim offset0 As Long
-                    Select Case quarter
-                        Case 1 : offset0 = CLng(sh - 1 - xf0) * sourceStride + CLng(yf) * bpp
-                        Case 2 : offset0 = CLng(sh - 1 - yf) * sourceStride + CLng(sw - 1 - xf0) * bpp
-                        Case 3 : offset0 = CLng(xf0) * sourceStride + CLng(sw - 1 - yf) * bpp
-                        Case Else : offset0 = CLng(yf) * sourceStride + CLng(xf0) * bpp
-                    End Select
-                    Dim rowSource = sourceBase + offset0
-                    Select Case bpp
-                        Case 4
-                            For x = runLeft To runRight - 1
-                                Marshal.WriteInt32(rowTarget, x * 4, Marshal.ReadInt32(New IntPtr(rowSource + x * stepPerX)))
-                            Next
-                        Case 8
-                            For x = runLeft To runRight - 1
-                                Marshal.WriteInt64(rowTarget, x * 8, Marshal.ReadInt64(New IntPtr(rowSource + x * stepPerX)))
-                            Next
-                        Case Else
-                            For x = runLeft To runRight - 1
-                                Marshal.WriteByte(rowTarget, x, Marshal.ReadByte(New IntPtr(rowSource + x * stepPerX)))
-                            Next
-                    End Select
-                End Sub)
-            result.NotifyPixelsChanged()
+            ' Der Quellpunkt zur Spalte x = 0 ist xf = 0 oder, gespiegelt, rw - 1.
+            Dim xf0 = If(flipHorizontal, rw - 1, 0)
+            ' Erst je Zeile: was ausserhalb der Ausschnitte liegt, wird durchsichtig, und fuer die
+            ' uebrigen Zeilen steht der Quellpunkt zu x = 0 fest.
+            Dim rows = y1 - y0
+            Dim rowSources(rows - 1) As Integer
+            Dim rowCopied(rows - 1) As Boolean
+            For y = y0 To y1 - 1
+                Dim rowTarget = y * resultStride
+                Dim yf = If(flipVertical, rh - 1 - y, y)
+                If y < finalClip.Top OrElse y >= finalClip.Bottom OrElse yf < rotatedClip.Top OrElse yf >= rotatedClip.Bottom OrElse
+                   runRight <= runLeft Then
+                    resultPixels.Slice(rowTarget, rw).Clear()
+                    Continue For
+                End If
+                If runLeft > 0 Then resultPixels.Slice(rowTarget, runLeft).Clear()
+                If runRight < rw Then resultPixels.Slice(rowTarget + runRight, rw - runRight).Clear()
+                Select Case quarter
+                    Case 1 : rowSources(y - y0) = (sh - 1 - xf0) * sourceStride + yf
+                    Case 2 : rowSources(y - y0) = (sh - 1 - yf) * sourceStride + (sw - 1 - xf0)
+                    Case 3 : rowSources(y - y0) = xf0 * sourceStride + (sw - 1 - yf)
+                    Case Else : rowSources(y - y0) = yf * sourceStride + xf0
+                End Select
+                rowCopied(y - y0) = True
+            Next
+            ' Dann Kachel fuer Kachel. Bei 0 und 180 Grad liest die Quelle ohnehin am Stueck, dort
+            ' ist die Kachel die ganze Zeile.
+            Dim tileWidth = If(quarter = 1 OrElse quarter = 3, QuarterTurnTile, Math.Max(1, runRight - runLeft))
+            Dim x0 = runLeft
+            While x0 < runRight
+                Dim x1 = Math.Min(runRight, x0 + tileWidth)
+                For i = 0 To rows - 1
+                    If Not rowCopied(i) Then Continue For
+                    Dim rowTarget = (y0 + i) * resultStride
+                    Dim rowSource = rowSources(i)
+                    For x = x0 To x1 - 1
+                        resultPixels(rowTarget + x) = sourcePixels(rowSource + x * stepPerX)
+                    Next
+                Next
+                x0 = x1
+            End While
         End Sub
 
         ''' <summary>ApplyGeometryTransforms ueber <see cref="ReorderQuarterTurn"/>: die beiden
@@ -8253,7 +8317,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim rw = If(normalized = 90 OrElse normalized = 270, sh, sw)
             Dim rh = If(normalized = 90 OrElse normalized = 270, sw, sh)
             Dim result = New SKBitmap(rw, rh, source.ColorType, source.AlphaType)
-            If result.GetPixels() = IntPtr.Zero Then
+            If Not ReorderQuarterTurnSupported(result) Then
                 result.Dispose()
                 Return Nothing
             End If

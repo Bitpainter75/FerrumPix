@@ -294,7 +294,9 @@ Namespace Services
         ''' <summary>Teil des Cache-Dateinamens für die ENTWICKELTE RAW-Vorschau: leer, solange die Option
         ''' aus ist oder keine .fpxmp existiert (dann gilt der eingebettete-JPG-Schlüssel unverändert).
         ''' Sonst der Zeitstempel der .fpxmp - so baut jede Bearbeitung (die die .fpxmp neu schreibt) die
-        ''' Kachel neu, ohne alte Kacheln zu entwerten.</summary>
+        ''' Kachel neu, ohne alte Kacheln zu entwerten. Die Fassung des Objektivabgleichs
+        ''' (LensDataService.MatchingRevision) gehoert dazu: eine neue Regel kann einer Datei ein
+        ''' anderes Profil geben, ohne dass Datei oder Rezept sich aendern.</summary>
         Private Shared Function DevelopedThumbnailSuffix(filePath As String) As String
             If RendersRecipeTile(filePath) Then
                 ' Nicht-RAW mit Rezept: immer gerechnet, eine Kameravorschau gibt es dort nicht. Der
@@ -311,6 +313,7 @@ Namespace Services
             Try
                 Return "_dev" & File.GetLastWriteTimeUtc(RawSidecarService.SidecarPathFor(filePath)).Ticks.ToString(Globalization.CultureInfo.InvariantCulture) &
                        If(DevelopedRawBaseVersion = 1, "", $"_b{DevelopedRawBaseVersion}") &
+                       If(LensDataService.MatchingRevision = 0, "", $"_m{LensDataService.MatchingRevision}") &
                        If(AmbientVariantId.Length = 0, "", "_ver" & AmbientVariantId)
             Catch
                 Return ""

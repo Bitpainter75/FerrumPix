@@ -29,6 +29,19 @@
   picture briefly without the warp drawn so far, and a single click on a handle no longer
   leaves it unwarped.
 
+- Presets and sidecars that set a vignette without naming its style, or with style 0, now get the
+  highlight priority vignette they were made with instead of color priority.
+
+- Flatpak: folders added through the system file dialog, such as a network share inside the home
+  folder, can be deleted from, renamed in and moved again when file operations outside the home
+  folder are allowed, instead of being treated as a system folder.
+
+- Automatic lens matching is stricter and finds more: a lens is no longer matched to the profile
+  of a different lens line, model code or brand, or one with a different teleconverter. Olympus,
+  Panasonic and Leica lenses are recognised on bodies of other brands, Tamron lenses on Sony
+  bodies, and the Pentax K-1, K-S1 and Fujifilm X-T100 bodies are recognised correctly. When in
+  doubt a lens now gets no profile rather than a wrong one.
+
 - The first start with a new picture library, or after an update that extends it, no longer
   fails now and then with a database error when two parts of the program open it at once.
 

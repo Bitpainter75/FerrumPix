@@ -328,16 +328,27 @@ Namespace Services
                     If TryGetXmpDouble(values, "PostCropVignetteRoundness", v) Then adj.VignetteRoundness = Clamp100(v)
                 End If
             End If
-            ' crs:PostCropVignetteStyle: 1 = Highlight Priority, 2 = Color Priority, 3 = Paint Overlay.
-            ' Unser Standard (ColorPriority) entspricht Adobes 2; nur die abweichenden Werte umschalten.
+            ' crs:PostCropVignetteStyle: 1 = Lichterprioritaet, 2 = Farbprioritaet, 3 = Farbueberlagerung.
+            ' Die Referenz rendert Stil 0 und einen FEHLENDEN Stil wie 1: gemessen am 2026-11-22 ueber
+            ' ihren Konverter an zehn Bildern mit Menge -50, ohne Stil, mit Stil 0 und mit Stil 1
+            ' bitgleich, Stil 2 und 3 deutlich verschieden. Unser Standard im Rezept (ColorPriority)
+            ' bleibt trotzdem, damit alte Projekte ohne Feld gleich rechnen; hier geht es nur um das
+            ' Lesen eines fremden Satzes.
+            ' Ein ausdruecklich genannter Stil gilt immer, auch ohne Menge. Ein fehlender Stil schaltet
+            ' nur bei Menge ungleich 0, sonst bliebe der Stil des Ausgangsrezepts bei einem Teilsatz
+            ' ohne Vignette nicht stehen. Ein unbekannter Wert (4 und mehr, negativ) faellt wie bisher
+            ' auf Farbprioritaet; ein nicht lesbarer Wert (NaN, unendlich) laesst den Stil unberuehrt.
             Dim styleVal As Double
             If TryGetXmpDouble(values, "PostCropVignetteStyle", styleVal) Then
                 ' Ohne CInt: ein endlicher, aber riesiger Wert liefe dort ueber.
                 Select Case Math.Round(styleVal)
-                    Case 1.0 : adj.VignetteStyle = VignetteStyle.HighlightPriority
+                    Case 0.0, 1.0 : adj.VignetteStyle = VignetteStyle.HighlightPriority
                     Case 3.0 : adj.VignetteStyle = VignetteStyle.PaintOverlay
                     Case Else : adj.VignetteStyle = VignetteStyle.ColorPriority
                 End Select
+            ElseIf Not values.ContainsKey("PostCropVignetteStyle") AndAlso
+                   TryGetXmpDouble(values, "PostCropVignetteAmount", d) AndAlso d <> 0 Then
+                adj.VignetteStyle = VignetteStyle.HighlightPriority
             End If
 
             ''' Schwarzweiß. PV2012 schreibt crs:Treatment="Black &amp; White", ältere Fassungen

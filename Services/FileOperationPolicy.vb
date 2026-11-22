@@ -82,11 +82,25 @@ Namespace Services
 
         ''' <summary>Liegt der Pfad IN einer Freigabe des Dokument-Portals? Das heisst mindestens zwei
         ''' Ebenen unter dem Portal: doc/KENNUNG/ORDNER. Das Portal selbst und die Kennungsordner
-        ''' darunter verwaltet das Portal; die bleiben Systempfade und damit gesperrt.</summary>
+        ''' darunter verwaltet das Portal; die bleiben Systempfade und damit gesperrt.
+        '''
+        ''' Das Portal gilt unter BEIDEN Schreibweisen: so, wie es in XDG_RUNTIME_DIR steht, und mit
+        ''' aufgeloesten Verweisen. In der Sandbox ist /run/user/UID/doc kein Ordner, sondern ein
+        ''' Verweis auf /run/flatpak/doc. <see cref="IsInAllowedArea"/> prueft den Pfad aber auch
+        ''' aufgeloest, und der aufgeloeste lag dann unter /run und damit im System: jede Freigabe
+        ''' blieb gesperrt, obwohl die buchstaebliche Pruefung sie zuliess. Aufgeloest wird nur die
+        ''' Wurzel des Portals; ein Verweis IN einer Freigabe, der ins System zeigt, wird weiter mit
+        ''' seinem Ziel geprueft und bleibt gesperrt.</summary>
         Private Shared Function IsInDocumentPortal(full As String) As Boolean
             Dim root = DocumentPortalRoot
+            If String.IsNullOrEmpty(root) Then Return False
+            Return IsTwoLevelsBelow(root, full) OrElse IsTwoLevelsBelow(ResolveLinks(root), full)
+        End Function
+
+        ''' <summary>Liegt der Pfad mindestens zwei Ebenen unter der Wurzel (KENNUNG/ORDNER)?</summary>
+        Private Shared Function IsTwoLevelsBelow(root As String, full As String) As Boolean
             If String.IsNullOrEmpty(root) OrElse Not IsAncestorOrSelf(root, full) Then Return False
-            Dim relative = IO.Path.GetRelativePath(root, full)
+            Dim relative = IO.Path.GetRelativePath(NormalizePath(root), NormalizePath(full))
             Return relative.Split(IO.Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries).Length >= 2
         End Function
 

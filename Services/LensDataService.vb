@@ -480,10 +480,11 @@ Namespace Services
         End Function
 
         ''' <summary>Objektivhersteller, die KEINE Kameras zu diesem Bajonett bauen und deren Namen
-        ''' die Kamera deshalb ins EXIF schreibt, wenn sie sie liest.</summary>
+        ''' die Kamera deshalb ins EXIF schreibt, wenn sie sie liest. "artisans" steht fuer
+        ''' 7Artisans: <see cref="NormalizedForName"/> trennt Ziffer und Buchstaben.</summary>
         Private Shared ReadOnly _fremdhersteller As String() =
             {"sigma", "tamron", "tokina", "samyang", "voigtlander", "zeiss", "laowa",
-             "meike", "viltrox", "yongnuo", "irix", "lensbaby"}
+             "meike", "viltrox", "yongnuo", "irix", "lensbaby", "ttartisan", "artisans", "sirui", "quantaray"}
 
         ''' <summary>Sperrt einen Kandidaten, der den Namen eines FREMDEN Objektivherstellers traegt,
         ''' den der gesuchte Name nicht nennt.
@@ -528,7 +529,12 @@ Namespace Services
             If _fremdhersteller.Any(Function(marke) gesuchtTokens.Contains(marke)) Then Return True
 
             Dim kandidatMaker = NormalizedForName(kandidat.Maker).Split(" "c)
-            Return kameraTokens.Any(Function(token) kandidatMaker.Contains(token))
+            If kameraTokens.Any(Function(token) kandidatMaker.Contains(token)) Then Return True
+            ' Nennt der Name selbst eine Marke, sind deren Profile zulaessig: ein "OLYMPUS
+            ' M.12-40mm" an einem Panasonic- oder OM-Gehaeuse, ein "LUMIX S 40/F2" an einer Sigma.
+            ' Das Bajonett ist dort mehreren Marken gemeinsam, und die Sperre auf den
+            ' Kamerahersteller liess sie ohne Profil.
+            Return BrandFamilies(gesucht).Any(Function(f) MakerTokensOf(f).Any(Function(t) kandidatMaker.Contains(t)))
         End Function
 
         ''' <summary>Namensbestandteile, an denen ein Fremdobjektiv auch OHNE Herstellernamen zu
@@ -559,6 +565,10 @@ Namespace Services
             For Each signature In _makerSignatures
                 If signature.Tokens.Any(Function(t) tokens.Contains(t)) Then Return signature.Maker & " " & name
             Next
+            ' Ein Tamron-Code neben einer Brennweite ("E 24mm F2.8 F051", so schreibt ein Sony-
+            ' Gehaeuse ein Tamron) nennt den Hersteller ebenso. Ohne Brennweite nicht: Kompakte wie
+            ' "DSC-F707" saehen sonst wie ein Code aus.
+            If _tamronCode.IsMatch(name) AndAlso FocalRange(name).HasValue Then Return "tamron " & name
             Return name
         End Function
 
@@ -592,10 +602,15 @@ Namespace Services
 
         ''' <summary>Die Brennweite aus einem Objektivnamen: (10, 20) fuer "10-20mm", (50, 50) fuer
         ''' "EF50mm". Panasonic laesst das "mm" weg und haengt die Blende mit Schraegstrich an
-        ''' ("LEICA DG 12-35/F2.8"); auch das zaehlt. Nothing, wenn der Name keine Brennweite traegt.</summary>
+        ''' ("LEICA DG 12-35/F2.8"); auch das zaehlt. Leica stellt die Blende voran und laesst das
+        ''' "mm" ebenfalls weg ("Summicron-TL 1:2/23", "1:2.8-5.6/24-90"). Nothing, wenn der Name
+        ''' keine Brennweite traegt.</summary>
         Private Shared Function FocalRange(name As String) As (Low As Double, High As Double)?
             If String.IsNullOrWhiteSpace(name) Then Return Nothing
             Dim m = Regex.Match(name.Replace(","c, "."c), "(\d+(?:\.\d+)?)(?:\s*-\s*(\d+(?:\.\d+)?))?\s*(?:mm|(?=/\s*f\s*\d))", RegexOptions.IgnoreCase)
+            If Not m.Success Then
+                m = Regex.Match(name.Replace(","c, "."c), "1\s*:\s*\d+(?:\.\d+)?(?:\s*-\s*\d+(?:\.\d+)?)?\s*/\s*(\d+(?:\.\d+)?)(?:\s*-\s*(\d+(?:\.\d+)?))?")
+            End If
             If Not m.Success Then Return Nothing
             Dim low = Double.Parse(m.Groups(1).Value, CultureInfo.InvariantCulture)
             Dim high = If(m.Groups(2).Success, Double.Parse(m.Groups(2).Value, CultureInfo.InvariantCulture), low)
@@ -641,6 +656,284 @@ Namespace Services
             If gesucht.Value.Narrow > 0 AndAlso k.Value.Narrow > 0 AndAlso
                Math.Abs(gesucht.Value.Narrow - k.Value.Narrow) > 0.05 Then Return False
             Return True
+        End Function
+
+        ' ── Linie, Modellcode, Marke und Konverter ──────────────────────────────
+        '
+        ' Brennweite und Lichtstaerke trennen zwei Objektive derselben Reihe, aber nicht zwei
+        ' Reihen: ein "RF85mm F1.4 L VCM" fand das "Canon EF 85mm f/1.4L IS USM", ein
+        ' "OM 50-200mm F2.8" das "LEICA DG 50-200/F2.8-4.0", ein "85mm F1.4 DG HSM | Art 018" das
+        ' "85mm F1.4 DG DN | Art 020". Gleiche Zahlen, andere Rechnung, und die Aehnlichkeit
+        ' reicht dagegen nicht. Die Regeln unten sperren nur, wenn BEIDE Namen das Merkmal tragen
+        ' und es sich unterscheidet; fehlt es auf einer Seite (Nikons Kurznamen, "OLYMPUS
+        ' 14-54mm Lens"), bleibt es beim Abgleich wie bisher. Lieber kein Profil als ein falsches:
+        ' dann springen die Korrekturwerte der Kamera ein, und die Wahl von Hand bleibt frei.
+
+        ''' <summary>Fassung des automatischen Abgleichs. Steht im Schluessel der entwickelten
+        ''' Kacheln (ThumbnailCacheService), denn eine neue Regel aendert das Profil einer Datei,
+        ''' ohne dass Datei oder Rezept sich aendern. 1 seit Linie, Modellcode, Marke und Konverter.</summary>
+        Public Const MatchingRevision As Integer = 1
+
+        ''' <summary>Linienwoerter je Hersteller, in der Reihenfolge der Pruefung (RF-S vor RF, EF-S
+        ''' vor EF, M.Zuiko vor Zuiko Digital, Nikkor Z und 1 Nikkor vor dem F-Bajonett). Der
+        ''' Schluessel nennt den Hersteller mit, damit auch zwei Linien verschiedener Marken
+        ''' auseinandergehen (Samsung NX gegen Fujifilm XC).</summary>
+        Private Shared ReadOnly _lineRules As (Line As String, Pattern As Regex)() = BuildLineRules()
+
+        Private Shared Function BuildLineRules() As (Line As String, Pattern As Regex)()
+            ' Leicas Objektivfamilien tragen die Linie als Endung: Summicron-M, Elmarit-TL, APO-Summicron-SL.
+            Const leicaFamily As String = "\b(?:SUMMICRON|SUMMILUX|SUMMARIT|SUMMARON|ELMARIT|ELMAR|NOCTILUX|TELYT|THAMBAR)-"
+            Dim rules As (String, String)() = {
+                ("panasonic leica dg", "\bLEICA\s+DG\b"),
+                ("panasonic lumix s", "\bLUMIX\s+S\b"),
+                ("panasonic lumix g", "\bLUMIX\s+G\b|\bG\s+(?:X\s+)?VARIO\b"),
+                ("olympus m.zuiko", "M\.\s*ZUIKO|(?:^|\s)M\.\s?(?:ED\s+)?\d|(?:^|\s)OM\s+(?:M\.\s?)?\d"),
+                ("olympus zuiko digital", "\bZUIKO\s+DIGITAL\b"),
+                ("leica tl", leicaFamily & "(?:TL|T)\b"),
+                ("leica sl", leicaFamily & "SL\b"),
+                ("leica m", leicaFamily & "M\b"),
+                ("leica r", leicaFamily & "R\b"),
+                ("leica s", leicaFamily & "S\b"),
+                ("pentax d fa", "PENTAX[-\s]?D\s?FA\b|\bHD\s+D\s?FA\b"),
+                ("pentax da", "PENTAX[-\s]?DA\b|\bHD\s+DA\b"),
+                ("pentax fa", "PENTAX[-\s]?FA\b"),
+                ("pentax f", "PENTAX[-\s]?F\b"),
+                ("pentax a", "PENTAX[-\s]?A\b"),
+                ("pentax m", "PENTAX[-\s]?M\b"),
+                ("pentax takumar", "TAKUMAR"),
+                ("canon rf-s", "\bRF-S\s?\d"),
+                ("canon rf", "\bRF\s?\d"),
+                ("canon ef-s", "\bEF-S\s?\d"),
+                ("canon ef-m", "\bEF-M\s?\d"),
+                ("canon ts-e", "\bTS-E\s?\d"),
+                ("canon mp-e", "\bMP-E\s?\d"),
+                ("canon ef", "\bEF\s?\d"),
+                ("canon fd", "\bFDn?\s?\d|\bFL\s?\d"),
+                ("nikon z", "\bNIKKOR\s+Z\b|(?:^|\s)Z\s+(?:DX\s+|MC\s+)?\d"),
+                ("nikon 1", "(?:^|\s)1\s+NIKKOR\b"),
+                ("nikon f", "\bNIKKOR\b|\bNIKON\b|\bAF-[SPI]\b|\bAI-?S\b|^\s*VR\s+\d"),
+                ("sony fe", "(?:^|\s)FE\s?(?:PZ\s+|C\s+)?\d"),
+                ("sony e", "(?:^|\s)E\s?(?:PZ\s+)?\d"),
+                ("sony dt", "(?:^|\s)DT\s?\d"),
+                ("sony a", "\bSAL\d"),
+                ("fujifilm xf", "\bXF\s?\d"),
+                ("fujifilm xc", "\bXC\s?\d"),
+                ("fujifilm gf", "\bGF\s?\d"),
+                ("samsung nx-m", "\bNX-M\s?\d"),
+                ("samsung nx", "\bNX\s?\d")}
+            Return rules.Select(Function(r) (r.Item1, New Regex(r.Item2, RegexOptions.IgnoreCase Or RegexOptions.CultureInvariant))).ToArray()
+        End Function
+
+        ''' <summary>Die Linie eines Objektivnamens ("canon rf", "nikon z", "olympus m.zuiko") oder
+        ''' leer. Bei Fremdobjektiven immer leer: ein Sony-Gehaeuse schreibt fuer ein Tamron-Vollformat
+        ''' "E 24mm F2.8 F051", das E sagt dort nichts ueber die Reihe; die trennt der Modellcode.
+        ''' <paramref name="maker"/> ist das Herstellerfeld des Eintrags, beim Suchnamen leer.</summary>
+        Private Shared Function LineOf(name As String, maker As String) As String
+            If String.IsNullOrWhiteSpace(name) OrElse IsThirdPartyName(name, maker) Then Return ""
+            For Each rule In _lineRules
+                If rule.Pattern.IsMatch(name) Then Return rule.Line
+            Next
+            Return ""
+        End Function
+
+        ''' <summary>Traegt der Name oder das Herstellerfeld einen Fremdhersteller, verraet er ihn an
+        ''' seinen Merkmalen (<see cref="WithInferredMaker"/>) oder fuehrt er einen Modellcode?</summary>
+        Private Shared Function IsThirdPartyName(name As String, maker As String) As Boolean
+            Dim tokens = NormalizedForName(name).Split(" "c)
+            Dim makerTokens = NormalizedForName(maker).Split(" "c)
+            If _fremdhersteller.Any(Function(m) tokens.Contains(m) OrElse makerTokens.Contains(m)) Then Return True
+            If Not String.Equals(WithInferredMaker(name), name, StringComparison.Ordinal) Then Return True
+            Return ModelCode(name, maker).Length > 0
+        End Function
+
+        ''' <summary>Tragen beide Namen eine Linie, muss es dieselbe sein.</summary>
+        Private Shared Function LineMatches(searchLine As String, candidate As String, candidateMaker As String) As Boolean
+            If searchLine.Length = 0 Then Return True
+            Dim candidateLine = LineOf(candidate, candidateMaker)
+            Return candidateLine.Length = 0 OrElse candidateLine = searchLine
+        End Function
+
+        ''' <summary>Die Marken hinter den Woertern aus <see cref="_brandTokens"/>, je Familie ein
+        ''' Name: Olympus, Zuiko und OM sind eine, Panasonic und Lumix eine, Nikon und Nikkor eine.</summary>
+        Private Shared ReadOnly _brandFamilies As (Family As String, Tokens As String())() = {
+            ("canon", {"canon"}), ("nikon", {"nikon", "nikkor"}), ("sony", {"sony"}),
+            ("fujifilm", {"fujifilm", "fujinon"}), ("olympus", {"olympus", "zuiko", "om"}),
+            ("panasonic", {"panasonic", "lumix"}), ("leica", {"leica"}), ("pentax", {"pentax", "smc"}),
+            ("samsung", {"samsung"}), ("hasselblad", {"hasselblad"}), ("ricoh", {"ricoh"})}
+
+        Private Shared Function BrandFamilies(name As String) As HashSet(Of String)
+            Dim tokens = NormalizedForName(name).Split(" "c)
+            Return New HashSet(Of String)(_brandFamilies.Where(Function(f) f.Tokens.Any(Function(t) tokens.Contains(t))).
+                                                         Select(Function(f) f.Family), StringComparer.Ordinal)
+        End Function
+
+        ''' <summary>Markensperre: nennen beide Namen eine Marke, muss eine gemeinsam sein. "OM" und
+        ''' "Zuiko" sind nicht "Leica" oder "Lumix", auch wenn Brennweite und Blende stimmen.
+        ''' Panasonics Leica-DG-Eintraege fuehren beide Marken und bleiben so zulaessig.</summary>
+        Private Shared Function BrandsMatch(searchFamilies As HashSet(Of String), candidate As String) As Boolean
+            If searchFamilies.Count = 0 Then Return True
+            Dim candidateFamilies = BrandFamilies(candidate)
+            Return candidateFamilies.Count = 0 OrElse candidateFamilies.Overlaps(searchFamilies)
+        End Function
+
+        ''' <summary>Unter welchen Herstellerfeldern der Sammlung die Objektive einer Marke stehen:
+        ''' Olympus heute unter OM Digital Solutions, Panasonics Leica DG unter Panasonic, Pentax
+        ''' unter Ricoh. Ohne Eintrag gilt der Name der Familie selbst.</summary>
+        Private Shared Function MakerTokensOf(family As String) As String()
+            Select Case family
+                Case "olympus" : Return {"olympus", "om"}
+                Case "leica" : Return {"leica", "panasonic"}
+                Case "pentax" : Return {"pentax", "ricoh"}
+                Case Else : Return {family}
+            End Select
+        End Function
+
+        ''' <summary>Sigmas Modellcode: drei Ziffern mit fuehrender Null hinter Art, Contemporary oder
+        ''' Sports bzw. hinter dem Strich ("| Art 018", "| C 018", "Contemporary C 016").</summary>
+        Private Shared ReadOnly _sigmaCode As New Regex("(?:\b(?:Art|Contemporary|Sports)|\|\s*\[?[ACS]\]?)\s*(?:\[?[ACS]\]?\s+)?(0\d{2})\b",
+                                                        RegexOptions.IgnoreCase Or RegexOptions.CultureInvariant)
+
+        ''' <summary>Tamrons Modellcode: ein Buchstabe und drei Ziffern (A036, B070, F051). Ein
+        ''' angehaengter Buchstabe fuer den Anschluss (A063Z, B070X) zaehlt nicht. Gross geschrieben,
+        ''' sonst faende er Teile anderer Namen.</summary>
+        Private Shared ReadOnly _tamronCode As New Regex("\b([A-Z]\d{3})[A-Z]?\b", RegexOptions.CultureInvariant)
+
+        ''' <summary>Der Modellcode eines Fremdobjektivs ("sigma 018", "tamron a036") oder leer.
+        ''' Einen Tamron-Code zaehlt nur ein Name, der Tamron nennt oder dessen Eintrag Tamron
+        ''' fuehrt; beim Suchnamen setzt <see cref="WithInferredMaker"/> den Namen davor.</summary>
+        Private Shared Function ModelCode(name As String, maker As String) As String
+            If String.IsNullOrWhiteSpace(name) Then Return ""
+            Dim sigma = _sigmaCode.Match(name)
+            If sigma.Success Then Return "sigma " & sigma.Groups(1).Value
+            If Not NormalizedForName(name).Split(" "c).Contains("tamron") AndAlso
+               Not NormalizedForName(maker).Split(" "c).Contains("tamron") Then Return ""
+            Dim tamron = _tamronCode.Match(name)
+            Return If(tamron.Success, "tamron " & tamron.Groups(1).Value.ToLowerInvariant(), "")
+        End Function
+
+        ''' <summary>Der Name ohne seinen Modellcode, fuer den Vergleich, wenn nur eine Seite einen
+        ''' traegt.</summary>
+        Private Shared Function WithoutModelCode(name As String, maker As String) As String
+            Dim code = ModelCode(name, maker)
+            If code.Length = 0 Then Return name
+            If code.StartsWith("sigma ", StringComparison.Ordinal) Then
+                Dim m = _sigmaCode.Match(name)
+                Return name.Remove(m.Groups(1).Index, m.Groups(1).Length)
+            End If
+            Dim t = _tamronCode.Match(name)
+            Return name.Remove(t.Index, t.Length)
+        End Function
+
+        ''' <summary>Bis zu dieser Aehnlichkeit der UEBRIGEN Bestandteile darf ein Name mit Code einen
+        ''' ohne Code finden ("Contemporary 015" gegen "| C").</summary>
+        Private Const CodeFreeThreshold As Double = 0.6
+
+        ''' <summary>Der Modellcode eines Eintrags: der erste, den einer seiner Namen traegt. Die
+        ''' Namen sind Schreibweisen DESSELBEN Objektivs, oft eine mit und eine ohne Code ("Tamron SP
+        ''' 90mm f/2.8 Di VC USD Macro 1:1 F004" und dasselbe ohne F004); ueber die ohne Code fand
+        ''' ein F017 sonst das F004.</summary>
+        Private Shared Function EntryCode(o As LensEntry) As String
+            For Each n In o.Namen
+                Dim code = ModelCode(n, o.Maker)
+                If code.Length > 0 Then Return code
+            Next
+            Return ""
+        End Function
+
+        ''' <summary>Modellcodes muessen gleich sein, wenn beide Seiten einen tragen; ein Code ist eine
+        ''' Rechnung, keine Brennweite. Traegt nur eine Seite einen, wird er weggelassen, und der Rest
+        ''' muss zu <see cref="CodeFreeThreshold"/> passen.</summary>
+        Private Shared Function CodeMatches(searchName As String, searchCode As String, entryCode As String,
+                                            candidate As String, candidateMaker As String) As Boolean
+            If searchCode.Length = 0 AndAlso entryCode.Length = 0 Then Return True
+            If searchCode.Length > 0 AndAlso entryCode.Length > 0 Then Return searchCode = entryCode
+            Return Similarity(WithoutModelCode(searchName, ""), WithoutModelCode(candidate, candidateMaker)) >= CodeFreeThreshold
+        End Function
+
+        Private Shared ReadOnly _converterWords As New Regex("\b(?:extender|converter|teleconverter|conv|ext)\b",
+                                                            RegexOptions.IgnoreCase Or RegexOptions.CultureInvariant)
+
+        ''' <summary>Ein Konverter oder Vorsatz ("+1.4x", "+ MC-20", "+ EF 1.4x extender III")
+        ''' aendert die Kennlinie. Hat ihn nur einer der beiden Namen, ist es ein anderes Profil.</summary>
+        Private Shared Function HasConverter(name As String) As Boolean
+            If String.IsNullOrEmpty(name) Then Return False
+            Return name.Contains("+"c) OrElse _converterWords.IsMatch(name)
+        End Function
+
+        ''' <summary>Produktnummern in Klammern ("(SEL35F14GM)", "(SAL18250)", "(11879/11882)")
+        ''' bringen weitere Ziffernwoerter mit, und die zaehlen dreifach: das "FE 35mm f/1.4 GM
+        ''' (SEL35F14GM)" fiel so fuer "FE 35mm F1.4 GM" unter das "FE 35mm f/1.4 ZA". Vor dem
+        ''' Vergleich weg damit. Tamrons Codes in Klammern ("(A005)") bleiben, sie trennen Rechnungen.</summary>
+        Private Shared ReadOnly _productCodes As New Regex("\(\s*(?:S[AE]L[0-9A-Z-]+|\d{4,6}(?:\s*/\s*\d{4,6})*)\s*\)",
+                                                           RegexOptions.IgnoreCase Or RegexOptions.CultureInvariant)
+
+        Private Shared Function StripProductCodes(name As String) As String
+            If String.IsNullOrEmpty(name) Then Return ""
+            Return _productCodes.Replace(name, " ")
+        End Function
+
+        ''' <summary>Ein nach dem Abstreifen der Produktnummern GLEICHER Name schlaegt jeden anderen.
+        ''' Der Zuschlag liegt ueber jeder Aehnlichkeit (hoechstens 1), Gleichstaende unter
+        ''' gleichnamigen Eintraegen entscheiden weiter Sensorgroesse und Umfang.</summary>
+        Private Const SameNameBonus As Double = 0.01
+
+        ''' <summary>Was der Abgleich an einem Suchnamen einmal ausrechnet statt fuer jeden Eintrag.</summary>
+        Private NotInheritable Class SearchKey
+            Public LensName As String
+            Public SearchName As String
+            Public Focal As (Low As Double, High As Double)?
+            Public Aperture As (Wide As Double, Narrow As Double)?
+            Public Line As String
+            Public Families As HashSet(Of String)
+            Public Code As String
+            Public Converter As Boolean
+            Public SameNameForms As HashSet(Of String)
+        End Class
+
+        Private Shared Function MakeSearchKey(lensName As String) As SearchKey
+            Dim searchName = WithInferredMaker(lensName)
+            Return New SearchKey With {
+                .LensName = lensName,
+                .SearchName = searchName,
+                .Focal = FocalRange(searchName),
+                .Aperture = ApertureRange(searchName),
+                .Line = LineOf(searchName, ""),
+                .Families = BrandFamilies(searchName),
+                .Code = ModelCode(searchName, ""),
+                .Converter = HasConverter(searchName),
+                .SameNameForms = New HashSet(Of String)({NormalizedForName(StripProductCodes(lensName)),
+                                                         NormalizedForName(StripProductCodes(searchName))}, StringComparer.Ordinal)}
+        End Function
+
+        ''' <summary>Wie gut passt ein Eintrag zum Suchnamen? 0 heisst gesperrt. Anschluss und
+        ''' Hersteller gelten fuer den Eintrag, alles Uebrige je Name; der beste Name zaehlt.</summary>
+        Private Shared Function CandidateScore(key As SearchKey, o As LensEntry, camera As CameraEntry) As Double
+            If Not PasstAnschluss(o, camera) Then Return 0
+            If Not MakerMatchesForIncompleteName(key.SearchName, o, camera) Then Return 0
+            If Not NamedMakerMatches(key.SearchName, o, camera) Then Return 0
+            If Not LeicaLineMatches(key.SearchName, o) Then Return 0
+            Dim codeOfEntry = EntryCode(o)
+            Dim g As Double = 0
+            For Each n In o.Namen
+                If Not FremdherstellerPasst(key.SearchName, n, camera) Then Continue For
+                If Not FocalRangeMatches(key.Focal, n) Then Continue For
+                If Not ApertureMatches(key.Aperture, n) Then Continue For
+                If HasConverter(n) <> key.Converter Then Continue For
+                If Not LineMatches(key.Line, n, o.Maker) Then Continue For
+                If Not BrandsMatch(key.Families, n) Then Continue For
+                If Not CodeMatches(key.SearchName, key.Code, codeOfEntry, n, o.Maker) Then Continue For
+                Dim stripped = StripProductCodes(n)
+                Dim s = If(key.SameNameForms.Contains(NormalizedForName(stripped)),
+                           1.0 + SameNameBonus,
+                           Similarity(StripProductCodes(key.SearchName), stripped))
+                ' Derselbe Modellcode bei gleicher Brennweite und Blende IST dasselbe Objektiv, auch
+                ' wenn die Schreibweise sonst abweicht. Ohne das gewann fuer "E 28-75mm F2.8 A063"
+                ' (zweite Fassung) das kuerzere "E 28-75mm F2.8-2.8" ohne Code (erste Fassung) vor
+                ' dem "Tamron E 28-75mm F/2.8 Di III VXD G2 A063Z".
+                If key.Code.Length > 0 AndAlso key.Code = codeOfEntry Then s = Math.Max(s, 1.0)
+                g = Math.Max(g, s)
+            Next
+            Return g
         End Function
 
         ''' <summary>Unterhalb dieser Aehnlichkeit gilt ein Objektiv als NICHT gefunden. Lieber gar
@@ -1129,7 +1422,8 @@ Namespace Services
         ''' bekommt zufaellig mal die eine, mal die andere.
         '''
         ''' Bei Gleichstand entscheidet deshalb erst der Abstand der Sensorgroesse zur Kamera, dann
-        ''' der Umfang der Messwerte.</summary>
+        ''' der Umfang der Messwerte. Welche Eintraege ueberhaupt in Frage kommen, entscheidet
+        ''' <see cref="CandidateScore"/>.</summary>
         Private Shared Function BestLens(lensName As String, camera As CameraEntry) As LensEntry
             ' Eine Canon schreibt fuer ihre eigenen Objektive den vollen Namen. Steht nur die
             ' Brennweite da ("24-70mm"), ist es ein Fremdobjektiv, dessen Nummer sich nicht
@@ -1143,22 +1437,10 @@ Namespace Services
             Dim bestCropDistance As Double = Double.MaxValue
             Dim bestExtent As Integer = -1
             Dim cameraCrop = If(camera IsNot Nothing, camera.CropFactor, 0.0)
-            Dim searchName = WithInferredMaker(lensName)
-            Dim searchFocal = FocalRange(searchName)
-            Dim searchAperture = ApertureRange(searchName)
+            Dim key = MakeSearchKey(lensName)
 
             For Each o In _objektive
-                If Not PasstAnschluss(o, camera) Then Continue For
-                If Not MakerMatchesForIncompleteName(searchName, o, camera) Then Continue For
-                If Not NamedMakerMatches(searchName, o, camera) Then Continue For
-                If Not LeicaLineMatches(searchName, o) Then Continue For
-                Dim g As Double = 0
-                For Each n In o.Namen
-                    If Not FremdherstellerPasst(searchName, n, camera) Then Continue For
-                    If Not FocalRangeMatches(searchFocal, n) Then Continue For
-                    If Not ApertureMatches(searchAperture, n) Then Continue For
-                    g = Math.Max(g, Similarity(searchName, n))
-                Next
+                Dim g = CandidateScore(key, o, camera)
                 If g <= 0 Then Continue For
 
                 Dim cropDistance = If(cameraCrop > 0, Math.Abs(o.CropFactor - cameraCrop), 0.0)
@@ -1188,14 +1470,17 @@ Namespace Services
         Private Shared Function BestCamera(maker As String, model As String) As CameraEntry
             If String.IsNullOrWhiteSpace(model) Then Return Nothing
             maker = CollectionMaker(maker, model)
+            Dim wanted = NormalizedForName(model)
             Dim best As CameraEntry = Nothing
             Dim bestScore As Double = 0
             For Each c In _kameras
-                Dim g = Similarity(model, c.Modell)
+                ' Ein gleich geschriebenes Modell schlaegt jedes aehnliche: "X-T100" und "X100T"
+                ' bestehen aus denselben Bestandteilen, und der erste Treffer gewann.
+                Dim g = If(NormalizedForName(c.Modell) = wanted, 1.0 + SameNameBonus, Similarity(model, c.Modell))
                 If Not String.IsNullOrWhiteSpace(maker) AndAlso
                    Not String.IsNullOrWhiteSpace(c.Maker) Then
                     ' Der Hersteller ist ein starker Filter: "5D" gibt es bei mehreren Marken.
-                    If Similarity(maker, c.Maker) < 0.5 Then Continue For
+                    If Not CameraMakerMatches(maker, c.Maker) Then Continue For
                 End If
                 If g > bestScore Then
                     bestScore = g
@@ -1213,6 +1498,20 @@ Namespace Services
         Private Shared Function CollectionMaker(maker As String, model As String) As String
             If If(model, "").TrimStart().StartsWith("PENTAX", StringComparison.OrdinalIgnoreCase) Then Return "Pentax"
             Return maker
+        End Function
+
+        ''' <summary>Passt das Herstellerfeld der Sammlung zum Hersteller der Aufnahme? Die neueren
+        ''' Pentax-Gehaeuse (K-1, K-S1, K-S2) fuehrt die Sammlung unter "Ricoh Imaging Company",
+        ''' die aelteren unter "Pentax". Ohne beide Schreibweisen fiel die K-1 aus dem Abgleich, und
+        ''' die Q-S1 (anderes Bajonett) gewann mit der gemeinsamen Ziffer.</summary>
+        Private Shared Function CameraMakerMatches(maker As String, entryMaker As String) As Boolean
+            If Similarity(maker, entryMaker) >= 0.5 Then Return True
+            Return IsPentaxMaker(maker) AndAlso IsPentaxMaker(entryMaker)
+        End Function
+
+        Private Shared Function IsPentaxMaker(maker As String) As Boolean
+            Dim m = NormalizedForName(maker)
+            Return m.StartsWith("pentax", StringComparison.Ordinal) OrElse m.StartsWith("ricoh imaging", StringComparison.Ordinal)
         End Function
 
         ''' <summary>Das fest eingebaute Objektiv einer Kompaktkamera. Die Sammlung fuehrt es unter
