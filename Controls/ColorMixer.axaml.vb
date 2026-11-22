@@ -379,7 +379,7 @@ Namespace Controls
         Private Shared Sub RegisterRecent(c As Color)
             ColorPickerButton.SharedRecentColors.Remove(c)
             ColorPickerButton.SharedRecentColors.Insert(0, c)
-            While ColorPickerButton.SharedRecentColors.Count > 10
+            While ColorPickerButton.SharedRecentColors.Count > ColorPickerButton.RecentColorLimit
                 ColorPickerButton.SharedRecentColors.RemoveAt(ColorPickerButton.SharedRecentColors.Count - 1)
             End While
         End Sub

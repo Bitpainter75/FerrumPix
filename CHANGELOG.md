@@ -119,6 +119,10 @@
   opening a 32-bit file whose layers cannot all be taken over, you can now choose to open the full
   picture instead.
 
+- Lowering Highlights on JPEG, TIFF, PNG, HEIC and other pictures that are not RAW no longer
+  strengthens bright halos along hard edges, and the detail in bright areas stays closer to the
+  original there. RAW files look as before.
+
 ### Fixes
 
 - Text layers in PSD files that a text object cannot reproduce faithfully, such as text in a

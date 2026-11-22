@@ -1275,10 +1275,14 @@
     <Style Selector=":is(NumericUpDown).slider-value:pointerover">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
     </Style>
-    <!-- Im Aufklapper ist FP.Bg.Elevated die Menuefarbe: dort steht das Zahlenfeld neben dem Hex-Feld
-         des Farbwaehlers und traegt wie dieses die Feldfarbe, statt als Menueblock zu erscheinen. -->
+    <!-- Im Aufklapper ist FP.Bg.Elevated die Menuefarbe, ein Zahlenfeld darin verschwaende also.
+         Es sieht dort aus wie neben den Reglern im Panel: eine Stufe heller als sein Grund
+         (Panel Elevated auf Panel, Aufklapper Hover auf Elevated), beim Ueberfahren noch eine. -->
     <Style Selector="Popup :is(NumericUpDown).slider-value">
-        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+    </Style>
+    <Style Selector="Popup :is(NumericUpDown).slider-value:pointerover">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Active}"/>
     </Style>
 
     <!-- 3. Das eigentliche Textfeld im Template stylen -->
@@ -1294,6 +1298,14 @@
         <Setter Property="MinHeight" Value="0"/>
         <Setter Property="HorizontalContentAlignment" Value="Right"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <!-- Die Kanalfelder R, G, B und A des Farbwaehlers (ColorChannelFields) tragen die Zahl
+         linksbuendig, direkt hinter ihrem Buchstaben. Rechtsbuendig wie neben den Reglern stand
+         eine kurze Zahl am Ende ihres Feldes und damit naeher am naechsten Buchstaben als am
+         eigenen. -->
+    <Style Selector=":is(NumericUpDown).channel-value /template/ TextBox#PART_TextBox">
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="Padding" Value="3,0,2,0"/>
     </Style>
     <Style Selector=":is(NumericUpDown).slider-value /template/ TextBox#PART_TextBox /template/ ScrollViewer#PART_ScrollViewer">
         <Setter Property="Background" Value="Transparent"/>

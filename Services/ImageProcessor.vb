@@ -907,11 +907,13 @@ Namespace Services
                                                ByRef renderAdj As ImageAdjustments,
                                                Optional developRaw As Boolean = True) As SKBitmap
             Dim applied = 0.0
+            Dim rawStage = False
             Dim decoded = DecodeOrientedWithExposure(path, developRaw, LensChoiceFrom(adj),
                                                      adj IsNot Nothing AndAlso adj.RawHighlightRecovery,
                                                      If(adj Is Nothing, 0.0, adj.RawExposureEv()), applied,
-                                                     knee:=If(adj Is Nothing, RawDecodeService.HighlightRecoveryKnee, adj.RawHighlightKnee()))
-            renderAdj = WithExposureInSource(adj, applied)
+                                                     knee:=If(adj Is Nothing, RawDecodeService.HighlightRecoveryKnee, adj.RawHighlightKnee()),
+                                                     rawStage:=rawStage)
+            renderAdj = WithExposureInSource(adj, applied, rawStage)
             ' Steckt die Belichtung schon in der RAW-Stufe, traegt die Quelle einen Regler, den eine
             ' Protokollebene zuruecknehmen soll. Dann den Ursprung ohne Belichtung dazu, ein zweiter
             ' Decode NACH dem ersten (nie zwei gleichzeitig) und nur, wenn eine solche Ebene wirkt.
@@ -941,8 +943,9 @@ Namespace Services
             Dim decoded = RawDecodeService.TryDecodeThumbnail(path, LensChoiceFrom(adj),
                                                               adj IsNot Nothing AndAlso adj.RawHighlightRecovery, exposureEv,
                                                               If(adj Is Nothing, RawDecodeService.HighlightRecoveryKnee, adj.RawHighlightKnee()))
-            Dim inSource = If(decoded IsNot Nothing AndAlso RawDecodeService.DevelopsThroughRawStage(path), exposureEv, 0.0)
-            renderAdj = WithExposureInSource(adj, inSource)
+            Dim rawStage = decoded IsNot Nothing AndAlso RawDecodeService.DevelopsThroughRawStage(path)
+            Dim inSource = If(rawStage, exposureEv, 0.0)
+            renderAdj = WithExposureInSource(adj, inSource, rawStage)
             ' Wie beim vollen Decode: mit Protokollebene der Ursprung ohne Belichtung dazu.
             If decoded IsNot Nothing AndAlso inSource <> 0.0 AndAlso HasVisibleRestoreLayer(adj) Then
                 RegisterRestoreOrigin(decoded, RawDecodeService.TryDecodeThumbnail(path, LensChoiceFrom(adj),
@@ -955,14 +958,28 @@ Namespace Services
         ''' <summary>Das Rezept fuer die Kette zu einem Quellbild, in dem schon
         ''' <paramref name="appliedEv"/> Blendenstufen Belichtung stecken. Stimmt der Vermerk im
         ''' Rezept schon, das Rezept selbst, sonst eine Kopie. Auch ein Vermerk, der aus dem
-        ''' Arbeitsbild des Editors stammt, wird ueberschrieben: das Bild hier ist frisch gelesen.</summary>
-        Friend Shared Function WithExposureInSource(adj As ImageAdjustments, appliedEv As Double) As ImageAdjustments
+        ''' Arbeitsbild des Editors stammt, wird ueberschrieben: das Bild hier ist frisch gelesen.
+        ''' Ebenso <paramref name="fromRawStage"/>, ob es durch die RAW-Stufe kam
+        ''' (ImageAdjustments.SourceFromRawStage).</summary>
+        Friend Shared Function WithExposureInSource(adj As ImageAdjustments, appliedEv As Double,
+                                                    fromRawStage As Boolean) As ImageAdjustments
             If adj Is Nothing Then Return Nothing
             Dim points = CSng(appliedEv * ImageAdjustments.ExposurePointsPerStop)
-            If adj.ExposureInSource = points Then Return adj
+            If adj.ExposureInSource = points AndAlso adj.SourceFromRawStage = fromRawStage Then Return adj
             Dim copy = adj.Clone()
             copy.ExposureInSource = points
+            copy.SourceFromRawStage = fromRawStage
             Return copy
+        End Function
+
+        ''' <summary>Kaeme <paramref name="path"/> beim Entwickeln durch die RAW-Stufe? Dieselbe
+        ''' Bedingung wie in <see cref="DecodeOrientedWithExposure"/>, ohne zu dekodieren: fuer ein
+        ''' Bild, das schon entwickelt vorliegt (Uebergabe vom Betrachter, eingebackenes Arbeitsbild
+        ''' eines Buendels), aber aus dieser Datei stammt.</summary>
+        Friend Shared Function SourceDevelopsThroughRawStage(path As String) As Boolean
+            If String.IsNullOrEmpty(path) Then Return False
+            Return RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.CanDevelop(path) AndAlso
+                   RawDecodeService.DevelopsThroughRawStage(path)
         End Function
 
         ''' TEMPORÄR ( Vorher/Nachher dunkler): protokolliert den Farbraum des rohen
@@ -4208,6 +4225,10 @@ Namespace Services
                             ' Besitz voraus - ohne ihn gehoert das Bild dem Aufrufer, und eine
                             ' Kopie waere genau die Vollkopie, die der Weg vermeiden soll.
                             Dim layerPixelAdjustments = layer.Adjustments.ExtractPixelAdjustments()
+                            ' Die Ebene wirkt auf dieselben Bildpunkte wie das Bild darunter, also mit
+                            ' dessen Herkunft (ImageAdjustments.SourceFromRawStage); ein Filmnegativ
+                            ' darunter hat kein verschobenes Knie.
+                            layerPixelAdjustments.SourceFromRawStage = adj.BoostsLuminanceDetail()
 
                             ' Erst die Karte, wenn die Ebene nur aus der Punktkette besteht und nichts
                             ' danach den Prozessor-Stand braucht.
@@ -5534,7 +5555,7 @@ Namespace Services
             ' komponierten auf veralteter Basis. Das gilt auch fuer APP-WEITE Render-Schalter,
             ' nicht nur adj-Felder - wer einen einfuehrt, muss ihn hier eintragen.
             Return String.Join("|", New Object() {
-                adj.Exposure, adj.ExposureInSource, adj.ChainExposureInRawStage(), adj.KneeInSource, adj.RampBlackShareInSource, If(adj.ShadowSaturationInSource IsNot Nothing, 1, 0), adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
+                adj.Exposure, adj.ExposureInSource, adj.ChainExposureInRawStage(), adj.KneeInSource, adj.SourceFromRawStage, adj.RampBlackShareInSource, If(adj.ShadowSaturationInSource IsNot Nothing, 1, 0), adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.SharpenRadius, adj.SharpenDetail,
                 adj.SharpnessAtOutputScale,
                 adj.WhiteBalanceModel, adj.WhiteBalanceAnchorX, adj.WhiteBalanceAnchorY, adj.WhiteBalanceCamera,

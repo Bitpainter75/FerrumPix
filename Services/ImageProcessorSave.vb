@@ -1289,9 +1289,13 @@ Namespace Services
                 Dim baseBitmap As SKBitmap
                 If fromStage Then
                     baseBitmap = DecodeForAdjustments(inputPath, recipe)
-                    If recipe.WorkingImageExposure <> 0.0F Then
+                    ' Das Arbeitsbild ist aus dem Basisbild entwickelt; kam das durch die RAW-Stufe,
+                    ' traegt auch das Arbeitsbild deren Knie (ImageAdjustments.SourceFromRawStage).
+                    Dim fromRawStage = SourceDevelopsThroughRawStage(loaded.BaseImagePath)
+                    If recipe.WorkingImageExposure <> 0.0F OrElse fromRawStage Then
                         renderAdj = recipe.Clone()
                         renderAdj.ExposureInSource = recipe.WorkingImageExposure
+                        renderAdj.SourceFromRawStage = fromRawStage
                     End If
                     ' Das Arbeitsbild traegt die eingebackene Retusche; das Ursprungsbild einer
                     ' Protokollebene ist das Basisbild daneben im Buendel, ohne Belichtung.

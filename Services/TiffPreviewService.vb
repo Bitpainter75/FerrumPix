@@ -33,6 +33,11 @@ Namespace Services
         ''' werden abgewiesen statt den Prozess zu sprengen.</summary>
         Private Const MaxPixels As Long = 300L * 1000L * 1000L
 
+        ''' <summary>Obergrenze fuer den Lesepuffer EINER Kachel oder Zeile im Gleitkomma-Leser
+        ''' (TryReadLinear). 256 MB reichen fuer eine Kachel von 4096 mal 4096 Punkten mit vier
+        ''' Kanaelen in 32 Bit; was mehr meldet, ist kaputt oder boeswillig.</summary>
+        Private Const MaxFloatBufferBytes As Long = 256L * 1024L * 1024L
+
         Public Shared Function IsSupportedTiff(filePath As String) As Boolean
             If String.IsNullOrWhiteSpace(filePath) Then Return False
             Select Case IO.Path.GetExtension(filePath).ToLowerInvariant()
@@ -562,8 +567,13 @@ Namespace Services
                         Dim tileWidth = tileWidthField(0).ToInt()
                         Dim tileHeight = tileHeightField(0).ToInt()
                         If tileWidth <= 0 OrElse tileHeight <= 0 OrElse CLng(tileWidth) * tileHeight > 64L * 1024 * 1024 Then Return Nothing
-                        Dim tile(tif.TileSize() - 1) As Byte
-                        If tile.Length < tileWidth * tileHeight * samplesPerPlane * bytesPerSample Then Return Nothing
+                        ' Erst aus den geprueften Feldern rechnen, dann anlegen: eine fremde Datei
+                        ' kann eine uebergrosse Kachel melden, und in Integer liefe das Produkt ueber.
+                        Dim tileBytes = CLng(tileWidth) * tileHeight * samplesPerPlane * bytesPerSample
+                        Dim nativeTileBytes = CLng(tif.TileSize())
+                        If tileBytes > MaxFloatBufferBytes OrElse nativeTileBytes < tileBytes OrElse
+                           nativeTileBytes > MaxFloatBufferBytes Then Return Nothing
+                        Dim tile(CInt(nativeTileBytes) - 1) As Byte
                         For plane = 0 To planes - 1
                             If layout.Separate AndAlso plane >= colors Then Exit For
                             For tileY = 0 To height - 1 Step tileHeight
@@ -584,8 +594,11 @@ Namespace Services
                             Next
                         Next
                     Else
-                        Dim line(tif.ScanlineSize() - 1) As Byte
-                        If line.Length < width * samplesPerPlane * bytesPerSample Then Return Nothing
+                        Dim lineBytes = CLng(width) * samplesPerPlane * bytesPerSample
+                        Dim nativeLineBytes = CLng(tif.ScanlineSize())
+                        If lineBytes > MaxFloatBufferBytes OrElse nativeLineBytes < lineBytes OrElse
+                           nativeLineBytes > MaxFloatBufferBytes Then Return Nothing
+                        Dim line(CInt(nativeLineBytes) - 1) As Byte
                         For plane = 0 To planes - 1
                             If layout.Separate AndAlso plane >= colors Then Exit For
                             For y = 0 To height - 1

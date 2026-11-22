@@ -791,6 +791,11 @@ Namespace ViewModels
         ''' Nur dann kommen Belichtung und Knie dort an; eine DNG-Huelle um ein fertiges Bild
         ''' entwickelt LibRaw zwar, aber ohne Rampe. Gesetzt wie _workingImageRawDeveloped.
         Private _workingImageRawStage As Boolean
+        ''' Stammt das Arbeitsbild aus der RAW-Stufe, auch wenn es nicht frisch dekodiert ist
+        ''' (eingebackenes Buendel-Arbeitsbild, Uebergabe vom Betrachter)? Geht an die Kette als
+        ''' ImageAdjustments.SourceFromRawStage und entscheidet ueber den Verstaerker der
+        ''' Helligkeitsstruktur. Gesetzt wie _workingImageRawStage.
+        Private _workingImageFromRawStage As Boolean
         ''' Hat LibRaw das Arbeitsbild entwickelt? Gesetzt wie _workingImageExposure aus dem Decode,
         ''' der es geliefert hat (IsRawDeveloped). Nicht aus dem Zwischenspeicher von RawDecodeService
         ''' abgeleitet: der haelt nur ein Bild, und der Decode einer anderen RAW (Kachel, Betrachter,
@@ -8161,6 +8166,7 @@ Namespace ViewModels
                                               stepClock.Restart()
                                               Dim result = PrepareSource(New DecodedSource With {
                                                   .Full = full, .AppliedEv = applied, .RawDeveloped = developed, .RawStage = rawStage,
+                                                  .FromRawStage = rawStage,
                                                   .AppliedKnee = If(rawStage, knee, RawDecodeService.HighlightRecoveryKnee)}, previewMax)
                                               prepareMs = stepClock.Elapsed.TotalMilliseconds
                                               Return result
@@ -8182,6 +8188,7 @@ Namespace ViewModels
             _workingImageExposure = CSng(prepared.AppliedEv * ImageAdjustments.ExposurePointsPerStop)
             _workingImageKnee = prepared.AppliedKnee
             _workingImageRawStage = prepared.RawStage
+            _workingImageFromRawStage = prepared.FromRawStage
             SetWorkingImageRawDeveloped(prepared.RawDeveloped)
             Dim adoptStart = clock.Elapsed.TotalMilliseconds
             AdoptPreparedWorkingImage(prepared.Prepared, prepared.Display,
@@ -22899,16 +22906,22 @@ Namespace ViewModels
             ' Die Uebergabe traegt die Belichtung nicht (der Betrachter zeigt die Datei ohne
             ' Rezept); der Neuaufbau nach dem Oeffnen zieht sie nach (ScheduleRawExposureRebuild).
             If fullDecode Is Nothing AndAlso Not bakedFromFpx Then fullDecode = DecodedImageHandoff.TryTake(imagePath)
+            Dim fromRawStage = False
             If fullDecode Is Nothing Then
                 fullDecode = ImageProcessor.DecodeWorkingImageWithExposure(imagePath, lensChoice, recoverHighlights,
                                                                            exposureEv, appliedEv, rawDeveloped, knee, rawStage)
                 If rawStage Then appliedKnee = knee
+                fromRawStage = rawStage
+            Else
+                ' Buendel-Arbeitsbild oder Uebergabe: entwickelt aus dieser Datei, also mit deren Herkunft.
+                fromRawStage = ImageProcessor.SourceDevelopsThroughRawStage(imagePath)
             End If
             DiagnosticLogService.LogAlways("Editor.RawHighlightRecovery",
                 $"decode completed; enabled={recoverHighlights}; source={imagePath}; override={Not String.IsNullOrEmpty(overridePath)}; " &
                 $"baked={bakedFromFpx}; developed={rawDeveloped}; exposureEv={appliedEv:F2}; result={If(fullDecode Is Nothing, "<none>", $"{fullDecode.Width}x{fullDecode.Height}")}")
             Return New DecodedSource With {.Full = fullDecode, .Baked = bakedFromFpx, .AppliedEv = appliedEv,
-                                           .AppliedKnee = appliedKnee, .RawDeveloped = rawDeveloped, .RawStage = rawStage}
+                                           .AppliedKnee = appliedKnee, .RawDeveloped = rawDeveloped, .RawStage = rawStage,
+                                           .FromRawStage = fromRawStage}
         End Function
 
         ''' <summary>Was der Decode fuer das Arbeitsbild liefert: das Vollbild, ob es ein eingebackenes
@@ -22923,6 +22936,9 @@ Namespace ViewModels
             Public RawDeveloped As Boolean
             ''' Kam es durch die RAW-Stufe (RawDecodeService.DevelopsThroughRawStage)?
             Public RawStage As Boolean
+            ''' Stammt es aus der RAW-Stufe, auch eingebacken oder uebergeben
+            ''' (ImageAdjustments.SourceFromRawStage)?
+            Public FromRawStage As Boolean
         End Structure
 
         ''' <summary>Quellwechsel Teil 3: das Ergebnis übernehmen - wieder UI-Thread.
@@ -22950,6 +22966,8 @@ Namespace ViewModels
             Public AppliedKnee As Double
             ''' Kam das Bild durch die RAW-Stufe?
             Public RawStage As Boolean
+            ''' Stammt es aus der RAW-Stufe, auch eingebacken oder uebergeben?
+            Public FromRawStage As Boolean
             ''' Hat LibRaw die Datei entwickelt (und nicht die eingebettete Vorschau eingesprungen)?
             Public RawDeveloped As Boolean
 
@@ -22976,7 +22994,8 @@ Namespace ViewModels
             End If
             Return New PreparedSource With {.Prepared = prepared, .Display = display, .Baked = decoded.Baked,
                                             .AppliedEv = decoded.AppliedEv, .AppliedKnee = decoded.AppliedKnee,
-                                            .RawDeveloped = decoded.RawDeveloped, .RawStage = decoded.RawStage}
+                                            .RawDeveloped = decoded.RawDeveloped, .RawStage = decoded.RawStage,
+                                            .FromRawStage = decoded.FromRawStage}
         End Function
 
         ''' <summary>Ist der Quellwechsel dieser Marke ueberholt? Dann NICHT entsperren: der neue
@@ -22998,6 +23017,7 @@ Namespace ViewModels
                                        CSng(source.AppliedEv * ImageAdjustments.ExposurePointsPerStop))
             _workingImageKnee = If(source.Baked, RawDecodeService.HighlightRecoveryKnee, source.AppliedKnee)
             _workingImageRawStage = Not source.Baked AndAlso source.RawStage
+            _workingImageFromRawStage = source.FromRawStage
             SetWorkingImageRawDeveloped(Not source.Baked AndAlso source.RawDeveloped)
 
             ' Laeuft auf dem Anzeigefaden; mit Messpunkt, damit eine Stockung hier im Protokoll einen
@@ -23192,6 +23212,7 @@ Namespace ViewModels
             _workingImageExposure = 0.0F
             _workingImageKnee = RawDecodeService.HighlightRecoveryKnee
             _workingImageRawStage = False
+            _workingImageFromRawStage = False
             SetWorkingImageRawDeveloped(False)
             Threading.Interlocked.Increment(_rawExposureRebuildToken)
             _rawExposureRebuildTimer?.Stop()
@@ -25802,6 +25823,7 @@ Namespace ViewModels
                 .ExposureInSource = If(_pixelLayerHidden, 0.0F, _workingImageExposure),
                 .SourceFollowsRawExposure = SourceFollowsRawExposure(),
                 .KneeInSource = _workingImageKnee,
+                .SourceFromRawStage = _workingImageFromRawStage,
                 .RampBlackShareInSource = If(SourceFollowsRawExposure(), RawDecodeService.RampBlackShareForFile(RenderSourcePath), 0.0),
                 .ShadowSaturationInSource = If(SourceFollowsRawExposure(), RawDecodeService.ShadowSaturationForFile(RenderSourcePath), Nothing),
                 .SharpnessAtOutputScale = forPreview,

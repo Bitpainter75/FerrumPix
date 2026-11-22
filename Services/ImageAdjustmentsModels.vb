@@ -814,6 +814,28 @@ Namespace Services
         <System.Text.Json.Serialization.JsonIgnore>
         Public Property KneeInSource As Double = RawDecodeService.HighlightRecoveryKnee
 
+        ''' <summary>Kam das Quellbild durch die RAW-Stufe (RawDecodeService.DevelopsThroughRawStage),
+        ''' also mit Lichterschulter und dem Knie, das abgesenkte Lichter verschieben? Nur dann gilt
+        ''' der Verstaerker der Helligkeitsstruktur ("lumaBoost", ToneSliderCurves.LuminanceDetailGain):
+        ''' geeicht ist er an RAW, wo das verschobene Knie sonst Zeichnung nimmt. Ein JPEG, PNG, TIFF
+        ''' oder HEIC hat kein solches Knie und bekommt Faktor 1, ebenso ein Filmnegativ
+        ''' (<see cref="ExposureBelongsToRawStage"/>). Lineares Licht (OpenEXR, Radiance, TIFF mit
+        ''' Gleitkomma) laeuft durch dieselbe Schulter und zaehlt mit.
+        '''
+        ''' Gesetzt von dem, der das Quellbild liefert: vom Decode (ImageProcessor.DecodeForRender,
+        ''' DecodeReducedForRender), vom Editor fuer sein Arbeitsbild und vom Buendel fuer sein
+        ''' eingebackenes Arbeitsbild; eine Maskenebene erbt es vom Bild darunter. Vorgabe False: ein
+        ''' Bild ohne bekannte Herkunft rechnet wie ein JPEG. Wie <see cref="ExposureInSource"/> eine
+        ''' Eigenschaft des Bildes: nicht gespeichert, nicht uebertragen.</summary>
+        <System.Text.Json.Serialization.JsonIgnore>
+        Public Property SourceFromRawStage As Boolean = False
+
+        ''' <summary>Gilt der Verstaerker der Helligkeitsstruktur fuer dieses Rezept? Siehe
+        ''' <see cref="SourceFromRawStage"/>.</summary>
+        Public Function BoostsLuminanceDetail() As Boolean
+            Return SourceFromRawStage AndAlso ExposureBelongsToRawStage()
+        End Function
+
         ''' <summary>Greift die Kette einem Neuaufbau mit anderem Knie vor? Dann rechnet sie die
         ''' Schulter um, bis das neue Arbeitsbild kommt (ImageProcessor.RawStageExposureAt).</summary>
         Public Function ChainFollowsRawKnee() As Boolean
@@ -1594,7 +1616,7 @@ Namespace Services
         Private Shared ReadOnly StructuralPropertyNames As New HashSet(Of String)(StringComparer.Ordinal) From {
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
             "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceCamera", "WhiteBalanceModel", "WhiteBalanceMode",
-            "RawHighlightRecovery", "RawSensorEdgeCrop", "RawCameraAspectCrop", "ExposureInSource", "SourceFollowsRawExposure", "KneeInSource",
+            "RawHighlightRecovery", "RawSensorEdgeCrop", "RawCameraAspectCrop", "ExposureInSource", "SourceFollowsRawExposure", "KneeInSource", "SourceFromRawStage",
             "RampBlackShareInSource", "ShadowSaturationInSource", "SharpnessAtOutputScale", "RawModelDenoise", "RawModelDenoiseStrength",
             "LensDistortion", "LensTca", "LensVignetting", "LensModel",
             "LensDistortionAmount", "LensTcaAmount", "LensVignettingAmount", "LensTcaRed", "LensTcaBlue",
@@ -2093,6 +2115,7 @@ Namespace Services
                 .ExposureInSource = ExposureInSource,
                 .SourceFollowsRawExposure = SourceFollowsRawExposure,
                 .KneeInSource = KneeInSource,
+                .SourceFromRawStage = SourceFromRawStage,
                 .RampBlackShareInSource = RampBlackShareInSource,
                 .ShadowSaturationInSource = ShadowSaturationInSource,
                 .SharpnessAtOutputScale = SharpnessAtOutputScale,

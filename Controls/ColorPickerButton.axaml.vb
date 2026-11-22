@@ -48,6 +48,10 @@ Namespace Controls
         ' bestimmte ViewModel-Instanz gebunden, damit dieses Control eigenständig wiederverwendbar bleibt.
         Public Shared ReadOnly SharedRecentColors As New ObservableCollection(Of Color)()
 
+        ' So viele Felder passen im Aufklapper (ColorEditor) in eine Zeile. Bei zehn brach das
+        ' zehnte allein in eine zweite Zeile um.
+        Friend Const RecentColorLimit As Integer = 9
+
         Private _suppressSync As Boolean
         Private _isPicking As Boolean
         Private _observedVm As EditorViewModel
@@ -211,7 +215,7 @@ Namespace Controls
         Friend Shared Sub RegisterRecent(c As Color)
             SharedRecentColors.Remove(c)
             SharedRecentColors.Insert(0, c)
-            While SharedRecentColors.Count > 10
+            While SharedRecentColors.Count > RecentColorLimit
                 SharedRecentColors.RemoveAt(SharedRecentColors.Count - 1)
             End While
         End Sub

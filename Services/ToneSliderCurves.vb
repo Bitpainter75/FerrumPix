@@ -596,14 +596,17 @@ Namespace Services
 
         ''' <summary>Wie <see cref="DetailGain"/>, fuer die Feinstruktur der Helligkeit: je Zone der
         ''' Ueberschuss mal dem Verstaerker (<see cref="LumaBoosts"/>), der bei positiver Belichtung
-        ''' <paramref name="exposureEv"/> (Blendenstufen) nach <see cref="LumaBoostEvSlopes"/> faellt.</summary>
+        ''' <paramref name="exposureEv"/> (Blendenstufen) nach <see cref="LumaBoostEvSlopes"/> faellt.
+        ''' Ohne <paramref name="withBoost"/> (Quelle nicht aus der RAW-Stufe,
+        ''' ImageAdjustments.SourceFromRawStage) gilt der Faktor wie fuer die Buntheit.</summary>
         Public Shared Function LuminanceDetailGain(slider As String, value As Double, lightness As Double,
-                                                   Optional exposureEv As Double = 0.0) As Double
+                                                   Optional exposureEv As Double = 0.0,
+                                                   Optional withBoost As Boolean = True) As Double
             Dim sets As Double()() = Nothing
             Dim boosts As Double()() = Nothing
             Dim slopes As Double() = Nothing
             If value = 0.0 OrElse DetailCenters Is Nothing OrElse Not DetailGains.TryGetValue(slider, sets) Then Return 1.0
-            If Not LumaBoosts.TryGetValue(slider, boosts) OrElse Not LumaBoostEvSlopes.TryGetValue(slider, slopes) Then
+            If Not withBoost OrElse Not LumaBoosts.TryGetValue(slider, boosts) OrElse Not LumaBoostEvSlopes.TryGetValue(slider, slopes) Then
                 Return GainOverZones(Function(k, z) sets(k)(z), value, lightness)
             End If
             Dim ev = Math.Max(0.0, exposureEv)
