@@ -2,7 +2,6 @@ Imports System
 Imports System.Collections.Generic
 Imports System.IO
 Imports System.Linq
-Imports System.Runtime.InteropServices
 Imports BitMiracle.LibTiff.Classic
 Imports SkiaSharp
 
@@ -18,7 +17,9 @@ Namespace Services
     ''' dieser Schreiber deshalb nur fuer ein tiefes Bild (Rgba16161616, ImageProcessorDeep.vb), das
     ''' die Kette durchgehend mitgerechnet hat.
     '''
-    ''' DIE BILDPUNKTE schreibt LibTiff.NET, verlustfrei mit Deflate und waagerechter Vorhersage. Ein
+    ''' DIE BILDPUNKTE gehen verlustfrei mit Deflate und waagerechter Vorhersage hinein, in Streifen
+    ''' zu 64 Zeilen, die parallel gepackt und von LibTiff.NET nur noch geschrieben werden (siehe
+    ''' <see cref="StripEncoding"/>). Ein
     ''' Alphakanal kommt nur mit, wenn das Bild wirklich Transparenz traegt; sonst waere jede Datei
     ''' ein Drittel groesser, ohne etwas mehr zu zeigen.
     '''
@@ -82,8 +83,9 @@ Namespace Services
         Private Const TagGpsIfdPointer As Integer = &H8825
 
         ''' Zeilen je Streifen. Klein genug, dass ein Leser nicht das ganze Bild auf einmal
-        ''' entpacken muss, gross genug, dass die Streifentabelle kurz bleibt.
-        Private Const RowsPerStrip As Integer = 64
+        ''' entpacken muss, gross genug, dass die Streifentabelle kurz bleibt. Dieselbe Zahl, in
+        ''' der die Streifen gepackt werden (siehe PackStrip).
+        Private Const RowsPerStrip As Integer = StripEncoding.RowsPerStrip
 
         ''' <summary>Schreibt <paramref name="bitmap"/> atomar nach <paramref name="targetPath"/>.
         ''' <paramref name="metadata"/> darf Nothing sein (Uebernahme aus oder nichts lesbar). Ein
@@ -113,86 +115,120 @@ Namespace Services
             Using pixmap = bitmap.PeekPixels()
                 If pixmap Is Nothing Then Return False
 
-                ' Zeilenweise nach RGBA ohne vormultipliziertes Alpha - so steht es im TIFF. Skia
-                ' rechnet dabei selbst um, gleich in welcher Anordnung das Bitmap vorliegt.
+                ' Nach RGBA ohne vormultipliziertes Alpha - so steht es im TIFF. Skia rechnet dabei
+                ' selbst um, gleich in welcher Anordnung das Bitmap vorliegt.
                 ' Ein tiefes Bild (ImageProcessorDeep.vb) geht mit 16 Bit je Kanal hinein: dieselbe
                 ' Anordnung, zwei Bytes je Wert in der Bytefolge des Rechners, wie LibTiff sie
                 ' fuer eine Datei erwartet, die es selbst anlegt.
                 Dim deep = bitmap.ColorType = SKColorType.Rgba16161616
                 Dim sampleBytes = If(deep, 2, 1)
-                Dim pixelBytes = 4 * sampleBytes
-                Dim rowInfo = New SKImageInfo(width, 1, If(deep, SKColorType.Rgba16161616, SKColorType.Rgba8888),
-                                              SKAlphaType.Unpremul)
-                Dim rgba(width * pixelBytes - 1) As Byte
-                Dim handle = GCHandle.Alloc(rgba, GCHandleType.Pinned)
-                Try
-                    Dim pointer = handle.AddrOfPinnedObject()
-                    Dim hasAlpha = bitmap.AlphaType <> SKAlphaType.Opaque AndAlso
-                                   HasTransparency(pixmap, height, rowInfo, rgba, pointer, sampleBytes)
-                    Dim samples = If(hasAlpha, 4, 3)
-                    Dim row(width * samples * sampleBytes - 1) As Byte
+                Dim hasAlpha = bitmap.AlphaType <> SKAlphaType.Opaque AndAlso
+                               StripEncoding.HasTransparency(pixmap, deep)
+                Dim samples = If(hasAlpha, 4, 3)
 
-                    Using tif = Tiff.ClientOpen("ferrumpix.tif", "w", output, New RetainingTiffStream())
-                        If tif Is Nothing Then Return False
+                Using tif = Tiff.ClientOpen("ferrumpix.tif", "w", output, New RetainingTiffStream())
+                    If tif Is Nothing Then Return False
 
-                        tif.SetField(TiffTag.IMAGEWIDTH, width)
-                        tif.SetField(TiffTag.IMAGELENGTH, height)
-                        tif.SetField(TiffTag.BITSPERSAMPLE, 8 * sampleBytes)
-                        tif.SetField(TiffTag.SAMPLESPERPIXEL, samples)
-                        tif.SetField(TiffTag.PHOTOMETRIC, Photometric.RGB)
-                        tif.SetField(TiffTag.PLANARCONFIG, PlanarConfig.CONTIG)
-                        ' Das Bild ist an dieser Stelle schon gedreht, siehe ExifBuilderService.
-                        tif.SetField(TiffTag.ORIENTATION, Orientation.TOPLEFT)
-                        tif.SetField(TiffTag.COMPRESSION, Compression.ADOBE_DEFLATE)
-                        tif.SetField(TiffTag.PREDICTOR, Predictor.HORIZONTAL)
-                        tif.SetField(TiffTag.ROWSPERSTRIP, RowsPerStrip)
-                        tif.SetField(TiffTag.XRESOLUTION, 72.0)
-                        tif.SetField(TiffTag.YRESOLUTION, 72.0)
-                        tif.SetField(TiffTag.RESOLUTIONUNIT, ResUnit.INCH)
-                        If hasAlpha Then
-                            tif.SetField(TiffTag.EXTRASAMPLES, 1, New Short() {CShort(ExtraSample.UNASSALPHA)})
-                        End If
-                        ApplyImageDirectoryText(tif, metadata, copyrightText)
+                    tif.SetField(TiffTag.IMAGEWIDTH, width)
+                    tif.SetField(TiffTag.IMAGELENGTH, height)
+                    tif.SetField(TiffTag.BITSPERSAMPLE, 8 * sampleBytes)
+                    tif.SetField(TiffTag.SAMPLESPERPIXEL, samples)
+                    tif.SetField(TiffTag.PHOTOMETRIC, Photometric.RGB)
+                    tif.SetField(TiffTag.PLANARCONFIG, PlanarConfig.CONTIG)
+                    ' Das Bild ist an dieser Stelle schon gedreht, siehe ExifBuilderService.
+                    tif.SetField(TiffTag.ORIENTATION, Orientation.TOPLEFT)
+                    tif.SetField(TiffTag.COMPRESSION, Compression.ADOBE_DEFLATE)
+                    tif.SetField(TiffTag.PREDICTOR, Predictor.HORIZONTAL)
+                    tif.SetField(TiffTag.ROWSPERSTRIP, RowsPerStrip)
+                    tif.SetField(TiffTag.XRESOLUTION, 72.0)
+                    tif.SetField(TiffTag.YRESOLUTION, 72.0)
+                    tif.SetField(TiffTag.RESOLUTIONUNIT, ResUnit.INCH)
+                    If hasAlpha Then
+                        tif.SetField(TiffTag.EXTRASAMPLES, 1, New Short() {CShort(ExtraSample.UNASSALPHA)})
+                    End If
+                    ApplyImageDirectoryText(tif, metadata, copyrightText)
 
-                        For y = 0 To height - 1
-                            If Not pixmap.ReadPixels(rowInfo, pointer, rgba.Length, 0, y) Then Return False
-                            If hasAlpha Then
-                                Array.Copy(rgba, row, rgba.Length)
-                            Else
-                                ' Die drei Farbwerte jedes Bildpunkts, der vierte bleibt weg.
-                                Dim colorBytes = 3 * sampleBytes
-                                Dim target = 0
-                                For source = 0 To rgba.Length - 1 Step pixelBytes
-                                    Array.Copy(rgba, source, row, target, colorBytes)
-                                    target += colorBytes
-                                Next
-                            End If
-                            If Not tif.WriteScanline(row, y) Then Return False
-                        Next
-                        ' Das Verzeichnis schreibt LibTiff beim Schliessen selbst.
-                    End Using
-                Finally
-                    handle.Free()
-                End Try
+                    ' DIE STREIFEN PACKEN WIR SELBST, parallel, und LibTiff schreibt sie nur noch
+                    ' in Reihenfolge weg (WriteRawStrip). Vorher packte LibTiff zeilenweise auf
+                    ' einem Kern, und das war bei grossen Bildern der groesste Teil der Ausgabe.
+                    ' Die Tags oben bleiben, wie sie waren: Deflate im zlib-Format, waagerechte
+                    ' Vorhersage, 64 Zeilen je Streifen. Siehe PackStrip.
+                    Dim bufferBytes = StripEncoding.RowsPerStrip * width * 4 * sampleBytes
+                    Dim outputs As New StripEncoding.PackedBuffers(StripEncoding.RowsPerStrip * width * samples * sampleBytes)
+                    Dim ok = StripEncoding.EncodeInOrder(Of Byte(), MemoryStream)(
+                        StripEncoding.StripCount(height),
+                        Function() New Byte(bufferBytes - 1) {},
+                        Function(buffer, strip) PackStrip(pixmap, strip, deep, samples, buffer, outputs),
+                        Function(strip, packed)
+                            Dim written = tif.WriteRawStrip(strip, packed.GetBuffer(), CInt(packed.Length)) >= 0
+                            outputs.Return(packed)
+                            Return written
+                        End Function)
+                    If Not ok Then Return False
+                    ' Das Verzeichnis schreibt LibTiff beim Schliessen selbst.
+                End Using
             End Using
             Return output.Length > 8
         End Function
 
-        ''' <summary>Traegt irgendein Bildpunkt Transparenz? Zeilenweise und mit fruehem Ausstieg,
-        ''' ein deckendes Bild kostet also genau einen Lesedurchgang.</summary>
-        Private Shared Function HasTransparency(pixmap As SKPixmap, height As Integer, rowInfo As SKImageInfo,
-                                                rgba As Byte(), pointer As IntPtr,
-                                                Optional sampleBytes As Integer = 1) As Boolean
-            Dim pixelBytes = 4 * sampleBytes
-            For y = 0 To height - 1
-                ' Im Zweifel MIT Alpha: ein ueberfluessiger Kanal kostet Platz, ein fehlender das Bild.
-                If Not pixmap.ReadPixels(rowInfo, pointer, rgba.Length, 0, y) Then Return True
-                ' Bei 16 Bit beide Bytes des Alphawerts: deckend sind sie beide 255.
-                For i = 3 * sampleBytes To rgba.Length - 1 Step pixelBytes
-                    If rgba(i) <> 255 OrElse rgba(i + sampleBytes - 1) <> 255 Then Return True
+        ''' <summary>Ein Streifen, wie LibTiff ihn mit Deflate und waagerechter Vorhersage selbst
+        ''' schriebe: die Zeilen als RGB oder RGBA hintereinander, in jeder Zeile jeder Wert ab dem
+        ''' zweiten Bildpunkt als Abstand zum selben Kanal des Bildpunkts davor (modulo 256 bzw.
+        ''' 65536, bei 16 Bit auf den 16-Bit-Werten in der Bytefolge des Rechners, also der Datei),
+        ''' das Ganze im zlib-Format gepackt. Die erste Zeile eines Streifens braucht nichts von
+        ''' aussen, jeder Streifen steht fuer sich. Gerechnet wird an Ort und Stelle in
+        ''' <paramref name="buffer"/>, dem Arbeitspuffer des Kerns (Platz fuer einen Streifen RGBA);
+        ''' gepackt wird in einen Puffer aus <paramref name="outputs"/>. Nothing, wenn Skia nicht
+        ''' lesen kann.</summary>
+        Private Shared Function PackStrip(pixmap As SKPixmap, strip As Integer, deep As Boolean,
+                                          samples As Integer, buffer As Byte(),
+                                          outputs As StripEncoding.PackedBuffers) As MemoryStream
+            Dim width = pixmap.Width
+            Dim firstRow = strip * StripEncoding.RowsPerStrip
+            Dim rows = Math.Min(StripEncoding.RowsPerStrip, pixmap.Height - firstRow)
+            Dim sampleBytes = If(deep, 2, 1)
+            Dim sourcePixelBytes = 4 * sampleBytes
+            Dim rowBytes = width * samples * sampleBytes
+            Dim rawLength = rows * rowBytes
+            If Not StripEncoding.ReadRows(pixmap, firstRow, rows, deep, buffer) Then Return Nothing
+
+            ' Die Werte jedes Bildpunkts; ohne Alpha bleibt der vierte weg. Nach vorn
+            ' zusammengeschoben: das Ziel liegt nie hinter der Quelle.
+            If samples = 3 Then
+                Dim valueBytes = 3 * sampleBytes
+                Dim target = 0
+                For source = 0 To rows * width * sourcePixelBytes - 1 Step sourcePixelBytes
+                    System.Buffer.BlockCopy(buffer, source, buffer, target, valueBytes)
+                    target += valueBytes
                 Next
+            End If
+
+            ' Vorhersage je Zeile, von rechts nach links, damit jeder Wert noch mit dem
+            ' unveraenderten Nachbarn verrechnet wird.
+            For row = 0 To rows - 1
+                Dim start = row * rowBytes
+                If deep Then
+                    Dim distance = samples * 2
+                    For i = start + rowBytes - 2 To start + distance Step -2
+                        Dim value = CInt(buffer(i)) Or (CInt(buffer(i + 1)) << 8)
+                        Dim before = CInt(buffer(i - distance)) Or (CInt(buffer(i - distance + 1)) << 8)
+                        Dim difference = (value - before) And &HFFFF
+                        buffer(i) = CByte(difference And &HFF)
+                        buffer(i + 1) = CByte(difference >> 8)
+                    Next
+                Else
+                    For i = start + rowBytes - 1 To start + samples Step -1
+                        buffer(i) = CByte((CInt(buffer(i)) - CInt(buffer(i - samples))) And &HFF)
+                    Next
+                End If
             Next
-            Return False
+
+            Dim packed = outputs.Rent()
+            Using zlib As New System.IO.Compression.ZLibStream(packed, System.IO.Compression.CompressionLevel.Optimal,
+                                                               leaveOpen:=True)
+                zlib.Write(buffer, 0, rawLength)
+            End Using
+            Return packed
         End Function
 
         ''' <summary>Kamera, Programm, Urheber und Zeit gehoeren in das Verzeichnis des Bildes. Die

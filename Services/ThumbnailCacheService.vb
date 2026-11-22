@@ -1407,7 +1407,14 @@ Namespace Services
                                                         Optional extraRotationDegrees As Integer = 0,
                                                         Optional rawContainerPath As String = Nothing) As Bitmap
             Dim rotation = ImageOrientationService.NormalizeQuarterTurn(extraRotationDegrees)
-            Using codec = SKCodec.Create(stream)
+            ' NICHT SKCodec.Create(Stream): der uebernimmt den Strom, und der WebP-Codec schliesst ihn
+            ' (dieselbe Falle wie in ImageProcessor.DecodeOriented). Danach brauchen Farbprofil und
+            ' Avalonia-Decoder den Strom aber noch; ohne die Kopie blieb eine WebP ohne Kachel,
+            ' sobald sie nicht ueber den Kachelspeicher lief (Temp-Ordner, Speicher aus).
+            stream.Seek(0, SeekOrigin.Begin)
+            Using data = SKData.Create(stream)
+            stream.Seek(0, SeekOrigin.Begin)
+            Using codec = If(data Is Nothing, Nothing, SKCodec.Create(data))
                 If codec Is Nothing Then
                     stream.Seek(0, SeekOrigin.Begin)
                     Return Bitmap.DecodeToWidth(stream, maxWidth)
@@ -1450,6 +1457,7 @@ Namespace Services
                         If Not Object.ReferenceEquals(corrected, original) Then corrected.Dispose()
                     End Try
                 End Using
+            End Using
             End Using
         End Function
 

@@ -8350,9 +8350,18 @@ Namespace Views
             Const tileStep As Double = 156.0
             Dim delta = If(Math.Abs(e.Delta.X) > Math.Abs(e.Delta.Y), e.Delta.X, e.Delta.Y)
             If delta = 0 Then Return
+            ' Der Streifen liegt je nach Einstellung waagerecht (oben, unten) oder senkrecht (links,
+            ' rechts). Gerollt wird in der Richtung, in der er Platz zum Rollen hat; nur waagerecht
+            ' zu rollen liess das Rad am senkrechten Streifen wirkungslos.
             Dim maxX = Math.Max(0.0, viewer.Extent.Width - viewer.Viewport.Width)
-            Dim x = Math.Max(0.0, Math.Min(maxX, viewer.Offset.X - delta * tileStep))
-            viewer.Offset = New Avalonia.Vector(x, viewer.Offset.Y)
+            Dim maxY = Math.Max(0.0, viewer.Extent.Height - viewer.Viewport.Height)
+            If maxY > maxX Then
+                Dim y = Math.Max(0.0, Math.Min(maxY, viewer.Offset.Y - delta * tileStep))
+                viewer.Offset = New Avalonia.Vector(viewer.Offset.X, y)
+            Else
+                Dim x = Math.Max(0.0, Math.Min(maxX, viewer.Offset.X - delta * tileStep))
+                viewer.Offset = New Avalonia.Vector(x, viewer.Offset.Y)
+            End If
             e.Handled = True
         End Sub
 

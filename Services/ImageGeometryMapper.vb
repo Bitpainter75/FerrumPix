@@ -481,6 +481,65 @@ Namespace Services
         ''' Naechster-Nachbar beseitigt Linear ebenso.</summary>
         Private Shared ReadOnly WarpSampling As New SKSamplingOptions(SKFilterMode.Linear)
 
+        ''' <summary>Ab so vielen Punkten im Ziel zeichnet DrawMeshInBands auf mehreren Kernen.</summary>
+        Private Const BandedMeshMinPixels As Integer = 262144
+
+        ''' <summary>Zeilen je Band in DrawMeshInBands.</summary>
+        Private Const BandedMeshRows As Integer = 64
+
+        ''' <summary>Zeichnet das Netz mit dem Bild als Shader (geklemmt, linear, Src, mit
+        ''' Kantenglaettung) in parallelen Baendern, je Band eine Flaeche ueber
+        ''' <paramref name="result"/> mit Ausschnitt. Ein Netz aus Dreiecken glaettet Skia nicht,
+        ''' der Ausschnitt aendert daher keinen Punkt: Byte fuer Byte dasselbe wie EIN DrawVertices
+        ''' auf das geleerte Ziel, gemessen an Rastern von 4 mal 4 und 12 mal 8, 8 und 16 Bit,
+        ''' mit Alphaverlauf (Geometriemessung skia; Pruefung "Verzerrungsraster in Baendern
+        ''' bytegleich zum Lauf am Stueck"). Skia rechnete es auf einem Faden, an einer Vorschau
+        ''' von 3072 Punkten rund 85 ms mit 8 und 370 ms mit 16 Bit, in Baendern 10 und 32 ms.
+        ''' Erwartet ein geleertes Ziel. False, wenn der Weg nicht greift; dann zeichnet der
+        ''' Aufrufer wie bisher am Stueck.</summary>
+        Private Shared Function DrawMeshInBands(result As SKBitmap, source As SKBitmap, mesh As SKVertices) As Boolean
+            If ImageProcessor.SerialGeometryForChecks OrElse result Is Nothing OrElse source Is Nothing OrElse mesh Is Nothing Then Return False
+            Dim info = result.Info
+            If CLng(info.Width) * info.Height < BandedMeshMinPixels Then Return False
+            Dim pixels = result.GetPixels()
+            If pixels = IntPtr.Zero Then Return False
+            Dim rowBytes = result.RowBytes
+            Dim width = info.Width, height = info.Height
+            Dim bandCount = (height + BandedMeshRows - 1) \ BandedMeshRows
+            Dim failed = 0
+            Using sourcePixels = source.PeekPixels()
+                If sourcePixels Is Nothing Then Return False
+                Using image = SKImage.FromPixels(sourcePixels)
+                    If image Is Nothing Then Return False
+                    Using shader = image.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, WarpSampling)
+                        Threading.Tasks.Parallel.For(0, bandCount,
+                            Sub(band)
+                                Using surface = SKSurface.Create(info, pixels, rowBytes)
+                                    If surface Is Nothing Then
+                                        Threading.Interlocked.Exchange(failed, 1)
+                                        Return
+                                    End If
+                                    Dim top = band * BandedMeshRows
+                                    surface.Canvas.ClipRect(New SKRect(0, top, width, Math.Min(height, top + BandedMeshRows)))
+                                    Using paint = New SKPaint With {.IsAntialias = True, .Shader = shader}
+                                        surface.Canvas.DrawVertices(mesh, SKBlendMode.Src, paint)
+                                    End Using
+                                End Using
+                            End Sub)
+                    End Using
+                End Using
+            End Using
+            If failed <> 0 Then
+                ' Unvollstaendig: leeren, der Aufrufer zeichnet am Stueck darueber.
+                Using clear = New SKCanvas(result)
+                    clear.Clear(SKColors.Transparent)
+                End Using
+                Return False
+            End If
+            result.NotifyPixelsChanged()
+            Return True
+        End Function
+
 
         ''' <summary>Wie <see cref="WarpOverGrid"/>, aber mit frei waehlbarer AUSGABEgroesse.
         '''
@@ -531,7 +590,9 @@ Namespace Services
                             ' Objekt-Export mehrfach ueberlagert; das zeigt sich besonders an einer
                             ' gebogenen Aussenkante als sichtbare Naht. Der Bild-Renderer verwendet
                             ' deshalb ebenfalls Src: jedes Netzpixel wird genau einmal geschrieben.
-                            canvas.DrawVertices(netz, SKBlendMode.Src, paint)
+                            If Not DrawMeshInBands(result, source, netz) Then
+                                canvas.DrawVertices(netz, SKBlendMode.Src, paint)
+                            End If
                         End Using
                     End Using
                 End Using
@@ -895,14 +956,16 @@ Namespace Services
             Dim result = New SKBitmap(width, height, source.ColorType, source.AlphaType)
             Using canvas = New SKCanvas(result)
                 canvas.Clear(SKColors.Transparent)
-                ' Klemmen an den Raendern: ohne das zeigt eine ueber die Kante gezogene Masche
-                ' durchsichtige Streifen, weil die Textur dort zu Ende ist.
-                Using shader = source.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, WarpSampling)
-                    Using paint = New SKPaint With {.IsAntialias = True, .Shader = shader}
-                        Using netz = SKVertices.CreateCopy(SKVertexMode.Triangles, corners.ToArray(), textur.ToArray(), Nothing)
-                            canvas.DrawVertices(netz, SKBlendMode.Src, paint)
+                Using netz = SKVertices.CreateCopy(SKVertexMode.Triangles, corners.ToArray(), textur.ToArray(), Nothing)
+                    If Not DrawMeshInBands(result, source, netz) Then
+                        ' Klemmen an den Raendern: ohne das zeigt eine ueber die Kante gezogene Masche
+                        ' durchsichtige Streifen, weil die Textur dort zu Ende ist.
+                        Using shader = source.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, WarpSampling)
+                            Using paint = New SKPaint With {.IsAntialias = True, .Shader = shader}
+                                canvas.DrawVertices(netz, SKBlendMode.Src, paint)
+                            End Using
                         End Using
-                    End Using
+                    End If
                 End Using
             End Using
             Return result

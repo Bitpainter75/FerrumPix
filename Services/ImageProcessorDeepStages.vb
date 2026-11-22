@@ -1168,7 +1168,8 @@ Namespace Services
         ''' <summary>Geht ein tiefes Bild zeilenweise durch und schreibt das Ergebnis in ein neues:
         ''' <paramref name="body"/> bekommt die Zeilennummer und die Zeile (vier 16-Bit-Werte je
         ''' Bildpunkt) und aendert sie an Ort und Stelle. Nebeneinander, wenn die Stufe das vertraegt;
-        ''' eine Stufe, die ihren Zufall aus einem Strom zieht, braucht die Reihenfolge.</summary>
+        ''' eine Stufe, die ihren Zufall aus einem Strom zieht, nimmt
+        ''' <see cref="MapDeepRowsWithRandomStream"/>.</summary>
         Private Shared Function MapDeepRows(deep As SKBitmap, parallel As Boolean, body As Action(Of Integer, Short())) As SKBitmap
             Dim w = deep.Width, h = deep.Height
             Dim sourcePixels = deep.GetPixels()
@@ -1243,24 +1244,68 @@ Namespace Services
                 End Sub)
         End Function
 
+        ''' <summary>Wie <see cref="MapDeepRows"/> fuer eine Stufe, die ihren Zufall aus EINEM Strom
+        ''' zieht: <paramref name="body"/> bekommt zur Zeile ihren Abschnitt des Stroms, je Bildpunkt
+        ''' <paramref name="perPixel"/> Zuege in der Reihenfolge, in der eine Schleife Zeile fuer Zeile
+        ''' sie zoege (Wert zu Punkt x, Zug d bei <c>values(start + x * perPixel + d)</c>). Gezogen
+        ''' wird der Reihe nach, gerechnet in Baendern nebeneinander wie in der 8-Bit-Stufe
+        ''' (<see cref="ForEachRowWithRandomStream"/>); das Ergebnis ist Bit fuer Bit das der einen
+        ''' Schleife.</summary>
+        Private Shared Function MapDeepRowsWithRandomStream(deep As SKBitmap, seed As Integer, perPixel As Integer,
+                                                            body As Action(Of Integer, Short(), Double(), Integer)) As SKBitmap
+            Dim w = deep.Width, h = deep.Height
+            Dim sourcePixels = deep.GetPixels()
+            If sourcePixels = IntPtr.Zero OrElse w <= 0 OrElse h <= 0 Then Return Nothing
+            Dim result = NewDeepBitmap(w, h, deep.AlphaType)
+            If result Is Nothing Then Return Nothing
+            Dim targetPixels = result.GetPixels()
+            If Not DeepRandomStreamParallel Then
+                ' Der Weg vor den Baendern: ein Strom, eine Schleife. Nur fuer den Pruefstand.
+                Dim random = New Random(seed)
+                Dim values(w * perPixel - 1) As Double
+                Dim row(w * 4 - 1) As Short
+                For y = 0 To h - 1
+                    For i = 0 To values.Length - 1
+                        values(i) = random.NextDouble()
+                    Next
+                    ReadDeepRow(deep, sourcePixels, y, row)
+                    body(y, row, values, 0)
+                    WriteDeepRow(result, targetPixels, y, row)
+                Next
+                Return result
+            End If
+            ForEachRowWithRandomStream(seed, w, h, perPixel,
+                Sub(y, values, start)
+                    Dim row(w * 4 - 1) As Short
+                    ReadDeepRow(deep, sourcePixels, y, row)
+                    body(y, row, values, start)
+                    WriteDeepRow(result, targetPixels, y, row)
+                End Sub)
+            Return result
+        End Function
+
+        ''' <summary>MESSSCHALTER, ab Werk an: Rauschen hinzufuegen und Farbflecken auf dem tiefen
+        ''' Bild in Baendern nebeneinander. Aus laeuft die eine Schleife wie zuvor; der Pruefstand
+        ''' vergleicht beide Byte fuer Byte (gesetzt per Reflexion).</summary>
+        Friend Shared DeepRandomStreamParallel As Boolean = True
+
         ''' <summary>Rauschen hinzufuegen auf dem tiefen Bild, wie <see cref="ApplyAddNoise"/>: je Kanal
-        ''' ein eigener Zufallswert aus demselben Strom in derselben Reihenfolge, deshalb Zeile fuer
-        ''' Zeile nacheinander.</summary>
+        ''' ein eigener Zufallswert aus demselben Strom in derselben Reihenfolge (drei Zuege je
+        ''' Bildpunkt, Rot, Gruen, Blau), mit demselben Startwert.</summary>
         Private Shared Function ApplyAddNoiseDeep(deep As SKBitmap, amount As Single) As SKBitmap
             Dim strength = Clamp(amount, 0, 1)
             If strength <= 0 Then Return Nothing
             Dim w = deep.Width
             Dim premul = deep.AlphaType = SKAlphaType.Premul
-            Dim random = New Random(deep.Width * 541 Xor deep.Height * 877)
             Dim amplitude = strength * 72.0
-            Return MapDeepRows(deep, False,
-                Sub(y, row)
+            Return MapDeepRowsWithRandomStream(deep, deep.Width * 541 Xor deep.Height * 877, 3,
+                Sub(y, row, values, start)
                     For x = 0 To w - 1
                         Dim cr As Single, cg As Single, cb As Single, a As Integer
                         ReadDeepUnpremultiplied(row, x * 4, premul, cr, cg, cb, a)
-                        Dim noiseR = (random.NextDouble() * 2.0 - 1.0) * amplitude
-                        Dim noiseG = (random.NextDouble() * 2.0 - 1.0) * amplitude
-                        Dim noiseB = (random.NextDouble() * 2.0 - 1.0) * amplitude
+                        Dim noiseR = (values(start + x * 3) * 2.0 - 1.0) * amplitude
+                        Dim noiseG = (values(start + x * 3 + 1) * 2.0 - 1.0) * amplitude
+                        Dim noiseB = (values(start + x * 3 + 2) * 2.0 - 1.0) * amplitude
                         WriteDeepPremultiplied(row, x * 4, premul, cr + CSng(noiseR), cg + CSng(noiseG), cb + CSng(noiseB), a)
                     Next
                 End Sub)
@@ -1268,21 +1313,20 @@ Namespace Services
 
         ''' <summary>Die Farbflecken auf dem tiefen Bild, wie <see cref="ApplyColorNoiseAdd"/>: Rot
         ''' und Blau wandern nach dem Zufall, Gruen gleicht die Helligkeit aus. Derselbe Strom in
-        ''' derselben Reihenfolge.</summary>
+        ''' derselben Reihenfolge (zwei Zuege je Bildpunkt, Rot, Blau), mit demselben Startwert.</summary>
         Private Shared Function ApplyColorNoiseAddDeep(deep As SKBitmap, amount As Single) As SKBitmap
             Dim strength = Clamp(amount, 0, 1)
             If strength <= 0 Then Return Nothing
             Dim w = deep.Width
             Dim premul = deep.AlphaType = SKAlphaType.Premul
-            Dim random = New Random(deep.Width * 733 Xor deep.Height * 397)
             Dim amplitude = strength * 48.0
-            Return MapDeepRows(deep, False,
-                Sub(y, row)
+            Return MapDeepRowsWithRandomStream(deep, deep.Width * 733 Xor deep.Height * 397, 2,
+                Sub(y, row, values, start)
                     For x = 0 To w - 1
                         Dim cr As Single, cg As Single, cb As Single, a As Integer
                         ReadDeepUnpremultiplied(row, x * 4, premul, cr, cg, cb, a)
-                        Dim dr = (random.NextDouble() * 2.0 - 1.0) * amplitude
-                        Dim db = (random.NextDouble() * 2.0 - 1.0) * amplitude
+                        Dim dr = (values(start + x * 2) * 2.0 - 1.0) * amplitude
+                        Dim db = (values(start + x * 2 + 1) * 2.0 - 1.0) * amplitude
                         Dim dg = -(0.299 * dr + 0.114 * db) / 0.587
                         WriteDeepPremultiplied(row, x * 4, premul, cr + CSng(dr), cg + CSng(dg), cb + CSng(db), a)
                     Next

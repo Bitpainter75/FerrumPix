@@ -4581,6 +4581,14 @@ RasterTeil:
             Next
         End Sub
 
+        ''' <summary>Spalten je Block im senkrechten Durchgang von SquaredDistanceToFeature: genug,
+        ''' dass ein Block die Zeilen des Speichers in ganzen Stuecken liest, und genug Bloecke fuer
+        ''' alle Kerne.</summary>
+        Private Const DistanceColumnBlock As Integer = 32
+
+        ''' <summary>Zeilen je Block im waagerechten Durchgang von SquaredDistanceToFeature.</summary>
+        Private Const DistanceRowBlock As Integer = 16
+
         ''' <summary>Quadrierter euklidischer Abstand jedes Punktes zum nächsten MERKMALSPUNKT,
         ''' gedeckelt bei <paramref name="cap"/>² (darüber interessiert der Wert nicht, und so passt er
         ''' in 16 Bit). Merkmal ist mit <paramref name="featureInside"/> ein Punkt der Auswahl (Alpha ab
@@ -4595,72 +4603,94 @@ RasterTeil:
                                                          Optional areaTouchesImage As (Left As Boolean, Top As Boolean, Right As Boolean, Bottom As Boolean) = Nothing) As UShort()
             Dim capSq = CInt(Math.Min(65535, cap * cap))
             Dim g(w * h - 1) As UShort
-            Dim column(h - 1) As Integer
+            ' Beide Durchgaenge rechnen jede Spalte bzw. Zeile fuer sich, lesen nur die Eingabe des
+            ' Durchgangs und schreiben nur in ihre eigene Spalte bzw. Zeile. In Bloecken auf mehrere
+            ' Kerne verteilt ist das Ergebnis deshalb Punkt fuer Punkt dasselbe; je Block liegen die
+            ' Hilfsfelder einmal an (Pruefung "Auswahl: Abstandskarten auf mehreren Kernen bytegleich").
+            Dim spread = Not SerialGeometryForChecks AndAlso CLng(w) * h >= ParallelPixelThreshold
             ' Senkrecht: Abstand zum nächsten Merkmal in derselben Spalte.
-            For x As Integer = 0 To w - 1
-                Dim last = Integer.MinValue \ 2
-                If Not featureInside AndAlso Not areaTouchesImage.Top Then last = -1
-                For y As Integer = 0 To h - 1
-                    Dim isFeature = (source(y * w + x) >= 128) = featureInside
-                    If isFeature Then last = y
-                    column(y) = If(last = Integer.MinValue \ 2, Integer.MaxValue, y - last)
-                Next
-                last = Integer.MaxValue \ 2
-                If Not featureInside AndAlso Not areaTouchesImage.Bottom Then last = h
-                For y As Integer = h - 1 To 0 Step -1
-                    Dim isFeature = (source(y * w + x) >= 128) = featureInside
-                    If isFeature Then last = y
-                    If last <> Integer.MaxValue \ 2 Then column(y) = Math.Min(column(y), last - y)
-                Next
-                For y As Integer = 0 To h - 1
-                    Dim d = column(y)
-                    g(y * w + x) = CUShort(If(d >= cap, capSq, Math.Min(capSq, d * d)))
-                Next
-            Next
+            Dim columnBlock = If(spread, DistanceColumnBlock, Math.Max(1, w))
+            Dim columnBlocks = (w + columnBlock - 1) \ columnBlock
+            Dim columnPass =
+                Sub(blockIndex As Integer)
+                    Dim column(h - 1) As Integer
+                    For x As Integer = blockIndex * columnBlock To Math.Min(w, (blockIndex + 1) * columnBlock) - 1
+                        Dim last = Integer.MinValue \ 2
+                        If Not featureInside AndAlso Not areaTouchesImage.Top Then last = -1
+                        For y As Integer = 0 To h - 1
+                            Dim isFeature = (source(y * w + x) >= 128) = featureInside
+                            If isFeature Then last = y
+                            column(y) = If(last = Integer.MinValue \ 2, Integer.MaxValue, y - last)
+                        Next
+                        last = Integer.MaxValue \ 2
+                        If Not featureInside AndAlso Not areaTouchesImage.Bottom Then last = h
+                        For y As Integer = h - 1 To 0 Step -1
+                            Dim isFeature = (source(y * w + x) >= 128) = featureInside
+                            If isFeature Then last = y
+                            If last <> Integer.MaxValue \ 2 Then column(y) = Math.Min(column(y), last - y)
+                        Next
+                        For y As Integer = 0 To h - 1
+                            Dim d = column(y)
+                            g(y * w + x) = CUShort(If(d >= cap, capSq, Math.Min(capSq, d * d)))
+                        Next
+                    Next
+                End Sub
             ' Waagerecht: untere Hülle der Parabeln f(q) + (x - q)² je Zeile.
             Dim result(w * h - 1) As UShort
-            Dim f(w + 1) As Double
-            Dim v(w + 1) As Integer
-            Dim z(w + 2) As Double
             Dim offLeft = Not featureInside AndAlso Not areaTouchesImage.Left
             Dim offRight = Not featureInside AndAlso Not areaTouchesImage.Right
-            For y As Integer = 0 To h - 1
-                ' Liegt die Seite nicht am Bildrand, steht dort ein gedachter Punkt außerhalb, eine
-                ' Spalte vor bzw. hinter dem Rechteck. Er wird als eigene Parabel mitgeführt.
-                Dim n = 0
-                Dim positions(w + 1) As Integer
-                If offLeft Then f(n) = 0 : positions(n) = -1 : n += 1
-                For x As Integer = 0 To w - 1
-                    f(n) = g(y * w + x) : positions(n) = x : n += 1
-                Next
-                If offRight Then f(n) = 0 : positions(n) = w : n += 1
-                Dim k = 0
-                v(0) = 0 : z(0) = Double.NegativeInfinity : z(1) = Double.PositiveInfinity
-                For q As Integer = 1 To n - 1
-                    Dim s As Double
-                    Do
-                        Dim pq = positions(q), pv = positions(v(k))
-                        s = ((f(q) + CDbl(pq) * pq) - (f(v(k)) + CDbl(pv) * pv)) / (2.0 * (pq - pv))
-                        If s <= z(k) AndAlso k > 0 Then k -= 1 Else Exit Do
-                    Loop
-                    If s <= z(k) Then
-                        ' k = 0 und die neue Parabel liegt überall darunter: sie ersetzt die erste.
-                        v(0) = q : z(0) = Double.NegativeInfinity : z(1) = Double.PositiveInfinity
-                        Continue For
-                    End If
-                    k += 1
-                    v(k) = q : z(k) = s : z(k + 1) = Double.PositiveInfinity
-                Next
-                k = 0
-                For x As Integer = 0 To w - 1
-                    While z(k + 1) < x
-                        k += 1
-                    End While
-                    Dim dx = x - positions(v(k))
-                    Dim value = f(v(k)) + CDbl(dx) * dx
-                    result(y * w + x) = CUShort(Math.Min(capSq, value))
-                Next
-            Next
+            Dim rowBlock = If(spread, DistanceRowBlock, Math.Max(1, h))
+            Dim rowBlocks = (h + rowBlock - 1) \ rowBlock
+            Dim rowPass =
+                Sub(blockIndex As Integer)
+                    Dim f(w + 1) As Double
+                    Dim v(w + 1) As Integer
+                    Dim z(w + 2) As Double
+                    Dim positions(w + 1) As Integer
+                    For y As Integer = blockIndex * rowBlock To Math.Min(h, (blockIndex + 1) * rowBlock) - 1
+                        ' Liegt die Seite nicht am Bildrand, steht dort ein gedachter Punkt außerhalb, eine
+                        ' Spalte vor bzw. hinter dem Rechteck. Er wird als eigene Parabel mitgeführt.
+                        Dim n = 0
+                        If offLeft Then f(n) = 0 : positions(n) = -1 : n += 1
+                        For x As Integer = 0 To w - 1
+                            f(n) = g(y * w + x) : positions(n) = x : n += 1
+                        Next
+                        If offRight Then f(n) = 0 : positions(n) = w : n += 1
+                        Dim k = 0
+                        v(0) = 0 : z(0) = Double.NegativeInfinity : z(1) = Double.PositiveInfinity
+                        For q As Integer = 1 To n - 1
+                            Dim s As Double
+                            Do
+                                Dim pq = positions(q), pv = positions(v(k))
+                                s = ((f(q) + CDbl(pq) * pq) - (f(v(k)) + CDbl(pv) * pv)) / (2.0 * (pq - pv))
+                                If s <= z(k) AndAlso k > 0 Then k -= 1 Else Exit Do
+                            Loop
+                            If s <= z(k) Then
+                                ' k = 0 und die neue Parabel liegt überall darunter: sie ersetzt die erste.
+                                v(0) = q : z(0) = Double.NegativeInfinity : z(1) = Double.PositiveInfinity
+                                Continue For
+                            End If
+                            k += 1
+                            v(k) = q : z(k) = s : z(k + 1) = Double.PositiveInfinity
+                        Next
+                        k = 0
+                        For x As Integer = 0 To w - 1
+                            While z(k + 1) < x
+                                k += 1
+                            End While
+                            Dim dx = x - positions(v(k))
+                            Dim value = f(v(k)) + CDbl(dx) * dx
+                            result(y * w + x) = CUShort(Math.Min(capSq, value))
+                        Next
+                    Next
+                End Sub
+            If spread Then
+                Parallel.For(0, columnBlocks, columnPass)
+                Parallel.For(0, rowBlocks, rowPass)
+            Else
+                columnPass(0)
+                rowPass(0)
+            End If
             Return result
         End Function
 

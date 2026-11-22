@@ -877,15 +877,19 @@ Namespace Services
                 ' Ohne reentrante libraw laufen die nativen Aufrufe nacheinander - die
                 ' Thumbnail-Erzeugung ruft aus mehreren Threads hier herein (Parallel.For).
                 Dim decoded As SKBitmap
-                If _reentrant Then
-                    decoded = DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv,
-                                         modelDenoise:=modelDenoise)
-                Else
-                    SyncLock _nativeLock
+                ' Verlangt die Ausgabe 16 Bit, nimmt das Umsetzen das tiefe Bild gleich mit
+                ' (RawDecodeServiceDeep.vb); hier steht, woher die linearen Daten kommen.
+                Using ArmDeepCapture(path, writeTime, demosaic, modelDenoise)
+                    If _reentrant Then
                         decoded = DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv,
                                              modelDenoise:=modelDenoise)
-                    End SyncLock
-                End If
+                    Else
+                        SyncLock _nativeLock
+                            decoded = DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv,
+                                                 modelDenoise:=modelDenoise)
+                        End SyncLock
+                    End If
+                End Using
                 If decoded Is Nothing Then Return Nothing
                 Dim coreMs = clock.Elapsed.TotalMilliseconds
 
@@ -2818,6 +2822,7 @@ Namespace Services
                                                Optional fringeOwner As Object = Nothing,
                                                Optional magentaRecovery As Boolean = True) As SKBitmap
             Dim bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque))
+            Dim deep As SKBitmap = Nothing
             Try
                 ' ZEILENWEISE direkt in die Bitmap. Ein 8-Bit-Vollbildpuffer waere bei 45
                 ' Megapixeln rund 180 MB auf dem Haufen fuer grosse Objekte und wuerde danach
@@ -2838,13 +2843,23 @@ Namespace Services
                 ' Linear (Filmnegativ) ohne Grundbelichtung und ohne Daempfung der Tiefen.
                 Dim linear = knee = LinearToneKnee
                 Dim ramp = If(linear, LinearToneRampFor(normalization), ToneRampFor(baseEv, normalization, sliderEv))
+                ' Verlangt die Ausgabe 16 Bit, nimmt derselbe Lauf das tiefe Bild mit
+                ' (RawDecodeServiceDeep.vb, BeginDeepCapture); die 8-Bit-Zeilen bleiben dieselben.
+                deep = StartDeepCapture(width, height, lens, baseEv, knee, sliderEv, shadowSaturation, magentaRecovery)
+                Dim deepPtr = If(deep Is Nothing, IntPtr.Zero, deep.GetPixels())
+                Dim deepStride = If(deep Is Nothing, 0, deep.RowBytes)
                 Convert16Rows(data, width, height,
                               Sub(y, row) Marshal.Copy(row, 0, IntPtr.Add(targetPtr, y * targetStride), rowLength),
                               lens, ramp.ExposureEv, ramp.BlackLevel, knee, If(linear, Nothing, shadowSaturation), toneMatrix,
+                              If(deep Is Nothing, Nothing,
+                                 Sub(y As Integer, row As Short()) Marshal.Copy(row, 0, IntPtr.Add(deepPtr, y * deepStride), rowLength)),
                               fringeOwner:=fringeOwner, magentaRecovery:=magentaRecovery)
+                KeepCapturedDeep(deep)
+                deep = Nothing
                 Return bitmap
             Catch ex As Exception
                 DiagnosticLogService.LogException("RawDecodeService.BuildFrom16Bit", ex)
+                deep?.Dispose()
                 bitmap.Dispose()
                 Return Nothing
             End Try

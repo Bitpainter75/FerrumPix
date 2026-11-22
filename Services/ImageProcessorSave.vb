@@ -669,10 +669,15 @@ Namespace Services
             ' Der Rahmen der Ausgabe fuer den Vorrat der bildgrossen Felder (PlanePool): solange
             ' er steht, bekommen die Filterstufen ihre Ebenen in genauer Laenge und reichen sie
             ' von Stufe zu Stufe weiter; mit seinem Ende wird der Vorrat geleert.
+            ' Mit verlangten 16 Bit nimmt der Decode der RAW-Stufe das tiefe Bild gleich mit
+            ' (RawDecodeService.BeginDeepCapture): ein Umsetzen statt zweier.
+            Dim captureDeep = bitDepth = 16 AndAlso workingFull Is Nothing AndAlso CanEncodeDeep(targetPath)
             Using PlanePoolScope.BeginOutput()
-                Return SaveImageCore(sourcePath, targetPath, adj, quality, preserveMetadata, workingFull, developRaw,
-                                     applyPendingBaked, copyrightText, cancel, denoise, missingSource, metadataParts,
-                                     bitDepth, outcome)
+                Using RawDecodeService.BeginDeepCapture(captureDeep)
+                    Return SaveImageCore(sourcePath, targetPath, adj, quality, preserveMetadata, workingFull, developRaw,
+                                         applyPendingBaked, copyrightText, cancel, denoise, missingSource, metadataParts,
+                                         bitDepth, outcome)
+                End Using
             End Using
         End Function
 

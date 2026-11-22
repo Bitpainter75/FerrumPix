@@ -47,8 +47,16 @@ Namespace Services
                 Dim wantedKnee = If(recoverHighlights OrElse knee = LinearToneKnee, knee, 1.0)
                 Dim modelDenoise = If(lensChoice IsNot Nothing AndAlso lensChoice.ModelDenoiseStrength >= 0 AndAlso
                                       HasModelDenoised(path), lensChoice.ModelDenoiseStrength, -1.0)
-                Dim deep = TryBuildFromCachedRaw(path, writeTime, demosaic, lens, baseEv, wantedKnee, exposureEv,
+                ' Zuerst das tiefe Bild, das der 8-Bit-Decode derselben Ausgabe gleich mit umgesetzt
+                ' hat (BeginDeepCapture). Es gilt nur, wenn es mit genau den Angaben entstand, mit
+                ' denen es hier entstuende; sonst wird es freigegeben und wie bisher gerechnet.
+                Dim deep = TakeCapturedDeep(DeepCaptureKey(RawDataIdentity(path, writeTime, demosaic, modelDenoise),
+                                                           lens, baseEv, wantedKnee, exposureEv,
+                                                           ShadowSaturationForFile(path), Not IsLinearLightSource(path)))
+                If deep Is Nothing Then
+                    deep = TryBuildFromCachedRaw(path, writeTime, demosaic, lens, baseEv, wantedKnee, exposureEv,
                                                  halfSize:=False, modelDenoise:=modelDenoise, deep:=True)
+                End If
                 If deep Is Nothing Then
                     ' Die linearen Daten liegen nicht mehr da: einmal fuellen, dann noch einmal.
                     If _reentrant Then
@@ -67,6 +75,169 @@ Namespace Services
                 DiagnosticLogService.LogException("RawDecodeService.Deep", ex)
                 Return Nothing
             End Try
+        End Function
+
+        ' ── Das tiefe Bild aus demselben Umsetzen wie das 8-Bit-Bild ──────────────────
+        '
+        ' Ohne diesen Weg lief die RAW-Stufe einer Ausgabe in 16 Bit zweimal ueber dieselben
+        ' linearen Daten: einmal fuer das 8-Bit-Bild (BuildFrom16Bit), einmal fuer das tiefe
+        ' (BuildDeepFrom16Bit). Convert16Rows gibt beide Zeilen aber in EINEM Lauf aus (onDeepRow).
+        ' Verlangt die Ausgabe 16 Bit, nimmt der 8-Bit-Decode deshalb das tiefe Bild gleich mit, und
+        ' TryDecodeDeep holt es dort ab, statt neu umzusetzen. Das 8-Bit-Bild bleibt Byte fuer Byte,
+        ' was es war (onRow bekommt dieselbe Zeile), und das tiefe ist dieselbe Rechnung mit
+        ' denselben Angaben.
+        '
+        ' DIE ANGABEN ENTSCHEIDEN, NICHT DER ZUFALL DER REIHENFOLGE. Das mitgenommene Bild gilt nur,
+        ' wenn Herkunft der linearen Daten (Datei, Stand, Demosaic, Entklemmen, Farbweg, Entrauschen)
+        ' und jede Groesse, die das Umsetzen steuert, mit dem uebereinstimmen, womit TryDecodeDeep es
+        ' selbst rechnen wuerde (DeepCaptureKey). Sonst wird es freigegeben, und es bleibt beim
+        ' zweiten Umsetzen; das kostet Zeit, aendert aber kein Bild.
+        '
+        ' JE FADEN. Die Ausgabe laeuft samt Decode auf dem Faden ihres Aufrufers (DecodeGate laesst
+        ' denselben Faden durch); ein Decode auf einem anderen Faden, etwa fuer eine Kachel, nimmt
+        ' nichts mit. Mitgenommen wird nur das erste Bild nach dem Beginn; ein zweiter Decode in
+        ' derselben Ausgabe (das Ursprungsbild einer Protokollebene) ersetzt es nicht.
+
+        ''' <summary>Das mitgenommene tiefe Bild einer Ausgabe und die Angaben, mit denen es
+        ''' entstand.</summary>
+        Private NotInheritable Class DeepCapture
+            ''' Noch nichts mitgenommen: der naechste Decode darf.
+            Public Wanted As Boolean = True
+            ''' Herkunft der linearen Daten des laufenden Decodes (RawDataIdentity), nur waehrend
+            ''' DecodeIntern umsetzt.
+            Public Source As String
+            Public Bitmap As SKBitmap
+            Public Key As String
+        End Class
+
+        <ThreadStatic> Private Shared _deepCapture As DeepCapture
+
+        ''' <summary>MESSSCHALTER, ab Werk an: das tiefe Bild beim 8-Bit-Decode mitnehmen. Aus
+        ''' laeuft die RAW-Stufe wieder zweimal; der Pruefstand vergleicht beide Wege Byte fuer
+        ''' Byte (gesetzt per Reflexion).</summary>
+        Friend Shared DeepCaptureEnabled As Boolean = True
+
+        ''' <summary>Beginnt fuer die Dauer des Using, auf diesem Faden das tiefe Bild beim
+        ''' 8-Bit-Decode mitzunehmen. Mit <paramref name="wanted"/> = False geschieht nichts
+        ''' (Nothing ist im Using erlaubt). Am Ende wird ein nicht abgeholtes Bild freigegeben.</summary>
+        Friend Shared Function BeginDeepCapture(wanted As Boolean) As IDisposable
+            If Not wanted OrElse Not DeepCaptureEnabled Then Return Nothing
+            Return New DeepCaptureScope()
+        End Function
+
+        Private NotInheritable Class DeepCaptureScope
+            Implements IDisposable
+
+            Private ReadOnly _previous As DeepCapture
+            Private _done As Boolean
+
+            Public Sub New()
+                _previous = _deepCapture
+                _deepCapture = New DeepCapture()
+            End Sub
+
+            Public Sub Dispose() Implements IDisposable.Dispose
+                If _done Then Return
+                _done = True
+                _deepCapture?.Bitmap?.Dispose()
+                _deepCapture = _previous
+            End Sub
+        End Class
+
+        ''' <summary>Fuer die Dauer des Using: der Decode auf diesem Faden setzt gerade die
+        ''' linearen Daten dieser Herkunft um. Nothing, wenn nichts mitzunehmen ist.</summary>
+        Private Shared Function ArmDeepCapture(path As String, writeTime As DateTime, demosaic As Integer,
+                                               modelDenoise As Double) As IDisposable
+            Dim capture = _deepCapture
+            If capture Is Nothing OrElse Not capture.Wanted OrElse capture.Source IsNot Nothing Then Return Nothing
+            capture.Source = RawDataIdentity(path, writeTime, demosaic, modelDenoise)
+            Return New DeepCaptureArm(capture)
+        End Function
+
+        Private NotInheritable Class DeepCaptureArm
+            Implements IDisposable
+
+            Private ReadOnly _capture As DeepCapture
+
+            Public Sub New(capture As DeepCapture)
+                _capture = capture
+            End Sub
+
+            Public Sub Dispose() Implements IDisposable.Dispose
+                _capture.Source = Nothing
+            End Sub
+        End Class
+
+        ''' <summary>Woher die linearen Daten kommen: dieselben Groessen, nach denen
+        ''' TryBuildFromCachedRaw den Zwischenspeicher annimmt, dazu die Staerke eines Entrauschens
+        ''' mit Modell.</summary>
+        Private Shared Function RawDataIdentity(path As String, writeTime As DateTime, demosaic As Integer,
+                                                modelDenoise As Double) As String
+            Return String.Join("|", path, writeTime.Ticks.ToString(Globalization.CultureInfo.InvariantCulture),
+                               demosaic.ToString(Globalization.CultureInfo.InvariantCulture),
+                               ConfiguredHighlightUnclip().ToString(), ColorPathState().ToString(Globalization.CultureInfo.InvariantCulture),
+                               modelDenoise.ToString("R", Globalization.CultureInfo.InvariantCulture))
+        End Function
+
+        ''' <summary>Alles, was das Umsetzen einer Herkunft steuert: Objektiv (ohne Verzeichnung,
+        ''' die laeuft danach), Grundbelichtung, Knie, Belichtung des Reglers, Daempfung der Tiefen
+        ''' und die Korrektur rosa Lichter. Normierung und Farbmatrix gehoeren zur Herkunft.</summary>
+        Private Shared Function DeepCaptureKey(identity As String, lens As LensDataService.Korrektur,
+                                               baseEv As Double, knee As Double, sliderEv As Double,
+                                               shadowSaturation As Single(), magentaRecovery As Boolean) As String
+            Dim c = Globalization.CultureInfo.InvariantCulture
+            Dim shadow = "-"
+            If shadowSaturation IsNot Nothing Then
+                Dim hash As New HashCode()
+                For Each v In shadowSaturation
+                    hash.Add(BitConverter.SingleToInt32Bits(v))
+                Next
+                shadow = shadowSaturation.Length.ToString(c) & ":" & hash.ToHashCode().ToString(c)
+            End If
+            Dim vignette = If(lens Is Nothing, "", String.Format(c, "{0:R};{1:R};{2:R}", lens.Vk1, lens.Vk2, lens.Vk3))
+            Return String.Join("|", identity, LensKey(lens), vignette, baseEv.ToString("R", c), knee.ToString("R", c),
+                               sliderEv.ToString("R", c), shadow, magentaRecovery.ToString())
+        End Function
+
+        ''' <summary>Fuer BuildFrom16Bit: ein leeres tiefes Bild, in das derselbe Lauf seine
+        ''' Zeilen vor dem Dither schreibt, wenn dieser Decode mitnehmen soll. Sonst Nothing.</summary>
+        Private Shared Function StartDeepCapture(width As Integer, height As Integer, lens As LensDataService.Korrektur,
+                                                 baseEv As Double, knee As Double, sliderEv As Double,
+                                                 shadowSaturation As Single(), magentaRecovery As Boolean) As SKBitmap
+            Dim capture = _deepCapture
+            If capture Is Nothing OrElse Not capture.Wanted OrElse capture.Source Is Nothing Then Return Nothing
+            ' Nur der erste Decode der Ausgabe nimmt mit, auch wenn es danach scheitert.
+            capture.Wanted = False
+            Dim deep = ImageProcessor.NewDeepBitmap(width, height, SKAlphaType.Opaque)
+            If deep Is Nothing Then Return Nothing
+            capture.Key = DeepCaptureKey(capture.Source, lens, baseEv, knee, sliderEv, shadowSaturation, magentaRecovery)
+            Return deep
+        End Function
+
+        ''' <summary>Legt das fertig umgesetzte tiefe Bild ab; der Besitz geht an die Ablage.</summary>
+        Private Shared Sub KeepCapturedDeep(deep As SKBitmap)
+            If deep Is Nothing Then Return
+            Dim capture = _deepCapture
+            If capture Is Nothing Then
+                deep.Dispose()
+                Return
+            End If
+            capture.Bitmap?.Dispose()
+            capture.Bitmap = deep
+        End Sub
+
+        ''' <summary>Das mitgenommene tiefe Bild, wenn es mit <paramref name="key"/> entstand; der
+        ''' Besitz geht an den Aufrufer. Passt es nicht, wird es freigegeben (es kaeme in dieser
+        ''' Ausgabe nicht mehr zum Zug), und das Ergebnis ist Nothing.</summary>
+        Private Shared Function TakeCapturedDeep(key As String) As SKBitmap
+            Dim capture = _deepCapture
+            If capture Is Nothing OrElse capture.Bitmap Is Nothing Then Return Nothing
+            Dim deep = capture.Bitmap
+            capture.Bitmap = Nothing
+            If String.Equals(capture.Key, key, StringComparison.Ordinal) Then Return deep
+            DiagnosticLogService.LogAlways("RawDecodeService.Deep", "das mitgenommene tiefe Bild passt nicht zu den Angaben, es wird neu umgesetzt")
+            deep.Dispose()
+            Return Nothing
         End Function
 
         ''' <summary>Wie <see cref="BuildFrom16Bit"/>, aber ohne die Rundung auf 8 Bit: jede Zeile

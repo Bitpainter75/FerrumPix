@@ -153,6 +153,192 @@ Namespace Services
             End Using
         End Sub
 
+        ''' <summary>Ab so vielen Punkten im Ziel zeichnet DrawSampledAntialiasedInBands auf
+        ''' mehreren Kernen; darunter lohnt die eigene Deckungsmaske nicht.</summary>
+        Private Const BandedGeometryMinPixels As Integer = 262144
+
+        ''' <summary>Zeilen je Band in DrawSampledAntialiasedInBands.</summary>
+        Private Const BandedGeometryRows As Integer = 64
+
+        ''' <summary>Dasselbe wie ein DrawBitmapSampled(canvas, source, x, y, SamplingHigh) mit
+        ''' Kantenglaettung auf <paramref name="canvas"/> (Matrix und Ausschnitt so, wie sie dort
+        ''' stehen), aber auf mehreren Kernen. Gedacht fuer Geradestellen und Perspektive: Skia
+        ''' rechnet die kubische Abtastung eines gedrehten Bildes auf einem Faden, gemessen an einer
+        ''' Vorschau von 3072 Punkten rund 200 ms mit 8 Bit und rund eine Sekunde mit 16 Bit.
+        '''
+        ''' Einfach in Baendern mit Ausschnitt zu zeichnen ist NICHT dasselbe: stutzt ein Ausschnitt
+        ''' die schraege Bildkante, rechnet Skia ihre Kantenglaettung mit anderer Rundung, an der
+        ''' Kante wichen Punkte um bis zu 27 Stufen ab (siehe auch ClipCanvasToOccupied). Deshalb in
+        ''' drei Schritten. Die Deckung der Bildkante entsteht einmal am Stueck, als einfarbiges
+        ''' Rechteck mit derselben Matrix, demselben Ausschnitt und Kantenglaettung in eine
+        ''' Alpha8-Maske (wenige Millisekunden, die Flaeche ist einfarbig). Die Baender zeichnen diese
+        ''' Maske mit dem Bild als Shader, mit genau der Gesamtmatrix, die Skia selbst fuer das Bild
+        ''' ansetzt: jeder Punkt mit voller oder ohne Deckung ist damit fertig. An Punkten mit
+        ''' Teildeckung verrechnet Skia die Kante eines halbdurchsichtigen Bildes aber anders als die
+        ''' Maske, um eine Stufe (an einer Vorschau rund drei von hundert Faellen). Diese Punkte
+        ''' zeichnet zuletzt die Zeichnung am Stueck selbst nach, beschnitten auf sie
+        ''' (BuildCoverageEdgePath); das sind nur die Punkte entlang der Kante. Byte fuer Byte
+        ''' dasselbe, gemessen an Winkeln, Perspektiven, Leinwandarten, ungeraden Massen, 8 und
+        ''' 16 Bit, Alphaverlauf und Zeilenausschnitt (Geometriemessung skia und zufall; Pruefung
+        ''' "Geometrie: Geradestellen und Perspektive in Baendern bytegleich zum Lauf am Stueck").
+        '''
+        ''' False, wenn der Weg nicht greift (kleines Ziel, leerer Ausschnitt, Pruefschalter, keine
+        ''' Flaeche ueber dem Ziel); dann zeichnet der Aufrufer wie bisher am Stueck.</summary>
+        Private Shared Function DrawSampledAntialiasedInBands(canvas As SKCanvas, target As SKBitmap, source As SKBitmap,
+                                                              x As Single, y As Single) As Boolean
+            If SerialGeometryForChecks OrElse canvas Is Nothing OrElse target Is Nothing OrElse source Is Nothing Then Return False
+            Dim info = target.Info
+            If CLng(info.Width) * info.Height < BandedGeometryMinPixels Then Return False
+            Dim clip = canvas.DeviceClipBounds
+            If clip.Width <= 0 OrElse clip.Height <= 0 Then Return False
+            Dim pixels = target.GetPixels()
+            If pixels = IntPtr.Zero Then Return False
+            Dim rowBytes = target.RowBytes
+            Dim matrix = canvas.TotalMatrix
+            Dim destination = SKRect.Create(x, y, source.Width, source.Height)
+
+            Using cover = New SKBitmap(New SKImageInfo(info.Width, info.Height, SKColorType.Alpha8, SKAlphaType.Premul))
+                If cover.GetPixels() = IntPtr.Zero Then Return False
+                Using coverCanvas = New SKCanvas(cover)
+                    coverCanvas.Clear(SKColors.Transparent)
+                    If clip.Left > 0 OrElse clip.Top > 0 OrElse clip.Right < info.Width OrElse clip.Bottom < info.Height Then
+                        coverCanvas.ClipRect(New SKRect(clip.Left, clip.Top, clip.Right, clip.Bottom))
+                    End If
+                    coverCanvas.SetMatrix(matrix)
+                    Using white = New SKPaint With {.IsAntialias = True, .Color = SKColors.White}
+                        coverCanvas.DrawRect(destination, white)
+                    End Using
+                End Using
+
+                ' Die Gesamtmatrix des Bildes, wie Skia sie fuer DrawImage an (x, y) bildet.
+                Dim local = matrix.PreConcat(SKMatrix.CreateTranslation(x, y))
+                Dim bandCount = (clip.Height + BandedGeometryRows - 1) \ BandedGeometryRows
+                Dim failed = 0
+                Using image = ShareBitmapPixels(source)
+                    Using coverImage = ShareBitmapPixels(cover)
+                        Using shader = image.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, SamplingHigh, local)
+                            Parallel.For(0, bandCount,
+                                Sub(band)
+                                    Using surface = SKSurface.Create(info, pixels, rowBytes)
+                                        If surface Is Nothing Then
+                                            Interlocked.Exchange(failed, 1)
+                                            Return
+                                        End If
+                                        Dim top = clip.Top + band * BandedGeometryRows
+                                        surface.Canvas.ClipRect(New SKRect(clip.Left, top, clip.Right, Math.Min(clip.Bottom, top + BandedGeometryRows)))
+                                        Using paint = New SKPaint With {.Shader = shader}
+                                            surface.Canvas.DrawImage(coverImage, 0, 0, paint)
+                                        End Using
+                                    End Using
+                                End Sub)
+                        End Using
+                    End Using
+                    ' Eine Flaeche kam nicht zustande: das Ziel ist unvollstaendig und wird ganz neu
+                    ' gezeichnet. Leeren genuegt, der Aufrufer zeichnet am Stueck darueber.
+                    If failed <> 0 Then
+                        Using clear = New SKCanvas(target)
+                            clear.Clear(SKColors.Transparent)
+                        End Using
+                        Return False
+                    End If
+
+                    ' Die Kante am Stueck nachzeichnen: Punkte mit Teildeckung, Wechsel der Deckung
+                    ' und ein Punkt Rand darum werden geleert und mit genau der Zeichnung des
+                    ' Aufrufers neu gezeichnet, beschnitten auf diese Punkte. Ein Ausschnitt aus
+                    ' Rechtecken ganzer Punkte ist fuer Skia eine Region; sie aendert die Rechnung der
+                    ' Kantenglaettung nicht, nur wohin geschrieben wird, und der Shader rechnet nur dort.
+                    Using edge = BuildCoverageEdgePath(cover, clip)
+                        canvas.Save()
+                        canvas.ResetMatrix()
+                        canvas.ClipPath(edge, SKClipOperation.Intersect, False)
+                        canvas.Clear(SKColors.Transparent)
+                        canvas.SetMatrix(matrix)
+                        Using paint = New SKPaint With {.IsAntialias = True}
+                            canvas.DrawImage(image, x, y, SamplingHigh, paint)
+                        End Using
+                        canvas.Restore()
+                    End Using
+                End Using
+            End Using
+            target.NotifyPixelsChanged()
+            Return True
+        End Function
+
+        ''' <summary>Die Punkte der Bildkante in einer Deckungsmaske als Pfad aus Rechtecken ganzer
+        ''' Punkte, je Zeile ein Rechteck je Strecke: Punkte mit Teildeckung und Punkte, an denen die
+        ''' Deckung zum linken oder oberen Nachbarn zwischen leer, teilweise und voll wechselt, um
+        ''' einen Punkt in jede Richtung erweitert. Dazu je ein Punkt in der linken oberen und der
+        ''' rechten unteren Ecke von <paramref name="clip"/>, dem Ausschnitt der Zeichnung: so hat
+        ''' der Ausschnitt dieselben Grenzen wie ohne die Kante. Lagen die Ecken ausserhalb eines
+        ''' Zeilenausschnitts, wurde er enger, und Skia glaettete die Kante wieder anders (bis zu
+        ''' acht Stufen, Geometriemessung zufall).</summary>
+        Private Shared Function BuildCoverageEdgePath(cover As SKBitmap, clip As SKRectI) As SKPath
+            Dim w = cover.Width, h = cover.Height, stride = cover.RowBytes
+            Dim bytes(stride * h - 1) As Byte
+            Marshal.Copy(cover.GetPixels(), bytes, 0, bytes.Length)
+            ' Waagerecht erweitert; jede Zeile schreibt nur in ihre eigene Zeile.
+            Dim wide(w * h - 1) As Byte
+            ForEachRow(w, h,
+                Sub(row As Integer)
+                    Dim own = row * stride, above = (row - 1) * stride, mark = row * w
+                    For col = 0 To w - 1
+                        Dim v = bytes(own + col)
+                        Dim isEdge = v <> 0 AndAlso v <> 255
+                        If Not isEdge AndAlso col > 0 Then
+                            Dim l = bytes(own + col - 1)
+                            isEdge = (v = 0) <> (l = 0) OrElse (v = 255) <> (l = 255)
+                        End If
+                        If Not isEdge AndAlso row > 0 Then
+                            Dim t = bytes(above + col)
+                            isEdge = (v = 0) <> (t = 0) OrElse (v = 255) <> (t = 255)
+                        End If
+                        If isEdge Then
+                            If col > 0 Then wide(mark + col - 1) = 1
+                            wide(mark + col) = 1
+                            If col < w - 1 Then wide(mark + col + 1) = 1
+                        End If
+                    Next
+                End Sub)
+            ' Senkrecht erweitert und in Strecken zerlegt, je Zeile fuer sich.
+            Dim runs(h - 1) As List(Of Integer)
+            ForEachRow(w, h,
+                Sub(row As Integer)
+                    Dim list As List(Of Integer) = Nothing
+                    Dim first = Math.Max(0, row - 1), last = Math.Min(h - 1, row + 1)
+                    Dim start = -1
+                    For col = 0 To w
+                        Dim marked = False
+                        If col < w Then
+                            For r = first To last
+                                If wide(r * w + col) <> 0 Then
+                                    marked = True
+                                    Exit For
+                                End If
+                            Next
+                        End If
+                        If marked AndAlso start < 0 Then start = col
+                        If Not marked AndAlso start >= 0 Then
+                            If list Is Nothing Then list = New List(Of Integer)()
+                            list.Add(start)
+                            list.Add(col)
+                            start = -1
+                        End If
+                    Next
+                    runs(row) = list
+                End Sub)
+            Dim path = New SKPath()
+            For row = 0 To h - 1
+                Dim list = runs(row)
+                If list Is Nothing Then Continue For
+                For i = 0 To list.Count - 1 Step 2
+                    path.AddRect(New SKRect(list(i), row, list(i + 1), row + 1))
+                Next
+            Next
+            path.AddRect(New SKRect(clip.Left, clip.Top, clip.Left + 1, clip.Top + 1))
+            path.AddRect(New SKRect(clip.Right - 1, clip.Bottom - 1, clip.Right, clip.Bottom))
+            Return path
+        End Function
+
 
         ' Cache des zuletzt berechneten Bildes VOR dem Einzeichnen der Objekte (Annotations).
         ' Beim Live-Verschieben/Bearbeiten eines Objekts ändert sich nur dieser letzte Schritt,
@@ -1574,6 +1760,11 @@ Namespace Services
             Dim rotated As SKBitmap = Nothing
             Try
                 rotated = New SKBitmap(New SKImageInfo(rw, rh, src.ColorType, src.AlphaType))
+                ' Wie in ApplyGeometryTransforms: fuer die ueblichen Farbtypen verwaltet umgesetzt.
+                If Not SerialGeometryForChecks AndAlso ReorderQuarterTurnSupported(src) AndAlso rotated.GetPixels() <> IntPtr.Zero Then
+                    ReorderQuarterTurn(src, rotated, n, False, False, New SKRectI(0, 0, rw, rh), New SKRectI(0, 0, rw, rh))
+                    Return rotated
+                End If
                 Using canvas = New SKCanvas(rotated)
                     canvas.Clear(SKColors.Transparent)
                     Select Case n
@@ -4414,15 +4605,19 @@ Namespace Services
             Using silhouette = New SKBitmap(w, h, SKColorType.Rgba8888, SKAlphaType.Premul)
                 Dim stride = silhouette.RowBytes
                 Dim rgba = New Byte(stride * h - 1) {}
-                For y = bounds.Top To bounds.Bottom - 1
-                    Dim mRow = y * mask.RowBytes, sRow = y * stride
-                    For x = bounds.Left To bounds.Right - 1
-                        Dim a = maskBytes(mRow + x)
-                        If a = 0 Then Continue For
-                        Dim o = sRow + x * 4
-                        rgba(o) = a : rgba(o + 1) = a : rgba(o + 2) = a : rgba(o + 3) = a
-                    Next
-                Next
+                Dim maskStride = mask.RowBytes
+                ' Jede Zeile schreibt nur ihre eigenen Bytes: auf mehreren Kernen dasselbe Feld.
+                ForEachRow(bounds.Width, bounds.Height,
+                    Sub(row As Integer)
+                        Dim y = bounds.Top + row
+                        Dim mRow = y * maskStride, sRow = y * stride
+                        For x = bounds.Left To bounds.Right - 1
+                            Dim a = maskBytes(mRow + x)
+                            If a = 0 Then Continue For
+                            Dim o = sRow + x * 4
+                            rgba(o) = a : rgba(o + 1) = a : rgba(o + 2) = a : rgba(o + 3) = a
+                        Next
+                    End Sub)
                 Marshal.Copy(rgba, 0, silhouette.GetPixels(), rgba.Length)
                 silhouette.NotifyPixelsChanged()
 
@@ -4496,19 +4691,11 @@ Namespace Services
             Dim mStride = mask.RowBytes
             Dim mBuf = New Byte(mStride * h - 1) {}
             Marshal.Copy(mask.GetPixels(), mBuf, 0, mBuf.Length)
-            Dim minX = w, minY = h, maxX = -1, maxY = -1
-            For y = 0 To h - 1
-                Dim mRow = y * mStride
-                For x = 0 To w - 1
-                    If mBuf(mRow + x) > 0 Then
-                        If x < minX Then minX = x
-                        If x > maxX Then maxX = x
-                        If y < minY Then minY = y
-                        If y > maxY Then maxY = y
-                    End If
-                Next
-            Next
-            If maxX < minX OrElse maxY < minY Then Return Nothing
+            ' Dasselbe Rechteck wie der fruehere Lauf ueber jeden Punkt, nur ohne die leeren
+            ' Strecken jeder Zeile zu Ende zu lesen.
+            Dim bounds = NonZeroBounds(mBuf, mStride, w, h)
+            If bounds.IsEmpty Then Return Nothing
+            Dim minX = bounds.Left, minY = bounds.Top, maxX = bounds.Right - 1, maxY = bounds.Bottom - 1
 
             Dim col = ParseColor(layer.FillColor, SKColors.White)
             Using fill = New SKBitmap(w, h, SKColorType.Bgra8888, SKAlphaType.Premul)
@@ -4530,22 +4717,27 @@ Namespace Services
                 End Using
 
                 ' Deckung = Maskenwert einmultiplizieren (premultipliziert: alle Kanäle skalieren).
+                ' Nur im Rechteck der Maske und zeilenweise auf mehreren Kernen: ausserhalb ist die
+                ' Fuellung schon durchsichtig (das Rechteck liegt auf ganzen Punkten), und ein
+                ' Produkt mit null bliebe null.
                 Dim fStride = fill.RowBytes
                 Dim fBuf = New Byte(fStride * h - 1) {}
                 Marshal.Copy(fill.GetPixels(), fBuf, 0, fBuf.Length)
-                For y = 0 To h - 1
-                    Dim fRow = y * fStride, mRow = y * mStride
-                    For x = 0 To w - 1
-                        Dim m = CInt(mBuf(mRow + x))
-                        If m < 255 Then
-                            Dim o = fRow + x * 4
-                            fBuf(o) = CByte(CInt(fBuf(o)) * m \ 255)
-                            fBuf(o + 1) = CByte(CInt(fBuf(o + 1)) * m \ 255)
-                            fBuf(o + 2) = CByte(CInt(fBuf(o + 2)) * m \ 255)
-                            fBuf(o + 3) = CByte(CInt(fBuf(o + 3)) * m \ 255)
-                        End If
-                    Next
-                Next
+                ForEachRow(maxX - minX + 1, maxY - minY + 1,
+                    Sub(row As Integer)
+                        Dim y = minY + row
+                        Dim fRow = y * fStride, mRow = y * mStride
+                        For x = minX To maxX
+                            Dim m = CInt(mBuf(mRow + x))
+                            If m < 255 Then
+                                Dim o = fRow + x * 4
+                                fBuf(o) = CByte(CInt(fBuf(o)) * m \ 255)
+                                fBuf(o + 1) = CByte(CInt(fBuf(o + 1)) * m \ 255)
+                                fBuf(o + 2) = CByte(CInt(fBuf(o + 2)) * m \ 255)
+                                fBuf(o + 3) = CByte(CInt(fBuf(o + 3)) * m \ 255)
+                            End If
+                        Next
+                    End Sub)
                 Marshal.Copy(fBuf, 0, fill.GetPixels(), fBuf.Length)
 
                 Dim result = CloneBitmap(processed)
@@ -6024,6 +6216,12 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim product = CInt(value) * CInt(alpha) + 128
             Return CByte((product + (product >> 8)) >> 8)
         End Function
+
+        ''' <summary>NUR FUER DEN PRUEFSTAND: wahr schaltet die Wege der Geometrie, der Masken und
+        ''' der Auswahl, die auf mehrere Kerne verteilt rechnen, auf ihren frueheren Lauf am Stueck
+        ''' zurueck. Die Pruefungen vergleichen damit beide Wege Byte fuer Byte. Die Anwendung
+        ''' setzt ihn nie.</summary>
+        Friend Shared SerialGeometryForChecks As Boolean = False
 
         ' Ab dieser Pixelzahl lohnt der Thread-Overhead von Parallel.For. Darunter (Miniaturen,
         ' entartete Größen) bleibt es seriell.
@@ -7804,6 +8002,150 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return unsharpened
         End Function
 
+        ''' <summary>Taugt die Bitmap fuer <see cref="ReorderQuarterTurn"/>? Skia zeichnet eine
+        ''' Vierteldrehung oder Spiegelung ohne Abtastung auf eine geleerte Flaeche, und fuer diese
+        ''' Farbtypen mit vormultipliziertem oder deckendem Alpha ist das ein reines Umsetzen der
+        ''' Bildpunkte. Unvormultipliziert rechnet Skia ueber das Vormultiplizieren und zurueck, das
+        ''' ist kein Umsetzen und bleibt bei der Zeichnung.</summary>
+        Private Shared Function ReorderQuarterTurnSupported(bitmap As SKBitmap) As Boolean
+            If bitmap Is Nothing Then Return False
+            Dim info = bitmap.Info
+            If info.Width <= 0 OrElse info.Height <= 0 Then Return False
+            If info.AlphaType <> SKAlphaType.Premul AndAlso info.AlphaType <> SKAlphaType.Opaque Then Return False
+            Select Case info.ColorType
+                Case SKColorType.Bgra8888, SKColorType.Rgba8888, SKColorType.Rgba16161616, SKColorType.Alpha8
+                    Return bitmap.GetPixels() <> IntPtr.Zero
+                Case Else
+                    Return False
+            End Select
+        End Function
+
+        ''' <summary>Vierteldrehung im Uhrzeigersinn um <paramref name="quarter"/> Schritte, danach
+        ''' waagerecht und senkrecht gespiegelt, in EINEM verwalteten Durchgang auf mehreren Kernen.
+        ''' Dasselbe wie die beiden Zeichnungen in ApplyGeometryTransforms (Drehung, dann Spiegeln,
+        ''' je mit ihrem Ausschnitt): <paramref name="rotatedClip"/> ist der Ausschnitt der Drehung im
+        ''' gedrehten Bild, <paramref name="finalClip"/> der des Spiegelns im Ergebnis; ausserhalb
+        ''' bleibt der Punkt durchsichtig. Skia brauchte dafuer an einer Vorschau von 3072 Punkten
+        ''' rund 110 ms mit 8 Bit und 230 bis 360 ms mit 16 Bit, die Umordnung rund 5 bis 9 ms
+        ''' (Geometriemessung skia). <paramref name="result"/> hat die Masse des gedrehten Bilds und
+        ''' denselben Farbtyp; jeder Punkt wird geschrieben.</summary>
+        Private Shared Sub ReorderQuarterTurn(source As SKBitmap, result As SKBitmap, quarter As Integer,
+                                              flipHorizontal As Boolean, flipVertical As Boolean,
+                                              rotatedClip As SKRectI, finalClip As SKRectI)
+            Dim sw = source.Width, sh = source.Height
+            Dim rw = result.Width, rh = result.Height
+            Dim bpp = source.Info.BytesPerPixel
+            Dim sourceStride = CLng(source.RowBytes)
+            Dim resultStride = result.RowBytes
+            Dim sourceBase = source.GetPixels().ToInt64()
+            Dim resultBase = result.GetPixels()
+            Dim zeroRow(resultStride - 1) As Byte
+            ' Versatz in der Quelle fuer den Punkt (xf, yf) des gedrehten Bilds und die Schrittweite,
+            ' wenn xf um eins waechst.
+            Dim stepPerXf As Long
+            Select Case quarter
+                Case 1 : stepPerXf = -sourceStride
+                Case 2 : stepPerXf = -bpp
+                Case 3 : stepPerXf = sourceStride
+                Case Else : stepPerXf = bpp
+            End Select
+            Dim stepPerX = If(flipHorizontal, -stepPerXf, stepPerXf)
+            ' Die Spalten des Ergebnisses, deren gespiegelter Punkt im Ausschnitt der Drehung liegt.
+            Dim rotatedLeft = If(flipHorizontal, rw - rotatedClip.Right, rotatedClip.Left)
+            Dim rotatedRight = If(flipHorizontal, rw - rotatedClip.Left, rotatedClip.Right)
+            Dim runLeft = Math.Max(finalClip.Left, rotatedLeft)
+            Dim runRight = Math.Min(finalClip.Right, rotatedRight)
+            ForEachRow(rw, rh,
+                Sub(y As Integer)
+                    Dim rowTarget = resultBase + y * resultStride
+                    Dim yf = If(flipVertical, rh - 1 - y, y)
+                    If y < finalClip.Top OrElse y >= finalClip.Bottom OrElse yf < rotatedClip.Top OrElse yf >= rotatedClip.Bottom OrElse
+                       runRight <= runLeft Then
+                        Marshal.Copy(zeroRow, 0, rowTarget, resultStride)
+                        Return
+                    End If
+                    If runLeft > 0 Then Marshal.Copy(zeroRow, 0, rowTarget, runLeft * bpp)
+                    If runRight < rw Then Marshal.Copy(zeroRow, 0, rowTarget + runRight * bpp, (rw - runRight) * bpp)
+                    ' Der Quellpunkt zur Spalte x = 0 (xf = 0 oder rw - 1).
+                    Dim xf0 = If(flipHorizontal, rw - 1, 0)
+                    Dim offset0 As Long
+                    Select Case quarter
+                        Case 1 : offset0 = CLng(sh - 1 - xf0) * sourceStride + CLng(yf) * bpp
+                        Case 2 : offset0 = CLng(sh - 1 - yf) * sourceStride + CLng(sw - 1 - xf0) * bpp
+                        Case 3 : offset0 = CLng(xf0) * sourceStride + CLng(sw - 1 - yf) * bpp
+                        Case Else : offset0 = CLng(yf) * sourceStride + CLng(xf0) * bpp
+                    End Select
+                    Dim rowSource = sourceBase + offset0
+                    Select Case bpp
+                        Case 4
+                            For x = runLeft To runRight - 1
+                                Marshal.WriteInt32(rowTarget, x * 4, Marshal.ReadInt32(New IntPtr(rowSource + x * stepPerX)))
+                            Next
+                        Case 8
+                            For x = runLeft To runRight - 1
+                                Marshal.WriteInt64(rowTarget, x * 8, Marshal.ReadInt64(New IntPtr(rowSource + x * stepPerX)))
+                            Next
+                        Case Else
+                            For x = runLeft To runRight - 1
+                                Marshal.WriteByte(rowTarget, x, Marshal.ReadByte(New IntPtr(rowSource + x * stepPerX)))
+                            Next
+                    End Select
+                End Sub)
+            result.NotifyPixelsChanged()
+        End Sub
+
+        ''' <summary>ApplyGeometryTransforms ueber <see cref="ReorderQuarterTurn"/>: die beiden
+        ''' Leinwaende entstehen wie dort, aber nur, um mit ClipCanvasToOccupied denselben
+        ''' Ausschnitt und dasselbe belegte Rechteck zu bestimmen; gezeichnet wird nicht. Nothing,
+        ''' wenn der Weg nicht greift, dann zeichnet ApplyGeometryTransforms wie bisher.</summary>
+        Private Shared Function TryApplyGeometryTransformsReordered(source As SKBitmap, adj As ImageAdjustments, normalized As Integer,
+                                                                    ByRef occupied As SKRectI?) As SKBitmap
+            If SerialGeometryForChecks OrElse Not ReorderQuarterTurnSupported(source) Then Return Nothing
+            Dim sw = source.Width, sh = source.Height
+            Dim rw = If(normalized = 90 OrElse normalized = 270, sh, sw)
+            Dim rh = If(normalized = 90 OrElse normalized = 270, sw, sh)
+            Dim result = New SKBitmap(rw, rh, source.ColorType, source.AlphaType)
+            If result.GetPixels() = IntPtr.Zero Then
+                result.Dispose()
+                Return Nothing
+            End If
+            Dim stepOccupied = occupied
+            Dim rotatedClip As SKRectI
+            Using canvas = New SKCanvas(result)
+                Select Case normalized
+                    Case 90
+                        canvas.Translate(rw, 0)
+                        canvas.RotateDegrees(90)
+                    Case 180
+                        canvas.Translate(rw, rh)
+                        canvas.RotateDegrees(180)
+                    Case 270
+                        canvas.Translate(0, rh)
+                        canvas.RotateDegrees(270)
+                End Select
+                stepOccupied = ClipCanvasToOccupied(canvas, stepOccupied, SKMatrix.Identity, sw, sh, rw, rh, antialiased:=False)
+                rotatedClip = canvas.DeviceClipBounds
+            End Using
+            Dim finalClip = New SKRectI(0, 0, rw, rh)
+            If adj.FlipHorizontal OrElse adj.FlipVertical Then
+                Using canvas = New SKCanvas(result)
+                    Dim matrix = SKMatrix.Identity
+                    If adj.FlipHorizontal Then
+                        matrix = matrix.PostConcat(SKMatrix.CreateScale(-1, 1, rw / 2.0F, rh / 2.0F))
+                    End If
+                    If adj.FlipVertical Then
+                        matrix = matrix.PostConcat(SKMatrix.CreateScale(1, -1, rw / 2.0F, rh / 2.0F))
+                    End If
+                    canvas.SetMatrix(matrix)
+                    stepOccupied = ClipCanvasToOccupied(canvas, stepOccupied, SKMatrix.Identity, rw, rh, rw, rh, antialiased:=False)
+                    finalClip = canvas.DeviceClipBounds
+                End Using
+            End If
+            ReorderQuarterTurn(source, result, normalized \ 90, adj.FlipHorizontal, adj.FlipVertical, rotatedClip, finalClip)
+            occupied = stepOccupied
+            Return result
+        End Function
+
         Private Shared Function ApplyGeometryTransforms(source As SKBitmap, adj As ImageAdjustments,
                                                         Optional ByRef occupied As SKRectI? = Nothing) As SKBitmap
             If adj.RotationDegrees = 0 AndAlso Not adj.FlipHorizontal AndAlso Not adj.FlipVertical Then
@@ -7811,6 +8153,12 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             End If
 
             Dim normalized = ((adj.RotationDegrees Mod 360) + 360) Mod 360
+            ' Fuer die ueblichen Farbtypen ein verwaltetes Umsetzen in einem Durchgang, bytegleich
+            ' zu den beiden Zeichnungen darunter (ReorderQuarterTurn).
+            If normalized Mod 90 = 0 Then
+                Dim reordered = TryApplyGeometryTransformsReordered(source, adj, normalized, occupied)
+                If reordered IsNot Nothing Then Return reordered
+            End If
             Dim sw = source.Width
             Dim sh = source.Height
             Dim rw = If(normalized = 90 OrElse normalized = 270, sh, sw)
@@ -7948,9 +8296,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 canvas.SetMatrix(m)
                 occupied = ClipCanvasToOccupied(canvas, occupied, SKMatrix.Identity,
                                                 source.Width, source.Height, source.Width, source.Height, antialiased:=True)
-                Using paint = New SKPaint With {.IsAntialias = True}
-                    DrawBitmapSampled(canvas, source, 0, 0, SamplingHigh, paint)
-                End Using
+                If Not DrawSampledAntialiasedInBands(canvas, result, source, 0, 0) Then
+                    Using paint = New SKPaint With {.IsAntialias = True}
+                        DrawBitmapSampled(canvas, source, 0, 0, SamplingHigh, paint)
+                    End Using
+                End If
             End Using
             Return result
         End Function
@@ -7979,9 +8329,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 occupied = ClipCanvasToOccupied(canvas, occupied,
                                                 SKMatrix.CreateTranslation(-source.Width / 2.0F, -source.Height / 2.0F),
                                                 source.Width, source.Height, targetWidth, targetHeight, antialiased:=True)
-                Using paint = New SKPaint With {.IsAntialias = True}
-                    DrawBitmapSampled(canvas, source, -source.Width / 2.0F, -source.Height / 2.0F, SamplingHigh, paint)
-                End Using
+                If Not DrawSampledAntialiasedInBands(canvas, result, source, -source.Width / 2.0F, -source.Height / 2.0F) Then
+                    Using paint = New SKPaint With {.IsAntialias = True}
+                        DrawBitmapSampled(canvas, source, -source.Width / 2.0F, -source.Height / 2.0F, SamplingHigh, paint)
+                    End Using
+                End If
             End Using
             Return result
         End Function
@@ -8368,6 +8720,13 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim wb = New WriteableBitmap(New Avalonia.PixelSize(width, height), New Avalonia.Vector(96, 96),
                                          Avalonia.Platform.PixelFormat.Rgba8888, Avalonia.Platform.AlphaFormat.Premul)
             Using fb = wb.Lock()
+                ' Wie der Bgra-Weg (ImageOrientationService.ToAvaloniaBitmapFast): Skia kopiert in
+                ' dasselbe Format direkt in den Puffer, ohne jede Zeile zweimal ueber ein
+                ' verwaltetes Feld zu tragen.
+                Using source = skBitmap.PeekPixels()
+                    Dim target = New SKImageInfo(width, height, SKColorType.Rgba8888, skBitmap.AlphaType, skBitmap.ColorSpace)
+                    If source IsNot Nothing AndAlso source.ReadPixels(target, fb.Address, fb.RowBytes) Then Return wb
+                End Using
                 Dim srcStride = skBitmap.RowBytes
                 Dim dstStride = fb.RowBytes
                 Dim rowBytes = Math.Min(srcStride, dstStride)
