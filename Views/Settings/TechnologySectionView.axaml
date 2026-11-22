@@ -273,6 +273,23 @@
                                         <TextBlock Text="LGPL-2.1" FontSize="{DynamicResource FP.Font.Small}"/>
                                     </Button>
                                 </Grid>
+                                <!-- Nur die OpenMP-Laufzeit, die als EIGENE Datei mitreist (libomp.dll
+                                     unter Windows ARM64). Statisch in LibRaw gebundene Laufzeiten
+                                     (libomp unter Linux und macOS, libgomp unter Windows x64) stehen
+                                     hier nicht: LLVM- und GCC-Ausnahme erlassen fuer eingebetteten
+                                     Code die Hinweispflicht. -->
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="libomp (LLVM OpenMP)" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="LibRaw auf mehreren Kernen: Windows ARM64" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/llvm/llvm-project/tree/main/openmp" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/llvm/llvm-project/blob/main/openmp/LICENSE.TXT" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="Apache-2.0" FontSize="{DynamicResource FP.Font.Small}"/>
+                                    </Button>
+                                </Grid>
                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="libmpv (mpv)" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
@@ -524,8 +541,7 @@
                         </StackPanel>
 
                         <TextBlock Text="LibRaw sowie libheif mit libde265 stehen unter der LGPL, libmpv unter der GPL, das in libheif enthaltene dav1d unter der BSD-Lizenz. Sie werden dynamisch geladen und lassen sich durch eigene Übersetzungen ersetzen. Die Lizenztexte und Herkunftsnachweise liegen jedem Paket bei, meist im Ordner licenses neben der Anwendung." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                        <TextBlock Text="LibRaw entwickelt RAW-Dateien. Jedes Paket bringt einen aktuellen Stand mit und nimmt ihn vor einer LibRaw des Systems, damit jeder Rechner gleich entwickelt; der Flatpak baut denselben Stand selbst. Fehlt sie, zeigen RAW-Dateien die eingebettete Vorschau der Kamera." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                        <TextBlock Text="libheif liest HEIC-, HEIF- und AVIF-Dateien, AVIF mit dem enthaltenen dav1d. Jedes Paket außer dem Flatpak bringt sie mit und nimmt sie vor einer libheif des Systems; macOS fragt zuerst seinen eigenen Leser, der Flatpak nimmt sie aus seiner Laufzeit. Fehlt sie, bleiben solche Dateien ungeöffnet, alles andere arbeitet unverändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        <TextBlock Text="LibRaw entwickelt RAW-Dateien. Jedes Paket bringt einen aktuellen Stand mit und nimmt ihn vor einer LibRaw des Systems, damit jeder Rechner gleich entwickelt; der Flatpak baut denselben Stand selbst. Fehlt sie, zeigen RAW-Dateien die eingebettete Vorschau der Kamera." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>                        <TextBlock Text="libheif liest HEIC-, HEIF- und AVIF-Dateien, AVIF mit dem enthaltenen dav1d. Jedes Paket außer dem Flatpak bringt sie mit und nimmt sie vor einer libheif des Systems; macOS fragt zuerst seinen eigenen Leser, der Flatpak nimmt sie aus seiner Laufzeit. Fehlt sie, bleiben solche Dateien ungeöffnet, alles andere arbeitet unverändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         <TextBlock Text="Bilder, die eine HEIF-Datei als JPEG trägt, etwa die Vorschaubilder mancher Kameras, liest libheif mit der darin enthaltenen libjpeg-turbo, der Flatpak mit der libheif seiner Laufzeit." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         <TextBlock Text="libjxl liest und schreibt JPEG-XL-Dateien und steht unter der BSD-Lizenz. Jedes Paket außer dem Flatpak bringt sie mit und nimmt sie vor einer libjxl des Systems; der Flatpak nimmt sie aus seiner Laufzeit. Fehlt sie, bleiben solche Dateien ungeöffnet, alles andere arbeitet unverändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         <TextBlock Text="OpenJPEG liest JPEG-2000-Dateien, auch HTJ2K, und steht unter der BSD-Lizenz. Windows und Linux bringen sie mit, der Flatpak nimmt sie aus seiner Laufzeit; unter macOS fehlt sie noch. Fehlt sie, bleiben nur diese Dateien ungeöffnet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>

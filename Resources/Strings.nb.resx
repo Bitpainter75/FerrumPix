@@ -12145,4 +12145,10 @@
   <data name="Schriften_fehlen_41c5e549" xml:space="preserve">
     <value>Manglende skrifter</value>
   </data>
+  <data name="libomp_LLVM_OpenMP_9eedcb0f" xml:space="preserve">
+    <value>libomp (LLVM OpenMP)</value>
+  </data>
+  <data name="LibRaw_auf_mehreren_Kernen_Windows_ARM64_fc4db394" xml:space="preserve">
+    <value>LibRaw på flere kjerner: Windows ARM64</value>
+  </data>
 </root>

@@ -13,6 +13,10 @@ Bundled version:
       929b84fc8b0fca23dff0f9142c9a5be1a754da07d9017be4b17e74dc73b34a46
     Build steps:
       autoreconf -fi (the snapshot ships no configure script)
+    Modification:
+      fbdd-parallel.patch, installed next to this file, spreads the FBDD noise
+      reduction in src/demosaic/dcb_demosaic.cpp over several processor cores.
+      The calculation and the result stay the same.
     Build options:
       --disable-examples --disable-static --enable-zlib --enable-jpeg
       --enable-lcms --enable-openmp

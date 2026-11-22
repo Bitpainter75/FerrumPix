@@ -130,12 +130,13 @@ libraries are part of this package.
   portable Linux ZIP and the deb, rpm and AUR packages; the Flatpak builds it as
   its own module. License text: licenses/libraw/ in this package.
 
-  Corresponding source for the bundled LibRaw build is the unmodified LibRaw
-  source named in licenses/libraw/, either a release from
-  https://www.libraw.org/download or a fixed commit of
-  https://github.com/LibRaw/LibRaw. The library is built from that source by us
-  rather than taken as a prebuilt binary; the exact compiler, options and
-  checksums are recorded in licenses/libraw/.
+  Corresponding source for the bundled LibRaw build is the LibRaw source named
+  in licenses/libraw/, a fixed commit of https://github.com/LibRaw/LibRaw, with
+  one modification: licenses/libraw/fbdd-parallel.patch spreads the FBDD noise
+  reduction in src/demosaic/dcb_demosaic.cpp over several processor cores. It
+  changes neither the calculation nor the result. The library is built from
+  that source by us rather than taken as a prebuilt binary; the exact compiler,
+  options and checksums are recorded in licenses/libraw/.
 
   zlib
   Copyright (c) 1995-2026 Jean-loup Gailly and Mark Adler
@@ -158,9 +159,18 @@ libraries are part of this package.
   Copyright (c) the LLVM Project contributors
   Used under the Apache License 2.0 with LLVM Exceptions
   https://github.com/llvm/llvm-project/tree/main/openmp
-  Statically linked and hidden in the bundled LibRaw on Linux and macOS, where
-  it spreads the RAW development over several cores. Version, source URL,
-  checksum and license text (LICENSE.libomp.txt) are in licenses/libraw/.
+  Bundled on Windows ARM64 only, unmodified, as its own file libomp.dll next
+  to libraw.dll, where it spreads the RAW development of LibRaw over several
+  cores. Version, source URL, checksum and license text (LICENSE.libomp.txt)
+  are in licenses/libraw/.
+
+  winpthreads (MinGW-w64 POSIX threads library)
+  Copyright (c) 2011 mingw-w64 project; parts (C) 2010 Lockless Inc.
+  Used under the MIT License, with parts under a BSD-style license
+  https://github.com/mingw-w64/mingw-w64/tree/master/mingw-w64-libraries/winpthreads
+  Statically linked into the bundled LibRaw on Windows (libraw.dll, x64 and
+  ARM64), unmodified, as part of the compiler runtime. License text:
+  LICENSE.winpthreads.txt in licenses/libraw/.
 
   X3F library (x3f_tools)
   Copyright (c) 2010, Roland Karlsson
@@ -499,6 +509,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 Apache License 2.0
 --------------------------------------------------------------------------------
 Used by: MetadataExtractor, and the model files listed above that state it.
+libomp is under this licence with the LLVM Exceptions; that complete text is
+LICENSE.libomp.txt in licenses/libraw/.
 
                                  Apache License
                            Version 2.0, January 2004
