@@ -2,8 +2,14 @@
 
 ### Changes
 
-- Exporting to TIFF and to 16-bit PNG is much faster: the file is now compressed on all processor
-  cores instead of one. The files and their pixels stay the same.
+- Exporting to TIFF and PNG is much faster: the file is now compressed on all processor cores
+  instead of one. The pixels stay the same.
+
+- HEIC and HEIF pictures open faster on computers with many processor cores.
+
+- RAW files open and export noticeably faster on computers with several processor cores: a
+  step of the RAW development that ran on one core now uses all of them. The picture stays
+  exactly the same.
 
 - 16-bit exports from RAW files are quicker, because the RAW development no longer runs twice
   for the 8-bit and the 16-bit picture.
@@ -12,7 +18,13 @@
   slider on a straightened or rotated picture responds noticeably faster, and so do growing,
   shrinking, bordering and refining a selection and the outline and fill of a selection layer.
 
+- Shadow and glow of a selection layer are drawn on all processor cores, so a picture with such a
+  layer reacts much faster. Glow on objects is quicker as well.
+
 ### Fixes
+
+- WebP pictures get their gallery tile again when the thumbnail cache is switched off or the
+  picture lies in a temporary folder.
 
 - The mouse wheel scrolls the filmstrip in the editor again when the filmstrip sits on the left
   or right.

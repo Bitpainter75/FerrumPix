@@ -14,7 +14,8 @@ Namespace Services
         ''' Masken, Basis- und Anzeigebild im Buendel. Schnell gepackt.</summary>
         Stored
         ''' <summary>Die Datei, die der Nutzer als PNG speichert. Groesse zaehlt, die Zeit
-        ''' zahlt er einmal. Skias Vorgabe.</summary>
+        ''' zahlt er einmal. Alle Filter und zlib 6 wie Skias Vorgabe, bei 8 Bit RGB oder RGBA
+        ''' und bei 16 Bit in Streifen auf allen Kernen gepackt, sonst von Skia.</summary>
         Export
     End Enum
 
@@ -35,7 +36,9 @@ Namespace Services
     '''   ungepackt                      0,28 s   0,05 s   71,8 MB
     ''' Bei Fotos ist die schnelle Stufe also nicht einmal groesser. Bei glatten Flaechen schon: eine
     ''' fast leere Malebene hatte 427 statt 94 KB. Fuer Dateien der Anwendung ist das der richtige
-    ''' Tausch, fuer die Ausgabe des Nutzers nicht.
+    ''' Tausch, fuer die Ausgabe des Nutzers nicht. Die Ausgabe packt deshalb stark, aber bei 8 Bit
+    ''' RGB oder RGBA und bei 16 Bit mit dem eigenen Schreiber in Streifen auf allen Kernen
+    ''' (<see cref="EncodeShallow"/>, <see cref="EncodeDeep"/>).
     '''
     ''' Ungepackt bleibt auf <see cref="TransientUncompressedLimitBytes"/> begrenzt: ein
     ''' MemoryStream endet bei 2 GB, und ein sehr grosses TIFF passte ungepackt nicht mehr hinein.
@@ -68,6 +71,11 @@ Namespace Services
         ''' Zeichenflaeche (SKImage.PeekPixels). Besitz beim Aufrufer.</summary>
         Public Shared Function Encode(pixmap As SKPixmap, purpose As PngPurpose) As SKData
             If pixmap Is Nothing Then Return Nothing
+            ' Die Ausgabe mit 8 Bit packt der eigene Schreiber in Streifen; was er nicht kennt, Skia.
+            If purpose = PngPurpose.Export Then
+                Dim strips = EncodeShallow(pixmap)
+                If strips IsNot Nothing Then Return strips
+            End If
             Return pixmap.Encode(OptionsFor(purpose, CLng(pixmap.RowBytes) * pixmap.Height))
         End Function
 
@@ -115,48 +123,233 @@ Namespace Services
                 Dim hasAlpha = bitmap.AlphaType <> SKAlphaType.Opaque AndAlso
                                StripEncoding.HasTransparency(pixmap, deep:=True)
 
-                Using output As New MemoryStream()
-                    output.Write(PngSignature, 0, PngSignature.Length)
+                Using head As New MemoryStream()
+                    head.Write(PngSignature, 0, PngSignature.Length)
                     Dim header(12) As Byte
                     WriteBigEndian(header, 0, width)
                     WriteBigEndian(header, 4, height)
                     header(8) = 16
                     header(9) = CByte(If(hasAlpha, 6, 2))
-                    WriteChunk(output, "IHDR", header, header.Length)
-
-                    Using idat As New IdatStream(output)
-                        idat.Write(ZlibHeader, 0, ZlibHeader.Length)
-                        Dim adler = 1UI
-                        Dim stripCount = StripEncoding.StripCount(height)
-                        Dim outputs As New StripEncoding.PackedBuffers(
-                            StripEncoding.RowsPerStrip * (width * If(hasAlpha, 8, 6) + 1))
-                        Dim ok = StripEncoding.EncodeInOrder(Of DeepStripBuffers, DeepStrip)(
-                            stripCount,
-                            Function() New DeepStripBuffers(width, hasAlpha),
-                            Function(buffers, strip) PackDeepStrip(pixmap, strip, hasAlpha, strip = stripCount - 1,
-                                                                   buffers, outputs),
-                            Function(strip, packed)
-                                idat.Write(packed.Data.GetBuffer(), 0, packed.Length)
-                                outputs.Return(packed.Data)
-                                adler = StripEncoding.CombineAdler32(adler, packed.Adler, packed.RawLength)
-                                Return True
-                            End Function)
-                        If Not ok Then Return Nothing
-                        ' Die Pruefsumme steht wie alle Zahlen im zlib-Strom mit dem hohen Byte zuerst.
-                        Dim tail = {CByte(adler >> 24), CByte((adler >> 16) And &HFFUI),
-                                    CByte((adler >> 8) And &HFFUI), CByte(adler And &HFFUI)}
-                        idat.Write(tail, 0, 4)
-                    End Using
-                    WriteChunk(output, "IEND", Array.Empty(Of Byte)(), 0)
-                    Return SKData.CreateCopy(output.GetBuffer(), CULng(output.Length))
+                    WriteChunk(head, "IHDR", header, header.Length)
+                    Return EncodeStrips(pixmap, True, hasAlpha, head.ToArray())
                 End Using
             End Using
         End Function
 
-        ''' <summary>Ein gepackter Streifen des PNG mit 16 Bit: die Bytes des Deflate-Teils
+        ''' <summary>Die Ausgabe mit 8 Bit (Bgra8888 oder Rgba8888) als PNG, gepackt in Streifen wie
+        ''' <see cref="EncodeDeep"/>, oder Nothing, wenn der Weg dieses Bild nicht kennt; dann
+        ''' kodiert Skia wie vorher. Besitz beim Aufrufer.
+        '''
+        ''' DIESELBE DATEI WIE SKIA, NUR SCHNELLER. Skia kodierte die Ausgabe mit allen Filtern und
+        ''' zlib 6 auf einem Kern (61 MP: rund 7 s). Alles vor den Bilddaten kommt deshalb aus Skia
+        ''' selbst (<see cref="SkiaHeader"/>): Farbart (RGB fuer deckend, RGBA sonst, nach der
+        ''' Alpha-Art des Bildes und nicht nach seinem Inhalt), sBIT und das Farbprofil (sRGB oder
+        ''' iCCP, ohne Farbraum keines). Die Bildpunkte liest Skia ohne vormultipliziertes Alpha wie
+        ''' bei 16 Bit; ein vormultipliziertes Bild rechnet der Weg selbst zurueck, und zwar genau
+        ''' wie Skias Kodierer (<see cref="BuildUnpremultiplyTable"/>). Die Filterwahl ist dieselbe
+        ''' Heuristik wie bei 16 Bit (kleinste Betragssumme, so waehlt auch libpng mit allen
+        ''' Filtern), gepackt mit <see cref="ShallowDeflateOptions"/>. Was ImageProcessorSave danach
+        ''' in die Datei setzt (eXIf, iTXt, pHYs und so weiter), haengt am Aufbau der Datei und nicht
+        ''' am Kodierer.</summary>
+        Private Shared Function EncodeShallow(pixmap As SKPixmap) As SKData
+            If pixmap.ColorType <> SKColorType.Bgra8888 AndAlso pixmap.ColorType <> SKColorType.Rgba8888 Then Return Nothing
+            If pixmap.AlphaType = SKAlphaType.Unknown Then Return Nothing
+            Dim width = pixmap.Width, height = pixmap.Height
+            If width <= 0 OrElse height <= 0 Then Return Nothing
+            ' Die Datei entsteht in einem MemoryStream, und der endet bei 2 GB; so grosse Bilder
+            ' bleiben bei Skia.
+            If CLng(width * 4L + 1L) * height > ShallowLimitBytes Then Return Nothing
+            Dim hasAlpha As Boolean
+            Dim head = SkiaHeader(pixmap.Info, hasAlpha)
+            If head Is Nothing Then Return Nothing
+            Dim unpremultiply As Byte() = Nothing
+            If pixmap.AlphaType = SKAlphaType.Premul Then
+                unpremultiply = If(pixmap.ColorType = SKColorType.Bgra8888, _unpremultiplyBgra.Value, _unpremultiplyRgba.Value)
+                If unpremultiply Is Nothing Then Return Nothing
+            End If
+            Return EncodeStrips(pixmap, False, hasAlpha, head, unpremultiply)
+        End Function
+
+        Private Shared ReadOnly _unpremultiplyBgra As New Lazy(Of Byte())(Function() BuildUnpremultiplyTable(SKColorType.Bgra8888))
+        Private Shared ReadOnly _unpremultiplyRgba As New Lazy(Of Byte())(Function() BuildUnpremultiplyTable(SKColorType.Rgba8888))
+
+        ''' <summary>Wie Skias PNG-Kodierer einen vormultiplizierten Wert zurueckrechnet, als Tafel
+        ''' (Index Alpha mal 256 plus Wert), oder Nothing.
+        '''
+        ''' NICHT SELBST GERECHNET, SONDERN BEI SKIA ABGELESEN. Skias Kodierer rechnet anders zurueck
+        ''' als SKPixmap.ReadPixels: an 130 der 32 385 gueltigen Paare um eins (etwa Wert 5 bei Alpha
+        ''' 6: 213 gegen 212). Die Tafel entsteht deshalb einmal je Programmlauf aus Skias Kodierung
+        ''' aller 65 536 Paare, gelesen ohne Umrechnung; so gilt sie auch dort, wo Skia auf einer
+        ''' anderen Plattform anders rundet. Liefert das Lesen nicht dasselbe Alpha oder nicht in
+        ''' allen drei Farben denselben Wert zurueck, gibt es keine Tafel, und vormultiplizierte
+        ''' Bilder kodiert weiter Skia. Je Anordnung der Kanaele eine eigene Tafel, weil Skia sie
+        ''' auf eigenen Wegen umsetzt.</summary>
+        Private Shared Function BuildUnpremultiplyTable(colorType As SKColorType) As Byte()
+            Try
+                Dim encoded As Byte()
+                Using probe As New SKBitmap(New SKImageInfo(256, 256, colorType, SKAlphaType.Premul))
+                    Dim source(256 * 256 * 4 - 1) As Byte
+                    For alpha = 0 To 255
+                        For value = 0 To 255
+                            Dim i = (alpha * 256 + value) * 4
+                            ' Alle drei Farben gleich: die Anordnung der Kanaele aendert die Bytes
+                            ' nicht, Alpha steht in beiden zuletzt.
+                            source(i) = CByte(value) : source(i + 1) = CByte(value) : source(i + 2) = CByte(value)
+                            source(i + 3) = CByte(alpha)
+                        Next
+                    Next
+                    If probe.RowBytes <> 256 * 4 Then Return Nothing
+                    Runtime.InteropServices.Marshal.Copy(source, 0, probe.GetPixels(), source.Length)
+                    Using pixels = probe.PeekPixels()
+                        Using data = pixels.Encode(OptionsFor(PngPurpose.Export, source.Length))
+                            If data Is Nothing Then Return Nothing
+                            encoded = data.ToArray()
+                        End Using
+                    End Using
+                End Using
+                Dim stored(256 * 256 * 4 - 1) As Byte
+                Using codec = SKCodec.Create(New MemoryStream(encoded))
+                    If codec Is Nothing Then Return Nothing
+                    Dim info = New SKImageInfo(256, 256, SKColorType.Rgba8888, SKAlphaType.Unpremul)
+                    Dim handle = Runtime.InteropServices.GCHandle.Alloc(stored, Runtime.InteropServices.GCHandleType.Pinned)
+                    Try
+                        If codec.GetPixels(info, handle.AddrOfPinnedObject()) <> SKCodecResult.Success Then Return Nothing
+                    Finally
+                        handle.Free()
+                    End Try
+                End Using
+                Dim table(256 * 256 - 1) As Byte
+                For alpha = 0 To 255
+                    For value = 0 To 255
+                        Dim i = (alpha * 256 + value) * 4
+                        If stored(i + 3) <> alpha OrElse stored(i + 1) <> stored(i) OrElse stored(i + 2) <> stored(i) Then Return Nothing
+                        table(alpha * 256 + value) = stored(i)
+                    Next
+                Next
+                Return table
+            Catch ex As Exception
+                DiagnosticLogService.LogException("PngEncoder.UnpremultiplyTable", ex)
+                Return Nothing
+            End Try
+        End Function
+
+        ''' Rohgroesse, bis zu der die Ausgabe mit 8 Bit in Streifen gepackt wird (1 GB, gut 260 MP).
+        Private Const ShallowLimitBytes As Long = 1024L * 1024L * 1024L
+
+        ''' <summary>Signatur und alle Abschnitte vor den Bilddaten, so wie Skia sie fuer ein Bild
+        ''' dieser Art schreibt, mit Breite und Hoehe des Bildes; dazu, ob Skia Alpha schreibt.
+        ''' Gewonnen aus Skias Kodierung EINES Bildpunkts derselben Farbart, Alpha-Art und desselben
+        ''' Farbraums. Nothing, wenn Skia etwas anderes als 8 Bit RGB oder RGBA ohne Zeilensprung
+        ''' schreiben wuerde; dann bleibt das ganze Bild bei Skia.</summary>
+        Private Shared Function SkiaHeader(info As SKImageInfo, ByRef hasAlpha As Boolean) As Byte()
+            Dim encoded As Byte()
+            Using probe As New SKBitmap(New SKImageInfo(1, 1, info.ColorType, info.AlphaType, info.ColorSpace))
+                If probe.GetPixels() = IntPtr.Zero Then Return Nothing
+                probe.Erase(SKColors.Transparent)
+                Using pixels = probe.PeekPixels()
+                    If pixels Is Nothing Then Return Nothing
+                    Using data = pixels.Encode(OptionsFor(PngPurpose.Export, 4))
+                        If data Is Nothing Then Return Nothing
+                        encoded = data.ToArray()
+                    End Using
+                End Using
+            End Using
+            If encoded.Length < PngSignature.Length Then Return Nothing
+            For i = 0 To PngSignature.Length - 1
+                If encoded(i) <> PngSignature(i) Then Return Nothing
+            Next
+            Using head As New MemoryStream()
+                head.Write(PngSignature, 0, PngSignature.Length)
+                Dim offset = PngSignature.Length
+                Dim sawHeader = False
+                Do
+                    If offset + 12 > encoded.Length Then Return Nothing
+                    Dim length = (CInt(encoded(offset)) << 24) Or (CInt(encoded(offset + 1)) << 16) Or
+                                 (CInt(encoded(offset + 2)) << 8) Or CInt(encoded(offset + 3))
+                    If length < 0 OrElse offset + 12 + length > encoded.Length Then Return Nothing
+                    Dim kind = Text.Encoding.ASCII.GetString(encoded, offset + 4, 4)
+                    If kind = "IDAT" Then Exit Do
+                    If kind = "IHDR" Then
+                        If sawHeader OrElse length <> 13 Then Return Nothing
+                        ' Tiefe 8, Farbart 2 oder 6, Packart, Filterart und Zeilensprung 0.
+                        Dim colorType = encoded(offset + 17)
+                        If encoded(offset + 16) <> 8 OrElse (colorType <> 2 AndAlso colorType <> 6) OrElse
+                           encoded(offset + 18) <> 0 OrElse encoded(offset + 19) <> 0 OrElse encoded(offset + 20) <> 0 Then Return Nothing
+                        hasAlpha = colorType = 6
+                        Dim header(12) As Byte
+                        Array.Copy(encoded, offset + 8, header, 0, 13)
+                        WriteBigEndian(header, 0, info.Width)
+                        WriteBigEndian(header, 4, info.Height)
+                        WriteChunk(head, "IHDR", header, header.Length)
+                        sawHeader = True
+                    ElseIf Not sawHeader Then
+                        Return Nothing
+                    Else
+                        ' Alles Weitere (sBIT, sRGB, iCCP, ...) Byte fuer Byte, samt Pruefsumme.
+                        head.Write(encoded, offset, 12 + length)
+                    End If
+                    offset += 12 + length
+                Loop
+                If Not sawHeader Then Return Nothing
+                Return head.ToArray()
+            End Using
+        End Function
+
+        ''' <summary>Schreibt das PNG: <paramref name="head"/> (Signatur und die Abschnitte vor den
+        ''' Bilddaten), dann die Bilddaten in Streifen gefiltert und gepackt, dann IEND. Mit
+        ''' <paramref name="deep"/> 16 Bit je Wert, sonst 8. Mit <paramref name="unpremultiply"/>
+        ''' werden die Werte vormultipliziert gelesen und ueber diese Tafel zurueckgerechnet.
+        '''
+        ''' GEPACKT WIRD IN STREIFEN, PARALLEL (<see cref="StripEncoding"/>), und doch entsteht EIN
+        ''' gueltiger zlib-Strom: der Kopf von hier, dann je Streifen ein roher Deflate-Teil, der
+        ''' mit einem Sync-Flush auf einer Bytegrenze endet (nur der letzte schliesst mit dem
+        ''' Endblock), am Schluss die Adler-32 ueber alles, zusammengesetzt aus den Summen der
+        ''' Streifen. Ein Leser sieht davon nichts; die Teile verweisen nur nicht ueber ihre Grenze
+        ''' zurueck. Die Filterwahl je Zeile haengt nur an der Zeile und der davor, und die liest
+        ''' jeder Streifen selbst mit: die gefilterten Zeilen sind dieselben wie in einem Durchgang.</summary>
+        Private Shared Function EncodeStrips(pixmap As SKPixmap, deep As Boolean, hasAlpha As Boolean,
+                                             head As Byte(), Optional unpremultiply As Byte() = Nothing) As SKData
+            Dim width = pixmap.Width, height = pixmap.Height
+            Using output As New MemoryStream()
+                output.Write(head, 0, head.Length)
+                Using idat As New IdatStream(output)
+                    Dim zlibHeader = If(deep, ZlibHeaderDefault, ZlibHeaderStrong)
+                    idat.Write(zlibHeader, 0, zlibHeader.Length)
+                    Dim adler = 1UI
+                    Dim stripCount = StripEncoding.StripCount(height)
+                    Dim outputs As New StripEncoding.PackedBuffers(
+                        StripEncoding.RowsPerStrip * (width * PngPixelBytes(deep, hasAlpha) + 1))
+                    Dim ok = StripEncoding.EncodeInOrder(Of StripBuffers, PackedStrip)(
+                        stripCount,
+                        Function() New StripBuffers(width, deep, hasAlpha),
+                        Function(buffers, strip) PackStrip(pixmap, strip, deep, hasAlpha, strip = stripCount - 1,
+                                                           unpremultiply, buffers, outputs),
+                        Function(strip, packed)
+                            idat.Write(packed.Data.GetBuffer(), 0, packed.Length)
+                            outputs.Return(packed.Data)
+                            adler = StripEncoding.CombineAdler32(adler, packed.Adler, packed.RawLength)
+                            Return True
+                        End Function)
+                    If Not ok Then Return Nothing
+                    ' Die Pruefsumme steht wie alle Zahlen im zlib-Strom mit dem hohen Byte zuerst.
+                    Dim tail = {CByte(adler >> 24), CByte((adler >> 16) And &HFFUI),
+                                CByte((adler >> 8) And &HFFUI), CByte(adler And &HFFUI)}
+                    idat.Write(tail, 0, 4)
+                End Using
+                WriteChunk(output, "IEND", Array.Empty(Of Byte)(), 0)
+                Return SKData.CreateCopy(output.GetBuffer(), CULng(output.Length))
+            End Using
+        End Function
+
+        ''' Bytes je Bildpunkt im PNG: drei oder vier Werte zu einem oder zwei Byte.
+        Private Shared Function PngPixelBytes(deep As Boolean, hasAlpha As Boolean) As Integer
+            Return If(hasAlpha, 4, 3) * If(deep, 2, 1)
+        End Function
+
+        ''' <summary>Ein gepackter Streifen des PNG: die Bytes des Deflate-Teils
         ''' (<see cref="Length"/> gilt, der Puffer kann laenger sein), die Adler-32 der gefilterten
         ''' Zeilen und deren Laenge.</summary>
-        Private NotInheritable Class DeepStrip
+        Private NotInheritable Class PackedStrip
             Public Data As MemoryStream
             Public Length As Integer
             Public Adler As UInteger
@@ -164,31 +357,58 @@ Namespace Services
         End Class
 
         ''' Kopf des zlib-Stroms: Deflate mit 32-KB-Fenster, Vorgabestufe, ohne Woerterbuch.
-        Private Shared ReadOnly ZlibHeader As Byte() = {&H78, &H9C}
+        Private Shared ReadOnly ZlibHeaderDefault As Byte() = {&H78, &H9C}
+        ''' Derselbe Kopf mit der Angabe "starke Stufe" (ab 7, <see cref="ShallowDeflateOptions"/>).
+        ''' Die Angabe ist nur Auskunft, entpackt wird beides gleich.
+        Private Shared ReadOnly ZlibHeaderStrong As Byte() = {&H78, &HDA}
+
+        ''' <summary>Die Packstufe der Ausgabe mit 8 Bit: zlib 7 fuer gefilterte Daten. Skia packt
+        ''' mit zlib 6 (die zlib von libpng, gefilterte Zeilen gehen dort mit der Strategie fuer
+        ''' gefilterte Daten hinein); die zlib von .NET packt auf Stufe 6 gemessen gut 5 Prozent
+        ''' groesser und laesst dort die Strategie unbeachtet. Mit Stufe 7 und dieser Strategie ist
+        ''' die Datei so gross wie die von Skia (61 MP: 89,1 gegen 89,2 MB) und das Packen auf
+        ''' allen Kernen kostet 0,54 statt 0,37 s; Stufe 9 kostete doppelt so viel und packte nicht
+        ''' kleiner. Die 16 Bit bleiben bei der Vorgabestufe, dort war die Groesse schon gleich.</summary>
+        Private Shared Function ShallowDeflateOptions() As Compression.ZLibCompressionOptions
+            Return New Compression.ZLibCompressionOptions With {
+                .CompressionLevel = 7,
+                .CompressionStrategy = Compression.ZLibCompressionStrategy.Filtered}
+        End Function
 
         ''' <summary>Filtert und packt einen Streifen von <see cref="StripEncoding.RowsPerStrip"/>
         ''' Zeilen. Die Zeile vor dem Streifen wird mitgelesen, weil die Filter sie brauchen; vor der
         ''' ersten Zeile des Bildes steht eine Zeile aus Nullen, wie es PNG vorsieht. Gerechnet wird
         ''' in den Puffern des Kerns (<paramref name="buffers"/>), gepackt in einen Puffer aus
         ''' <paramref name="outputs"/>. Nothing, wenn Skia nicht lesen kann.</summary>
-        Private Shared Function PackDeepStrip(pixmap As SKPixmap, strip As Integer, hasAlpha As Boolean,
-                                              isLast As Boolean, buffers As DeepStripBuffers,
-                                              outputs As StripEncoding.PackedBuffers) As DeepStrip
+        Private Shared Function PackStrip(pixmap As SKPixmap, strip As Integer, deep As Boolean, hasAlpha As Boolean,
+                                          isLast As Boolean, unpremultiply As Byte(), buffers As StripBuffers,
+                                          outputs As StripEncoding.PackedBuffers) As PackedStrip
             Dim width = pixmap.Width
             Dim firstRow = strip * StripEncoding.RowsPerStrip
             Dim rows = Math.Min(StripEncoding.RowsPerStrip, pixmap.Height - firstRow)
             Dim readFrom = If(firstRow > 0, firstRow - 1, 0)
             Dim readRows = rows + (firstRow - readFrom)
-            Dim sourceRowBytes = width * 8
-            Dim pixelBytes = If(hasAlpha, 8, 6)
+            Dim sourceRowBytes = width * If(deep, 8, 4)
+            Dim pixelBytes = PngPixelBytes(deep, hasAlpha)
             Dim rowBytes = width * pixelBytes
             Dim rgba = buffers.Rgba
-            If Not StripEncoding.ReadRows(pixmap, readFrom, readRows, True, rgba) Then Return Nothing
+            If unpremultiply Is Nothing Then
+                If Not StripEncoding.ReadRows(pixmap, readFrom, readRows, deep, rgba) Then Return Nothing
+            Else
+                If Not StripEncoding.ReadRows(pixmap, readFrom, readRows, deep, rgba, SKAlphaType.Premul) Then Return Nothing
+                Dim stopAt = readRows * sourceRowBytes
+                For i = 0 To stopAt - 1 Step 4
+                    Dim row = CInt(rgba(i + 3)) << 8
+                    rgba(i) = unpremultiply(row Or rgba(i))
+                    rgba(i + 1) = unpremultiply(row Or rgba(i + 1))
+                    rgba(i + 2) = unpremultiply(row Or rgba(i + 2))
+                Next
+            End If
             Dim current = buffers.Current
             Dim previous = buffers.Previous
             Dim candidates = buffers.Candidates
             If firstRow > 0 Then
-                ToBigEndianRow(rgba, 0, previous, width, hasAlpha)
+                ToPngRow(rgba, 0, previous, width, deep, hasAlpha)
             Else
                 Array.Clear(previous)
             End If
@@ -196,9 +416,11 @@ Namespace Services
             Dim deflated = outputs.Rent()
             Dim adler = 1UI
             Dim length As Long
-            Using deflate As New Compression.DeflateStream(deflated, Compression.CompressionLevel.Optimal, leaveOpen:=True)
+            Using deflate = If(deep,
+                               New Compression.DeflateStream(deflated, Compression.CompressionLevel.Optimal, leaveOpen:=True),
+                               New Compression.DeflateStream(deflated, ShallowDeflateOptions(), leaveOpen:=True))
                 For row = 0 To rows - 1
-                    ToBigEndianRow(rgba, (row + firstRow - readFrom) * sourceRowBytes, current, width, hasAlpha)
+                    ToPngRow(rgba, (row + firstRow - readFrom) * sourceRowBytes, current, width, deep, hasAlpha)
                     Dim best = FilterRow(current, previous, pixelBytes, candidates)
                     deflate.Write(candidates(best), 0, rowBytes + 1)
                     adler = StripEncoding.UpdateAdler32(adler, candidates(best), 0, rowBytes + 1)
@@ -213,23 +435,23 @@ Namespace Services
                 length = deflated.Length
             End Using
             If isLast Then length = deflated.Length
-            Return New DeepStrip With {.Data = deflated, .Length = CInt(length), .Adler = adler,
-                                       .RawLength = CLng(rows) * (rowBytes + 1)}
+            Return New PackedStrip With {.Data = deflated, .Length = CInt(length), .Adler = adler,
+                                         .RawLength = CLng(rows) * (rowBytes + 1)}
         End Function
 
-        ''' <summary>Die Arbeitspuffer eines Kerns fuer <see cref="PackDeepStrip"/>, einmal angelegt
+        ''' <summary>Die Arbeitspuffer eines Kerns fuer <see cref="PackStrip"/>, einmal angelegt
         ''' und fuer alle seine Streifen benutzt: ein Streifen RGBA samt der Zeile davor, die
         ''' aktuelle und die vorige Zeile in der Anordnung des PNG und die fuenf gefilterten Fassungen
         ''' einer Zeile, je mit ihrem Filterbyte vorweg.</summary>
-        Private NotInheritable Class DeepStripBuffers
+        Private NotInheritable Class StripBuffers
             Public ReadOnly Rgba As Byte()
             Public ReadOnly Current As Byte()
             Public ReadOnly Previous As Byte()
             Public ReadOnly Candidates As Byte()()
 
-            Public Sub New(width As Integer, hasAlpha As Boolean)
-                Dim rowBytes = width * If(hasAlpha, 8, 6)
-                Rgba = New Byte((StripEncoding.RowsPerStrip + 1) * width * 8 - 1) {}
+            Public Sub New(width As Integer, deep As Boolean, hasAlpha As Boolean)
+                Dim rowBytes = width * PngPixelBytes(deep, hasAlpha)
+                Rgba = New Byte((StripEncoding.RowsPerStrip + 1) * width * If(deep, 8, 4) - 1) {}
                 Current = New Byte(rowBytes - 1) {}
                 Previous = New Byte(rowBytes - 1) {}
                 Candidates = New Byte(4)() {}
@@ -239,6 +461,25 @@ Namespace Services
                 Next
             End Sub
         End Class
+
+        ''' <summary>Eine gelesene Zeile (RGBA) in der Anordnung des PNG, ohne Alpha nur die drei
+        ''' Farbwerte. Mit 16 Bit kommt das niedrige Byte zuerst und geht mit dem hohen zuerst
+        ''' hinaus.</summary>
+        Private Shared Sub ToPngRow(rgba As Byte(), offset As Integer, current As Byte(), width As Integer,
+                                    deep As Boolean, hasAlpha As Boolean)
+            If deep Then
+                ToBigEndianRow(rgba, offset, current, width, hasAlpha)
+            ElseIf hasAlpha Then
+                Buffer.BlockCopy(rgba, offset, current, 0, width * 4)
+            Else
+                Dim t = 0
+                Dim stopAt = offset + width * 4
+                For s = offset To stopAt - 1 Step 4
+                    current(t) = rgba(s) : current(t + 1) = rgba(s + 1) : current(t + 2) = rgba(s + 2)
+                    t += 3
+                Next
+            End If
+        End Sub
 
         ''' <summary>Eine gelesene Zeile (RGBA mit 16 Bit, niedriges Byte zuerst) in der
         ''' Anordnung des PNG: das hohe Byte zuerst, ohne Alpha nur die drei Farbwerte.</summary>

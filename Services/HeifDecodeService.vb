@@ -92,6 +92,13 @@ Namespace Services
         Private Delegate Function GetItemIdFn(handle As IntPtr) As UInteger
         Private Delegate Function GetTransformPropertiesFn(ctx As IntPtr, itemId As UInteger, outList As UInteger(), count As Integer) As Integer
         Private Delegate Function GetPropertyIntFn(ctx As IntPtr, itemId As UInteger, propertyId As UInteger) As Integer
+        ''' Die Faeden INNERHALB eines Decodes (siehe <see cref="NewDecodingContext"/> und
+        ''' <see cref="DecodeImageThreaded"/>). Die Rasterabfrage schreibt in eine Struktur, die der
+        ''' Aufrufer anlegt (<see cref="CodecThreadsFor"/>).
+        Private Delegate Sub SetMaxDecodingThreadsFn(ctx As IntPtr, maxThreads As Integer)
+        Private Delegate Function DecodingOptionsAllocFn() As IntPtr
+        Private Delegate Sub DecodingOptionsFreeFn(options As IntPtr)
+        Private Delegate Function GetImageTilingFn(handle As IntPtr, processTransformations As Integer, tiling As IntPtr) As HeifError
 
         ''' <summary>Die Farbangabe eines HEIF als ZAHLEN statt als Profildatei.
         '''
@@ -193,6 +200,13 @@ Namespace Services
             Public LumaBits As HandleIntFn
             Public HasAlpha As HandleIntFn
             Public BitsRange As GetIntFn
+            ''' Ebenfalls OPTIONAL, fuer die Faeden eines Decodes: ohne die erste dekodiert libheif
+            ''' die Kacheln eines Rasters mit seiner Vorgabe (vier Faeden), ohne die drei anderen
+            ''' laeuft der Codec mit seiner eigenen Vorgabe. Die Bildpunkte sind dieselben.
+            Public SetMaxDecodingThreads As SetMaxDecodingThreadsFn
+            Public DecodingOptionsAlloc As DecodingOptionsAllocFn
+            Public DecodingOptionsFree As DecodingOptionsFreeFn
+            Public ImageTiling As GetImageTilingFn
         End Class
 
         Private Shared _api As LibheifApi
@@ -410,6 +424,16 @@ Namespace Services
                 api.HasAlpha = Nothing
                 api.BitsRange = Nothing
             End If
+            ' Optional: fehlen sie, bleibt an ihrer Stelle die Vorgabe der Bibliothek.
+            api.SetMaxDecodingThreads = TryGetExport(Of SetMaxDecodingThreadsFn)(handle, "heif_context_set_max_decoding_threads")
+            api.DecodingOptionsAlloc = TryGetExport(Of DecodingOptionsAllocFn)(handle, "heif_decoding_options_alloc")
+            api.DecodingOptionsFree = TryGetExport(Of DecodingOptionsFreeFn)(handle, "heif_decoding_options_free")
+            api.ImageTiling = TryGetExport(Of GetImageTilingFn)(handle, "heif_image_handle_get_image_tiling")
+            If api.DecodingOptionsAlloc Is Nothing OrElse api.DecodingOptionsFree Is Nothing OrElse api.ImageTiling Is Nothing Then
+                api.DecodingOptionsAlloc = Nothing
+                api.DecodingOptionsFree = Nothing
+                api.ImageTiling = Nothing
+            End If
             Return api
         End Function
 
@@ -481,12 +505,96 @@ Namespace Services
             End Using
         End Function
 
+        ''' <summary>Ein neuer Kontext, dessen Raster (die Kacheln eines Telefonfotos) auf einem Faden
+        ''' je Kern dekodiert wird statt auf den vier der Vorgabe. Gemessen (24 Kerne, 12 MP mit 48
+        ''' Kacheln): 185 auf 137 ms und 127 auf 82 ms, Bildpunkte Byte fuer Byte gleich.</summary>
+        Private Shared Function NewDecodingContext(api As LibheifApi) As IntPtr
+            Dim ctx = api.ContextAlloc()
+            If ctx <> IntPtr.Zero AndAlso api.SetMaxDecodingThreads IsNot Nothing Then
+                api.SetMaxDecodingThreads(ctx, DecodingThreads())
+            End If
+            Return ctx
+        End Function
+
+        ''' <summary>Faeden fuer EINEN Decode: einer je Kern. Die Regel "nur ein Decode gleichzeitig"
+        ''' bleibt davon unberuehrt (DecodeGate und das Schloss oben); die Faeden arbeiten alle an
+        ''' demselben Bild.</summary>
+        Private Shared Function DecodingThreads() As Integer
+            Return Math.Max(1, Environment.ProcessorCount)
+        End Function
+
+        ''' Ab hier lohnen Faeden im Codec: darunter kostet das Anlegen mehr, als sie bringen.
+        Private Const CodecThreadsMinPixels As Long = 1000000L
+
+        ''' <summary>Faeden fuer den Codec dieses Bilds, oder 0 fuer die Vorgabe des Codecs (HEVC:
+        ''' einer, AV1: alle Kerne).
+        '''
+        ''' NUR FUER EIN BILD AUS EINEM STUECK. Ein Raster bekommt schon einen Faden je Kachel, und
+        ''' libheif legt fuer JEDE Kachel einen eigenen Dekoder mit eigenen Faeden an; mit beidem
+        ''' zusammen wurde ein 12-MP-Foto mit 48 Kacheln langsamer (135 auf 156 ms). Ein Bild aus
+        ''' einem Stueck dagegen hatte vorher nur einen Faden: 51 MP 802 auf 382 ms, 1,7 MP 28 auf
+        ''' 14 ms. Kennt die libheif die Abfrage des Rasters nicht, bleibt die Vorgabe.</summary>
+        Private Shared Function CodecThreadsFor(api As LibheifApi, handle As IntPtr) As Integer
+            If api.ImageTiling Is Nothing Then Return 0
+            Dim pixels = CLng(api.HandleGetWidth(handle)) * CLng(api.HandleGetHeight(handle))
+            If pixels < CodecThreadsMinPixels Then Return 0
+            ' heif_image_tiling legt der Aufrufer an; der Puffer ist reichlich groesser als die
+            ' Struktur (72 Byte in 1.23.7), falls eine spaetere Fassung hinten anhaengt.
+            Dim tiling = Marshal.AllocHGlobal(TilingBufferBytes)
+            Try
+                For i = 0 To TilingBufferBytes - 1 Step 4
+                    Marshal.WriteInt32(tiling, i, 0)
+                Next
+                If api.ImageTiling(handle, 0, tiling).Code <> 0 Then Return 0
+                Dim columns = Marshal.ReadInt32(tiling, TilingColumnsOffset)
+                Dim rows = Marshal.ReadInt32(tiling, TilingRowsOffset)
+                If columns <> 1 OrElse rows <> 1 Then Return 0
+                Return DecodingThreads()
+            Finally
+                Marshal.FreeHGlobal(tiling)
+            End Try
+        End Function
+
+        ''' heif_image_tiling: int version, dann uint32 num_columns und num_rows.
+        Private Const TilingBufferBytes As Integer = 512
+        Private Const TilingColumnsOffset As Integer = 4
+        Private Const TilingRowsOffset As Integer = 8
+
+        ''' Lage von num_codec_threads in heif_decoding_options: ein int ab Fassung 8 der Struktur
+        ''' (libheif 1.21.0 brachte ignore_sequence_editlist, output_image_nclx_profile,
+        ''' num_library_threads und num_codec_threads zusammen). Belegt mit offsetof am Header der
+        ''' mitgelieferten 1.23.7 unter 64 Bit; bis dorthin sind alle Felder Zeiger, Bytes, int und
+        ''' eine Struktur aus Byte und drei Aufzaehlungen, die Lage ist also unter Linux, Windows
+        ''' und macOS dieselbe. Spaetere Fassungen haengen nur hinten an.
+        Private Const OptionsCodecThreadsOffset As Integer = 108
+        Private Const OptionsCodecThreadsVersion As Byte = 8
+
+        ''' <summary>heif_decode_image mit Optionen aus heif_decoding_options_alloc statt ohne: die
+        ''' Vorgaben der Bibliothek, nur mit Faeden fuer den Codec (<see cref="CodecThreadsFor"/>),
+        ''' wenn die Struktur das Feld kennt. libheif fuellt dieselben Vorgaben selbst ein, wenn
+        ''' keine Optionen kommen; die Bildpunkte sind also dieselben. Fehlen die Einstiege, geht es
+        ''' ohne Optionen wie bisher.</summary>
+        Private Shared Function DecodeImageThreaded(api As LibheifApi, handle As IntPtr, ByRef img As IntPtr,
+                                                    colorspace As Integer, chroma As Integer) As HeifError
+            Dim codecThreads = If(api.DecodingOptionsAlloc Is Nothing OrElse IntPtr.Size <> 8, 0, CodecThreadsFor(api, handle))
+            If codecThreads <= 0 Then Return api.DecodeImage(handle, img, colorspace, chroma, IntPtr.Zero)
+            Dim options = api.DecodingOptionsAlloc()
+            Try
+                If options <> IntPtr.Zero AndAlso Marshal.ReadByte(options) >= OptionsCodecThreadsVersion Then
+                    Marshal.WriteInt32(options, OptionsCodecThreadsOffset, codecThreads)
+                End If
+                Return api.DecodeImage(handle, img, colorspace, chroma, options)
+            Finally
+                If options <> IntPtr.Zero Then api.DecodingOptionsFree(options)
+            End Try
+        End Function
+
         Private Shared Function DecodeCore(api As LibheifApi, path As String) As SKBitmap
             Dim ctx As IntPtr = IntPtr.Zero
             Dim handle As IntPtr = IntPtr.Zero
             Dim pathPtr As IntPtr = IntPtr.Zero
             Try
-                ctx = api.ContextAlloc()
+                ctx = NewDecodingContext(api)
                 If ctx = IntPtr.Zero Then Return Nothing
 
                 pathPtr = StringToUtf8(path)
@@ -531,7 +639,7 @@ Namespace Services
             Dim thumb As IntPtr = IntPtr.Zero
             Dim pathPtr As IntPtr = IntPtr.Zero
             Try
-                ctx = api.ContextAlloc()
+                ctx = NewDecodingContext(api)
                 If ctx = IntPtr.Zero Then Return Nothing
                 pathPtr = StringToUtf8(path)
                 If api.ReadFromFile(ctx, pathPtr, IntPtr.Zero).Code <> 0 Then Return Nothing
@@ -709,7 +817,7 @@ Namespace Services
             Dim handle As IntPtr = IntPtr.Zero
             Dim pathPtr As IntPtr = IntPtr.Zero
             Try
-                ctx = api.ContextAlloc()
+                ctx = NewDecodingContext(api)
                 If ctx = IntPtr.Zero Then Return Nothing
                 pathPtr = StringToUtf8(path)
                 If api.ReadFromFile(ctx, pathPtr, IntPtr.Zero).Code <> 0 Then Return Nothing
@@ -738,7 +846,7 @@ Namespace Services
         Private Shared Function DecodeDeepHandle(api As LibheifApi, handle As IntPtr, profileHandle As IntPtr, opaque As Boolean) As SKBitmap
             Dim img As IntPtr = IntPtr.Zero
             Try
-                If api.DecodeImage(handle, img, ColorspaceRgb, ChromaInterleavedRrggbbaaLe, IntPtr.Zero).Code <> 0 OrElse img = IntPtr.Zero Then Return Nothing
+                If DecodeImageThreaded(api, handle, img, ColorspaceRgb, ChromaInterleavedRrggbbaaLe).Code <> 0 OrElse img = IntPtr.Zero Then Return Nothing
 
                 Dim width = api.ImageGetWidth(img, ChannelInterleaved)
                 Dim height = api.ImageGetHeight(img, ChannelInterleaved)
@@ -848,7 +956,7 @@ Namespace Services
             Try
                 ' IMMER mit Alphakanal dekodieren: das kostet bei undurchsichtigen Bildern nur den
                 ' vierten Kanal, erspart aber einen zweiten Zweig - und HEIC kann Transparenz.
-                If api.DecodeImage(handle, img, ColorspaceRgb, ChromaInterleavedRgba, IntPtr.Zero).Code <> 0 OrElse img = IntPtr.Zero Then Return Nothing
+                If DecodeImageThreaded(api, handle, img, ColorspaceRgb, ChromaInterleavedRgba).Code <> 0 OrElse img = IntPtr.Zero Then Return Nothing
 
                 Dim width = api.ImageGetWidth(img, ChannelInterleaved)
                 Dim height = api.ImageGetHeight(img, ChannelInterleaved)

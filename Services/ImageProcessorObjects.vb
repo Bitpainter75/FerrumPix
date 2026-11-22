@@ -1928,10 +1928,19 @@ Namespace Services
         Friend Shared Sub DrawInnerSilhouetteEffects(canvas As SKCanvas, mask As SKBitmap,
                                                      maskLeft As Integer, maskTop As Integer,
                                                      maskWidth As Integer, maskHeight As Integer,
-                                                     rect As SKRect, annotation As ImageAnnotation, alphaFactor As Single)
+                                                     rect As SKRect, annotation As ImageAnnotation, alphaFactor As Single,
+                                                     Optional target As SKBitmap = Nothing)
             Dim innerShadow = annotation.ShadowEnabled AndAlso ImageAnnotation.EffectDrawsInside(annotation.ShadowPlacement)
             Dim innerGlow = annotation.GlowEnabled AndAlso ImageAnnotation.EffectDrawsInside(annotation.GlowPlacement)
             If Not innerShadow AndAlso Not innerGlow Then Return
+            ' In Bändern nur, wenn die Maske genau die Bitmap unter der Leinwand deckt und die Leinwand
+            ' nichts verschiebt (die Auswahlebene, CompositeLayerEffects); siehe DrawClippedToSilhouette.
+            Dim banded = target IsNot Nothing AndAlso Not SerialGeometryForChecks AndAlso
+                         maskLeft = 0 AndAlso maskTop = 0 AndAlso canvas.TotalMatrix.IsIdentity AndAlso
+                         canvas.DeviceClipBounds = New SKRectI(0, 0, maskWidth, maskHeight) AndAlso
+                         target.Width = maskWidth AndAlso target.Height = maskHeight AndAlso
+                         CLng(maskWidth) * maskHeight >= BandedEffectsMinPixels
+            If Not banded Then target = Nothing
 
             Dim objSize = Math.Max(1.0F, Math.Min(rect.Width, rect.Height))
             Dim glowReach = objSize * Clamp(annotation.GlowBlur, 0, 100) / 100.0F * 1.5F
@@ -1943,12 +1952,24 @@ Namespace Services
 
             ' Das Gegenstueck: ueberall deckend, wo die Silhouette es nicht ist.
             Using inverse = New SKBitmap(maskWidth, maskHeight, SKColorType.Rgba8888, SKAlphaType.Premul)
-                Using inverseCanvas = New SKCanvas(inverse)
-                    inverseCanvas.Clear(SKColors.Black)
-                    Using knockOut = New SKPaint With {.BlendMode = SKBlendMode.DstOut}
-                        inverseCanvas.DrawBitmap(mask, 0, 0, knockOut)
+                If banded Then
+                    Using maskImage = ShareBitmapPixels(mask)
+                        DrawInRowBands(inverse, BandedEffectsRows,
+                                       Sub(inverseCanvas)
+                                           inverseCanvas.Clear(SKColors.Black)
+                                           Using knockOut = New SKPaint With {.BlendMode = SKBlendMode.DstOut}
+                                               inverseCanvas.DrawImage(maskImage, 0, 0, knockOut)
+                                           End Using
+                                       End Sub)
                     End Using
-                End Using
+                Else
+                    Using inverseCanvas = New SKCanvas(inverse)
+                        inverseCanvas.Clear(SKColors.Black)
+                        Using knockOut = New SKPaint With {.BlendMode = SKBlendMode.DstOut}
+                            inverseCanvas.DrawBitmap(mask, 0, 0, knockOut)
+                        End Using
+                    End Using
+                End If
 
                 If innerGlow Then
                     Dim glowColor = ApplyAlpha(ParseColor(annotation.GlowColor, SKColors.Yellow), alphaFactor * Clamp(annotation.GlowStrength, 0, 100) / 100.0F)
@@ -1972,25 +1993,7 @@ Namespace Services
                         Using glowSmall = New SKBitmap(glowW, glowH, SKColorType.Rgba8888, SKAlphaType.Premul)
                             Using glowCanvas = New SKCanvas(glowSmall)
                                 glowCanvas.Clear(SKColors.Transparent)
-                                Using glowColorFilter = SKColorFilter.CreateBlendMode(glowColor, SKBlendMode.SrcIn)
-                                    Using coloredFilter = SKImageFilter.CreateColorFilter(glowColorFilter)
-                                        Dim spreadFilter As SKImageFilter = coloredFilter
-                                        Dim dilatedOwned As SKImageFilter = Nothing
-                                        Try
-                                            If scaledDilate > 0 Then
-                                                dilatedOwned = SKImageFilter.CreateDilate(scaledDilate, scaledDilate, coloredFilter)
-                                                spreadFilter = dilatedOwned
-                                            End If
-                                            Using glowImageFilter = SKImageFilter.CreateBlur(scaledSigma, scaledSigma, spreadFilter)
-                                                Using paint = New SKPaint With {.ImageFilter = glowImageFilter, .IsAntialias = True}
-                                                    glowCanvas.DrawBitmap(inverseSmall, 0, 0, paint)
-                                                End Using
-                                            End Using
-                                        Finally
-                                            dilatedOwned?.Dispose()
-                                        End Try
-                                    End Using
-                                End Using
+                                DrawSpreadGlow(glowCanvas, inverseSmall, glowColor, scaledDilate, scaledSigma, antialias:=True)
                             End Using
                             DrawClippedToSilhouette(canvas, mask, maskLeft, maskTop, maskWidth, maskHeight,
                                                     Sub(layerCanvas)
@@ -1998,7 +2001,7 @@ Namespace Services
                                                                           New SKRect(0, 0, glowW, glowH),
                                                                           New SKRect(0, 0, maskWidth, maskHeight),
                                                                           SamplingHigh, Nothing)
-                                                    End Sub)
+                                                    End Sub, target, BandedEffectsRows)
                         End Using
                     End Using
                 End If
@@ -2006,28 +2009,68 @@ Namespace Services
                 If innerShadow Then
                     Dim shadowColor = ApplyAlpha(ParseColor(annotation.ShadowColor, New SKColor(0, 0, 0, 128)), alphaFactor * Clamp(annotation.ShadowStrength, 0, 100) / 100.0F)
                     Dim shadowSigma = Math.Max(0.1F, shadowBlurPx)
-                    DrawClippedToSilhouette(canvas, mask, maskLeft, maskTop, maskWidth, maskHeight,
-                                            Sub(layerCanvas)
-                                                Using shadowColorFilter = SKColorFilter.CreateBlendMode(shadowColor, SKBlendMode.SrcIn)
-                                                    Using shadowImageFilter = SKImageFilter.CreateBlur(shadowSigma, shadowSigma)
-                                                        Using paint = New SKPaint With {.ColorFilter = shadowColorFilter, .ImageFilter = shadowImageFilter}
-                                                            layerCanvas.DrawBitmap(inverse, offsetX, offsetY, paint)
+                    ' Bänder lesen das Gegenstück über seinen Punkten statt je eine Kopie anzulegen.
+                    Using inverseImage = If(banded, ShareBitmapPixels(inverse), Nothing)
+                        DrawClippedToSilhouette(canvas, mask, maskLeft, maskTop, maskWidth, maskHeight,
+                                                Sub(layerCanvas)
+                                                    Using shadowColorFilter = SKColorFilter.CreateBlendMode(shadowColor, SKBlendMode.SrcIn)
+                                                        Using shadowImageFilter = SKImageFilter.CreateBlur(shadowSigma, shadowSigma)
+                                                            Using paint = New SKPaint With {.ColorFilter = shadowColorFilter, .ImageFilter = shadowImageFilter}
+                                                                If inverseImage Is Nothing Then
+                                                                    layerCanvas.DrawBitmap(inverse, offsetX, offsetY, paint)
+                                                                Else
+                                                                    layerCanvas.DrawImage(inverseImage, offsetX, offsetY, paint)
+                                                                End If
+                                                            End Using
                                                         End Using
                                                     End Using
-                                                End Using
-                                            End Sub)
+                                                End Sub, target,
+                                                Math.Max(BandedEffectsRows, 4 * CInt(Math.Ceiling(3.0F * shadowSigma))))
+                    End Using
                 End If
             End Using
         End Sub
 
         ''' <summary>Zeichnet <paramref name="draw"/> in eine eigene Ebene der Maskengroesse, behaelt
         ''' davon nur, was in der Silhouette liegt (DstIn mit ihrer Deckung), und legt das Ergebnis
-        ''' an die Stelle der Maske.</summary>
+        ''' an die Stelle der Maske.
+        '''
+        ''' Mit <paramref name="target"/> (der Bitmap unter <paramref name="canvas"/>, Maske bei 0/0,
+        ''' Leinwand ohne Matrix und Ausschnitt, geprüft in DrawInnerSilhouetteEffects) läuft jede
+        ''' Stufe Band für Band auf mehreren Kernen (DrawInRowBands): Zeichnung in die Ebene in
+        ''' Bändern von <paramref name="rows"/> Zeilen, Beschneiden und Mischen in schmalen Bändern.
+        ''' Dieselben Zeichnungen wie am Stück, bytegleich (Prüfung "Effekte: Schatten und Glühen in
+        ''' Bändern bytegleich zum Lauf am Stück").</summary>
         Private Shared Sub DrawClippedToSilhouette(canvas As SKCanvas, mask As SKBitmap,
                                                    maskLeft As Integer, maskTop As Integer,
                                                    maskWidth As Integer, maskHeight As Integer,
-                                                   draw As Action(Of SKCanvas))
+                                                   draw As Action(Of SKCanvas),
+                                                   Optional target As SKBitmap = Nothing, Optional rows As Integer = 0)
             Using layer = New SKBitmap(maskWidth, maskHeight, SKColorType.Rgba8888, SKAlphaType.Premul)
+                If target IsNot Nothing Then
+                    DrawInRowBands(layer, Math.Max(BandedEffectsRows, rows),
+                                   Sub(layerCanvas)
+                                       layerCanvas.Clear(SKColors.Transparent)
+                                       draw(layerCanvas)
+                                   End Sub)
+                    Using maskImage = ShareBitmapPixels(mask)
+                        DrawInRowBands(layer, BandedEffectsRows,
+                                       Sub(layerCanvas)
+                                           Using clip = New SKPaint With {.BlendMode = SKBlendMode.DstIn}
+                                               layerCanvas.DrawImage(maskImage, 0, 0, clip)
+                                           End Using
+                                       End Sub)
+                    End Using
+                    Using layerImage = ShareBitmapPixels(layer)
+                        DrawInRowBands(target, BandedEffectsRows,
+                                       Sub(targetCanvas)
+                                           Using paint = New SKPaint With {.BlendMode = SKBlendMode.SrcOver, .IsAntialias = True}
+                                               targetCanvas.DrawImage(layerImage, maskLeft, maskTop, paint)
+                                           End Using
+                                       End Sub)
+                    End Using
+                    Return
+                End If
                 Using layerCanvas = New SKCanvas(layer)
                     layerCanvas.Clear(SKColors.Transparent)
                     draw(layerCanvas)
@@ -2051,14 +2094,82 @@ Namespace Services
                                                 maskLeft As Integer, maskTop As Integer,
                                                 maskWidth As Integer, maskHeight As Integer,
                                                 rect As SKRect, annotation As ImageAnnotation, alphaFactor As Single)
-            ' Dieselben Formeln wie in DrawAnnotationEffects, das damit den Rand der Maske bemisst.
-            Dim objSize = Math.Max(1.0F, Math.Min(rect.Width, rect.Height))
-            Dim glowReach = objSize * Clamp(annotation.GlowBlur, 0, 100) / 100.0F * 1.5F
-            Dim glowDilate = Math.Max(0, CInt(Math.Round(glowReach * 0.5F)))
-            Dim glowSigma = Math.Max(0.1F, glowReach * 0.17F)
-            Dim shadowBlurPx = objSize * Clamp(annotation.ShadowBlur, 0, 100) / 100.0F * ShadowBlurSigmaFactor
-            Dim offsetX = objSize * annotation.ShadowOffsetXPercent / 100.0F
-            Dim offsetY = objSize * annotation.ShadowOffsetYPercent / 100.0F
+            Using effects = SilhouetteEffects.Prepare(mask, maskWidth, maskHeight, rect, annotation, alphaFactor)
+                effects.DrawGlow(canvas, maskLeft, maskTop)
+                effects.DrawShadow(canvas, maskLeft, maskTop, Nothing)
+            End Using
+        End Sub
+
+        ''' <summary>Glühen und Schatten außen, vorbereitet für eine oder mehrere Zeichnungen: das
+        ''' verkleinert gerechnete Glühen und die Quelle des Schattens entstehen EINMAL, gezeichnet
+        ''' werden sie danach am Stück (DrawSilhouetteEffects) oder Band für Band auf eine eigene Ebene
+        ''' (CompositeLayerEffectsInBands). Jede Zeichnung ist genau die frühere; geteilt ist nur
+        ''' die Vorbereitung.</summary>
+        Friend NotInheritable Class SilhouetteEffects
+            Implements IDisposable
+
+            Private _glowSmall As SKBitmap
+            Private _glowWidth As Integer
+            Private _glowHeight As Integer
+            Private _maskWidth As Integer
+            Private _maskHeight As Integer
+            Private _shadowSource As SKBitmap
+            Private _roundedShadowMask As SKBitmap
+            Private _shadowColor As SKColor
+            Private _shadowScale As Single = 1.0F
+            Private _shadowSigma As Single
+            Private _rect As SKRect
+            Private _offsetX As Single
+            Private _offsetY As Single
+
+            ''' <summary>Wahr, wenn ein Glühen außen gezeichnet wird.</summary>
+            Friend ReadOnly Property HasGlow As Boolean
+                Get
+                    Return _glowSmall IsNot Nothing
+                End Get
+            End Property
+
+            ''' <summary>Die Quelle des Schattens (Silhouette oder ihre abgerundete Fassung);
+            ''' Nothing, wenn kein Schatten außen gezeichnet wird.</summary>
+            Friend ReadOnly Property ShadowSource As SKBitmap
+                Get
+                    Return _shadowSource
+                End Get
+            End Property
+
+            ''' <summary>Wie weit die Weichzeichnung des Schattens auf der Leinwand reicht (dreimal
+            ''' Sigma, aufgerundet); bemisst die Bänder, nicht das Ergebnis.</summary>
+            Friend ReadOnly Property ShadowReach As Integer
+                Get
+                    If _shadowSource Is Nothing Then Return 0
+                    Return CInt(Math.Ceiling(3.0F * _shadowSigma * _shadowScale))
+                End Get
+            End Property
+
+            Friend Shared Function Prepare(mask As SKBitmap, maskWidth As Integer, maskHeight As Integer,
+                                           rect As SKRect, annotation As ImageAnnotation, alphaFactor As Single) As SilhouetteEffects
+                Dim effects = New SilhouetteEffects()
+                Try
+                    effects.PrepareCore(mask, maskWidth, maskHeight, rect, annotation, alphaFactor)
+                    Return effects
+                Catch
+                    effects.Dispose()
+                    Throw
+                End Try
+            End Function
+
+            Private Sub PrepareCore(mask As SKBitmap, maskWidth As Integer, maskHeight As Integer,
+                                    rect As SKRect, annotation As ImageAnnotation, alphaFactor As Single)
+                ' Dieselben Formeln wie in DrawAnnotationEffects, das damit den Rand der Maske bemisst.
+                Dim objSize = Math.Max(1.0F, Math.Min(rect.Width, rect.Height))
+                Dim glowReach = objSize * Clamp(annotation.GlowBlur, 0, 100) / 100.0F * 1.5F
+                Dim glowDilate = Math.Max(0, CInt(Math.Round(glowReach * 0.5F)))
+                Dim glowSigma = Math.Max(0.1F, glowReach * 0.17F)
+                Dim shadowBlurPx = objSize * Clamp(annotation.ShadowBlur, 0, 100) / 100.0F * ShadowBlurSigmaFactor
+                Dim offsetX = objSize * annotation.ShadowOffsetXPercent / 100.0F
+                Dim offsetY = objSize * annotation.ShadowOffsetYPercent / 100.0F
+                _maskWidth = maskWidth
+                _maskHeight = maskHeight
 
                 If annotation.GlowEnabled AndAlso ImageAnnotation.EffectDrawsOutside(annotation.GlowPlacement) Then
                     Dim glowColor = ApplyAlpha(ParseColor(annotation.GlowColor, SKColors.Yellow), alphaFactor * Clamp(annotation.GlowStrength, 0, 100) / 100.0F)
@@ -2088,93 +2199,217 @@ Namespace Services
                             End Using
                         End Using
 
-                        ' Silhouette einfärben -> nach außen vergrößern (Dilate) -> weichzeichnen. Als
-                        ' verkettete ImageFilter, damit das Glühen sichtbar über die Objektkante hinausreicht.
-                        Using glowSmall = New SKBitmap(glowW, glowH, SKColorType.Rgba8888, SKAlphaType.Premul)
-                            Using glowCanvas = New SKCanvas(glowSmall)
-                                glowCanvas.Clear(SKColors.Transparent)
-                                Using glowColorFilter = SKColorFilter.CreateBlendMode(glowColor, SKBlendMode.SrcIn)
-                                    Using coloredFilter = SKImageFilter.CreateColorFilter(glowColorFilter)
-                                        Dim spreadFilter As SKImageFilter = coloredFilter
-                                        Dim dilatedOwned As SKImageFilter = Nothing
-                                        Try
-                                            If scaledDilate > 0 Then
-                                                dilatedOwned = SKImageFilter.CreateDilate(scaledDilate, scaledDilate, coloredFilter)
-                                                spreadFilter = dilatedOwned
-                                            End If
-                                            Using glowImageFilter = SKImageFilter.CreateBlur(scaledSigma, scaledSigma, spreadFilter)
-                                                Using paint = New SKPaint With {.ImageFilter = glowImageFilter}
-                                                    glowCanvas.DrawBitmap(smallMask, 0, 0, paint)
-                                                End Using
-                                            End Using
-                                        Finally
-                                            dilatedOwned?.Dispose()
-                                        End Try
-                                    End Using
-                                End Using
-                            End Using
-
-                            ' Bewusst SrcOver statt additiv (Plus): Das Overlay zeichnet das Glühen auf
-                            ' Transparenz (Plus und SrcOver liefern dort dasselbe) und blendet es dann per
-                            ' SrcOver übers Foto - beim gebackenen Bild würde Plus die Glow-Farbe hingegen
-                            ' aufs Foto ADDIEREN und dadurch auswaschen. SrcOver macht beide Pfade gleich kräftig.
-                            Using paint = New SKPaint With {.BlendMode = SKBlendMode.SrcOver, .IsAntialias = True}
-                                DrawBitmapSampled(canvas, glowSmall,
-                                                  New SKRect(0, 0, glowW, glowH),
-                                                  New SKRect(maskLeft, maskTop, maskLeft + maskWidth, maskTop + maskHeight),
-                                                  SamplingHigh, paint)
-                            End Using
+                        ' Silhouette einfärben, nach außen vergrößern (Dilate) und weichzeichnen, damit
+                        ' das Glühen sichtbar über die Objektkante hinausreicht (DrawSpreadGlow).
+                        _glowSmall = New SKBitmap(glowW, glowH, SKColorType.Rgba8888, SKAlphaType.Premul)
+                        _glowWidth = glowW
+                        _glowHeight = glowH
+                        Using glowCanvas = New SKCanvas(_glowSmall)
+                            glowCanvas.Clear(SKColors.Transparent)
+                            DrawSpreadGlow(glowCanvas, smallMask, glowColor, scaledDilate, scaledSigma, antialias:=False)
                         End Using
                     End Using
                 End If
 
                 If annotation.ShadowEnabled AndAlso ImageAnnotation.EffectDrawsOutside(annotation.ShadowPlacement) Then
-                    Dim shadowColor = ApplyAlpha(ParseColor(annotation.ShadowColor, New SKColor(0, 0, 0, 128)), alphaFactor * Clamp(annotation.ShadowStrength, 0, 100) / 100.0F)
-                    Dim shadowSource = mask
-                    Dim roundedShadowMask As SKBitmap = Nothing
-                    Try
-                        ' Abgerundeter Schatten rundet die ECKEN DER SILHOUETTE ab (siehe
-                        ' BuildRoundedSilhouette) - die Objektform bleibt erhalten. Der Glow-Effekt
-                        ' bleibt davon unberührt und folgt weiter der ungerundeten Form.
-                        If annotation.ShadowRounded Then
-                            Dim cornerRadius = Math.Min(rect.Width, rect.Height) / 2.0F * Clamp(annotation.ShadowCornerRadiusPercent, 0, 100) / 100.0F
-                            roundedShadowMask = BuildRoundedSilhouette(mask, cornerRadius)
-                            If roundedShadowMask IsNot Nothing Then shadowSource = roundedShadowMask
-                        End If
+                    _shadowColor = ApplyAlpha(ParseColor(annotation.ShadowColor, New SKColor(0, 0, 0, 128)), alphaFactor * Clamp(annotation.ShadowStrength, 0, 100) / 100.0F)
+                    _shadowSource = mask
+                    ' Abgerundeter Schatten rundet die ECKEN DER SILHOUETTE ab (siehe
+                    ' BuildRoundedSilhouette) - die Objektform bleibt erhalten. Der Glow-Effekt
+                    ' bleibt davon unberührt und folgt weiter der ungerundeten Form.
+                    If annotation.ShadowRounded Then
+                        Dim cornerRadius = Math.Min(rect.Width, rect.Height) / 2.0F * Clamp(annotation.ShadowCornerRadiusPercent, 0, 100) / 100.0F
+                        _roundedShadowMask = BuildRoundedSilhouette(mask, cornerRadius)
+                        If _roundedShadowMask IsNot Nothing Then _shadowSource = _roundedShadowMask
+                    End If
 
-                        ' Schattengröße: um die Objektmitte skalieren, sodass der Schatten über das Objekt
-                        ' hinauswachsen (oder schrumpfen) kann. Der Blur-Radius wird durch den Skalierungs-
-                        ' faktor geteilt, weil die anschließende Canvas-Skalierung ihn wieder hochmultipliziert -
-                        ' so bleibt die Weichzeichnung unabhängig von der gewählten Größe.
-                        Dim shadowScale = Clamp(annotation.ShadowSizePercent, 10, 400) / 100.0F
-                        Dim shadowSigma = Math.Max(0.1F, shadowBlurPx / shadowScale)
-                        ' Weichzeichnung MUSS hier ein ImageFilter sein, kein MaskFilter: der Schatten
-                        ' wird per DrawBitmap gezeichnet, und ein MaskFilter wirkt nur auf die Deckung
-                        ' gezeichneter GEOMETRIE - bei DrawBitmap tut er schlicht nichts (gemessen mit
-                        ' SkiaSharp 3.119, sigma 4/12/30 alle unveraendert hart). Genau daran lag der
-                        ' Befund "Schatten hat keine weiche Kante": der Weichzeichnen-Regler war
-                        ' wirkungslos, der Schatten immer eine harte Silhouette.
-                        Using shadowColorFilter = SKColorFilter.CreateBlendMode(shadowColor, SKBlendMode.SrcIn)
-                            Using shadowImageFilter = SKImageFilter.CreateBlur(shadowSigma, shadowSigma)
-                                Using paint = New SKPaint With {
-                                    .ColorFilter = shadowColorFilter,
-                                    .ImageFilter = shadowImageFilter
-                                }
-                                    canvas.Save()
-                                    ' Versatz unskaliert (außerhalb der Skalierung angewandt), Skalierung um die Objektmitte.
-                                    canvas.Translate(rect.MidX + offsetX, rect.MidY + offsetY)
-                                    canvas.Scale(shadowScale, shadowScale)
-                                    canvas.Translate(-rect.MidX, -rect.MidY)
-                                    canvas.DrawBitmap(shadowSource, maskLeft, maskTop, paint)
-                                    canvas.Restore()
+                    ' Schattengröße: um die Objektmitte skalieren, sodass der Schatten über das Objekt
+                    ' hinauswachsen (oder schrumpfen) kann. Der Blur-Radius wird durch den Skalierungs-
+                    ' faktor geteilt, weil die anschließende Canvas-Skalierung ihn wieder hochmultipliziert -
+                    ' so bleibt die Weichzeichnung unabhängig von der gewählten Größe.
+                    _shadowScale = Clamp(annotation.ShadowSizePercent, 10, 400) / 100.0F
+                    _shadowSigma = Math.Max(0.1F, shadowBlurPx / _shadowScale)
+                    _rect = rect
+                    _offsetX = offsetX
+                    _offsetY = offsetY
+                End If
+            End Sub
+
+            ''' <summary>Zieht das Glühen auf die Maskenfläche bei
+            ''' <paramref name="maskLeft"/>/<paramref name="maskTop"/> hoch.</summary>
+            Friend Sub DrawGlow(canvas As SKCanvas, maskLeft As Integer, maskTop As Integer)
+                If _glowSmall Is Nothing Then Return
+                ' Bewusst SrcOver statt additiv (Plus): Das Overlay zeichnet das Glühen auf
+                ' Transparenz (Plus und SrcOver liefern dort dasselbe) und blendet es dann per
+                ' SrcOver übers Foto - beim gebackenen Bild würde Plus die Glow-Farbe hingegen
+                ' aufs Foto ADDIEREN und dadurch auswaschen. SrcOver macht beide Pfade gleich kräftig.
+                Using paint = New SKPaint With {.BlendMode = SKBlendMode.SrcOver, .IsAntialias = True}
+                    DrawBitmapSampled(canvas, _glowSmall,
+                                      New SKRect(0, 0, _glowWidth, _glowHeight),
+                                      New SKRect(maskLeft, maskTop, maskLeft + _maskWidth, maskTop + _maskHeight),
+                                      SamplingHigh, paint)
+                End Using
+            End Sub
+
+            ''' <summary>Zeichnet den Schatten. <paramref name="sharedSource"/> ist ein Bild über den
+            ''' Punkten von <see cref="ShadowSource"/> für Bänder, die nicht je eine Kopie anlegen
+            ''' sollen; Nothing zeichnet wie bisher die Bitmap selbst.</summary>
+            Friend Sub DrawShadow(canvas As SKCanvas, maskLeft As Integer, maskTop As Integer, sharedSource As SKImage)
+                If _shadowSource Is Nothing Then Return
+                ' Weichzeichnung MUSS hier ein ImageFilter sein, kein MaskFilter: der Schatten
+                ' wird per DrawBitmap gezeichnet, und ein MaskFilter wirkt nur auf die Deckung
+                ' gezeichneter GEOMETRIE - bei DrawBitmap tut er schlicht nichts (gemessen mit
+                ' SkiaSharp 3.119, sigma 4/12/30 alle unveraendert hart). Genau daran lag der
+                ' Befund "Schatten hat keine weiche Kante": der Weichzeichnen-Regler war
+                ' wirkungslos, der Schatten immer eine harte Silhouette.
+                Using shadowColorFilter = SKColorFilter.CreateBlendMode(_shadowColor, SKBlendMode.SrcIn)
+                    Using shadowImageFilter = SKImageFilter.CreateBlur(_shadowSigma, _shadowSigma)
+                        Using paint = New SKPaint With {
+                            .ColorFilter = shadowColorFilter,
+                            .ImageFilter = shadowImageFilter
+                        }
+                            canvas.Save()
+                            ' Versatz unskaliert (außerhalb der Skalierung angewandt), Skalierung um die Objektmitte.
+                            canvas.Translate(_rect.MidX + _offsetX, _rect.MidY + _offsetY)
+                            canvas.Scale(_shadowScale, _shadowScale)
+                            canvas.Translate(-_rect.MidX, -_rect.MidY)
+                            If sharedSource Is Nothing Then
+                                canvas.DrawBitmap(_shadowSource, maskLeft, maskTop, paint)
+                            Else
+                                canvas.DrawImage(sharedSource, maskLeft, maskTop, paint)
+                            End If
+                            canvas.Restore()
+                        End Using
+                    End Using
+                End Using
+            End Sub
+
+            Public Sub Dispose() Implements IDisposable.Dispose
+                _glowSmall?.Dispose()
+                _glowSmall = Nothing
+                _roundedShadowMask?.Dispose()
+                _roundedShadowMask = Nothing
+                _shadowSource = Nothing
+            End Sub
+        End Class
+
+        ''' <summary>Färbt <paramref name="source"/> mit <paramref name="glowColor"/> ein (SrcIn),
+        ''' breitet es um <paramref name="dilate"/> Punkte nach außen aus und zeichnet es mit
+        ''' <paramref name="sigma"/> weich auf <paramref name="glowCanvas"/>, wie die Filterkette
+        ''' Farbe, Dilate, Weichzeichner.
+        '''
+        ''' Skias Dilate rechnet auf einem Faden und langsam: an 512 x 342 Punkten mit Radius 9 rund
+        ''' 330 ms, der größte Posten des Glühens. Ausgebreitet wird deshalb vorab mit
+        ''' <see cref="DilateRgba"/> (dasselbe Maximum je Kanal über das Rechteck des Radius), und
+        ''' Farbe und Weichzeichner laufen auf dem Ergebnis. Die Reihenfolge darf wechseln: SrcIn mit
+        ''' fester Farbe hängt nur an der Deckung und steigt mit ihr, das Maximum der eingefärbten
+        ''' Punkte ist also die eingefärbte größte Deckung. Bytegleich, Prüfung "Effekte: Schatten und
+        ''' Glühen in Bändern bytegleich zum Lauf am Stück". Der Prüfschalter
+        ''' SerialGeometryForChecks führt zur Filterkette zurück.</summary>
+        Private Shared Sub DrawSpreadGlow(glowCanvas As SKCanvas, source As SKBitmap, glowColor As SKColor,
+                                          dilate As Integer, sigma As Single, antialias As Boolean)
+            Using glowColorFilter = SKColorFilter.CreateBlendMode(glowColor, SKBlendMode.SrcIn)
+                Using coloredFilter = SKImageFilter.CreateColorFilter(glowColorFilter)
+                    If dilate > 0 AndAlso Not SerialGeometryForChecks Then
+                        Using spread = DilateRgba(source, dilate)
+                            If spread IsNot Nothing Then
+                                ' Die Ausbreitung ragt um den Radius über die Quelle hinaus, wie der
+                                ' Dilate der Kette; sie liegt deshalb um ihn nach links oben versetzt.
+                                Using glowImageFilter = SKImageFilter.CreateBlur(sigma, sigma, coloredFilter)
+                                    Using paint = New SKPaint With {.ImageFilter = glowImageFilter, .IsAntialias = antialias}
+                                        glowCanvas.DrawBitmap(spread, -dilate, -dilate, paint)
+                                    End Using
                                 End Using
+                                Return
+                            End If
+                        End Using
+                    End If
+                    Dim spreadFilter As SKImageFilter = coloredFilter
+                    Dim dilatedOwned As SKImageFilter = Nothing
+                    Try
+                        If dilate > 0 Then
+                            dilatedOwned = SKImageFilter.CreateDilate(dilate, dilate, coloredFilter)
+                            spreadFilter = dilatedOwned
+                        End If
+                        Using glowImageFilter = SKImageFilter.CreateBlur(sigma, sigma, spreadFilter)
+                            Using paint = New SKPaint With {.ImageFilter = glowImageFilter, .IsAntialias = antialias}
+                                glowCanvas.DrawBitmap(source, 0, 0, paint)
                             End Using
                         End Using
                     Finally
-                        roundedShadowMask?.Dispose()
+                        dilatedOwned?.Dispose()
                     End Try
-                End If
+                End Using
+            End Using
         End Sub
+
+        ''' <summary>Breitet ein Rgba8888-Bild mit vormultipliziertem Alpha um <paramref name="radius"/>
+        ''' Punkte aus: jeder Kanal wird das Maximum über das Quadrat mit Kantenlänge 2 r + 1 um den
+        ''' Punkt, außerhalb der Quelle zählt durchsichtig. Das Ergebnis ist um 2 r breiter und höher,
+        ''' sein Punkt (r, r) liegt über dem Punkt (0, 0) der Quelle. Erst waagerecht, dann senkrecht,
+        ''' je Zeile auf mehreren Kernen. Nothing, wenn die Quelle nicht passt.</summary>
+        Private Shared Function DilateRgba(source As SKBitmap, radius As Integer) As SKBitmap
+            If source Is Nothing OrElse radius <= 0 Then Return Nothing
+            Dim info = source.Info
+            If info.ColorType <> SKColorType.Rgba8888 OrElse info.AlphaType <> SKAlphaType.Premul Then Return Nothing
+            Dim pixels = source.GetPixels()
+            If pixels = IntPtr.Zero Then Return Nothing
+            Dim w = info.Width, h = info.Height
+            Dim stride = source.RowBytes
+            Dim span = 2 * radius
+            Dim wideW = w + span, wideH = h + span
+            Dim input(stride * h - 1) As Byte
+            Runtime.InteropServices.Marshal.Copy(pixels, input, 0, input.Length)
+
+            ' Waagerecht: Zeile y der Quelle, Spalte X des Ergebnisses deckt die Quellspalten X - 2r bis X.
+            Dim wideStride = wideW * 4
+            Dim across(wideStride * h - 1) As Byte
+            ForEachRow(wideW, h,
+                Sub(y As Integer)
+                    Dim src = y * stride, dst = y * wideStride
+                    For x = 0 To wideW - 1
+                        Dim first = Math.Max(0, x - span), last = Math.Min(w - 1, x)
+                        If first > last Then Continue For
+                        Dim r As Byte = 0, g As Byte = 0, b As Byte = 0, a As Byte = 0
+                        For s = first To last
+                            Dim o = src + s * 4
+                            If input(o) > r Then r = input(o)
+                            If input(o + 1) > g Then g = input(o + 1)
+                            If input(o + 2) > b Then b = input(o + 2)
+                            If input(o + 3) > a Then a = input(o + 3)
+                        Next
+                        Dim d = dst + x * 4
+                        across(d) = r : across(d + 1) = g : across(d + 2) = b : across(d + 3) = a
+                    Next
+                End Sub)
+
+            Dim result = New SKBitmap(New SKImageInfo(wideW, wideH, SKColorType.Rgba8888, SKAlphaType.Premul))
+            Dim outPixels = result.GetPixels()
+            If outPixels = IntPtr.Zero Then
+                result.Dispose()
+                Return Nothing
+            End If
+            Dim outStride = result.RowBytes
+            Dim output(outStride * wideH - 1) As Byte
+            ' Senkrecht: Zeile Y des Ergebnisses deckt die Zeilen Y - 2r bis Y der waagerechten Stufe.
+            ForEachRow(wideW, wideH,
+                Sub(y As Integer)
+                    Dim first = Math.Max(0, y - span), last = Math.Min(h - 1, y)
+                    If first > last Then Return
+                    Dim dst = y * outStride
+                    For k = 0 To wideStride - 1
+                        Dim m As Byte = 0
+                        For s = first To last
+                            Dim v = across(s * wideStride + k)
+                            If v > m Then m = v
+                        Next
+                        output(dst + k) = m
+                    Next
+                End Sub)
+            Runtime.InteropServices.Marshal.Copy(output, 0, outPixels, output.Length)
+            result.NotifyPixelsChanged()
+            Return result
+        End Function
 
         ''' Harte Alpha-Schwelle bei halber Deckung: aus einer weichgezeichneten Maske wird wieder eine
         ''' scharfe Form - nur eben mit runden Ecken. Die Farbkanaele bleiben unveraendert; die
@@ -2196,6 +2431,7 @@ Namespace Services
             Dim rounded As SKBitmap = Nothing
             Try
                 rounded = New SKBitmap(mask.Width, mask.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
+                If BuildRoundedSilhouetteInBands(rounded, mask, sigma) Then Return rounded
                 Using roundCanvas = New SKCanvas(rounded)
                     roundCanvas.Clear(SKColors.Transparent)
                     Using blur = SKImageFilter.CreateBlur(sigma, sigma)
@@ -2214,6 +2450,56 @@ Namespace Services
                 rounded?.Dispose()
                 Return Nothing
             End Try
+        End Function
+
+        ''' <summary>Dasselbe wie die Zeichnung am Stück in BuildRoundedSilhouette (weichzeichnen und
+        ''' schwellen, auf eine leere Fläche), aber in Bändern über den Zeilen von
+        ''' <paramref name="rounded"/> auf mehreren Kernen; Skia zeichnet sie auf einem Faden, an 24 MP
+        ''' rund 650 ms. Die Weichzeichnung holt sich ihren Überstand aus der ganzen Maske selbst, ein
+        ''' Band ist mindestens viermal so hoch wie ihre Reichweite. Bytegleich, Prüfung "Effekte:
+        ''' Schatten und Glühen in Bändern bytegleich zum Lauf am Stück". False, wenn der Weg nicht
+        ''' greift (Prüfschalter, kleine Maske, weniger als zwei Bänder, keine Fläche); dann zeichnet
+        ''' der Aufrufer am Stück.</summary>
+        Private Shared Function BuildRoundedSilhouetteInBands(rounded As SKBitmap, mask As SKBitmap, sigma As Single) As Boolean
+            If SerialGeometryForChecks OrElse rounded Is Nothing OrElse mask Is Nothing Then Return False
+            Dim info = rounded.Info
+            Dim w = info.Width, h = info.Height
+            If CLng(w) * h < BandedEffectsMinPixels Then Return False
+            Dim rows = Math.Max(BandedEffectsRows, 4 * CInt(Math.Ceiling(3.0F * sigma)))
+            Dim count = (h + rows - 1) \ rows
+            If count < 2 Then Return False
+            Dim pixels = rounded.GetPixels()
+            If pixels = IntPtr.Zero Then Return False
+            Dim rowBytes = rounded.RowBytes
+            Dim failed = 0
+            Using maskImage = ShareBitmapPixels(mask)
+                Parallel.For(0, count,
+                    Sub(band)
+                        Using surface = SKSurface.Create(info, pixels, rowBytes)
+                            If surface Is Nothing Then
+                                Interlocked.Exchange(failed, 1)
+                                Return
+                            End If
+                            Dim top = band * rows
+                            surface.Canvas.ClipRect(New SKRect(0, top, w, Math.Min(h, top + rows)))
+                            surface.Canvas.Clear(SKColors.Transparent)
+                            Using blur = SKImageFilter.CreateBlur(sigma, sigma)
+                                Using threshold = SKColorFilter.CreateTable(AlphaThresholdTable, IdentityColorTable,
+                                                                            IdentityColorTable, IdentityColorTable)
+                                    Using sharpen = SKImageFilter.CreateColorFilter(threshold, blur)
+                                        Using paint = New SKPaint With {.ImageFilter = sharpen}
+                                            surface.Canvas.DrawImage(maskImage, 0, 0, paint)
+                                        End Using
+                                    End Using
+                                End Using
+                            End Using
+                        End Using
+                    End Sub)
+            End Using
+            ' Eine Fläche kam nicht zustande: der Aufrufer zeichnet am Stück über alles neu.
+            If failed <> 0 Then Return False
+            rounded.NotifyPixelsChanged()
+            Return True
         End Function
 
         ''' <summary>Die Farbe der feinen Linie des Rahmens "Keyline": die eigene, sonst im Kontrast

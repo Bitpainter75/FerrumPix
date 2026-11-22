@@ -9,7 +9,7 @@ Namespace Services
 
     ''' <summary>
     ''' Gemeinsames Werkzeug der beiden verlustfreien Schreiber, die in Streifen packen
-    ''' (<see cref="TiffWriterService"/> und der Weg mit 16 Bit in <see cref="PngEncoder"/>).
+    ''' (<see cref="TiffWriterService"/> und die Ausgabe mit 8 und 16 Bit in <see cref="PngEncoder"/>).
     '''
     ''' WARUM IN STREIFEN. Deflate rechnet auf einem Kern. Bei einem Bild mit 61 Megapixeln und
     ''' 16 Bit lagen so gut elf Sekunden einer TIFF-Ausgabe allein im Packen. Ein Streifen von 64
@@ -183,13 +183,15 @@ Namespace Services
 
         ''' <summary>Liest <paramref name="rows"/> Zeilen ab <paramref name="firstRow"/> in
         ''' <paramref name="target"/> (ab Index 0), RGBA ohne vormultipliziertes Alpha, mit 8 oder
-        ''' 16 Bit je Wert. Falsch, wenn Skia nicht lesen kann.</summary>
+        ''' 16 Bit je Wert. Mit <paramref name="alphaType"/> Premul bleiben die Werte
+        ''' vormultipliziert (der PNG-Schreiber rechnet dann selbst zurueck). Falsch, wenn Skia
+        ''' nicht lesen kann.</summary>
         Friend Shared Function ReadRows(pixmap As SKPixmap, firstRow As Integer, rows As Integer, deep As Boolean,
-                                        target As Byte()) As Boolean
+                                        target As Byte(), Optional alphaType As SKAlphaType = SKAlphaType.Unpremul) As Boolean
             Dim width = pixmap.Width
             Dim rowBytes = width * If(deep, 8, 4)
             Dim info = New SKImageInfo(width, rows, If(deep, SKColorType.Rgba16161616, SKColorType.Rgba8888),
-                                       SKAlphaType.Unpremul)
+                                       alphaType)
             Dim handle = GCHandle.Alloc(target, GCHandleType.Pinned)
             Try
                 Return pixmap.ReadPixels(info, handle.AddrOfPinnedObject(), rowBytes, 0, firstRow)

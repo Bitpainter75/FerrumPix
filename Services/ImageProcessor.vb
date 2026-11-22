@@ -4622,21 +4622,169 @@ Namespace Services
                 silhouette.NotifyPixelsChanged()
 
                 Dim result = CloneBitmap(processed)
-                Using canvas = New SKCanvas(result)
-                    canvas.SaveLayer()
-                    DrawSilhouetteEffects(canvas, silhouette, 0, 0, w, h, rect, effects, 1.0F)
-                    ' Innen ausstanzen: die Auswahl selbst bleibt, wie sie ist.
-                    Using knockOut = New SKPaint With {.BlendMode = SKBlendMode.DstOut}
-                        DrawBitmapShared(canvas, silhouette, 0, 0, knockOut)
+                If Not CompositeLayerEffectsInBands(result, silhouette, rect, effects) Then
+                    Using canvas = New SKCanvas(result)
+                        canvas.SaveLayer()
+                        DrawSilhouetteEffects(canvas, silhouette, 0, 0, w, h, rect, effects, 1.0F)
+                        ' Innen ausstanzen: die Auswahl selbst bleibt, wie sie ist.
+                        Using knockOut = New SKPaint With {.BlendMode = SKBlendMode.DstOut}
+                            DrawBitmapShared(canvas, silhouette, 0, 0, knockOut)
+                        End Using
+                        canvas.Restore()
                     End Using
-                    canvas.Restore()
-                    ' Innen dagegen AUF den Pixeln der Auswahl, auf sie beschnitten.
-                    If effects.HasInnerEffects() Then
-                        DrawInnerSilhouetteEffects(canvas, silhouette, 0, 0, w, h, rect, effects, 1.0F)
-                    End If
-                End Using
+                End If
+                ' Innen dagegen AUF den Pixeln der Auswahl, auf sie beschnitten.
+                If effects.HasInnerEffects() Then
+                    Using canvas = New SKCanvas(result)
+                        DrawInnerSilhouetteEffects(canvas, silhouette, 0, 0, w, h, rect, effects, 1.0F, target:=result)
+                    End Using
+                End If
                 Return result
             End Using
+        End Function
+
+        ''' <summary>Ab so vielen Punkten zeichnet CompositeLayerEffectsInBands auf mehreren Kernen.</summary>
+        Private Const BandedEffectsMinPixels As Integer = 262144
+
+        ''' <summary>Zeilen je Band für Glühen, Ausstanzen und Mischen; der Schatten nimmt Bänder von
+        ''' mindestens der vierfachen Reichweite seiner Weichzeichnung.</summary>
+        Private Const BandedEffectsRows As Integer = 64
+
+        ''' <summary>Dasselbe wie der Weg am Stück in CompositeLayerEffects (SaveLayer, Glühen und
+        ''' Schatten, Ausstanzen mit der Silhouette, Restore), aber Band für Band auf mehreren Kernen.
+        ''' Skia rechnet jede dieser Zeichnungen auf einem Faden: an 24 MP das Hochziehen des Glühens
+        ''' mit Mitchell rund 600 ms, der Weichzeichner des Schattens rund 300 ms, das Ausstanzen samt
+        ''' Restore rund 160 ms.
+        '''
+        ''' Die Ebene ist eine eigene Bitmap im Farbtyp des Bildes, wie die von SaveLayer. Jede Stufe
+        ''' zeichnet in Bändern mit Ausschnitt über den Zeilen der Ebene, mit genau der Zeichnung des
+        ''' Wegs am Stück (SilhouetteEffects); zwischen den Stufen wartet jede auf alle Bänder, die
+        ''' Reihenfolge je Punkt bleibt also Glühen, Schatten, Ausstanzen, Mischen. Das Glühen hat
+        ''' keine schräge Kante (das Zielrechteck liegt auf ganzen Punkten), die Weichzeichnung des
+        ''' Schattens holt sich ihren Überstand aus der ganzen Quelle selbst. Zuletzt mischt jedes Band
+        ''' seine Zeilen der Ebene über das Bild, wie Restore. Bytegleich, Prüfung "Effekte: Schatten
+        ''' und Glühen in Bändern bytegleich zum Lauf am Stück".
+        '''
+        ''' False, wenn der Weg nicht greift (Prüfschalter, kleines Bild, anderer Farbtyp, keine Fläche
+        ''' über der Ebene); das Bild ist dann unberührt, und der Aufrufer zeichnet am Stück.</summary>
+        Private Shared Function CompositeLayerEffectsInBands(result As SKBitmap, silhouette As SKBitmap, rect As SKRect,
+                                                            effects As ImageAnnotation) As Boolean
+            If SerialGeometryForChecks OrElse result Is Nothing OrElse silhouette Is Nothing OrElse effects Is Nothing Then Return False
+            Dim info = result.Info
+            Dim w = info.Width, h = info.Height
+            If CLng(w) * h < BandedEffectsMinPixels Then Return False
+            If info.ColorType <> SKColorType.Bgra8888 AndAlso info.ColorType <> SKColorType.Rgba8888 AndAlso
+               info.ColorType <> SKColorType.Rgba16161616 Then Return False
+            If info.AlphaType <> SKAlphaType.Premul AndAlso info.AlphaType <> SKAlphaType.Opaque Then Return False
+            If silhouette.Width <> w OrElse silhouette.Height <> h Then Return False
+            If result.GetPixels() = IntPtr.Zero Then Return False
+            ' Mit 16 Bit nur der Schatten in Bändern, siehe CompositeLayerEffectsInSavedBands.
+            If info.ColorType = SKColorType.Rgba16161616 AndAlso effects.GlowEnabled AndAlso
+               ImageAnnotation.EffectDrawsOutside(effects.GlowPlacement) Then Return False
+
+            Using plan = SilhouetteEffects.Prepare(silhouette, w, h, rect, effects, 1.0F)
+                ' Nichts außen: SaveLayer und Restore um eine leere Ebene lassen das Bild, wie es ist.
+                If Not plan.HasGlow AndAlso plan.ShadowSource Is Nothing Then Return True
+                If info.ColorType = SKColorType.Rgba16161616 Then
+                    Return CompositeLayerEffectsInSavedBands(result, silhouette, plan)
+                End If
+                Using layer = New SKBitmap(New SKImageInfo(w, h, info.ColorType, SKAlphaType.Premul, info.ColorSpace))
+                    If layer.GetPixels() = IntPtr.Zero Then Return False
+                    Dim shadowRows = Math.Max(BandedEffectsRows, 4 * plan.ShadowReach)
+                    Using silhouetteImage = ShareBitmapPixels(silhouette)
+                        Using shadowImage = If(plan.ShadowSource Is Nothing, Nothing, ShareBitmapPixels(plan.ShadowSource))
+                            DrawInRowBands(layer, BandedEffectsRows,
+                                           Sub(canvas)
+                                               canvas.Clear(SKColors.Transparent)
+                                               plan.DrawGlow(canvas, 0, 0)
+                                           End Sub)
+                            If shadowImage IsNot Nothing Then
+                                DrawInRowBands(layer, shadowRows, Sub(canvas) plan.DrawShadow(canvas, 0, 0, shadowImage))
+                            End If
+                            ' Innen ausstanzen: die Auswahl selbst bleibt, wie sie ist.
+                            DrawInRowBands(layer, BandedEffectsRows,
+                                           Sub(canvas)
+                                               Using knockOut = New SKPaint With {.BlendMode = SKBlendMode.DstOut}
+                                                   canvas.DrawImage(silhouetteImage, 0, 0, knockOut)
+                                               End Using
+                                           End Sub)
+                        End Using
+                    End Using
+                    ' Wie Restore: die Ebene ueber das Bild mischen.
+                    Using layerImage = ShareBitmapPixels(layer)
+                        DrawInRowBands(result, BandedEffectsRows, Sub(canvas) canvas.DrawImage(layerImage, 0, 0))
+                    End Using
+                End Using
+            End Using
+            Return True
+        End Function
+
+        ''' <summary>Zeichnet <paramref name="draw"/> Band für Band auf <paramref name="target"/>, auf
+        ''' mehreren Kernen: je Band eine Fläche über den Punkten der Bitmap, beschnitten auf seine
+        ''' <paramref name="rows"/> Zeilen. Kommt eine Fläche nicht zustande, zeichnet das Band danach
+        ''' dasselbe über eine Zeichenfläche der Bitmap, nacheinander. Kehrt erst zurück, wenn alle
+        ''' Bänder fertig sind; ein Band darf also nur aus Bildern lesen, in die gerade niemand
+        ''' schreibt. Voraussetzung für Bytegleichheit mit einer Zeichnung am Stück: die Zeichnung
+        ''' hängt an einem Punkt nicht davon ab, wo der Ausschnitt endet (für Effekte geprüft, siehe
+        ''' CompositeLayerEffectsInBands).</summary>
+        Friend Shared Sub DrawInRowBands(target As SKBitmap, rows As Integer, draw As Action(Of SKCanvas))
+            Dim info = target.Info
+            Dim w = info.Width, h = info.Height
+            Dim pixels = target.GetPixels()
+            Dim rowBytes = target.RowBytes
+            Dim count = (h + rows - 1) \ rows
+            Dim missed = New List(Of Integer)()
+            Parallel.For(0, count,
+                Sub(band)
+                    Dim top = band * rows
+                    Using surface = If(pixels = IntPtr.Zero, Nothing, SKSurface.Create(info, pixels, rowBytes))
+                        If surface Is Nothing Then
+                            SyncLock missed
+                                missed.Add(band)
+                            End SyncLock
+                            Return
+                        End If
+                        surface.Canvas.ClipRect(New SKRect(0, top, w, Math.Min(h, top + rows)))
+                        draw(surface.Canvas)
+                    End Using
+                End Sub)
+            For Each band In missed
+                Dim top = band * rows
+                Using canvas = New SKCanvas(target)
+                    canvas.ClipRect(New SKRect(0, top, w, Math.Min(h, top + rows)))
+                    draw(canvas)
+                End Using
+            Next
+            target.NotifyPixelsChanged()
+        End Sub
+
+        ''' <summary>Der Bandweg von CompositeLayerEffectsInBands für Bilder mit 16 Bit je Kanal, nur
+        ''' für den Schatten. Eine eigene Ebene trifft hier die von SaveLayer nicht: Glühen allein und
+        ''' Schatten allein gleichen einer Ebene Rgba8888, beide zusammen in keinem der Farbtypen
+        ''' Rgba8888, Bgra8888, Rgba16161616 und RgbaF16 (Effektmessung ebene). Deshalb legt jedes Band
+        ''' selbst SaveLayer an, auf seinen Ausschnitt begrenzt, und zeichnet darin die Folge des Wegs
+        ''' am Stück. Für den Schatten ist das bytegleich, für das Glühen NICHT: in einer Ebene, die
+        ''' nicht bei Zeile 0 beginnt, rechnet Skia die Abtastpunkte des Hochziehens mit anderer
+        ''' Rundung (Effektmessung hochziehen, in jedem Farbtyp). Mit Glühen läuft ein Bild mit
+        ''' 16 Bit deshalb weiter am Stück. Die Bänder sind mindestens viermal so hoch wie die
+        ''' Reichweite des Schattens, weil jede Stufe in ihnen läuft. Prüfung wie dort.</summary>
+        Private Shared Function CompositeLayerEffectsInSavedBands(result As SKBitmap, silhouette As SKBitmap,
+                                                                 plan As SilhouetteEffects) As Boolean
+            Dim rows = Math.Max(BandedEffectsRows, 4 * plan.ShadowReach)
+            Using silhouetteImage = ShareBitmapPixels(silhouette)
+                Using shadowImage = If(plan.ShadowSource Is Nothing, Nothing, ShareBitmapPixels(plan.ShadowSource))
+                    DrawInRowBands(result, rows,
+                                   Sub(canvas)
+                                       canvas.SaveLayer()
+                                       If shadowImage IsNot Nothing Then plan.DrawShadow(canvas, 0, 0, shadowImage)
+                                       Using knockOut = New SKPaint With {.BlendMode = SKBlendMode.DstOut}
+                                           canvas.DrawImage(silhouetteImage, 0, 0, knockOut)
+                                       End Using
+                                       canvas.Restore()
+                                   End Sub)
+                End Using
+            End Using
+            Return True
         End Function
 
         ''' <summary>Zeichnet die deklarative Kontur einer AUSWAHL-Ebene: eine Linie entlang der Kante
