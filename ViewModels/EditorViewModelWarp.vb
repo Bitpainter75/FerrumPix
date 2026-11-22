@@ -802,11 +802,21 @@ Namespace ViewModels
         ''' fuehrt seinen Zustand in vier Randkurven und wertet sie erst hier auf Knoten aus.</summary>
         Private Sub PrepareWarpPreview(columns As Integer, rows As Integer,
                                        Optional sourcePointToDisplay As Func(Of Double, Double, SKPoint?) = Nothing)
-            DisposeGridPreview()
+            ' Nur die Grundlage neu, das Vorschaubild bleibt stehen. Es zeigt den Stand der Sitzung,
+            ' und der ist beim erneuten Anfassen derselbe. Wurde es hier abgeraeumt, lag bis zur
+            ' ersten Bewegung das unverzerrte Anzeigebild offen, und jeder Griff an einen Anfasser
+            ' blendete die schon gezogene Verzerrung kurz aus.
+            ReleaseGridPreviewBase()
             Dim size = GetAnnotationDisplayPixelSize()
-            If size.Width <= 0 OrElse size.Height <= 0 Then Return
+            If size.Width <= 0 OrElse size.Height <= 0 Then
+                DisposeGridPreview()
+                Return
+            End If
             Dim source = TryCast(DisplayImage, Bitmap)
-            If source Is Nothing Then Return
+            If source Is Nothing Then
+                DisposeGridPreview()
+                Return
+            End If
 
             Try
                 ' Das Anzeigebild als SKBitmap in Anzeigegroesse, direkt ueber seine Pixel.
@@ -857,6 +867,11 @@ Namespace ViewModels
                 _vorschauQuelle = ""
                 SetToolPreviewMargin(0)
             End If
+            ReleaseGridPreviewBase()
+        End Sub
+
+        ''' <summary>Gibt nur die Grundlage frei, das Vorschaubild bleibt.</summary>
+        Private Sub ReleaseGridPreviewBase()
             _gridPreviewBase?.Dispose()
             _gridPreviewBase = Nothing
             _gridPreviewSourceX = Nothing
@@ -1565,9 +1580,14 @@ Namespace ViewModels
         Private _linienVorschauBasis As SKBitmap
 
         Private Sub PrepareLinePreview()
-            DisposeLinePreview()
+            ' Wie beim Gitter: nur die Grundlage neu, das Vorschaubild bleibt bis zum naechsten Bild.
+            _linienVorschauBasis?.Dispose()
+            _linienVorschauBasis = Nothing
             Dim source = TryCast(DisplayImage, Bitmap)
-            If source Is Nothing Then Return
+            If source Is Nothing Then
+                DisposeLinePreview()
+                Return
+            End If
             Try
                 _linienVorschauBasis = ImageOrientationService.ToSkBitmap(source)
             Catch

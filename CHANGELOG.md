@@ -25,6 +25,10 @@
 
 - A damaged or crafted Sony ARW file no longer crashes the program.
 
+- Grabbing a handle of the warp grid, the envelope or a warp line again no longer shows the
+  picture briefly without the warp drawn so far, and a single click on a handle no longer
+  leaves it unwarped.
+
 - The first start with a new picture library, or after an update that extends it, no longer
   fails now and then with a database error when two parts of the program open it at once.
 
