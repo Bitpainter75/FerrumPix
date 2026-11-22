@@ -72,9 +72,12 @@ Namespace Services
                                         data As Byte()) As Boolean
             If String.IsNullOrWhiteSpace(rawPath) OrElse String.IsNullOrEmpty(key) OrElse data Is Nothing Then Return False
             If width <= 0 OrElse height <= 0 OrElse CLng(data.Length) <> CLng(width) * height * 6 Then Return False
-            Dim target = PathFor(rawPath)
-            Dim temp = target & ".tmp"
+            Dim temp As String = Nothing
             Try
+                ' Liegt neben der RAW im Bestand: durch einen symbolischen Verweis hindurch schreiben
+                ' und die Zugriffsrechte der alten Datei behalten (ImageProcessor.WriteFileAtomic).
+                Dim target = ImageProcessor.ResolveWriteTarget(PathFor(rawPath))
+                temp = target & ".tmp"
                 Dim bandCount = (height + BandRows - 1) \ BandRows
                 Dim bands = New Byte(bandCount - 1)() {}
                 Parallel.For(0, bandCount, Sub(b) bands(b) = PackBand(data, width, height, b))
@@ -96,6 +99,7 @@ Namespace Services
                         Next
                     End Using
                 End Using
+                ImageProcessor.CarryOverFileMode(target, temp)
                 File.Move(temp, target, overwrite:=True)
                 Return True
             Catch ex As Exception

@@ -12155,4 +12155,7 @@
   <data name="LibRaw_auf_mehreren_Kernen_Windows_ARM64_fc4db394" xml:space="preserve">
     <value>LibRaw 멀티코어 처리: Windows ARM64</value>
   </data>
+  <data name="Der_Ordner_des_Verweisziels_fehlt_0_e5dd2884" xml:space="preserve">
+    <value>링크 대상의 폴더가 없습니다: {0}</value>
+  </data>
 </root>

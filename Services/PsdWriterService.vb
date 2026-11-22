@@ -287,8 +287,12 @@ Namespace Services
 
             ' Erst vollstaendig in den Arbeitsspeicher, dann in einem Zug auf die Platte: die Laengen
             ' der Ebenen-Sektion stehen VOR ihrem Inhalt und sind erst bekannt, wenn er gebaut ist.
-            Dim tempPath = filePath & ".tmp"
+            Dim tempPath As String = Nothing
             Try
+                ' Durch einen symbolischen Verweis hindurch schreiben und die Zugriffsrechte der alten
+                ' Datei behalten, wie jedes atomare Schreiben (ImageProcessor.WriteFileAtomic).
+                Dim finalPath = ImageProcessor.ResolveWriteTarget(filePath)
+                tempPath = finalPath & ".tmp"
                 ' Der Ebenenblock steht VOR dem Gesamtbild und braucht trotzdem schon dessen
                 ' Alpha-Markierung. Die Kanaele werden deshalb hier einmal zerlegt und beim
                 ' Schreiben des Gesamtbilds weiterverwendet, statt das Bild zweimal umzurechnen.
@@ -302,7 +306,8 @@ Namespace Services
                     WriteLayerSection(fs, usable, HasTransparentPixels(compositePlanes))
                     WriteMergedImage(fs, composite.Width, composite.Height, compositePlanes)
                 End Using
-                File.Move(tempPath, filePath, overwrite:=True)
+                ImageProcessor.CarryOverFileMode(finalPath, tempPath)
+                File.Move(tempPath, finalPath, overwrite:=True)
                 Return True
             Catch
                 ' Kein einzeiliges Try mit einzeiligem If davor: der Doppelpunkt zieht das Catch in
@@ -553,8 +558,10 @@ Namespace Services
                 Next
             End If
 
-            Dim tempPath = filePath & ".tmp"
+            Dim tempPath As String = Nothing
             Try
+                Dim finalPath = ImageProcessor.ResolveWriteTarget(filePath)
+                tempPath = finalPath & ".tmp"
                 Dim compositePlanes = ExtractPlanesDeep(deepComposite)
                 If compositePlanes Is Nothing Then Return False
                 Dim transparent = False
@@ -571,7 +578,8 @@ Namespace Services
                     WriteLayerSection(fs, usable, transparent, deep:=True)
                     WriteMergedImageDeep(fs, deepComposite.Width, deepComposite.Height, compositePlanes)
                 End Using
-                File.Move(tempPath, filePath, overwrite:=True)
+                ImageProcessor.CarryOverFileMode(finalPath, tempPath)
+                File.Move(tempPath, finalPath, overwrite:=True)
                 Return True
             Catch ex As Exception
                 DiagnosticLogService.LogException("PsdWriter.SaveDeep", ex)

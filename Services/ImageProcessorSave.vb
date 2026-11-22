@@ -1650,17 +1650,23 @@ Namespace Services
         ''' erst in eine Nachbardatei, dann darüberbewegen.
         '''
         ''' `File.Open(..., FileMode.Create)` kürzt das Ziel SOFORT auf 0 Byte. Bricht das Encodieren
-        ''' danach ab - voller Datenträger, Encoder-Ausnahme, abgezogenes Netzlaufwerk, Absturz -,
+        ''' danach ab (voller Datenträger, Encoder-Ausnahme, abgezogenes Netzlaufwerk, Absturz),
         ''' ist das Original weg und an seiner Stelle liegt ein Torso. Beim Speichern ÜBER das
         ''' Original (nicht "Speichern unter") ist das ein Datenverlust ohne Rückweg.
         ''' `FpxService` macht es seit jeher so; hier gilt derselbe Weg für alle Bild-Schreibpfade.
         '''
-        ''' Die Nachbardatei liegt bewusst im ZIELVERZEICHNIS - `File.Move` ist nur innerhalb
+        ''' Die Nachbardatei liegt bewusst im ZIELVERZEICHNIS: `File.Move` ist nur innerhalb
         ''' desselben Dateisystems ein Umhängen und damit unteilbar; über `Path.GetTempPath` wäre
         ''' es wieder ein Kopieren mit denselben Abbruchstellen.
+        '''
+        ''' Unter Linux und macOS ist das Umhängen ein rename, und das nimmt vom alten Ziel nichts
+        ''' mit. Deshalb wird ein symbolischer Verweis vorher aufgelöst
+        ''' (<see cref="ResolveWriteTarget"/>) und die Nachbardatei bekommt vor dem Umhängen die
+        ''' Zugriffsrechte des alten Ziels (<see cref="CarryOverFileMode"/>).
         ''' </summary>
         Friend Shared Function WriteFileAtomic(targetPath As String, writer As Action(Of Stream)) As Boolean
             If String.IsNullOrWhiteSpace(targetPath) OrElse writer Is Nothing Then Return False
+            targetPath = ResolveWriteTarget(targetPath)
             Dim targetDirectory = IO.Path.GetDirectoryName(targetPath)
             If Not String.IsNullOrEmpty(targetDirectory) Then Directory.CreateDirectory(targetDirectory)
             ' Jeder Auftrag erhaelt seine eigene Datei, auch bei demselben Ziel im selben Prozess.
@@ -1675,6 +1681,7 @@ Namespace Services
                     ' nicht, und am Ziel liegt eine leere oder halbe Datei statt der alten.
                     fs.Flush(flushToDisk:=True)
                 End Using
+                CarryOverFileMode(targetPath, tempPath)
                 File.Move(tempPath, targetPath, overwrite:=True)
                 Return True
             Catch
@@ -1686,7 +1693,82 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Byte-Fassung von <see cref="WriteFileAtomic"/> - für die Metadaten-Nachläufe,
+        ''' <summary>Der Pfad, an dem ein atomarer Schreibvorgang wirklich ersetzen muss: ist das Ziel
+        ''' ein symbolischer Verweis (auch eine Kette davon), die Datei am Ende des Verweises.
+        '''
+        ''' Ein rename auf den Verweis selbst ersetzte den Verweis durch eine gewöhnliche Datei, und
+        ''' die Datei, auf die er zeigt, bliebe alt. Mit dem aufgelösten Pfad entsteht die
+        ''' Nachbardatei im Ordner des endgültigen Ziels und wird dort umgehängt; der Verweis bleibt
+        ''' Verweis.
+        '''
+        ''' Ein Verweis ins Leere: geschrieben wird an die Stelle, auf die er zeigt, sofern deren Ordner
+        ''' besteht. Danach ist der Verweis wieder gültig. So rechnet auch
+        ''' <see cref="FileOperationPolicy.ResolveLinks"/>, nach dem die Dateiarbeit entscheidet, ob
+        ''' ein Pfad angefasst werden darf: dort steht für einen leeren Verweis ebenfalls sein Ziel.
+        ''' Fehlt der Ordner des Ziels (etwa eine nicht eingehängte Freigabe), wird nichts angelegt
+        ''' und nichts ersetzt: das Speichern scheitert mit DirectoryNotFoundException, statt fremde
+        ''' Ordner anzulegen oder den Verweis still durch eine Datei zu ersetzen.
+        '''
+        ''' Ein Ring aus Verweisen lässt sich nicht auflösen, und ein Verweis auf eine Datei mit
+        ''' anderer Endung wird nicht aufgelöst (siehe unten); in beiden Fällen bleibt der Pfad, wie er ist.
+        ''' Unter Windows bleibt der Pfad immer, wie er ist.</summary>
+        Friend Shared Function ResolveWriteTarget(targetPath As String) As String
+            If String.IsNullOrWhiteSpace(targetPath) OrElse OperatingSystem.IsWindows() Then Return targetPath
+            Dim final As FileSystemInfo
+            Try
+                Dim info As New FileInfo(targetPath)
+                If info.LinkTarget Is Nothing Then Return targetPath
+                final = info.ResolveLinkTarget(returnFinalTarget:=True)
+            Catch ex As IOException
+                Return targetPath
+            Catch ex As UnauthorizedAccessException
+                Return targetPath
+            End Try
+            If final Is Nothing Then Return targetPath
+            Dim resolved = final.FullName
+            If Not IO.Path.IsPathRooted(resolved) Then
+                resolved = IO.Path.Combine(If(IO.Path.GetDirectoryName(IO.Path.GetFullPath(targetPath)), ""), resolved)
+            End If
+            resolved = IO.Path.GetFullPath(resolved)
+            ' Nur durch einen Verweis mit derselben Endung: der Schutz der Originale (welche Formate
+            ' an Ort und Stelle neu geschrieben werden dürfen) prüft vorher den Namen des Verweises.
+            ' Zeigt "foto.jpg" auf "original.cr2", ginge das Schreiben sonst ungeprüft in die RAW.
+            ' Dann bleibt es beim Pfad des Verweises, und der Verweis wird ersetzt wie früher.
+            If Not String.Equals(IO.Path.GetExtension(resolved), IO.Path.GetExtension(targetPath),
+                                 StringComparison.OrdinalIgnoreCase) Then Return targetPath
+            Dim folder = IO.Path.GetDirectoryName(resolved)
+            If Not String.IsNullOrEmpty(folder) AndAlso Not Directory.Exists(folder) Then
+                Throw New DirectoryNotFoundException(String.Format(LocalizationService.T("Der Ordner des Verweisziels fehlt: {0}"), resolved))
+            End If
+            Return resolved
+        End Function
+
+        ''' <summary>Gibt der fertigen Nachbardatei vor dem Umhängen die Zugriffsrechte des Ziels,
+        ''' das sie gleich ersetzt (nur Linux und macOS).
+        '''
+        ''' Die Nachbardatei entsteht mit 0666 abzüglich der umask, meist also 0644. Ohne diesen Schritt wäre
+        ''' ein privates Foto mit 0600 nach dem Speichern für alle lesbar, und eine 0664-Datei auf
+        ''' einer gemeinsamen Ablage verlöre das Schreibrecht der Gruppe.
+        '''
+        ''' Scheitert das Übernehmen (ein Dateisystem ohne Unix-Rechte wie exFAT oder eine
+        ''' SMB-Freigabe), wird trotzdem gespeichert: die Rechte sind dort ohnehin nicht die der
+        ''' Datei. Nur das Diagnoseprotokoll hält es fest.
+        '''
+        ''' Nicht übernehmbar sind Eigentümer und Gruppe (die Datei gehört danach dem Speichernden,
+        ''' ändern dürfte das nur root) und harte Verweise: ein rename setzt einen neuen Dateiknoten
+        ''' an den Namen, die übrigen Namen des alten Knotens zeigen weiter auf den alten Inhalt.</summary>
+        Friend Shared Sub CarryOverFileMode(existingPath As String, newPath As String)
+            If OperatingSystem.IsWindows() Then Return
+            Try
+                If Not File.Exists(existingPath) Then Return
+                File.SetUnixFileMode(newPath, File.GetUnixFileMode(existingPath))
+            Catch ex As Exception
+                DiagnosticLogService.LogAlways("Save.FileMode",
+                    "Zugriffsrechte nicht übernommen (" & ex.GetType().Name & "): " & IO.Path.GetFileName(existingPath))
+            End Try
+        End Sub
+
+        ''' <summary>Byte-Fassung von <see cref="WriteFileAtomic"/>: für die Metadaten-Nachläufe,
         ''' die die fertige Datei einlesen, umbauen und zurückschreiben.</summary>
         Friend Shared Function WriteAllBytesAtomic(targetPath As String, bytes As Byte()) As Boolean
             If bytes Is Nothing Then Return False

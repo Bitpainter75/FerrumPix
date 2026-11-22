@@ -12155,4 +12155,7 @@
   <data name="LibRaw_auf_mehreren_Kernen_Windows_ARM64_fc4db394" xml:space="preserve">
     <value>कई कोर पर LibRaw: Windows ARM64</value>
   </data>
+  <data name="Der_Ordner_des_Verweisziels_fehlt_0_e5dd2884" xml:space="preserve">
+    <value>लिंक के लक्ष्य का फ़ोल्डर मौजूद नहीं है: {0}</value>
+  </data>
 </root>

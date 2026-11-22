@@ -211,9 +211,11 @@ Namespace Services
 
                     ' Ueber eine Nachbardatei schreiben, nie direkt: ein abgebrochener Schreibvorgang
                     ' liesse sonst eine halbe Beistelldatei zurueck - mitsamt Bewertung und Stichworten.
-                    Dim temp = sidecarPath & ".neu"
+                    ' Ein symbolischer Verweis wird durchschritten (ImageProcessor.ResolveWriteTarget).
+                    Dim finalPath = ImageProcessor.ResolveWriteTarget(sidecarPath)
+                    Dim temp = finalPath & ".neu"
                     doc.Save(temp, SaveOptions.DisableFormatting)
-                    Return ExifService.ReplaceSidecarIfUnchanged(temp, sidecarPath, snapshot)
+                    Return ExifService.ReplaceSidecarIfUnchanged(temp, finalPath, snapshot)
                 Catch ex As Exception
                     DiagnosticLogService.LogException("Xmp.RegionenSchreiben", ex)
                     Return False

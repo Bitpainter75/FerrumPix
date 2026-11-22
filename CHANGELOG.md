@@ -28,3 +28,15 @@
 
 - The mouse wheel scrolls the filmstrip in the editor again when the filmstrip sits on the left
   or right.
+
+- On Linux and macOS, saving over an existing picture or sidecar file keeps its access rights, so
+  a private photo stays private, and saving through a symbolic link updates the file it points to
+  instead of replacing the link.
+
+- Batch processing, pasting and moving in the gallery no longer let "Overwrite all" replace a
+  picture written earlier in the same run or another picture of the selection, for example the
+  camera JPEG next to its RAW, or the first of two "photo.jpg" from different folders, which
+  moving could lose for good. Such a file now gets a new name like "photo (1).jpg" instead.
+  The same goes for "photo.cr2" and "photo.nef" from different folders, whose XMP files would
+  meet as "photo.xmp", and a foreign XMP file already in the destination now only skips that one
+  picture instead of stopping the rest.

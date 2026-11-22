@@ -401,7 +401,10 @@ Namespace Services
                     target = SidecarPathFor(rawPath)
                     ' Eine Nachbardatei je Vorgang: eine feste ".tmp" teilten sich zwei Instanzen, die
                     ' dieselbe Datei gleichzeitig schreiben, und eine haengte die halbe der anderen um.
-                    temp = ImageProcessor.AtomicSiblingPath(target)
+                    ' Durch einen symbolischen Verweis hindurch schreiben und die Zugriffsrechte der
+                    ' alten Datei behalten, wie jedes atomare Schreiben (ImageProcessor.WriteFileAtomic).
+                    Dim finalTarget = ImageProcessor.ResolveWriteTarget(target)
+                    temp = ImageProcessor.AtomicSiblingPath(finalTarget)
                     Using fs = New FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None)
                         Using writer = XmlWriter.Create(fs, New XmlWriterSettings With {.Indent = True})
                             doc.Save(writer)
@@ -410,8 +413,9 @@ Namespace Services
                         ' Stromausfall der neue Name gelten und der Inhalt fehlen.
                         fs.Flush(flushToDisk:=True)
                     End Using
+                    ImageProcessor.CarryOverFileMode(finalTarget, temp)
                     ' Ohne Ueberschreiben wirft Move, wenn am Ziel inzwischen eine Datei liegt.
-                    File.Move(temp, target, overwrite:=Not requireAbsent)
+                    File.Move(temp, finalTarget, overwrite:=Not requireAbsent)
                     ' Den gemerkten Drehwinkel verwerfen, statt auf einen geaenderten Zeitstempel zu
                     ' hoffen: zwei Schreibvorgaenge kurz hintereinander koennen auf grob aufloesenden
                     ' Dateisystemen dieselbe mtime tragen.

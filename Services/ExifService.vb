@@ -1871,10 +1871,14 @@ Namespace Services
             Dim before = doc.Annotation(Of SidecarSnapshot)()
             If before Is Nothing Then Return False
             SyncLock _sidecarWriteLock
-                Dim tempPath = sidecarPath & ".tmp"
+                Dim tempPath As String = Nothing
                 Try
+                    ' Ein symbolischer Verweis wird durchschritten: Nachbardatei und Umhaengen im
+                    ' Ordner der Datei, auf die er zeigt (ImageProcessor.ResolveWriteTarget).
+                    Dim finalPath = ImageProcessor.ResolveWriteTarget(sidecarPath)
+                    tempPath = finalPath & ".tmp"
                     System.IO.File.WriteAllText(tempPath, doc.ToString(SaveOptions.DisableFormatting), New UTF8Encoding(False))
-                    Return ReplaceSidecarIfUnchanged(tempPath, sidecarPath, before)
+                    Return ReplaceSidecarIfUnchanged(tempPath, finalPath, before)
                 Catch
                     Try
                         If System.IO.File.Exists(tempPath) Then System.IO.File.Delete(tempPath)
@@ -1924,6 +1928,7 @@ Namespace Services
                             IO.Path.GetFileName(sidecarPath))
                         Return False
                     End If
+                    ImageProcessor.CarryOverFileMode(sidecarPath, tempPath)
                     System.IO.File.Move(tempPath, sidecarPath, overwrite:=True)
                     Return True
                 Finally

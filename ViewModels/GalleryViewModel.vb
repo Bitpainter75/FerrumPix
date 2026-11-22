@@ -13987,7 +13987,7 @@ Namespace ViewModels
                             ' Reines Aendern der Gross-/Kleinschreibung ist auf Linux eine ECHTE Umbenennung
                             ' (RAW.jpg und raw.jpg sind zwei Dateien) und darf nicht uebersprungen werden.
                             If String.Equals(NormalizePath(mapping.SourcePath), NormalizePath(mapping.TargetPath), PathIdentity.Comparison) Then Continue For
-                            If File.Exists(mapping.TargetPath) OrElse Directory.Exists(mapping.TargetPath) Then Throw New IOException("Ein Zielname existiert bereits.")
+                            If File.Exists(mapping.TargetPath) OrElse Directory.Exists(mapping.TargetPath) Then Throw New IOException(LocalizationService.T("Ein Element mit diesem Namen existiert bereits."))
 
                             If File.Exists(mapping.SourcePath) Then
                                 ThrowIfTargetSidecarConflict(mapping.SourcePath, mapping.TargetPath, replaceConfirmed:=False)
@@ -14463,6 +14463,7 @@ Namespace ViewModels
             Dim sourcePaths As List(Of String) = Nothing
             Dim completedSources As New List(Of String)()
             Dim leftoverCompanions As New List(Of String)()
+            Dim skippedItems As New List(Of String)()
             Try
                 sourcePaths = paths.
                     Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso (File.Exists(p) OrElse Directory.Exists(p))).
@@ -14470,12 +14471,19 @@ Namespace ViewModels
                     Where(Function(p) Not String.Equals(NormalizePath(p), NormalizePath(targetFolder), PathIdentity.Comparison)).
                     Where(Function(p) If(cut, FileOperationPolicy.CanMove(p, targetFolder), FileOperationPolicy.CanCopy(p))).
                     ToList()
+                Dim run As New TransferRun(sourcePaths)
 
                 Await RunSidecarBatchAsync(Async Function()
                                                For Each source In sourcePaths
-                                                   If Await CopyOrMovePathAsync(source, targetFolder, cut) Then
-                                                       completedSources.Add(source)
-                                                   End If
+                                                   Try
+                                                       If Await CopyOrMovePathAsync(source, targetFolder, cut, run:=run) Then
+                                                           completedSources.Add(source)
+                                                       End If
+                                                   Catch ex As TargetSidecarConflictException
+                                                       ' Eine fremde Begleitdatei am Ziel hält nur
+                                                       ' dieses Element auf, nicht den Lauf.
+                                                       skippedItems.Add(ex.Message)
+                                                   End Try
                                                Next
                                            End Function, leftoverCompanions)
                 ClearSelection()
@@ -14489,7 +14497,7 @@ Namespace ViewModels
             Catch ex As Exception
                 errorMessage = ex.Message
             End Try
-            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Einfügen fehlgeschlagen"), errorMessage)
+            Await ReportTransferFailuresAsync(LocalizationService.T("Einfügen fehlgeschlagen"), skippedItems, errorMessage)
             Await ReportLeftoverCompanionsAsync(leftoverCompanions)
         End Function
 
@@ -14510,6 +14518,16 @@ Namespace ViewModels
                 leftover.AddRange(Await Task.Run(Function() batch.Finish()))
                 failure?.Throw()
             End Using
+        End Function
+
+        ''' <summary>Meldet am Ende von Einfügen oder Verschieben in EINEM Fenster, was nicht
+        ''' übertragen wurde: die übersprungenen Elemente (je eine Zeile, fremde Begleitdatei am Ziel)
+        ''' und, falls der Lauf abbrach, dessen Fehler als letzte Zeile.</summary>
+        Private Async Function ReportTransferFailuresAsync(title As String, skippedItems As List(Of String), errorMessage As String) As Task
+            Dim lines As New List(Of String)(If(skippedItems, New List(Of String)()))
+            If errorMessage IsNot Nothing Then lines.Add(errorMessage)
+            If lines.Count = 0 Then Return
+            Await _mainVm.ShowMessageAsync(title, String.Join(Environment.NewLine, lines))
         End Function
 
         Private Async Function ReportLeftoverCompanionsAsync(leftover As List(Of String)) As Task
@@ -16608,9 +16626,14 @@ Namespace ViewModels
             ' Ohne dieses Gedächtnis wäre der zweite kein Konflikt - die Datei liegt ja noch nicht -
             ' und überschriebe still das Ergebnis des ersten.
             Dim claimed As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            ' Die Dateien aller Quellen des Laufs. Ein Ziel, das eine ANDERE Quelle ist (a.cr2 und
+            ' a.jpg zusammen, Ausgabe JPEG), wird nie überschrieben: die Quelle läse danach je nach
+            ' Reihenfolge schon das Ergebnis, und das Kamerabild wäre ersetzt.
+            Dim sourceList = If(sources, Enumerable.Empty(Of String)()).Where(Function(s) Not String.IsNullOrEmpty(s)).ToList()
+            Dim sourceFiles As New HashSet(Of String)(sourceList.Select(Function(s) NormalizePath(VariantKey.FileOf(s))),
+                                                      StringComparer.OrdinalIgnoreCase)
             Dim pictures = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
-            For Each source In If(sources, Enumerable.Empty(Of String)())
-                If String.IsNullOrEmpty(source) Then Continue For
+            For Each source In sourceList
                 ' Eine Ordnervorlage (GitHub #102) gilt je Bild: "{folder}/export" legt den Unterordner
                 ' neben JEDEM Bild an, auch wenn die Auswahl aus mehreren Ordnern stammt. Ohne
                 ' Platzhalter und absolut ist es der Ordner selbst, wie bisher.
@@ -16623,14 +16646,47 @@ Namespace ViewModels
                 If Not Directory.Exists(folderForSource) Then Directory.CreateDirectory(folderForSource)
                 Dim target = CreateBatchTargetFolderPath(source, folderForSource, outputExtension(source),
                                                          nameSuffix, nameBuilder, makeUnique:=False)
-                If File.Exists(target) OrElse claimed.Contains(target) Then
+                ' Ein Ziel, das im Lauf schon vergeben oder eine andere Quelle ist, bekommt ohne Frage
+                ' einen freien Namen: "Alle überschreiben" und "Überschreiben" meinen vorhandene
+                ' Dateien, nicht das Ergebnis oder die Quelle eines anderen Bildes desselben Laufs.
+                ' Die eigene Quelle als Ziel bleibt Sache des Konfliktdialogs.
+                Dim ownFile = NormalizePath(sourceFile)
+                Dim isReserved As Func(Of String, Boolean) =
+                    Function(candidate)
+                        Dim normalized = NormalizePath(candidate)
+                        Return claimed.Contains(normalized) OrElse
+                               (sourceFiles.Contains(normalized) AndAlso
+                                Not String.Equals(normalized, ownFile, StringComparison.OrdinalIgnoreCase))
+                    End Function
+                If isReserved(target) Then
+                    target = MakeUniqueFilePath(target, isReserved)
+                ElseIf File.Exists(target) Then
                     target = Await ResolveConflictTargetAsync(target, sourceFile)
                     If String.IsNullOrEmpty(target) Then Continue For   ' übersprungen
+                    ' Auch ein im Dialog umbenanntes Ziel darf nicht auf ein vergebenes fallen.
+                    If isReserved(target) Then target = MakeUniqueFilePath(target, isReserved)
                 End If
-                claimed.Add(target)
+                claimed.Add(NormalizePath(target))
                 pairs.Add(New KeyValuePair(Of String, String)(source, target))
             Next
             Return pairs
+        End Function
+
+        ''' <summary>Wie MakeUniqueFilePath, weicht aber außer vorhandenen Dateien auch Namen aus,
+        ''' die <paramref name="isReserved"/> als belegt meldet (im Stapel vergebene Ziele und die
+        ''' Dateien anderer Quellen).</summary>
+        Private Shared Function MakeUniqueFilePath(path As String, isReserved As Func(Of String, Boolean)) As String
+            If Not File.Exists(path) AndAlso Not isReserved(path) Then Return path
+            Dim dir = IO.Path.GetDirectoryName(path)
+            Dim stem = IO.Path.GetFileNameWithoutExtension(path)
+            Dim ext = IO.Path.GetExtension(path)
+            Dim i = 1
+            Dim candidate As String
+            Do
+                candidate = IO.Path.Combine(dir, $"{stem} ({i}){ext}")
+                i += 1
+            Loop While File.Exists(candidate) OrElse isReserved(candidate)
+            Return candidate
         End Function
 
         ''' <param name="uploadedAssetIds">Sammelt die IDs der Assets, die danach in der Ansicht stehen sollen -
@@ -17479,6 +17535,7 @@ Namespace ViewModels
             Dim sourcePaths As List(Of String) = Nothing
             Dim completedSources As New List(Of String)()
             Dim leftoverCompanions As New List(Of String)()
+            Dim skippedItems As New List(Of String)()
             Try
                 sourcePaths = paths.
                     Where(Function(p) Not String.IsNullOrEmpty(p)).
@@ -17487,12 +17544,19 @@ Namespace ViewModels
                     Where(Function(p) FileOperationPolicy.CanMove(p, targetFolder)).
                     ToList()
                 If sourcePaths.Count = 0 Then Return
+                Dim run As New TransferRun(sourcePaths)
 
                 Await RunSidecarBatchAsync(Async Function()
                                                For Each source In sourcePaths
-                                                   If Await CopyOrMovePathAsync(source, targetFolder, True) Then
-                                                       completedSources.Add(source)
-                                                   End If
+                                                   Try
+                                                       If Await CopyOrMovePathAsync(source, targetFolder, True, run:=run) Then
+                                                           completedSources.Add(source)
+                                                       End If
+                                                   Catch ex As TargetSidecarConflictException
+                                                       ' Eine fremde Begleitdatei am Ziel hält nur
+                                                       ' dieses Element auf, nicht den Lauf.
+                                                       skippedItems.Add(ex.Message)
+                                                   End Try
                                                Next
                                            End Function, leftoverCompanions)
                 ClearSelection()
@@ -17506,7 +17570,7 @@ Namespace ViewModels
             Catch ex As Exception
                 errorMessage = ex.Message
             End Try
-            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Verschieben fehlgeschlagen"), errorMessage)
+            Await ReportTransferFailuresAsync(LocalizationService.T("Verschieben fehlgeschlagen"), skippedItems, errorMessage)
             Await ReportLeftoverCompanionsAsync(leftoverCompanions)
         End Function
 
@@ -17589,7 +17653,10 @@ Namespace ViewModels
             Return Not String.IsNullOrEmpty(path) AndAlso path.StartsWith("virtual://", StringComparison.OrdinalIgnoreCase)
         End Function
 
-        Private Async Function CopyOrMovePathAsync(source As String, targetFolder As String, movePath As Boolean, Optional duplicate As Boolean = False) As Task(Of Boolean)
+        ''' <param name="run">Das Gedächtnis eines Laufs über mehrere Quellen (Einfügen, Verschieben):
+        ''' vergebene Ziele und die Quellen selbst. Ohne es gilt jede Quelle für sich.</param>
+        Private Async Function CopyOrMovePathAsync(source As String, targetFolder As String, movePath As Boolean, Optional duplicate As Boolean = False,
+                                                   Optional run As TransferRun = Nothing) As Task(Of Boolean)
             If Not File.Exists(source) AndAlso Not Directory.Exists(source) Then Return False
             If duplicate Then
                 If Not FileOperationPolicy.CanDuplicate(source, targetFolder) Then Return False
@@ -17598,9 +17665,9 @@ Namespace ViewModels
             Else
                 If Not FileOperationPolicy.CanCopy(source) OrElse Not FileOperationPolicy.CanPasteInto(targetFolder) Then Return False
             End If
-            If Directory.Exists(source) AndAlso IsAncestorOrSelf(source, targetFolder) Then Throw New IOException("Ein Ordner kann nicht in sich selbst verschoben werden.")
+            If Directory.Exists(source) AndAlso IsAncestorOrSelf(source, targetFolder) Then Throw New IOException(LocalizationService.T("Ein Ordner kann nicht in sich selbst verschoben werden."))
 
-            Dim resolved = Await ResolveCopyTargetAsync(source, targetFolder, movePath, duplicate)
+            Dim resolved = Await ResolveCopyTargetAsync(source, targetFolder, movePath, duplicate, run)
             Dim target = resolved.Path
             If String.IsNullOrEmpty(target) Then Return False
 
@@ -17621,6 +17688,7 @@ Namespace ViewModels
                                End If
                                Return result
                            End Function)
+            run?.Claim(target, source)
             ' Ein Rest des ersetzten Ziels in die Warnung des Fensters: der Vorgang ist gelungen und
             ' soll nicht auf einen Dialog warten, aber der Pfad muss sichtbar bleiben.
             For Each leftover In outcome.LeftoverOldVersions
@@ -17634,9 +17702,16 @@ Namespace ViewModels
 
         ''' <summary>Das Ziel fuer Einfuegen und Verschieben, und ob der Nutzer genau dieses Ziel zum
         ''' Ueberschreiben freigegeben hat. Nur dann darf ein dort liegendes Element ersetzt werden;
-        ''' entsteht ein Ziel erst nach dieser Frage, bleibt es stehen (TransferPath).</summary>
+        ''' entsteht ein Ziel erst nach dieser Frage, bleibt es stehen (TransferPath).
+        '''
+        ''' Mit <paramref name="run"/> bekommt ein Ziel, das im Lauf schon vergeben ist oder eine
+        ''' ANDERE Quelle des Laufs (auch eine, die im Zielordner liegt), ohne Frage einen freien
+        ''' Namen, wie im Stapel (ResolveBatchTargetsAsync). "Alle überschreiben" und "Überschreiben"
+        ''' meinen vorhandene fremde Dateien, nicht die gleichnamige Datei aus einem anderen Ordner,
+        ''' die eben erst angekommen ist: beim Verschieben wäre deren Quelle schon fort.</summary>
         Private Async Function ResolveCopyTargetAsync(source As String, targetFolder As String, movePath As Boolean,
-                                                      duplicate As Boolean) As Task(Of (Path As String, ReplaceConfirmed As Boolean))
+                                                      duplicate As Boolean,
+                                                      Optional run As TransferRun = Nothing) As Task(Of (Path As String, ReplaceConfirmed As Boolean))
             Dim name = IO.Path.GetFileName(source.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
             If String.IsNullOrWhiteSpace(name) Then Return (Nothing, False)
 
@@ -17653,11 +17728,17 @@ Namespace ViewModels
                 Return (CreateUniquePath(target), False)
             End If
 
+            If run IsNot Nothing AndAlso run.IsReserved(target, source) Then Return (run.FreePath(target, source), False)
+
             If Not File.Exists(target) AndAlso Not Directory.Exists(target) Then Return (target, False)
 
             ' "Überschreiben" liefert genau das vorhandene Ziel zurück, "Umbenennen" einen anderen,
             ' freien Namen. Nur im ersten Fall ist das Ersetzen freigegeben.
             Dim chosen = Await ResolveConflictTargetAsync(target, source)
+            ' Auch ein im Dialog umbenanntes Ziel darf nicht auf ein vergebenes fallen.
+            If chosen IsNot Nothing AndAlso run IsNot Nothing AndAlso run.IsReserved(chosen, source) Then
+                Return (run.FreePath(chosen, source), False)
+            End If
             Return (chosen, chosen IsNot Nothing AndAlso String.Equals(chosen, target, PathIdentity.Comparison))
         End Function
 
@@ -17915,22 +17996,125 @@ Namespace ViewModels
             Public LeftoverOldVersions As New List(Of String)()
         End Class
 
+        ''' <summary>Das Gedächtnis eines Laufs aus Einfügen oder Verschieben über mehrere Quellen:
+        ''' welche Ziele schon vergeben sind und welche Pfade Quellen des Laufs sind. Ohne es wäre die
+        ''' zweite von zwei gleichnamigen Dateien aus verschiedenen Ordnern ein gewöhnlicher Konflikt
+        ''' mit der ersten, und "Alle überschreiben" ersetzte sie.
+        '''
+        ''' Die Pfade werden wie in den Dateiregeln verglichen (FileOperationPolicy.ResolveLinks):
+        ''' eine Quelle, die über einen Verweis im Zielordner liegt, ist dieselbe Datei. Die
+        ''' Schreibweise zählt wie im Stapel nicht; im Zweifel bekommt ein Ziel einen Namen mehr.
+        '''
+        ''' Vergeben ist auch die Stamm-XMP eines übertragenen Ziels ("ziel/foto.xmp" neben
+        ''' "ziel/foto.cr2"). "a/foto.cr2" und "b/foto.nef" haben verschiedene Zielnamen, ihre
+        ''' Stamm-XMP träfe sich aber im Zielordner: die zweite Datei fände dort die XMP der ersten
+        ''' als fremde Begleitdatei, und eine XMP der zweiten käme nicht an. Sie bekommt deshalb
+        ''' einen Namen, dessen Stamm frei ist ("foto (1).nef" mit "foto (1).xmp"). Nicht betroffen
+        ''' sind Bilder, die schon an der Quelle dieselbe Stamm-XMP teilen ("a/foto.cr2" und
+        ''' "a/foto.jpg"): sie bleiben am Ziel ein Paar.</summary>
+        Private NotInheritable Class TransferRun
+            Private ReadOnly _claimed As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            Private ReadOnly _sources As HashSet(Of String)
+            ' Stamm-XMP eines übertragenen Ziels, zu jeder die Stamm-XMP seiner Quelle.
+            Private ReadOnly _claimedStems As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+
+            Public Sub New(sources As IEnumerable(Of String))
+                _sources = New HashSet(Of String)(sources.Select(Function(s) Key(s)), StringComparer.OrdinalIgnoreCase)
+            End Sub
+
+            Private Shared Function Key(path As String) As String
+                Return FileOperationPolicy.ResolveLinks(NormalizePath(path))
+            End Function
+
+            ''' <summary>Der Vergleichsschlüssel der Stamm-XMP einer Datei, leer für einen Ordner oder
+            ''' eine Datei ohne Stamm-XMP-Namen (ohne Endung, selbst eine XMP).</summary>
+            Private Shared Function StemKey(path As String) As String
+                If String.IsNullOrEmpty(path) OrElse Directory.Exists(path) Then Return ""
+                Dim stem = RawSidecarService.StemXmpPathFor(path)
+                Return If(stem Is Nothing, "", Key(stem))
+            End Function
+
+            ''' <summary>Ob das Ziel im Lauf schon vergeben ist oder die Datei einer ANDEREN Quelle,
+            ''' oder ob seine Stamm-XMP schon zu einem Ziel aus einer anderen Quelle gehört. Die
+            ''' Stamm-XMP zählt nur, wenn eine im Spiel ist: am Ziel (von der früheren Quelle
+            ''' mitgebracht) oder an der eigenen Quelle. Zwei Bilder ohne jede XMP dürfen ihren Stamm
+            ''' teilen wie in jedem Ordner. Die eigene Quelle als Ziel bleibt Sache des Aufrufers.</summary>
+            Public Function IsReserved(candidate As String, ownSource As String) As Boolean
+                Dim candidateKey = Key(candidate)
+                If _claimed.Contains(candidateKey) Then Return True
+                If _sources.Contains(candidateKey) AndAlso
+                   Not String.Equals(candidateKey, Key(ownSource), StringComparison.OrdinalIgnoreCase) Then Return True
+                If _claimedStems.Count = 0 OrElse Not File.Exists(ownSource) Then Return False
+                Dim candidateStem = RawSidecarService.StemXmpPathFor(candidate)
+                If candidateStem Is Nothing Then Return False
+                Dim claimerStem As String = Nothing
+                If Not _claimedStems.TryGetValue(Key(candidateStem), claimerStem) Then Return False
+                Dim ownStem = StemKey(ownSource)
+                If String.Equals(claimerStem, ownStem, StringComparison.OrdinalIgnoreCase) Then Return False
+                Return XmpSidecarService.ExistingXmpPath(candidateStem, strict:=False) IsNot Nothing OrElse
+                       (ownStem.Length > 0 AndAlso XmpSidecarService.ExistingXmpPath(RawSidecarService.StemXmpPathFor(ownSource), strict:=False) IsNot Nothing)
+            End Function
+
+            ''' <summary>Ein Name neben <paramref name="candidate"/>, der weder auf der Platte liegt
+            ''' (Datei oder Ordner) noch vergeben noch eine andere Quelle ist, und dessen Stamm-XMP
+            ''' frei ist. Läge dort schon eine fremde, hielte sie das Element wieder auf.</summary>
+            Public Function FreePath(candidate As String, ownSource As String) As String
+                Return MakeUniqueFilePath(candidate,
+                    Function(c) Directory.Exists(c) OrElse IsReserved(c, ownSource) OrElse StemXmpPresent(c))
+            End Function
+
+            Private Shared Function StemXmpPresent(path As String) As Boolean
+                Dim stem = RawSidecarService.StemXmpPathFor(path)
+                Return stem IsNot Nothing AndAlso XmpSidecarService.ExistingXmpPath(stem, strict:=False) IsNot Nothing
+            End Function
+
+            ''' <summary>Merkt ein übertragenes Ziel und, bei einer Datei, seine Stamm-XMP samt der
+            ''' Stamm-XMP der Quelle. Aufgerufen nach dem Übertragen: die Quelle kann beim
+            ''' Verschieben schon fort sein, ihr Pfad genügt.</summary>
+            Public Sub Claim(target As String, source As String)
+                If String.IsNullOrEmpty(target) Then Return
+                _claimed.Add(Key(target))
+                If Not File.Exists(target) Then Return
+                Dim targetStem = RawSidecarService.StemXmpPathFor(target)
+                If targetStem Is Nothing Then Return
+                Dim sourceStem = RawSidecarService.StemXmpPathFor(source)
+                Dim targetStemKey = Key(targetStem)
+                If Not _claimedStems.ContainsKey(targetStemKey) Then
+                    _claimedStems(targetStemKey) = If(sourceStem Is Nothing, "", Key(sourceStem))
+                End If
+            End Sub
+        End Class
+
+        ''' <summary>Eine Begleitdatei am Ziel, die nicht zur Quelle gehört
+        ''' (<see cref="ThrowIfTargetSidecarConflict"/>). Einfügen und Verschieben lassen nur das
+        ''' betroffene Element liegen und melden es am Ende des Laufs.</summary>
+        Friend NotInheritable Class TargetSidecarConflictException
+            Inherits IOException
+
+            Public Sub New(message As String)
+                MyBase.New(message)
+            End Sub
+        End Class
+
         ''' <summary>Hält einen Vorgang auf, dessen Ziel schon eine Begleitdatei trägt, die nicht zur
         ''' Quelle gehört (RawSidecarService.UnrelatedTargetSidecar). Die Meldung sagt, warum: bei der
         ''' Stamm-XMP ("foto.xmp" neben "foto.cr2") steht dort, dass sie einem anderen Bild mit
         ''' demselben Namen gehört. Ein blosses "bereits vorhanden" liess offen, was das mit dem
-        ''' gerade verschobenen Bild zu tun hat.</summary>
+        ''' gerade verschobenen Bild zu tun hat.
+        '''
+        ''' Die Ausnahme ist eine <see cref="TargetSidecarConflictException"/>: Einfügen und
+        ''' Verschieben überspringen damit nur dieses Element und setzen den Lauf fort.</summary>
         Friend Shared Sub ThrowIfTargetSidecarConflict(source As String, target As String, replaceConfirmed As Boolean)
             Dim conflict = RawSidecarService.UnrelatedTargetSidecar(source, target, replacingTarget:=replaceConfirmed)
             If conflict Is Nothing Then Return
             ' Die Stamm-XMP kann mit anders geschriebener Endung daliegen ("foto.XMP").
             If conflict.EndsWith(".xmp", StringComparison.OrdinalIgnoreCase) AndAlso
                String.Equals(IO.Path.ChangeExtension(conflict, ".xmp"), RawSidecarService.StemXmpPathFor(target), PathIdentity.Comparison) Then
-                Throw New IOException(String.Format(
+                Throw New TargetSidecarConflictException(String.Format(
                     LocalizationService.T("Am Ziel liegt schon die Begleitdatei {0}. Sie gehört zu einem anderen Bild mit demselben Namen und würde sonst auch diesem Bild zugeordnet."),
                     conflict))
             End If
-            Throw New IOException(LocalizationService.T("bereits vorhanden") & ": " & conflict)
+            Throw New TargetSidecarConflictException(LocalizationService.T("bereits vorhanden") & ": " & conflict)
         End Sub
 
         ''' <summary>Verschiebt über Ordner- und Datenträgergrenzen; ein Ordner geht dabei nur

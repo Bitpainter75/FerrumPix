@@ -367,14 +367,16 @@ Namespace Services
                     root.SetAttributeValue("version", If(block Is Nothing, FormatVersion, VariantsFormatVersion))
                     root.SetElementValue(Ns + "savedUtc", DateTime.UtcNow.ToString("O"))
 
-                    temp = ImageProcessor.AtomicSiblingPath(target)
+                    Dim finalTarget = ImageProcessor.ResolveWriteTarget(target)
+                    temp = ImageProcessor.AtomicSiblingPath(finalTarget)
                     Using fs = New FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None)
                         Using writer = XmlWriter.Create(fs, New XmlWriterSettings With {.Indent = True})
                             doc.Save(writer)
                         End Using
                         fs.Flush(flushToDisk:=True)
                     End Using
-                    IO.File.Move(temp, target, overwrite:=True)
+                    ImageProcessor.CarryOverFileMode(finalTarget, temp)
+                    IO.File.Move(temp, finalTarget, overwrite:=True)
                     ForgetDisplayFacts(target)
                     Return ModifyRecipeResult.Written
                 End SyncLock

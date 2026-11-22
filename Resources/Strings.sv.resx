@@ -12151,4 +12151,7 @@
   <data name="LibRaw_auf_mehreren_Kernen_Windows_ARM64_fc4db394" xml:space="preserve">
     <value>LibRaw på flera kärnor: Windows ARM64</value>
   </data>
+  <data name="Der_Ordner_des_Verweisziels_fehlt_0_e5dd2884" xml:space="preserve">
+    <value>Mappen för länkens mål saknas: {0}</value>
+  </data>
 </root>

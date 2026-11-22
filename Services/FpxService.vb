@@ -397,7 +397,10 @@ Namespace Services
             Dim baseExt = Path.GetExtension(baseImagePath)
             If String.IsNullOrEmpty(baseExt) Then baseExt = ".png"
 
-            Dim tempPath = fpxPath & ".tmp"
+            ' Durch einen symbolischen Verweis hindurch schreiben und die Zugriffsrechte des alten
+            ' Buendels behalten, wie jedes atomare Schreiben (ImageProcessor.WriteFileAtomic).
+            Dim finalPath = ImageProcessor.ResolveWriteTarget(fpxPath)
+            Dim tempPath = finalPath & ".tmp"
             If File.Exists(tempPath) Then File.Delete(tempPath)
             Using zip = ZipFile.Open(tempPath, ZipArchiveMode.Create)
                 ' Bilddaten (Basisbild, Objekt-Assets, Komposit) UNKOMPRIMIERT ablegen: es sind bereits
@@ -429,7 +432,8 @@ Namespace Services
                 End Using
             End Using
 
-            File.Move(tempPath, fpxPath, overwrite:=True)
+            ImageProcessor.CarryOverFileMode(finalPath, tempPath)
+            File.Move(tempPath, finalPath, overwrite:=True)
         End Sub
 
         ' ── Laden ───────────────────────────────────────────────────────────────

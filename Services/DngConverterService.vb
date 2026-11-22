@@ -54,6 +54,14 @@ Namespace Services
             ' Ausgabeformat daran erkennt; der Punkt vorn haelt sie aus der Galerie heraus.
             ' Der Name wird gekuerzt, wo ein langer, gueltiger Stamm mit dem Zusatz sonst ueber die
             ' Grenze des Dateisystems liefe (ImageProcessor.SiblingPath).
+            ' Ein symbolischer Verweis als Ziel wird durchschritten, und ein ersetztes DNG behaelt
+            ' seine Zugriffsrechte, wie bei jedem atomaren Schreiben (ImageProcessor.WriteFileAtomic).
+            Try
+                targetPath = ImageProcessor.ResolveWriteTarget(targetPath)
+            Catch ex As IOException
+                DiagnosticLogService.LogException("DngConverter", ex)
+                Return False
+            End Try
             Dim targetDirectory = Path.GetDirectoryName(targetPath)
             Dim stagePath = ImageProcessor.SiblingPath(Path.Combine(If(targetDirectory, ""), Path.GetFileNameWithoutExtension(targetPath)),
                                                        ".fpconvert-", ".dng")
@@ -86,6 +94,7 @@ Namespace Services
                     Dim standardError = If(errorReader.Wait(2000), errorReader.Result, "")
                     If Not cancel.IsCancellationRequested AndAlso process.HasExited AndAlso
                        process.ExitCode = 0 AndAlso File.Exists(stagePath) Then
+                        ImageProcessor.CarryOverFileMode(targetPath, stagePath)
                         File.Move(stagePath, targetPath, overwrite:=True)
                         Return True
                     End If
