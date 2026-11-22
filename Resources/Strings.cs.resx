@@ -7068,8 +7068,20 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>Mazání není možné</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
-    <value>Tyto soubory leží mimo osobní složku nebo ve skryté složce. FerrumPix tam nic nemaže. Povolit to lze v Nastavení, Galerie, Povolit operace se soubory mimo osobní složku.</value>
+  <data name="Das_Laufwerk_oder_die_Netzfreigabe_dieser_Dateie_90f0676a" xml:space="preserve">
+    <value>Jednotka nebo síťové sdílení těchto souborů teď není dostupné. Mazat půjde, až bude znovu připojené.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_versteckten_Ordner_4f53e39e" xml:space="preserve">
+    <value>Tyto soubory leží ve skryté složce nebo v koši. FerrumPix tam nic nemaže.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_Ordner_des_Systems_383b92fd" xml:space="preserve">
+    <value>Tyto soubory leží v systémové složce. FerrumPix tam nikdy nic nemaže, ani s povolenými operacemi se soubory mimo osobní složku.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__e73eed7b" xml:space="preserve">
+    <value>Tyto soubory leží mimo osobní složku. FerrumPix tam nic nemaže. Povolit to lze v Nastavení, Galerie, Povolit operace se soubory mimo osobní složku.</value>
+  </data>
+  <data name="Dieser_Ordner_ist_gesch_tzt_etwa_der_pers_nliche_4c7732cb" xml:space="preserve">
+    <value>Tato složka je chráněná, například osobní složka, složka obrázků nebo samotná jednotka či síťové sdílení. FerrumPix ji nemaže, jen to, co je v ní.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Kopírovat místo pořízení</value>

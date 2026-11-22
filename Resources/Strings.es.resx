@@ -7028,8 +7028,20 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>No se puede eliminar</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
-    <value>Estos archivos están fuera de la carpeta personal o en una carpeta oculta. FerrumPix no borra nada ahí. Se puede permitir en Ajustes, Galeria, Permitir operaciones de archivo fuera de la carpeta personal.</value>
+  <data name="Das_Laufwerk_oder_die_Netzfreigabe_dieser_Dateie_90f0676a" xml:space="preserve">
+    <value>La unidad o el recurso de red de estos archivos no está disponible ahora. Se podrá borrar cuando vuelva a estar conectado.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_versteckten_Ordner_4f53e39e" xml:space="preserve">
+    <value>Estos archivos están en una carpeta oculta o en la papelera. FerrumPix no borra nada ahí.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_Ordner_des_Systems_383b92fd" xml:space="preserve">
+    <value>Estos archivos están en una carpeta del sistema. FerrumPix nunca borra nada ahí, ni siquiera con las operaciones de archivo fuera de la carpeta personal permitidas.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__e73eed7b" xml:space="preserve">
+    <value>Estos archivos están fuera de la carpeta personal. FerrumPix no borra nada ahí. Se puede permitir en Ajustes, Galeria, Permitir operaciones de archivo fuera de la carpeta personal.</value>
+  </data>
+  <data name="Dieser_Ordner_ist_gesch_tzt_etwa_der_pers_nliche_4c7732cb" xml:space="preserve">
+    <value>Esta carpeta está protegida, como la carpeta personal, la carpeta de imágenes o una unidad o un recurso de red en sí. FerrumPix no la borra, solo lo que contiene.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Copiar ubicación</value>

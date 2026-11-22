@@ -7065,8 +7065,20 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>Silinemiyor</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
-    <value>Bu dosyalar kişisel klasörünüzün dışında ya da gizli bir klasörde. FerrumPix orada hiçbir şeyi silmez. Buna Ayarlar, Galeri, Kişisel klasör dışında dosya işlemlerine izin ver altında izin verilebilir.</value>
+  <data name="Das_Laufwerk_oder_die_Netzfreigabe_dieser_Dateie_90f0676a" xml:space="preserve">
+    <value>Bu dosyaların bulunduğu sürücüye veya ağ paylaşımına şu anda ulaşılamıyor. Yeniden bağlandığında silme yapılabilir.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_versteckten_Ordner_4f53e39e" xml:space="preserve">
+    <value>Bu dosyalar gizli bir klasörde ya da çöp kutusunda. FerrumPix orada hiçbir şeyi silmez.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_Ordner_des_Systems_383b92fd" xml:space="preserve">
+    <value>Bu dosyalar bir sistem klasöründe. Kişisel klasör dışında dosya işlemlerine izin verilse bile FerrumPix orada asla bir şey silmez.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__e73eed7b" xml:space="preserve">
+    <value>Bu dosyalar kişisel klasörünüzün dışında. FerrumPix orada hiçbir şeyi silmez. Buna Ayarlar, Galeri, Kişisel klasör dışında dosya işlemlerine izin ver altında izin verilebilir.</value>
+  </data>
+  <data name="Dieser_Ordner_ist_gesch_tzt_etwa_der_pers_nliche_4c7732cb" xml:space="preserve">
+    <value>Bu klasör korunuyor, örneğin kişisel klasör, resimler klasörü ya da bir sürücü veya ağ paylaşımının kendisi. FerrumPix onu silmez, yalnızca içindekileri siler.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Konumu kopyala</value>

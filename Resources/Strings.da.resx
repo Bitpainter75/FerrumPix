@@ -7068,8 +7068,20 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>Sletning er ikke mulig</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
-    <value>Disse filer ligger uden for den personlige mappe eller i en skjult mappe. FerrumPix sletter intet der. Det kan tillades under Indstillinger, Galleri, Tillad filhandlinger uden for den personlige mappe.</value>
+  <data name="Das_Laufwerk_oder_die_Netzfreigabe_dieser_Dateie_90f0676a" xml:space="preserve">
+    <value>Drevet eller netværksdelingen med disse filer kan ikke nås lige nu. Sletning virker igen, når det er forbundet.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_versteckten_Ordner_4f53e39e" xml:space="preserve">
+    <value>Disse filer ligger i en skjult mappe eller i papirkurven. Der sletter FerrumPix intet.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_Ordner_des_Systems_383b92fd" xml:space="preserve">
+    <value>Disse filer ligger i en systemmappe. Der sletter FerrumPix aldrig noget, heller ikke med tilladte filhandlinger uden for den personlige mappe.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__e73eed7b" xml:space="preserve">
+    <value>Disse filer ligger uden for den personlige mappe. FerrumPix sletter intet der. Det kan tillades under Indstillinger, Galleri, Tillad filhandlinger uden for den personlige mappe.</value>
+  </data>
+  <data name="Dieser_Ordner_ist_gesch_tzt_etwa_der_pers_nliche_4c7732cb" xml:space="preserve">
+    <value>Denne mappe er beskyttet, for eksempel den personlige mappe, billedmappen eller selve et drev eller en netværksdeling. FerrumPix sletter den ikke, kun det, der ligger i den.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Kopier optagelsesstedet</value>

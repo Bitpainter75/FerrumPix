@@ -7068,8 +7068,20 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>Удаление невозможно</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
-    <value>Эти файлы лежат за пределами личной папки или в скрытой папке. Там FerrumPix ничего не удаляет. Разрешить это можно в Настройки, Галерея, Разрешить операции с файлами вне личной папки.</value>
+  <data name="Das_Laufwerk_oder_die_Netzfreigabe_dieser_Dateie_90f0676a" xml:space="preserve">
+    <value>Диск или сетевой ресурс с этими файлами сейчас недоступен. Удалить можно будет, когда он снова подключится.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_versteckten_Ordner_4f53e39e" xml:space="preserve">
+    <value>Эти файлы лежат в скрытой папке или в корзине. Там FerrumPix ничего не удаляет.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_Ordner_des_Systems_383b92fd" xml:space="preserve">
+    <value>Эти файлы лежат в системной папке. Там FerrumPix никогда ничего не удаляет, даже если операции с файлами вне личной папки разрешены.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__e73eed7b" xml:space="preserve">
+    <value>Эти файлы лежат за пределами личной папки. Там FerrumPix ничего не удаляет. Разрешить это можно в Настройки, Галерея, Разрешить операции с файлами вне личной папки.</value>
+  </data>
+  <data name="Dieser_Ordner_ist_gesch_tzt_etwa_der_pers_nliche_4c7732cb" xml:space="preserve">
+    <value>Эта папка защищена, например личная папка, папка изображений или сам диск или сетевой ресурс. FerrumPix не удаляет её, только то, что в ней лежит.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Копировать место съёмки</value>

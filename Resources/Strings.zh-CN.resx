@@ -7026,8 +7026,20 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>无法删除</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
-    <value>这些文件位于个人文件夹之外或隐藏文件夹中。FerrumPix 不会在那里删除任何内容。可在设置, 图库, 允许在个人文件夹之外进行文件操作中允许。</value>
+  <data name="Das_Laufwerk_oder_die_Netzfreigabe_dieser_Dateie_90f0676a" xml:space="preserve">
+    <value>这些文件所在的驱动器或网络共享目前无法访问。重新连接后才能删除。</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_versteckten_Ordner_4f53e39e" xml:space="preserve">
+    <value>这些文件位于隐藏文件夹或回收站中。FerrumPix 不会在那里删除任何内容。</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_Ordner_des_Systems_383b92fd" xml:space="preserve">
+    <value>这些文件位于系统文件夹中。即使允许在个人文件夹之外进行文件操作，FerrumPix 也绝不会在那里删除任何内容。</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__e73eed7b" xml:space="preserve">
+    <value>这些文件位于个人文件夹之外。FerrumPix 不会在那里删除任何内容。可在设置, 图库, 允许在个人文件夹之外进行文件操作中允许。</value>
+  </data>
+  <data name="Dieser_Ordner_ist_gesch_tzt_etwa_der_pers_nliche_4c7732cb" xml:space="preserve">
+    <value>此文件夹受保护，例如个人文件夹、图片文件夹，或驱动器、网络共享本身。FerrumPix 不会删除它，只会删除其中的内容。</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>复制拍摄地点</value>

@@ -7068,8 +7068,20 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>Usuwanie niemożliwe</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
-    <value>Te pliki leżą poza folderem osobistym albo w folderze ukrytym. FerrumPix niczego tam nie usuwa. Można na to zezwolić w Ustawienia, Galeria, Zezwalaj na operacje na plikach poza folderem osobistym.</value>
+  <data name="Das_Laufwerk_oder_die_Netzfreigabe_dieser_Dateie_90f0676a" xml:space="preserve">
+    <value>Dysk lub udział sieciowy tych plików jest teraz niedostępny. Usuwanie zadziała, gdy znów będzie podłączony.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_versteckten_Ordner_4f53e39e" xml:space="preserve">
+    <value>Te pliki leżą w folderze ukrytym albo w koszu. FerrumPix niczego tam nie usuwa.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_Ordner_des_Systems_383b92fd" xml:space="preserve">
+    <value>Te pliki leżą w folderze systemowym. FerrumPix nigdy niczego tam nie usuwa, nawet przy dozwolonych operacjach na plikach poza folderem osobistym.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__e73eed7b" xml:space="preserve">
+    <value>Te pliki leżą poza folderem osobistym. FerrumPix niczego tam nie usuwa. Można na to zezwolić w Ustawienia, Galeria, Zezwalaj na operacje na plikach poza folderem osobistym.</value>
+  </data>
+  <data name="Dieser_Ordner_ist_gesch_tzt_etwa_der_pers_nliche_4c7732cb" xml:space="preserve">
+    <value>Ten folder jest chroniony, na przykład folder osobisty, folder obrazów albo sam dysk lub udział sieciowy. FerrumPix go nie usuwa, tylko to, co jest w środku.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Kopiuj miejsce wykonania</value>

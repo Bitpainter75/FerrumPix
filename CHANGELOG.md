@@ -36,6 +36,11 @@
   folder, can be deleted from, renamed in and moved again when file operations outside the home
   folder are allowed, instead of being treated as a system folder.
 
+- Network shares opened through the file manager on GNOME, XFCE or Cinnamon can be used for
+  deleting, renaming and moving when file operations outside the home folder are allowed. When a
+  picture cannot be deleted, the message now says why, and DELETE in the gallery shows it instead
+  of doing nothing.
+
 - Cameras without their own brightness entry now develop at the typical brightness of their brand
   instead of a fixed value, so they no longer come out noticeably too bright.
 

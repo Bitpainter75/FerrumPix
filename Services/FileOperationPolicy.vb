@@ -6,6 +6,27 @@ Imports System.Linq
 
 Namespace Services
 
+    ''' <summary>Warum Dateiarbeit an einem Pfad nicht erlaubt ist. Gedacht fuer die Meldung an den
+    ''' Nutzer; entschieden wird weiter ueber die Can-Funktionen von
+    ''' <see cref="FileOperationPolicy"/>.</summary>
+    Public Enum FileOperationDenial
+        ''' <summary>Erlaubt.</summary>
+        None
+        ''' <summary>Leerer Pfad oder eine Datei, die es nicht (mehr) gibt.</summary>
+        Missing
+        ''' <summary>Das Laufwerk oder die Netzfreigabe ist gerade nicht erreichbar.</summary>
+        UnreachableVolume
+        ''' <summary>Ein versteckter Ordner, darunter jeder Papierkorb.</summary>
+        HiddenOrTrash
+        ''' <summary>Ein Ordner des Systems; gesperrt auch mit <see cref="FileOperationPolicy.AllowOutsidePersonalFolder"/>.</summary>
+        SystemFolder
+        ''' <summary>Ausserhalb des Benutzerordners, und der Schalter dafuer ist aus.</summary>
+        OutsidePersonalFolder
+        ''' <summary>Ein geschuetzter Ordner selbst (Benutzerordner, Bilder, Laufwerk, Freigabe), siehe
+        ''' <see cref="FileOperationPolicy.IsProtectedFolder"/>.</summary>
+        ProtectedFolder
+    End Enum
+
     Public NotInheritable Class FileOperationPolicy
         Private Sub New()
         End Sub
@@ -60,7 +81,49 @@ Namespace Services
             ' /run gehoert dem System, aber unter /run/media haengt Linux die Laufwerke ein.
             If Not OperatingSystem.IsWindows() AndAlso IsAncestorOrSelf("/run/media", full) Then Return False
             If IsInDocumentPortal(full) Then Return False
+            If IsInGvfsShare(full) Then Return False
             Return SystemFolders().Any(Function(s) IsAncestorOrSelf(s, full))
+        End Function
+
+        ''' <summary>Wo gvfs die Netzfreigaben einhaengt: $XDG_RUNTIME_DIR/gvfs, also
+        ''' /run/user/UID/gvfs/NAME. Das gilt innerhalb wie ausserhalb des Flatpak; ohne
+        ''' XDG_RUNTIME_DIR (und unter Windows und macOS) leer, und leer heisst: keine Ausnahme.
+        '''
+        ''' Eine Freigabe ist fuer den Nutzer ein Laufwerk wie jedes andere und mit
+        ''' <see cref="AllowOutsidePersonalFolder"/> erlaubt. Sie liegt aber unter /run, das sonst ganz
+        ''' dem System gehoert; ohne diese Ausnahme blieb jede Freigabe auch mit Schalter gesperrt.
+        ''' Der Sammelordner gvfs selbst bleibt Systempfad, die Freigabe-Ebene darunter ein
+        ''' geschuetzter Ordner (<see cref="IsProtectedFolder"/>).</summary>
+        Public Shared Property GvfsRoot As String = FindGvfsRoot()
+
+        Private Shared Function FindGvfsRoot() As String
+            If OperatingSystem.IsWindows() OrElse OperatingSystem.IsMacOS() Then Return ""
+            Dim runtimeDir = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR")
+            If String.IsNullOrEmpty(runtimeDir) Then Return ""
+            Return IO.Path.Combine(runtimeDir, "gvfs")
+        End Function
+
+        ''' <summary>Liegt der Pfad in einer gvfs-Freigabe oder IST er eine, also gvfs/NAME und
+        ''' darunter? Wie beim Portal unter beiden Schreibweisen der Wurzel, buchstaeblich und
+        ''' aufgeloest. Ein Verweis IN der Freigabe, der ins System zeigt, wird weiter mit seinem
+        ''' Ziel geprueft und bleibt gesperrt.</summary>
+        Private Shared Function IsInGvfsShare(full As String) As Boolean
+            Dim root = GvfsRoot
+            If String.IsNullOrEmpty(root) Then Return False
+            Return IsLevelsBelow(root, full, 1) OrElse IsLevelsBelow(ResolveLinks(root), full, 1)
+        End Function
+
+        ''' <summary>Ist der Pfad der Sammelordner gvfs selbst oder eine Freigabe-Ebene darunter
+        ''' (gvfs/NAME)? Die verwaltet gvfs; umbenennen oder loeschen geht dort nie.</summary>
+        Private Shared Function IsGvfsRootOrShare(path As String) As Boolean
+            Dim root = GvfsRoot
+            If String.IsNullOrEmpty(root) Then Return False
+            For Each candidate In {root, ResolveLinks(root)}
+                If String.IsNullOrEmpty(candidate) OrElse Not IsAncestorOrSelf(candidate, path) Then Continue For
+                Dim relative = IO.Path.GetRelativePath(NormalizePath(candidate), NormalizePath(path))
+                If relative = "." OrElse relative.Split(IO.Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries).Length <= 1 Then Return True
+            Next
+            Return False
         End Function
 
         ''' <summary>Wo das Dokument-Portal im Flatpak die Ordner einhaengt, die der Nutzer ueber den
@@ -99,9 +162,15 @@ Namespace Services
 
         ''' <summary>Liegt der Pfad mindestens zwei Ebenen unter der Wurzel (KENNUNG/ORDNER)?</summary>
         Private Shared Function IsTwoLevelsBelow(root As String, full As String) As Boolean
+            Return IsLevelsBelow(root, full, 2)
+        End Function
+
+        ''' <summary>Liegt der Pfad mindestens <paramref name="minLevels"/> Ebenen unter der Wurzel?</summary>
+        Private Shared Function IsLevelsBelow(root As String, full As String, minLevels As Integer) As Boolean
             If String.IsNullOrEmpty(root) OrElse Not IsAncestorOrSelf(root, full) Then Return False
             Dim relative = IO.Path.GetRelativePath(NormalizePath(root), NormalizePath(full))
-            Return relative.Split(IO.Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries).Length >= 2
+            If relative = "." Then Return False
+            Return relative.Split(IO.Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries).Length >= minLevels
         End Function
 
         Private Shared ReadOnly _unixSystemFolders As String() = {
@@ -236,6 +305,31 @@ Namespace Services
             Return CanCopy(path) AndAlso CanPasteInto(targetFolder)
         End Function
 
+        ''' <summary>Warum <see cref="CanDelete"/> den Pfad ablehnt, oder None, wenn Loeschen erlaubt
+        ''' ist. Die Entscheidung selbst bleibt bei CanDelete; diese Funktion sortiert nur fuer die
+        ''' Meldung, damit sie nicht "ausserhalb des persoenlichen Ordners" sagt, wo der Schalter
+        ''' gar nicht hilft.
+        '''
+        ''' Reihenfolge: zuerst, was an keiner Einstellung haengt (Laufwerk weg, versteckt, System),
+        ''' dann der Schalter, zuletzt der geschuetzte Ordner selbst.</summary>
+        Public Shared Function GetDeleteDenial(path As String) As FileOperationDenial
+            If String.IsNullOrEmpty(path) Then Return FileOperationDenial.Missing
+            ' Vor jedem Blick auf die Platte, siehe IsOnUnreachableVolume.
+            If IsOnUnreachableVolume(path) Then Return FileOperationDenial.UnreachableVolume
+            If CanDelete(path) Then Return FileOperationDenial.None
+            If Not (File.Exists(path) OrElse Directory.Exists(path)) Then Return FileOperationDenial.Missing
+            If IsHiddenPath(path) Then Return FileOperationDenial.HiddenOrTrash
+            If Not IsInAllowedArea(path) Then
+                If AllowOutsidePersonalFolder OrElse IsSystemPath(path) OrElse IsSystemPath(ResolveLinks(path)) Then
+                    Return FileOperationDenial.SystemFolder
+                End If
+                Return FileOperationDenial.OutsidePersonalFolder
+            End If
+            If IsProtectedFolder(path) Then Return FileOperationDenial.ProtectedFolder
+            ' Zwischen den Pruefungen geaendert (gerade entstanden oder verschwunden).
+            Return FileOperationDenial.Missing
+        End Function
+
         Private Shared Function CanModify(path As String) As Boolean
             Return Not String.IsNullOrEmpty(path) AndAlso
                    Not IsOnUnreachableVolume(path) AndAlso
@@ -247,6 +341,9 @@ Namespace Services
         Public Shared Function IsProtectedFolder(path As String) As Boolean
             If String.IsNullOrEmpty(path) OrElse Not Directory.Exists(path) Then Return False
             If IsHiddenPath(path) Then Return True
+            ' Eine gvfs-Freigabe selbst: was darin liegt, ist mit dem Schalter erlaubt, sie selbst
+            ' umzubenennen oder zu loeschen nie, wie bei einem Laufwerk unter /media.
+            If IsGvfsRootOrShare(path) Then Return True
 
             Dim protectedFolders = GetProtectedFolders()
             Dim normalized = NormalizePath(path)

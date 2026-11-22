@@ -7065,8 +7065,20 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>Tidak dapat dihapus</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
-    <value>Berkas-berkas ini berada di luar folder pribadi Anda atau di folder tersembunyi. FerrumPix tidak menghapus apa pun di sana. Ini dapat diizinkan di Pengaturan, Galeri, Izinkan operasi file di luar folder pribadi.</value>
+  <data name="Das_Laufwerk_oder_die_Netzfreigabe_dieser_Dateie_90f0676a" xml:space="preserve">
+    <value>Drive atau berbagi jaringan berkas-berkas ini sedang tidak dapat dijangkau. Menghapus baru bisa setelah tersambung lagi.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_versteckten_Ordner_4f53e39e" xml:space="preserve">
+    <value>Berkas-berkas ini berada di folder tersembunyi atau di tempat sampah. FerrumPix tidak menghapus apa pun di sana.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_Ordner_des_Systems_383b92fd" xml:space="preserve">
+    <value>Berkas-berkas ini berada di folder sistem. FerrumPix tidak pernah menghapus apa pun di sana, bahkan jika operasi file di luar folder pribadi diizinkan.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__e73eed7b" xml:space="preserve">
+    <value>Berkas-berkas ini berada di luar folder pribadi Anda. FerrumPix tidak menghapus apa pun di sana. Ini dapat diizinkan di Pengaturan, Galeri, Izinkan operasi file di luar folder pribadi.</value>
+  </data>
+  <data name="Dieser_Ordner_ist_gesch_tzt_etwa_der_pers_nliche_4c7732cb" xml:space="preserve">
+    <value>Folder ini dilindungi, misalnya folder pribadi, folder gambar, atau drive atau berbagi jaringan itu sendiri. FerrumPix tidak menghapusnya, hanya isinya.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Salin lokasi</value>

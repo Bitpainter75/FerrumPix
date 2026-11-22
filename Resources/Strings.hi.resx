@@ -7065,8 +7065,20 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>मिटाया नहीं जा सकता</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
-    <value>ये फ़ाइलें आपके निजी फ़ोल्डर के बाहर या किसी छिपे फ़ोल्डर में हैं। FerrumPix वहाँ कुछ नहीं मिटाता। इसे सेटिंग्स, गैलरी, व्यक्तिगत फ़ोल्डर के बाहर फ़ाइल संचालन की अनुमति दें में अनुमति दी जा सकती है।</value>
+  <data name="Das_Laufwerk_oder_die_Netzfreigabe_dieser_Dateie_90f0676a" xml:space="preserve">
+    <value>इन फ़ाइलों की ड्राइव या नेटवर्क शेयर अभी उपलब्ध नहीं है। दोबारा जुड़ने पर ही मिटाया जा सकेगा।</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_versteckten_Ordner_4f53e39e" xml:space="preserve">
+    <value>ये फ़ाइलें किसी छिपे फ़ोल्डर में या रीसायकल बिन में हैं। FerrumPix वहाँ कुछ नहीं मिटाता।</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_Ordner_des_Systems_383b92fd" xml:space="preserve">
+    <value>ये फ़ाइलें सिस्टम के किसी फ़ोल्डर में हैं। FerrumPix वहाँ कभी कुछ नहीं मिटाता, निजी फ़ोल्डर के बाहर फ़ाइल संचालन की अनुमति होने पर भी नहीं।</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__e73eed7b" xml:space="preserve">
+    <value>ये फ़ाइलें आपके निजी फ़ोल्डर के बाहर हैं। FerrumPix वहाँ कुछ नहीं मिटाता। इसे सेटिंग्स, गैलरी, व्यक्तिगत फ़ोल्डर के बाहर फ़ाइल संचालन की अनुमति दें में अनुमति दी जा सकती है।</value>
+  </data>
+  <data name="Dieser_Ordner_ist_gesch_tzt_etwa_der_pers_nliche_4c7732cb" xml:space="preserve">
+    <value>यह फ़ोल्डर सुरक्षित है, जैसे निजी फ़ोल्डर, चित्र फ़ोल्डर या स्वयं कोई ड्राइव या नेटवर्क शेयर। FerrumPix इसे नहीं मिटाता, केवल इसके अंदर की चीज़ें।</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>स्थान कॉपी करें</value>

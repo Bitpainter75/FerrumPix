@@ -7065,8 +7065,20 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>ลบไม่ได้</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
-    <value>ไฟล์เหล่านี้อยู่นอกโฟลเดอร์ส่วนตัวของคุณหรืออยู่ในโฟลเดอร์ที่ซ่อนไว้ FerrumPix จะไม่ลบอะไรที่นั่น อนุญาตได้ที่ การตั้งค่า, แกลเลอรี, อนุญาตการจัดการไฟล์นอกโฟลเดอร์ส่วนตัว</value>
+  <data name="Das_Laufwerk_oder_die_Netzfreigabe_dieser_Dateie_90f0676a" xml:space="preserve">
+    <value>ไดรฟ์หรือที่แชร์บนเครือข่ายของไฟล์เหล่านี้เข้าถึงไม่ได้ในขณะนี้ จะลบได้เมื่อเชื่อมต่ออีกครั้ง</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_versteckten_Ordner_4f53e39e" xml:space="preserve">
+    <value>ไฟล์เหล่านี้อยู่ในโฟลเดอร์ที่ซ่อนไว้หรือในถังขยะ FerrumPix จะไม่ลบอะไรที่นั่น</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_Ordner_des_Systems_383b92fd" xml:space="preserve">
+    <value>ไฟล์เหล่านี้อยู่ในโฟลเดอร์ของระบบ FerrumPix จะไม่ลบอะไรที่นั่นเลย แม้จะอนุญาตการจัดการไฟล์นอกโฟลเดอร์ส่วนตัวแล้วก็ตาม</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__e73eed7b" xml:space="preserve">
+    <value>ไฟล์เหล่านี้อยู่นอกโฟลเดอร์ส่วนตัวของคุณ FerrumPix จะไม่ลบอะไรที่นั่น อนุญาตได้ที่ การตั้งค่า, แกลเลอรี, อนุญาตการจัดการไฟล์นอกโฟลเดอร์ส่วนตัว</value>
+  </data>
+  <data name="Dieser_Ordner_ist_gesch_tzt_etwa_der_pers_nliche_4c7732cb" xml:space="preserve">
+    <value>โฟลเดอร์นี้ได้รับการป้องกัน เช่น โฟลเดอร์ส่วนตัว โฟลเดอร์รูปภาพ หรือตัวไดรฟ์หรือที่แชร์บนเครือข่ายเอง FerrumPix จะไม่ลบโฟลเดอร์นี้ ลบได้เฉพาะสิ่งที่อยู่ข้างใน</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>คัดลอกตำแหน่ง</value>

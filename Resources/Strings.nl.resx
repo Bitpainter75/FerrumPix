@@ -7068,8 +7068,20 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>Verwijderen niet mogelijk</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
-    <value>Deze bestanden staan buiten de persoonlijke map of in een verborgen map. FerrumPix verwijdert daar niets. Toestaan kan onder Instellingen, Galerij, Bestandsbewerkingen buiten de persoonlijke map toestaan.</value>
+  <data name="Das_Laufwerk_oder_die_Netzfreigabe_dieser_Dateie_90f0676a" xml:space="preserve">
+    <value>Het station of de netwerkshare van deze bestanden is nu niet bereikbaar. Verwijderen kan weer zodra het opnieuw verbonden is.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_versteckten_Ordner_4f53e39e" xml:space="preserve">
+    <value>Deze bestanden staan in een verborgen map of in de prullenbak. Daar verwijdert FerrumPix niets.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_Ordner_des_Systems_383b92fd" xml:space="preserve">
+    <value>Deze bestanden staan in een systeemmap. Daar verwijdert FerrumPix nooit iets, ook niet met toegestane bestandsbewerkingen buiten de persoonlijke map.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__e73eed7b" xml:space="preserve">
+    <value>Deze bestanden staan buiten de persoonlijke map. FerrumPix verwijdert daar niets. Toestaan kan onder Instellingen, Galerij, Bestandsbewerkingen buiten de persoonlijke map toestaan.</value>
+  </data>
+  <data name="Dieser_Ordner_ist_gesch_tzt_etwa_der_pers_nliche_4c7732cb" xml:space="preserve">
+    <value>Deze map is beschermd, zoals de persoonlijke map, de map met afbeeldingen of een station of netwerkshare zelf. FerrumPix verwijdert hem niet, alleen wat erin staat.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Opnamelocatie kopiëren</value>

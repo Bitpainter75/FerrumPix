@@ -7027,8 +7027,20 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>Não é possível excluir</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
-    <value>Estes arquivos estão fora da pasta pessoal ou em uma pasta oculta. O FerrumPix não apaga nada ali. Pode permitir isto em Configurações, Galeria, Permitir operações de arquivo fora da pasta pessoal.</value>
+  <data name="Das_Laufwerk_oder_die_Netzfreigabe_dieser_Dateie_90f0676a" xml:space="preserve">
+    <value>A unidade ou o compartilhamento de rede destes arquivos não está acessível agora. Será possível apagar quando voltar a estar conectado.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_versteckten_Ordner_4f53e39e" xml:space="preserve">
+    <value>Estes arquivos estão em uma pasta oculta ou na lixeira. O FerrumPix não apaga nada ali.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_Ordner_des_Systems_383b92fd" xml:space="preserve">
+    <value>Estes arquivos estão em uma pasta do sistema. O FerrumPix nunca apaga nada ali, nem mesmo com as operações de arquivo fora da pasta pessoal permitidas.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__e73eed7b" xml:space="preserve">
+    <value>Estes arquivos estão fora da pasta pessoal. O FerrumPix não apaga nada ali. Pode permitir isto em Configurações, Galeria, Permitir operações de arquivo fora da pasta pessoal.</value>
+  </data>
+  <data name="Dieser_Ordner_ist_gesch_tzt_etwa_der_pers_nliche_4c7732cb" xml:space="preserve">
+    <value>Esta pasta está protegida, como a pasta pessoal, a pasta de imagens ou uma unidade ou compartilhamento de rede em si. O FerrumPix não a apaga, apenas o que está dentro dela.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Copiar local</value>

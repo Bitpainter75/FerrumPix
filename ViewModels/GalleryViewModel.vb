@@ -13781,8 +13781,15 @@ Namespace ViewModels
                 Where(Function(p) Not String.IsNullOrEmpty(p)).
                 Distinct(PathIdentity.Comparer).
                 ToList()
-            targets = targets.Where(Function(p) FileOperationPolicy.CanDelete(p)).ToList()
-            If targets.Count = 0 Then Return
+            Dim allowed = targets.Where(Function(p) FileOperationPolicy.CanDelete(p)).ToList()
+            If allowed.Count = 0 Then
+                ' Nichts davon darf geloescht werden. Wortlos abzubrechen hiess: ENTF tut nichts,
+                ' und niemand erfaehrt warum. Der gemeinsame Loeschweg nennt den Grund und loescht
+                ' selbst nichts, weil er dieselbe Pruefung anlegt.
+                If targets.Count > 0 Then _mainVm?.RequestDeletePaths(targets)
+                Return
+            End If
+            targets = allowed
             Dim deletionAnchor = CaptureDeletionAnchor(targets)
             If _isVirtualFolder Then
                 Dim deletedSet = targets.ToHashSet(PathIdentity.Comparer)

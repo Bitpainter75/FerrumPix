@@ -6936,6 +6936,27 @@ Namespace ViewModels
             End Try
         End Sub
 
+        ''' <summary>Der Text, wenn nichts geloescht werden darf: je Grund ein eigener Satz, bei
+        ''' gemischter Auswahl alle beteiligten Gruende untereinander.</summary>
+        Friend Shared Function DeleteDenialMessage(reasons As IEnumerable(Of FileOperationDenial)) As String
+            Dim lines As New List(Of String)()
+            For Each reason In reasons.Distinct()
+                Select Case reason
+                    Case FileOperationDenial.UnreachableVolume
+                        lines.Add(LocalizationService.T("Das Laufwerk oder die Netzfreigabe dieser Dateien ist gerade nicht erreichbar. Löschen geht erst, wenn es wieder verbunden ist."))
+                    Case FileOperationDenial.HiddenOrTrash
+                        lines.Add(LocalizationService.T("Diese Dateien liegen in einem versteckten Ordner oder im Papierkorb. Dort löscht FerrumPix nichts."))
+                    Case FileOperationDenial.SystemFolder
+                        lines.Add(LocalizationService.T("Diese Dateien liegen in einem Ordner des Systems. Dort löscht FerrumPix nie etwas, auch nicht mit erlaubten Dateioperationen außerhalb des persönlichen Ordners."))
+                    Case FileOperationDenial.OutsidePersonalFolder
+                        lines.Add(LocalizationService.T("Diese Dateien liegen außerhalb des persönlichen Ordners. FerrumPix löscht dort nichts. Erlauben lässt sich das unter Einstellungen, Galerie, Dateioperationen außerhalb des persönlichen Ordners erlauben."))
+                    Case FileOperationDenial.ProtectedFolder
+                        lines.Add(LocalizationService.T("Dieser Ordner ist geschützt, etwa der persönliche Ordner, der Bilderordner oder ein Laufwerk oder eine Netzfreigabe selbst. FerrumPix löscht ihn nicht, nur was darin liegt."))
+                End Select
+            Next
+            Return String.Join(Environment.NewLine & Environment.NewLine, lines)
+        End Function
+
         Private Async Function RequestDeletePathsCoreAsync(paths As IEnumerable(Of String), afterDelete As Action,
                                                            beforeDelete As Action) As Task
             Dim angefragt = If(paths, Enumerable.Empty(Of String)()).ToList()
@@ -6948,18 +6969,18 @@ Namespace ViewModels
                 ' Ein wortloser Abbruch ist die schlimmste Sorte: der Nutzer bestaetigt nichts, es
                 ' passiert nichts, und niemand erfaehrt warum. Der Grund steht im Log UND in der
                 ' Meldung - beim Nutzerbefund lagen die Bilder im Systempapierkorb,
-                ' und dort ist Loeschen zu Recht gesperrt.
-                Dim gesperrt = 0
+                ' und dort ist Loeschen zu Recht gesperrt. Die Meldung nennt den GRUND, den
+                ' FileOperationPolicy unterscheidet: der Hinweis auf die Einstellung steht nur
+                ' dort, wo sie auch hilft.
+                Dim reasons As New List(Of FileOperationDenial)()
                 For Each p In angefragt
-                    Dim fehlt = Not (IO.File.Exists(p) OrElse IO.Directory.Exists(p))
-                    Dim grund = If(String.IsNullOrEmpty(p), "leerer Pfad",
-                                If(fehlt, "gibt es nicht (mehr)", "Loeschen nicht erlaubt (FileOperationPolicy)"))
-                    If Not fehlt AndAlso Not String.IsNullOrEmpty(p) Then gesperrt += 1
-                    DiagnosticLogService.LogAlways("Delete", $"uebergangen: {p} - {grund}")
+                    Dim reason = FileOperationPolicy.GetDeleteDenial(p)
+                    DiagnosticLogService.LogAlways("Delete", $"uebergangen: {p} - {reason}")
+                    If reason <> FileOperationDenial.None AndAlso reason <> FileOperationDenial.Missing AndAlso
+                       Not reasons.Contains(reason) Then reasons.Add(reason)
                 Next
-                If gesperrt > 0 Then
-                    Await ShowMessageAsync(LocalizationService.T("Löschen nicht möglich"),
-                                           LocalizationService.T("Diese Dateien liegen außerhalb des persönlichen Ordners oder in einem versteckten Ordner. FerrumPix löscht dort nichts. Erlauben lässt sich das unter Einstellungen, Galerie, Dateioperationen außerhalb des persönlichen Ordners erlauben."))
+                If reasons.Count > 0 Then
+                    Await ShowMessageAsync(LocalizationService.T("Löschen nicht möglich"), DeleteDenialMessage(reasons))
                 End If
                 Return
             End If

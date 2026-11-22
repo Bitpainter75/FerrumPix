@@ -7028,8 +7028,20 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>Suppression impossible</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
-    <value>Ces fichiers sont hors du dossier personnel ou dans un dossier caché. FerrumPix n'y supprime rien. Vous pouvez l'autoriser dans Paramètres, Galerie, Autoriser les opérations sur les fichiers hors du dossier personnel.</value>
+  <data name="Das_Laufwerk_oder_die_Netzfreigabe_dieser_Dateie_90f0676a" xml:space="preserve">
+    <value>Le lecteur ou le partage réseau de ces fichiers est injoignable pour le moment. La suppression sera possible une fois qu'il sera reconnecté.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_versteckten_Ordner_4f53e39e" xml:space="preserve">
+    <value>Ces fichiers sont dans un dossier caché ou dans la corbeille. FerrumPix n'y supprime rien.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_Ordner_des_Systems_383b92fd" xml:space="preserve">
+    <value>Ces fichiers sont dans un dossier du système. FerrumPix n'y supprime jamais rien, même avec les opérations sur les fichiers hors du dossier personnel autorisées.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__e73eed7b" xml:space="preserve">
+    <value>Ces fichiers sont hors du dossier personnel. FerrumPix n'y supprime rien. Vous pouvez l'autoriser dans Paramètres, Galerie, Autoriser les opérations sur les fichiers hors du dossier personnel.</value>
+  </data>
+  <data name="Dieser_Ordner_ist_gesch_tzt_etwa_der_pers_nliche_4c7732cb" xml:space="preserve">
+    <value>Ce dossier est protégé, comme le dossier personnel, le dossier des images ou un lecteur ou un partage réseau lui-même. FerrumPix ne le supprime pas, seulement ce qu'il contient.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Copier le lieu</value>

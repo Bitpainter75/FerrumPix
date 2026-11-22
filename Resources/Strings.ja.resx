@@ -7068,8 +7068,20 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>削除できません</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
-    <value>これらのファイルはホームフォルダーの外か、隠しフォルダーの中にあります。FerrumPix はそこにあるものを削除しません。設定, ギャラリー, 個人用フォルダー以外でのファイル操作を許可 で許可できます。</value>
+  <data name="Das_Laufwerk_oder_die_Netzfreigabe_dieser_Dateie_90f0676a" xml:space="preserve">
+    <value>これらのファイルがあるドライブまたはネットワーク共有に、今は接続できません。再び接続されると削除できます。</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_versteckten_Ordner_4f53e39e" xml:space="preserve">
+    <value>これらのファイルは隠しフォルダーかゴミ箱の中にあります。FerrumPix はそこにあるものを削除しません。</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_Ordner_des_Systems_383b92fd" xml:space="preserve">
+    <value>これらのファイルはシステムのフォルダーにあります。個人用フォルダー以外でのファイル操作を許可していても、FerrumPix はそこにあるものを決して削除しません。</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__e73eed7b" xml:space="preserve">
+    <value>これらのファイルはホームフォルダーの外にあります。FerrumPix はそこにあるものを削除しません。設定, ギャラリー, 個人用フォルダー以外でのファイル操作を許可 で許可できます。</value>
+  </data>
+  <data name="Dieser_Ordner_ist_gesch_tzt_etwa_der_pers_nliche_4c7732cb" xml:space="preserve">
+    <value>このフォルダーは保護されています。例えばホームフォルダー、ピクチャフォルダー、ドライブやネットワーク共有そのものです。FerrumPix はフォルダー自体を削除せず、中身だけを削除します。</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>撮影場所をコピー</value>

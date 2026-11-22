@@ -7068,8 +7068,20 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>Borttagning är inte möjlig</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
-    <value>De här filerna ligger utanför den personliga mappen eller i en dold mapp. FerrumPix tar inte bort någonting där. Det kan tillåtas under Inställningar, Galleri, Tillåt filåtgärder utanför den personliga mappen.</value>
+  <data name="Das_Laufwerk_oder_die_Netzfreigabe_dieser_Dateie_90f0676a" xml:space="preserve">
+    <value>Enheten eller nätverksresursen med de här filerna går inte att nå just nu. Det går att ta bort igen när den är ansluten.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_versteckten_Ordner_4f53e39e" xml:space="preserve">
+    <value>De här filerna ligger i en dold mapp eller i papperskorgen. Där tar FerrumPix inte bort någonting.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_in_einem_Ordner_des_Systems_383b92fd" xml:space="preserve">
+    <value>De här filerna ligger i en systemmapp. Där tar FerrumPix aldrig bort något, inte ens med tillåtna filåtgärder utanför den personliga mappen.</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__e73eed7b" xml:space="preserve">
+    <value>De här filerna ligger utanför den personliga mappen. FerrumPix tar inte bort någonting där. Det kan tillåtas under Inställningar, Galleri, Tillåt filåtgärder utanför den personliga mappen.</value>
+  </data>
+  <data name="Dieser_Ordner_ist_gesch_tzt_etwa_der_pers_nliche_4c7732cb" xml:space="preserve">
+    <value>Den här mappen är skyddad, till exempel den personliga mappen, bildmappen eller själva enheten eller nätverksresursen. FerrumPix tar inte bort den, bara det som ligger i den.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Kopiera fotograferingsplatsen</value>
