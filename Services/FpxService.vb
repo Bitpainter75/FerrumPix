@@ -399,10 +399,38 @@ Namespace Services
 
             ' Durch einen symbolischen Verweis hindurch schreiben und die Zugriffsrechte des alten
             ' Buendels behalten, wie jedes atomare Schreiben (ImageProcessor.WriteFileAtomic).
+            ' Eine EIGENE Nachbardatei je Auftrag (ImageProcessor.AtomicSiblingPath): ein fester Name
+            ' ("buendel.fpx.tmp") teilten sich zwei gleichzeitige Speicherungen desselben Buendels,
+            ' auch ueber zwei Verweise darauf, und die eine loeschte oder ueberschriebe die halbe
+            ' Datei der anderen. ZipArchiveMode.Create legt sie neu an und ersetzt nie eine vorhandene.
             Dim finalPath = ImageProcessor.ResolveWriteTarget(fpxPath)
-            Dim tempPath = finalPath & ".tmp"
-            If File.Exists(tempPath) Then File.Delete(tempPath)
+            Dim tempPath = ImageProcessor.AtomicSiblingPath(finalPath)
+            Dim created = False
+            Try
+                WriteBundle(tempPath, baseImagePath, baseExt, assetMap, compositePng, retouchStagePng, recipe, created)
+                ImageProcessor.CarryOverFileMode(finalPath, tempPath)
+                File.Move(tempPath, finalPath, overwrite:=True)
+            Catch
+                Try
+                    ' Nur die selbst angelegte Nachbardatei: unter demselben Zufallsnamen koennte
+                    ' sonst die halbe Datei eines anderen Auftrags liegen.
+                    If created AndAlso File.Exists(tempPath) Then File.Delete(tempPath)
+                Catch cleanupEx As Exception
+                    DiagnosticLogService.LogException("Fpx.Save.Cleanup", cleanupEx)
+                End Try
+                Throw
+            End Try
+        End Sub
+
+        ''' <summary>Schreibt das Buendel in eine neue Datei; sie darf noch nicht bestehen.</summary>
+        Private Shared Sub WriteBundle(tempPath As String, baseImagePath As String, baseExt As String,
+                                       assetMap As Dictionary(Of String, String), compositePng As Stream,
+                                       retouchStagePng As Stream, recipe As FpxRecipe,
+                                       ByRef created As Boolean)
+            ' ZipArchiveMode.Create oeffnet mit CreateNew: liegt unter dem Zufallsnamen schon eine
+            ' Datei (die eines anderen Auftrags), wirft schon das Oeffnen, und created bleibt False.
             Using zip = ZipFile.Open(tempPath, ZipArchiveMode.Create)
+                created = True
                 ' Bilddaten (Basisbild, Objekt-Assets, Komposit) UNKOMPRIMIERT ablegen: es sind bereits
                 ' komprimierte Formate (PNG/JPEG …); ein zusätzlicher ZIP-Deflate kostet beim Speichern und
                 ' vor allem beim Extrahieren im Viewer CPU, ohne nennenswert zu schrumpfen. Größe ist zweitrangig,
@@ -431,9 +459,6 @@ Namespace Services
                     JsonSerializer.Serialize(es, recipe, JsonOptions)
                 End Using
             End Using
-
-            ImageProcessor.CarryOverFileMode(finalPath, tempPath)
-            File.Move(tempPath, finalPath, overwrite:=True)
         End Sub
 
         ' ── Laden ───────────────────────────────────────────────────────────────

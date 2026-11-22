@@ -52,7 +52,10 @@
 
 - If pasting or moving a picture is interrupted, for example by a crash, the half-copied file no
   longer stays hidden in the destination folder: the next paste or move into that folder removes
-  it.
+  it, but leaves a slow copy alone that is still being written.
+
+- If moving a picture to another drive cannot remove the original afterwards, the original keeps
+  its rating, keywords and people in the library, and the copy gets them too.
 
 - A damaged LUT file no longer causes an error every time the picture is drawn; it simply has no
   effect.

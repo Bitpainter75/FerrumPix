@@ -287,35 +287,30 @@ Namespace Services
 
             ' Erst vollstaendig in den Arbeitsspeicher, dann in einem Zug auf die Platte: die Laengen
             ' der Ebenen-Sektion stehen VOR ihrem Inhalt und sind erst bekannt, wenn er gebaut ist.
-            Dim tempPath As String = Nothing
             Try
-                ' Durch einen symbolischen Verweis hindurch schreiben und die Zugriffsrechte der alten
-                ' Datei behalten, wie jedes atomare Schreiben (ImageProcessor.WriteFileAtomic).
-                Dim finalPath = ImageProcessor.ResolveWriteTarget(filePath)
-                tempPath = finalPath & ".tmp"
                 ' Der Ebenenblock steht VOR dem Gesamtbild und braucht trotzdem schon dessen
                 ' Alpha-Markierung. Die Kanaele werden deshalb hier einmal zerlegt und beim
                 ' Schreiben des Gesamtbilds weiterverwendet, statt das Bild zweimal umzurechnen.
                 ' Der Preis dafuer: sie stehen waehrend des ganzen Ebenenblocks im Speicher,
                 ' also vier Byte je Bildpunkt zusaetzlich zu dessen eigenem Puffer.
                 Dim compositePlanes = ExtractPlanes(composite)
-                Using fs = File.Create(tempPath)
-                    WriteHeader(fs, composite.Width, composite.Height, 8)
-                    WriteU32(fs, 0)  ' Farbmodus-Daten: keine
-                    WriteImageResources(fs, recipe, resolutionDpi, xmp)
-                    WriteLayerSection(fs, usable, HasTransparentPixels(compositePlanes))
-                    WriteMergedImage(fs, composite.Width, composite.Height, compositePlanes)
-                End Using
-                ImageProcessor.CarryOverFileMode(finalPath, tempPath)
-                File.Move(tempPath, finalPath, overwrite:=True)
+                ' Wie jedes atomare Schreiben (ImageProcessor.WriteFileAtomic): durch einen
+                ' symbolischen Verweis hindurch, die Zugriffsrechte der alten Datei behalten, und
+                ' eine EIGENE Nachbardatei je Auftrag. Ein fester Name ("ziel.psd.tmp") teilten sich
+                ' zwei gleichzeitige Speicherungen derselben Datei, auch über zwei Verweise darauf:
+                ' die eine schriebe in die halbe Datei der anderen oder nähme sie ihr weg.
+                ImageProcessor.WriteFileAtomic(filePath,
+                    Sub(fs)
+                        WriteHeader(fs, composite.Width, composite.Height, 8)
+                        WriteU32(fs, 0)  ' Farbmodus-Daten: keine
+                        WriteImageResources(fs, recipe, resolutionDpi, xmp)
+                        WriteLayerSection(fs, usable, HasTransparentPixels(compositePlanes))
+                        WriteMergedImage(fs, composite.Width, composite.Height, compositePlanes)
+                    End Sub)
                 Return True
-            Catch
-                ' Kein einzeiliges Try mit einzeiligem If davor: der Doppelpunkt zieht das Catch in
-                ' den If-Rumpf, und der Compiler sieht ein Catch ohne Try.
-                Try
-                    If File.Exists(tempPath) Then File.Delete(tempPath)
-                Catch
-                End Try
+            Catch ex As Exception
+                ' Die Nachbardatei räumt WriteFileAtomic im Fehlerfall selbst weg.
+                DiagnosticLogService.LogException("PsdWriter.Save", ex)
                 Return False
             End Try
         End Function
@@ -558,10 +553,7 @@ Namespace Services
                 Next
             End If
 
-            Dim tempPath As String = Nothing
             Try
-                Dim finalPath = ImageProcessor.ResolveWriteTarget(filePath)
-                tempPath = finalPath & ".tmp"
                 Dim compositePlanes = ExtractPlanesDeep(deepComposite)
                 If compositePlanes Is Nothing Then Return False
                 Dim transparent = False
@@ -571,22 +563,19 @@ Namespace Services
                         Exit For
                     End If
                 Next
-                Using fs = File.Create(tempPath)
-                    WriteHeader(fs, deepComposite.Width, deepComposite.Height, 16)
-                    WriteU32(fs, 0)  ' Farbmodus-Daten: keine
-                    WriteImageResources(fs, recipe, resolutionDpi, xmp)
-                    WriteLayerSection(fs, usable, transparent, deep:=True)
-                    WriteMergedImageDeep(fs, deepComposite.Width, deepComposite.Height, compositePlanes)
-                End Using
-                ImageProcessor.CarryOverFileMode(finalPath, tempPath)
-                File.Move(tempPath, finalPath, overwrite:=True)
+                ' Eigene Nachbardatei je Auftrag wie in Save (ImageProcessor.WriteFileAtomic).
+                ImageProcessor.WriteFileAtomic(filePath,
+                    Sub(fs)
+                        WriteHeader(fs, deepComposite.Width, deepComposite.Height, 16)
+                        WriteU32(fs, 0)  ' Farbmodus-Daten: keine
+                        WriteImageResources(fs, recipe, resolutionDpi, xmp)
+                        WriteLayerSection(fs, usable, transparent, deep:=True)
+                        WriteMergedImageDeep(fs, deepComposite.Width, deepComposite.Height, compositePlanes)
+                    End Sub)
                 Return True
             Catch ex As Exception
+                ' Die Nachbardatei räumt WriteFileAtomic im Fehlerfall selbst weg.
                 DiagnosticLogService.LogException("PsdWriter.SaveDeep", ex)
-                Try
-                    If File.Exists(tempPath) Then File.Delete(tempPath)
-                Catch
-                End Try
                 Return False
             End Try
         End Function

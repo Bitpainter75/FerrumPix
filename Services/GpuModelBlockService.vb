@@ -39,6 +39,11 @@ Namespace Services
     ''' Einstellungen auf. Ein bestaetigter Aufbau auf der Karte (Probe, Modellaufbau) hebt nur eine
     ''' Sperre aus einem Fehler auf; eine aus einem Absturz nicht, denn der kann erst im Lauf kommen.
     '''
+    ''' ZWEI PROZESSE teilen sich die Datei. Jede Aenderung liest sie unter einem benannten Mutex
+    ''' frisch, traegt nur das eigene Paar ein oder aus und schreibt atomar zurueck (Mutate); der
+    ''' Zwischenspeicher wird neu gelesen, sobald Schreibzeit oder Laenge der Datei abweichen. So
+    ''' ueberschreibt kein Prozess eine Sperre, die der andere inzwischen eingetragen hat.
+    '''
     ''' EINE KAPUTTE DATEI ist keine Sperre: sie wird ignoriert und beim naechsten Schreiben ersetzt.</summary>
     Public NotInheritable Class GpuModelBlockService
 
@@ -85,8 +90,21 @@ Namespace Services
         Friend Shared DriverOverride As Func(Of String, String) = Nothing
 
         Private Shared ReadOnly _lock As New Object()
-        ''' Nothing heisst: in diesem Programmlauf noch nicht gelesen.
+        ''' Der zuletzt gelesene oder geschriebene Stand, nur die Sperren dieses Baus. Nothing heisst:
+        ''' noch nicht gelesen. Gilt nur, solange die Datei Zeit und Laenge von _fileStamp traegt.
         Private Shared _entries As List(Of BlockEntry) = Nothing
+        ''' Schreibzeit und Laenge der Datei, als _entries entstand; ein anderer Prozess, der seither
+        ''' geschrieben hat, aendert sie, und der naechste Blick liest neu.
+        Private Shared _fileStamp As (Time As DateTime, Length As Long)
+        ''' Ob in diesem Programmlauf die liegengebliebenen Laufmarken schon uebernommen sind.
+        Private Shared _adopted As Boolean
+        ''' Wie lange ein Schreiber auf einen anderen Prozess wartet, der gerade dieselbe Datei
+        ''' schreibt. Danach wird trotzdem geschrieben: eine Sperre, die verloren geht, ist
+        ''' schlimmer als ein Wettlauf, der sie vielleicht verliert. Ein Schreiben der kleinen
+        ''' JSON-Datei dauert Millisekunden; 30 Sekunden Warten erreicht nur ein Prozess, der mit der
+        ''' Sperre haengt. Erst dann bleibt der Restfall, dass sein spaeteres Schreiben einen in der
+        ''' Zwischenzeit geschriebenen Eintrag ueberdeckt.
+        Private Const CrossProcessLockTimeoutMs As Integer = 30000
         ''' Die offenen Laeufe dieses Prozesses je Paar, fuer die eine Marke liegt.
         Private Shared ReadOnly _running As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
         ''' Zu jeder Sitzung auf der Karte: Modelldatei und Kartenschluessel.
@@ -226,23 +244,126 @@ Namespace Services
         ' ---------------------------------------------------------------------------------------
         ' Sperrdatei
 
-        ''' <summary>Einmal je Programmlauf: Datei lesen, liegengebliebene Marken uebernehmen,
-        ''' Sperren eines anderen Baus verwerfen. Unter _lock zu rufen.</summary>
+        ''' <summary>Den Zwischenspeicher bereitstellen. Einmal je Programmlauf werden dabei
+        ''' liegengebliebene Marken uebernommen und Sperren eines anderen Baus verworfen; danach wird
+        ''' nur neu gelesen, wenn ein anderer Prozess die Datei geaendert hat (Zeit oder Laenge).
+        ''' Unter _lock zu rufen.</summary>
         Private Shared Sub EnsureLoaded()
-            If _entries IsNot Nothing Then Return
-            Dim list = ReadFile()
-            Dim changed = AdoptLeftoverMarkers(list)
-            Dim stamp = NativeStartGuard.CurrentStamp()
-            Dim before = list.Count
-            list.RemoveAll(Function(e) Not String.Equals(e.Build, stamp, StringComparison.Ordinal))
-            If list.Count <> before Then
-                changed = True
-                DiagnosticLogService.LogAlways("Startschutz",
-                    $"{before - list.Count} Modellsperre(n) einer anderen Programmfassung verworfen, die Karte wird wieder versucht")
+            If Not _adopted Then
+                _adopted = True
+                Mutate(Function(list)
+                           Dim changed = AdoptLeftoverMarkers(list)
+                           Dim stamp = NativeStartGuard.CurrentStamp()
+                           Dim before = list.Count
+                           list.RemoveAll(Function(e) Not String.Equals(e.Build, stamp, StringComparison.Ordinal))
+                           If list.Count <> before Then
+                               changed = True
+                               DiagnosticLogService.LogAlways("Startschutz",
+                                   $"{before - list.Count} Modellsperre(n) einer anderen Programmfassung verworfen, die Karte wird wieder versucht")
+                           End If
+                           Return changed
+                       End Function)
+                Return
             End If
-            _entries = list
-            If changed Then WriteFile()
+            If _entries IsNot Nothing AndAlso CurrentFileStamp().Equals(_fileStamp) Then Return
+            ' Die Marke VOR dem Lesen: schreibt jemand dazwischen, weicht sie beim naechsten Blick
+            ' ab, und es wird noch einmal gelesen.
+            _fileStamp = CurrentFileStamp()
+            _entries = OwnBuildOnly(ReadFile())
         End Sub
+
+        ''' <summary>Eine Aenderung an der Sperrdatei, die neben einem zweiten FerrumPix bestehen
+        ''' muss. Unter einer Sperre ueber Prozesse hinweg wird die Datei FRISCH gelesen,
+        ''' <paramref name="change"/> fuegt darin einzelne Eintraege hinzu oder nimmt sie weg, und
+        ''' nur bei einer Aenderung wird atomar zurueckgeschrieben. Frueher schrieb jeder Prozess
+        ''' seinen einmal gelesenen Stand zurueck, und die Sperre, die ein anderer inzwischen
+        ''' eingetragen hatte, war wieder weg. Liefert, ob <paramref name="change"/> etwas geaendert
+        ''' hat. Unter _lock zu rufen.</summary>
+        Private Shared Function Mutate(change As Func(Of List(Of BlockEntry), Boolean)) As Boolean
+            Using crossLock = LockAcrossProcesses()
+                Dim list = ReadFile()
+                Dim changed = change(list)
+                If changed Then
+                    Dim json = JsonSerializer.Serialize(New BlockFile With {.Entries = list},
+                                                        New JsonSerializerOptions With {.WriteIndented = True})
+                    JsonStoreService.WriteAtomic(BlockFilePath, json, "GpuModelBlock")
+                End If
+                _fileStamp = CurrentFileStamp()
+                _entries = OwnBuildOnly(list)
+                Return changed
+            End Using
+        End Function
+
+        ''' <summary>Nur die Sperren dieses Baus gelten; die eines anderen, gleichzeitig laufenden
+        ''' Baus bleiben in der Datei, sperren hier aber nichts.</summary>
+        Private Shared Function OwnBuildOnly(list As List(Of BlockEntry)) As List(Of BlockEntry)
+            Dim stamp = NativeStartGuard.CurrentStamp()
+            Return list.Where(Function(e) String.Equals(e.Build, stamp, StringComparison.Ordinal)).ToList()
+        End Function
+
+        Private Shared Function CurrentFileStamp() As (Time As DateTime, Length As Long)
+            Try
+                Dim info As New FileInfo(BlockFilePath)
+                If Not info.Exists Then Return (DateTime.MinValue, -1)
+                Return (info.LastWriteTimeUtc, info.Length)
+            Catch
+                Return (DateTime.MinValue, -2)
+            End Try
+        End Function
+
+        ''' <summary>Die Sperre ueber Prozesse hinweg: ein benannter Mutex je Sperrdatei, wie bei den
+        ''' Beistelldateien (RawSidecarService.LockAcrossProcesses). Ist er nicht zu haben oder
+        ''' laeuft die Wartezeit ab, wird ohne ihn weitergemacht; das Protokoll haelt es fest.</summary>
+        Private Shared Function LockAcrossProcesses() As IDisposable
+            Dim key As String
+            Try
+                key = Path.GetFullPath(BlockFilePath)
+            Catch
+                key = BlockFilePath
+            End Try
+            If PathIdentity.IgnoresCase Then key = key.ToUpperInvariant()
+            Dim name = "FerrumPix.GpuModelBlock." &
+                       Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(key))).Substring(0, 40)
+            Dim mutex As Threading.Mutex
+            Try
+                mutex = New Threading.Mutex(False, name)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("GpuModelBlock.CrossProcessLock", ex)
+                Return Nothing
+            End Try
+            Try
+                If Not mutex.WaitOne(CrossProcessLockTimeoutMs) Then
+                    mutex.Dispose()
+                    DiagnosticLogService.LogAlways("GpuModelBlock.CrossProcessLock", "belegt, ohne Sperre geschrieben")
+                    Return Nothing
+                End If
+            Catch ex As Threading.AbandonedMutexException
+                ' Ein anderer Prozess endete, waehrend er sie hielt: sie gehoert jetzt uns, und die
+                ' Datei ist dank des atomaren Schreibens trotzdem ganz.
+            End Try
+            Return New HeldMutex(mutex)
+        End Function
+
+        Private NotInheritable Class HeldMutex
+            Implements IDisposable
+            Private _mutex As Threading.Mutex
+
+            Public Sub New(mutex As Threading.Mutex)
+                _mutex = mutex
+            End Sub
+
+            Public Sub Dispose() Implements IDisposable.Dispose
+                Dim held = _mutex
+                _mutex = Nothing
+                If held Is Nothing Then Return
+                Try
+                    held.ReleaseMutex()
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("GpuModelBlock.CrossProcessLock", ex)
+                End Try
+                held.Dispose()
+            End Sub
+        End Class
 
         Private Shared Function ReadFile() As List(Of BlockEntry)
             Dim result As New List(Of BlockEntry)()
@@ -271,12 +392,6 @@ Namespace Services
             End Try
             Return result
         End Function
-
-        Private Shared Sub WriteFile()
-            Dim json = JsonSerializer.Serialize(New BlockFile With {.Entries = _entries},
-                                                New JsonSerializerOptions With {.WriteIndented = True})
-            JsonStoreService.WriteAtomic(BlockFilePath, json, "GpuModelBlock")
-        End Sub
 
         ''' <summary>Liegengebliebene Laufmarken gestorbener Prozesse werden zu Sperren. Marken
         ''' dieses Prozesses und eines noch laufenden zweiten FerrumPix zaehlen nicht; Marken einer
@@ -341,9 +456,8 @@ Namespace Services
             If current.Length = 0 OrElse String.Equals(current, recorded, StringComparison.Ordinal) Then Return True
             Dim removed = False
             SyncLock _lock
-                removed = _entries.RemoveAll(Function(e) e.Matches(fileName, deviceKey) AndAlso
-                                                         String.Equals(e.Driver, recorded, StringComparison.Ordinal)) > 0
-                If removed Then WriteFile()
+                removed = Mutate(Function(list) list.RemoveAll(Function(e) e.Matches(fileName, deviceKey) AndAlso
+                                                                           String.Equals(e.Driver, recorded, StringComparison.Ordinal)) > 0)
             End SyncLock
             If removed Then
                 DiagnosticLogService.LogAlways("Startschutz",
@@ -379,16 +493,22 @@ Namespace Services
                 .ExecutionPath = ExecutionPathName, .Driver = If(driver, ""),
                 .Build = NativeStartGuard.CurrentStamp(), .Reason = If(reason, ReasonError),
                 .BlockedAtUtc = DateTime.UtcNow}
+            Dim noted As Boolean
             SyncLock _lock
                 EnsureLoaded()
-                Dim existing = _entries.FirstOrDefault(Function(e) e.Matches(fileName, deviceKey))
-                ' Ein Absturz bleibt ein Absturz, auch wenn danach ein Fehler gemeldet wird.
-                If existing IsNot Nothing AndAlso existing.Reason = ReasonCrash AndAlso entry.Reason = ReasonError Then Return
-                _entries.RemoveAll(Function(e) e.Matches(fileName, deviceKey))
-                _entries.Add(entry)
-                WriteFile()
+                noted = Mutate(Function(list)
+                                   Dim existing = list.FirstOrDefault(Function(e) e.Matches(fileName, deviceKey))
+                                   ' Ein Absturz bleibt ein Absturz, auch wenn danach ein Fehler gemeldet
+                                   ' wird; auch einer, den ein anderer Prozess eingetragen hat.
+                                   If existing IsNot Nothing AndAlso existing.Reason = ReasonCrash AndAlso
+                                      String.Equals(existing.Build, entry.Build, StringComparison.Ordinal) AndAlso
+                                      entry.Reason = ReasonError Then Return False
+                                   list.RemoveAll(Function(e) e.Matches(fileName, deviceKey))
+                                   list.Add(entry)
+                                   Return True
+                               End Function)
             End SyncLock
-            RaiseEvent Changed(Nothing, EventArgs.Empty)
+            If noted Then RaiseEvent Changed(Nothing, EventArgs.Empty)
         End Sub
 
         ''' <summary>Ein Aufbau auf der Karte ist gelungen: eine Sperre aus einem FEHLER faellt. Eine
@@ -398,8 +518,7 @@ Namespace Services
             Dim removed As Boolean
             SyncLock _lock
                 EnsureLoaded()
-                removed = _entries.RemoveAll(Function(e) e.Matches(fileName, deviceKey) AndAlso e.Reason <> ReasonCrash) > 0
-                If removed Then WriteFile()
+                removed = Mutate(Function(list) list.RemoveAll(Function(e) e.Matches(fileName, deviceKey) AndAlso e.Reason <> ReasonCrash) > 0)
             End SyncLock
             If removed Then RaiseEvent Changed(Nothing, EventArgs.Empty)
         End Sub
@@ -417,9 +536,13 @@ Namespace Services
             Dim removed As Boolean
             SyncLock _lock
                 EnsureLoaded()
-                removed = _entries.Count > 0
-                _entries.Clear()
-                If removed Then WriteFile()
+                ' Alles, was JETZT in der Datei steht, auch die Sperren eines anderen Prozesses:
+                ' der Knopf meint alle Sperren.
+                removed = Mutate(Function(list)
+                                     Dim any = list.Count > 0
+                                     list.Clear()
+                                     Return any
+                                 End Function)
             End SyncLock
             If removed Then
                 DiagnosticLogService.LogAlways("Startschutz", "Modellsperren von Hand aufgehoben")
@@ -435,13 +558,16 @@ Namespace Services
             SyncLock _lock
                 EnsureLoaded()
                 Dim stamp = NativeStartGuard.CurrentStamp()
-                For Each entry In saved
-                    If entry Is Nothing OrElse Not String.Equals(entry.Build, stamp, StringComparison.Ordinal) Then Continue For
-                    If _entries.Any(Function(e) e.Matches(entry.Model, entry.Device)) Then Continue For
-                    _entries.Add(entry.Copy())
-                    added = True
-                Next
-                If added Then WriteFile()
+                Dim wanted = saved.Where(Function(e) e IsNot Nothing AndAlso String.Equals(e.Build, stamp, StringComparison.Ordinal)).ToList()
+                added = Mutate(Function(list)
+                                   Dim any = False
+                                   For Each entry In wanted
+                                       If list.Any(Function(e) e.Matches(entry.Model, entry.Device)) Then Continue For
+                                       list.Add(entry.Copy())
+                                       any = True
+                                   Next
+                                   Return any
+                               End Function)
             End SyncLock
             If added Then RaiseEvent Changed(Nothing, EventArgs.Empty)
         End Sub
@@ -450,6 +576,7 @@ Namespace Services
         Friend Shared Sub Reload()
             SyncLock _lock
                 _entries = Nothing
+                _adopted = False
             End SyncLock
         End Sub
     End Class

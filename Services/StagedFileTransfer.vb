@@ -16,8 +16,10 @@ Namespace Services
     ''' - ".name.ferrumpix-part-SEKUNDEN-xxxxxxxx" entsteht durch KOPIEREN, und die Quelle bleibt dabei
     '''   stehen, bis die Kopie unter dem Endnamen liegt. Eine liegengebliebene Teildatei ist also
     '''   immer halb oder ueberzaehlig und darf weg, sobald sie alt genug ist, dass kein laufender
-    '''   Vorgang mehr an ihr schreibt. Das Alter steht im Namen wie bei den Zwischendateien des
-    '''   Einlesens (CardImportService): die Aenderungszeit setzt das Kopieren auf die der Quelle.
+    '''   Vorgang mehr an ihr schreibt. Der Beginn steht im Namen wie bei den Zwischendateien des
+    '''   Einlesens (CardImportService): die Aenderungszeit einer FERTIGEN Kopie setzt das Kopieren
+    '''   auf die der Quelle. Waehrend der Kopie ist sie dagegen frisch, und das Aufraeumen verlangt
+    '''   beides: einen alten Namen und eine Schreibzeit, die seit der Frist ruht.
     '''
     ''' Damit das Verschieben nie selbst zur Kopie wird, die es nicht als solche kennt, geht das
     ''' Umbenennen ueber Directory.Move: das ist auch fuer Dateien ein reines rename und scheitert
@@ -32,8 +34,9 @@ Namespace Services
         ''' Kennung der umbenannten Nachbardateien; sie bleiben, siehe oben.
         Friend Const StagingMarker As String = ".ferrumpix-new-"
 
-        ''' Teildateien, die aelter sind, gelten als Rest eines abgebrochenen Laufs. Eine Stunde wie
-        ''' beim Einlesen: so lange kopiert kein Vorgang an einer einzelnen Datei.
+        ''' Teildateien, deren Name und Schreibzeit beide aelter sind, gelten als Rest eines
+        ''' abgebrochenen Laufs. Eine Stunde wie beim Einlesen; eine Kopie, die laenger braucht,
+        ''' haelt ihre Schreibzeit frisch und bleibt deshalb stehen.
         Friend Shared ReadOnly StalePartAge As TimeSpan = TimeSpan.FromHours(1)
 
         Private Sub New()
@@ -139,8 +142,10 @@ Namespace Services
         End Function
 
         ''' <summary>Raeumt liegengebliebene Teildateien (und Teilordner einer Ordnerkopie) aus einem
-        ''' Ordner, nicht rekursiv. Nur, was genau dem Namensschema folgt und aelter als
-        ''' <see cref="StalePartAge"/> ist; ein Verweis wird nie angefasst, und eine Nachbardatei aus
+        ''' Ordner, nicht rekursiv. Nur, was genau dem Namensschema folgt, dessen Name aelter als
+        ''' <see cref="StalePartAge"/> ist UND dessen letzte Schreibzeit ebenso (eine langsame Kopie,
+        ''' die laenger als die Frist laeuft, schreibt noch und bleibt), und eine Datei nur, wenn sie
+        ''' sich exklusiv oeffnen laesst; ein Verweis wird nie angefasst, und eine Nachbardatei aus
         ''' einem Umbenennen (".ferrumpix-new-") bleibt, weil sie die einzige Fassung sein kann.
         ''' Liefert die Zahl der entfernten Eintraege. Fehler werden protokolliert und halten den
         ''' Vorgang nicht auf: das Aufraeumen ist ein Nebenweg.</summary>
@@ -160,9 +165,25 @@ Namespace Services
                         If now - createdAt <= StalePartAge Then Continue For
                         Dim attributes = File.GetAttributes(entry)
                         If (attributes And FileAttributes.ReparsePoint) <> 0 Then Continue For
-                        If (attributes And FileAttributes.Directory) <> 0 Then
+                        Dim isFolder = (attributes And FileAttributes.Directory) <> 0
+                        ' Der Name sagt nur, wann die Kopie BEGANN. Eine große Datei über eine langsame
+                        ' Freigabe kann länger als die Frist laufen; sie schreibt dann noch, und ihre
+                        ' Schreibzeit ist frisch. Weg darf nur, was auch seit der Frist ruht.
+                        If now - LatestWriteTime(entry, isFolder) <= StalePartAge Then Continue For
+                        If isFolder Then
                             Directory.Delete(entry, recursive:=True)
                         Else
+                            ' Zusätzlich: hält ein anderer Vorgang die Datei offen, lässt sie sich nicht
+                            ' exklusiv öffnen, und sie bleibt. Unter Windows sperrt jedes offene Schreiben
+                            ' so; unter Linux und macOS ist die Sperre nur beratend (sie greift nur gegen
+                            ' eine Kopie, die selbst exklusiv geöffnet hat, und nicht auf jeder Freigabe),
+                            ' deshalb ist die Schreibzeit oben das Hauptkriterium.
+                            Try
+                                Using probe As New FileStream(entry, FileMode.Open, FileAccess.ReadWrite, FileShare.None)
+                                End Using
+                            Catch ex As IOException
+                                Continue For
+                            End Try
                             File.Delete(entry)
                         End If
                         removed += 1
@@ -175,6 +196,21 @@ Namespace Services
                 DiagnosticLogService.LogException("FileOps.RemoveStaleParts", ex)
             End Try
             Return removed
+        End Function
+
+        ''' <summary>Die jüngste Schreibzeit einer Teildatei, bei einem Teilordner über ihn und
+        ''' alles darin: eine laufende Ordnerkopie schreibt an einer Datei tief unten, der Ordner
+        ''' selbst ändert sich nur, wenn ein Eintrag hinzukommt. File.Copy setzt die Zeit einer
+        ''' fertigen Datei auf die der Quelle, eine fertige Datei zählt deshalb nur als alt; die
+        ''' gerade geschriebene trägt die laufende Zeit.</summary>
+        Private Shared Function LatestWriteTime(entry As String, isFolder As Boolean) As DateTimeOffset
+            Dim latest = New DateTimeOffset(File.GetLastWriteTimeUtc(entry), TimeSpan.Zero)
+            If Not isFolder Then Return latest
+            For Each inner In Directory.EnumerateFileSystemEntries(entry, "*", SearchOption.AllDirectories)
+                Dim written = New DateTimeOffset(File.GetLastWriteTimeUtc(inner), TimeSpan.Zero)
+                If written > latest Then latest = written
+            Next
+            Return latest
         End Function
 
     End Class

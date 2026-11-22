@@ -1881,8 +1881,16 @@ Namespace Services
                     ' Ein symbolischer Verweis wird durchschritten: Nachbardatei und Umhaengen im
                     ' Ordner der Datei, auf die er zeigt (ImageProcessor.ResolveWriteTarget).
                     Dim finalPath = ImageProcessor.ResolveWriteTarget(sidecarPath)
-                    tempPath = finalPath & ".tmp"
-                    System.IO.File.WriteAllText(tempPath, doc.ToString(SaveOptions.DisableFormatting), New UTF8Encoding(False))
+                    ' Eine eigene, neu angelegte Nachbardatei je Auftrag: die Sperre oben gilt nur in
+                    ' diesem Prozess, und ein fester Name teilten sich ein zweiter Prozess oder ein
+                    ' zweiter Verweis auf dieselbe Beistelldatei. Erst nach dem Anlegen gemerkt, damit
+                    ' das Aufraeumen nie eine fremde Datei trifft.
+                    Dim candidate = ImageProcessor.AtomicSiblingPath(finalPath)
+                    Dim bytes = New UTF8Encoding(False).GetBytes(doc.ToString(SaveOptions.DisableFormatting))
+                    Using fs As New System.IO.FileStream(candidate, System.IO.FileMode.CreateNew, System.IO.FileAccess.Write)
+                        tempPath = candidate
+                        fs.Write(bytes, 0, bytes.Length)
+                    End Using
                     Return ReplaceSidecarIfUnchanged(tempPath, finalPath, before)
                 Catch
                     Try

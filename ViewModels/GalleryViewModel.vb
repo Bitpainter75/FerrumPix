@@ -17686,9 +17686,13 @@ Namespace ViewModels
                                ' aber ein vorhandenes Ziel ÜBERSCHRIEBEN, gilt dort alles der Quelle,
                                ' auch im Katalog: sonst erbte die neue Datei Sterne, Etikett,
                                ' Stichwörter und Personen der überschriebenen (CopyCatalogEntries).
-                               If movePath Then
+                               ' Ließ sich beim Verschieben über eine Dateisystemgrenze die Quelle nicht
+                               ' entfernen, ist daraus eine Kopie geworden (MoveBecameCopy): die Quelle
+                               ' liegt weiter da und behält ihre Zeilen, das Ziel bekommt Kopien davon,
+                               ' denn es sollte ja die Quelle mitsamt ihren Daten werden.
+                               If movePath AndAlso Not result.MoveBecameCopy Then
                                    LibraryService.Instance.MoveEverythingForPath(source, target)
-                               ElseIf resolved.ReplaceConfirmed Then
+                               ElseIf result.MoveBecameCopy OrElse resolved.ReplaceConfirmed Then
                                    LibraryService.Instance.CopyCatalogEntries(source, target)
                                End If
                                Return result
@@ -18017,6 +18021,7 @@ Namespace ViewModels
                 Catch ex As Exception
                     DiagnosticLogService.LogException("Gallery.TransferPath.RemoveSource", ex)
                     outcome.LeftoverOldVersions.Add(source)
+                    outcome.MoveBecameCopy = True
                     sourceStays = True
                 End Try
             End If
@@ -18034,6 +18039,10 @@ Namespace ViewModels
         Private NotInheritable Class TransferOutcome
             Public FailedCompanions As New List(Of String)()
             Public LeftoverOldVersions As New List(Of String)()
+            ''' <summary>Aus dem Verschieben wurde eine Kopie: die Quelle ließ sich nach der Kopie über
+            ''' eine Dateisystemgrenze nicht entfernen. Der Katalog behandelt den Vorgang dann wie
+            ''' eine Kopie, die Quelle behält ihre Zeilen.</summary>
+            Public MoveBecameCopy As Boolean
         End Class
 
         ''' <summary>Das Gedächtnis eines Laufs aus Einfügen oder Verschieben über mehrere Quellen:

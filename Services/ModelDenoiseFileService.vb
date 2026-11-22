@@ -77,11 +77,15 @@ Namespace Services
                 ' Liegt neben der RAW im Bestand: durch einen symbolischen Verweis hindurch schreiben
                 ' und die Zugriffsrechte der alten Datei behalten (ImageProcessor.WriteFileAtomic).
                 Dim target = ImageProcessor.ResolveWriteTarget(PathFor(rawPath))
-                temp = target & ".tmp"
                 Dim bandCount = (height + BandRows - 1) \ BandRows
                 Dim bands = New Byte(bandCount - 1)() {}
                 Parallel.For(0, bandCount, Sub(b) bands(b) = PackBand(data, width, height, b))
-                Using stream As New FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20)
+                ' Eine eigene Nachbardatei je Auftrag, neu angelegt: ein fester Name teilten sich zwei
+                ' gleichzeitige Schreiber derselben Datei (zwei Prozesse, zwei Verweise darauf).
+                ' Erst hier gesetzt, damit das Aufraeumen unten nie eine fremde Datei trifft.
+                Dim candidate = ImageProcessor.AtomicSiblingPath(target)
+                Using stream As New FileStream(candidate, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1 << 20)
+                    temp = candidate
                     Using writer As New BinaryWriter(stream, Encoding.UTF8, leaveOpen:=True)
                         writer.Write(Magic)
                         writer.Write(FormatVersion)
