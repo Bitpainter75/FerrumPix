@@ -23,6 +23,8 @@
 
 ### Fixes
 
+- A damaged or crafted Sony ARW file no longer crashes the program.
+
 - WebP pictures get their gallery tile again when the thumbnail cache is switched off or the
   picture lies in a temporary folder.
 

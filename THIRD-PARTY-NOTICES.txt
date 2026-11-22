@@ -132,9 +132,11 @@ libraries are part of this package.
 
   Corresponding source for the bundled LibRaw build is the LibRaw source named
   in licenses/libraw/, a fixed commit of https://github.com/LibRaw/LibRaw, with
-  one modification: licenses/libraw/fbdd-parallel.patch spreads the FBDD noise
+  two modifications: licenses/libraw/fbdd-parallel.patch spreads the FBDD noise
   reduction in src/demosaic/dcb_demosaic.cpp over several processor cores. It
-  changes neither the calculation nor the result. The library is built from
+  changes neither the calculation nor the result. licenses/libraw/arw6-guard.patch
+  makes the Sony ARW6 decoder in src/decoders/sony_arw6.cpp reject damaged
+  files instead of crashing. The library is built from
   that source by us rather than taken as a prebuilt binary; the exact compiler,
   options and checksums are recorded in licenses/libraw/.
 
