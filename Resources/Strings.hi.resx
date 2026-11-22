@@ -12158,4 +12158,28 @@
   <data name="Der_Ordner_des_Verweisziels_fehlt_0_e5dd2884" xml:space="preserve">
     <value>लिंक के लक्ष्य का फ़ोल्डर मौजूद नहीं है: {0}</value>
   </data>
+  <data name="Nach_einem_Absturz_gesperrt_0_auf_1_d843585f" xml:space="preserve">
+    <value>क्रैश के बाद अवरुद्ध: {1} पर {0}।</value>
+  </data>
+  <data name="Nach_einem_Fehler_gesperrt_0_auf_1_49ea1294" xml:space="preserve">
+    <value>त्रुटि के बाद अवरुद्ध: {1} पर {0}।</value>
+  </data>
+  <data name="Gesperrte_Modelle_rechnen_dort_auf_dem_Prozessor_326d7d28" xml:space="preserve">
+    <value>अवरुद्ध मॉडल वहाँ प्रोसेसर पर चलते हैं, जब तक कोई नया ग्राफ़िक्स ड्राइवर या प्रोग्राम का नया संस्करण नहीं आता।</value>
+  </data>
+  <data name="Auf_der_Grafikkarte_gesperrte_Modelle_bf8f7fe2" xml:space="preserve">
+    <value>ग्राफ़िक्स कार्ड पर अवरुद्ध मॉडल</value>
+  </data>
+  <data name="Sperren_aufheben_765e6ae1" xml:space="preserve">
+    <value>अवरोध हटाएँ</value>
+  </data>
+  <data name="Gibt_die_Modelle_wieder_f_r_die_Grafikkarte_frei_4d12eb43" xml:space="preserve">
+    <value>मॉडलों को फिर से ग्राफ़िक्स कार्ड के लिए अनुमति देता है। यदि कोई फिर से क्रैश होता है, तो अगली शुरुआत पर वह फिर से अवरुद्ध हो जाएगा।</value>
+  </data>
+  <data name="Bearbeitung_gespeichert_Die_inzwischen_anderswo__f2a2ce73" xml:space="preserve">
+    <value>संपादन सहेजा गया। इस बीच कहीं और बदला गया संस्करण बगल में {0} के रूप में रखा गया है।</value>
+  </data>
+  <data name="Die_Bearbeitung_wurde_inzwischen_anderswo_ge_nde_24ac72b9" xml:space="preserve">
+    <value>संपादन इस बीच कहीं और बदल दिया गया और वैसा ही रहेगा। देखने के लिए छवि फिर से खोलें।</value>
+  </data>
 </root>

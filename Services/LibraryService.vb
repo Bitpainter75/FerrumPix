@@ -119,13 +119,16 @@ Namespace Services
     ''' Bibliothek nur die Verbindungszeichenfolge teilt.
     Partial Public Class LibraryService
 
-        Private Shared _instance As LibraryService
+        ' Threadsicher angelegt: greifen zwei Faeden beim ersten Mal gleichzeitig zu, liefen sonst
+        ' zwei Konstruktoren und damit zwei InitDb, und das zweite ALTER TABLE scheiterte mit
+        ' "duplicate column name" (neue Datenbank oder erste Oeffnung nach neuen Spalten).
+        Private Shared ReadOnly _instance As New Lazy(Of LibraryService)(
+            Function() New LibraryService(), Threading.LazyThreadSafetyMode.ExecutionAndPublication)
         Private ReadOnly _connectionString As String
 
         Public Shared ReadOnly Property Instance As LibraryService
             Get
-                If _instance Is Nothing Then _instance = New LibraryService()
-                Return _instance
+                Return _instance.Value
             End Get
         End Property
 

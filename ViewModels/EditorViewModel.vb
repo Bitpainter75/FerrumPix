@@ -5371,6 +5371,27 @@ Namespace ViewModels
         ' naechste Speichern in die Begleitdatei setzt den Vermerk fuer die entwickelte Kachel.
         Private _markDevelopedThumbnailOnSave As Boolean
 
+        ''' <summary>Der Stand der Begleitdatei beim Oeffnen, nach jedem eigenen Speichern der neue.
+        ''' Das Speichern vergleicht ihn mit der Platte (RawSidecarService.TryWriteChecked): eine
+        ''' Aenderung von aussen wird zusammengefuehrt, uebernommen oder daneben aufgehoben, statt
+        ''' still ersetzt zu werden.</summary>
+        Private _sidecarStamp As RawSidecarService.SidecarStamp
+
+        ''' <summary>Merkt den Stand der Begleitdatei VOR dem Lesen des Rezepts (siehe
+        ''' RawSidecarService.ReadStamp). Ein .fpx traegt sein Rezept selbst und hat keinen.</summary>
+        Private Sub RememberSidecarStamp(path As String)
+            _sidecarStamp = Nothing
+            If String.IsNullOrWhiteSpace(path) OrElse FpxService.IsFpx(path) OrElse Not RawSidecarService.IsRecipeFormat(path) Then Return
+            Try
+                _sidecarStamp = RawSidecarService.ReadStamp(ItemPathFor(path))
+            Catch ex As Exception
+                ' Ohne gelesenen Stand gilt er als unbekannt: dann wird eine abweichende Datei beim
+                ' Speichern aufgehoben statt ersetzt.
+                DiagnosticLogService.LogException("Editor.SidecarStamp", ex)
+                _sidecarStamp = RawSidecarService.UnknownStamp(ItemPathFor(path))
+            End Try
+        End Sub
+
         ''' <summary>Der Rezept- und Katalogschluessel zu einem Pfad: fuer die Datei, deren
         ''' zusaetzliche Variante geoeffnet ist, der Schluessel dieser Variante
         ''' (Services.VariantKey), fuer jede andere der Pfad selbst. Gilt schon waehrend des Ladens,
@@ -20843,6 +20864,7 @@ Namespace ViewModels
             Dim newWorkingOverridePath = ""
             Dim newWorkingOverrideHasAlpha = False
             Dim newWorkingOverrideExposure = 0.0F
+            RememberSidecarStamp(path)
             If FpxService.IsFpx(path) Then
                 Dim loaded = FpxService.Load(path)
                 If loaded Is Nothing OrElse loaded.Adjustments Is Nothing OrElse String.IsNullOrEmpty(loaded.BaseImagePath) OrElse Not File.Exists(loaded.BaseImagePath) Then
@@ -21366,6 +21388,7 @@ Namespace ViewModels
             Dim newWorkingOverridePath = ""
             Dim newWorkingOverrideHasAlpha = False
             Dim newWorkingOverrideExposure = 0.0F
+            RememberSidecarStamp(imagePath)
             If FpxService.IsFpx(imagePath) Then
                 Dim fpxSource = imagePath
                 Dim loaded = Await Task.Run(Function() FpxService.Load(fpxSource))
@@ -25518,21 +25541,39 @@ Namespace ViewModels
             ' zuruecksetzt und speichert, nimmt ihn damit wieder weg.
             Dim sidecarAdjustments = GetCurrentAdjustments()
             ' In die Variante, die geoeffnet ist: die Standardvariante der Datei oder eine zusaetzliche.
-            If Not RawSidecarService.TryWrite(ItemPathFor(RenderSourcePath), sidecarAdjustments,
-                                              developedThumbnail:=If(_markDevelopedThumbnailOnSave, CType(True, Boolean?), Nothing),
-                                              edited:=RawSidecarService.IsEditedRecipe(RenderSourcePath, sidecarAdjustments)) Then
+            ' Verglichen mit dem Stand beim Oeffnen: hat ein anderer die Datei inzwischen geaendert,
+            ' geht seine Aenderung nicht still verloren (RawSidecarService.SidecarWriteOutcome).
+            Dim itemPath = ItemPathFor(RenderSourcePath)
+            Dim opened = If(_sidecarStamp, RawSidecarService.UnknownStamp(itemPath))
+            Dim result = RawSidecarService.TryWriteChecked(itemPath, sidecarAdjustments, opened,
+                                                           developedThumbnail:=If(_markDevelopedThumbnailOnSave, CType(True, Boolean?), Nothing),
+                                                           edited:=RawSidecarService.IsEditedRecipe(RenderSourcePath, sidecarAdjustments))
+            If Not result.Succeeded Then
                 DiagnosticLogService.LogAlways("Editor.Save",
                     $"sidecarRejected writeFailed source={IO.Path.GetFileName(RenderSourcePath)}")
                 StatusText = LocalizationService.T("Begleitdatei konnte nicht geschrieben werden")
                 Return False
             End If
+            _sidecarStamp = result.Stamp
             _hasChanges = False
             _markDevelopedThumbnailOnSave = False
             Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
             ' Die Quelldatei ist unveraendert - ohne diesen Anstoss behielten Galerie und
             ' Filmstreifen ihre alte Kachel, obwohl das Rezept (z.B. eine Drehung) jetzt anders ist.
             _mainVm?.ReloadThumbnailsForFile(RenderSourcePath)
-            StatusText = LocalizationService.T("Bearbeitung in Begleitdatei gespeichert")
+            Select Case result.Outcome
+                Case RawSidecarService.SidecarWriteOutcome.Preserved
+                    StatusText = String.Format(
+                        LocalizationService.T("Bearbeitung gespeichert. Die inzwischen anderswo geänderte Fassung liegt daneben als {0}."),
+                        IO.Path.GetFileName(result.PreservedPath))
+                Case RawSidecarService.SidecarWriteOutcome.Adopted
+                    ' Am Rezept war nichts geaendert: die Fassung von aussen bleibt. Der Editor zeigt
+                    ' weiter seinen Stand; speichert er spaeter eine Aenderung, wird die fremde
+                    ' Fassung aufgehoben (der Stand vom Oeffnen bleibt dafuer gemerkt).
+                    StatusText = LocalizationService.T("Die Bearbeitung wurde inzwischen anderswo geändert und bleibt so. Zum Ansehen das Bild neu öffnen.")
+                Case Else
+                    StatusText = LocalizationService.T("Bearbeitung in Begleitdatei gespeichert")
+            End Select
             ' Nach der Meldung: scheitert die .fpdnz, soll das in der Statuszeile stehen bleiben.
             SaveModelDenoiseFile(RenderSourcePath, sidecarAdjustments)
             Return True

@@ -3596,8 +3596,16 @@ Namespace Services
                 If _cubeLutCache.TryGetValue(path, cached) Then Return cached
             End SyncLock
 
-            ' Ausserhalb der Sperre: hier liegt die ganze Datei-Arbeit.
-            Dim parsed = ParseCubeLut(path)
+            ' Ausserhalb der Sperre: hier liegt die ganze Datei-Arbeit. Eine Ausnahme aus dem Parsen
+            ' zaehlt wie eine unbrauchbare Datei und wird ebenso negativ gemerkt: sie kaeme sonst aus
+            ' dem Aufbau der Pixelkette heraus, und zwar bei jedem Rechnen neu.
+            Dim parsed As Lut3DData
+            Try
+                parsed = ParseCubeLut(path)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImageProcessor.ParseCubeLut", ex)
+                parsed = Nothing
+            End Try
 
             SyncLock _cubeLutCacheLock
                 ' Zweite Frage unter der Sperre: war ein anderer Faden schneller, gewinnt sein
@@ -3614,6 +3622,13 @@ Namespace Services
         ''' Eingangsbereich eingerechnet wird. 64 ist die groesste uebliche Kante; an einer
         ''' Vorstufe vor einer 33er Tabelle liegt die Naeherung damit bei wenigen Stufen von 255.</summary>
         Private Const CubeBakeSize As Integer = 64
+
+        ''' <summary>Groesste Kante einer 3D-Tabelle und groesste Laenge einer 1D-Tabelle, wie sie die
+        ''' Spezifikation des .cube-Formats (Version 1.0) zulaesst. Uebliche LUTs haben 17, 33, 65
+        ''' oder 129 Teilungen; eine 256er ist als Text schon mehrere hundert MB gross. Alles darueber ist
+        ''' eine kaputte Datei.</summary>
+        Private Const MaxCube3DSize As Integer = 256
+        Private Const MaxCube1DSize As Integer = 65536
 
         ''' <summary>Die reine Datei-Arbeit, OHNE Cache und ohne Sperre - genau deshalb darf sie
         ''' ausserhalb des SyncLock laufen. Nothing heisst "nicht brauchbar" (fehlende Groesse,
@@ -3695,9 +3710,26 @@ Namespace Services
             ' am LUT-Staerke-Regler mit JEDEM Vorschau-Frame neu geparst. Es gilt (wie der
             ' Positiv-Cache) bis zum Programmende - eine extern reparierte Datei braucht einen
             ' Neustart bzw. eine Neu-Auswahl.
-            Dim count1d = If(size1d >= 2, size1d * 3, 0)
-            Dim count3d = If(size3d >= 2, size3d * size3d * size3d * 3, 0)
-            If count1d + count3d = 0 OrElse values.Count <> count1d + count3d Then Return Nothing
+            ' Groessen ausserhalb der Spezifikation des Formats (3D 2 bis 256, 1D 2 bis 65536) sind
+            ' kaputt: eine groessere Kante kennt kein Programm, und das Produkt lief vorher ab 1291 in
+            ' Integer ueber, und die Ausnahme kam aus der Pixelkette. Gerechnet wird in Long.
+            If size3d > MaxCube3DSize OrElse size1d > MaxCube1DSize OrElse size3d < 0 OrElse size1d < 0 Then Return Nothing
+            Dim longCount1d = If(size1d >= 2, CLng(size1d) * 3, 0L)
+            Dim longCount3d = If(size3d >= 2, CLng(size3d) * size3d * size3d * 3, 0L)
+            If longCount1d + longCount3d = 0 OrElse values.Count <> longCount1d + longCount3d Then Return Nothing
+            ' Innerhalb der Grenzen passt beides in Integer (256^3 * 3 = 50 331 648).
+            Dim count1d = CInt(longCount1d)
+            Dim count3d = CInt(longCount3d)
+            ' Ein Wert, der keine endliche Zahl ist ("nan", "inf"), und ebenso ein solcher
+            ' Eingangsbereich: die Tabelle ist dann nicht brauchbar.
+            For Each v In values
+                If Not Single.IsFinite(v) Then Return Nothing
+            Next
+            For c = 0 To 2
+                If Not Single.IsFinite(domainMin(c)) OrElse Not Single.IsFinite(domainMax(c)) Then Return Nothing
+            Next
+            If Not Single.IsNaN(range1dMin) AndAlso (Not Single.IsFinite(range1dMin) OrElse Not Single.IsFinite(range1dMax)) Then Return Nothing
+            If Not Single.IsNaN(range3dMin) AndAlso (Not Single.IsFinite(range3dMin) OrElse Not Single.IsFinite(range3dMax)) Then Return Nothing
             Dim all = values.ToArray()
 
             ' Die Eingangsbereiche. Ohne eigene Angabe gilt fuer die Stufe, die allein steht, DOMAIN;

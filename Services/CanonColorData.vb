@@ -102,7 +102,7 @@ Namespace Services
                     stream.ReadExactly(head, 0, head.Length)
                 End Using
                 If head.Length < 16 OrElse head(0) <> &H49 OrElse head(1) <> &H49 Then Return Nothing
-                Dim ifd0 = CInt(BitConverter.ToUInt32(head, 4))
+                Dim ifd0 = OffsetOrInvalid(BitConverter.ToUInt32(head, 4))
                 Dim exif = EntryValue(head, ifd0, &H8769)
                 If exif <= 0 Then Return Nothing
                 Dim makerNote = EntryValue(head, exif, &H927C)
@@ -120,9 +120,16 @@ Namespace Services
             For i = 0 To count - 1
                 Dim entry = ifd + 2 + 12 * i
                 If entry + 12 > data.Length Then Return -1
-                If BitConverter.ToUInt16(data, entry) = tag Then Return CInt(BitConverter.ToUInt32(data, entry + 8))
+                If BitConverter.ToUInt16(data, entry) = tag Then Return OffsetOrInvalid(BitConverter.ToUInt32(data, entry + 8))
             Next
             Return -1
+        End Function
+
+        ' Ein vorzeichenloser 32-Bit-Wert als Verweis, oder -1, wenn er nicht in Integer passt. Das
+        ' CInt davor warf ab 2^31 einen Ueberlauf; ein solcher Verweis zeigt ohnehin aus dem Kopf.
+        Private Shared Function OffsetOrInvalid(value As UInteger) As Integer
+            If value > CUInt(Integer.MaxValue) Then Return -1
+            Return CInt(value)
         End Function
 
         ' Liest eine Box der obersten Ebene ganz in den Speicher.
@@ -228,7 +235,9 @@ Namespace Services
 
         ' Liest den Eintrag 0x4001 aus dem ersten Verzeichnis eines TIFF-Blocks (Intel-Reihenfolge).
         Private Shared Function ReadTag(data As Byte(), tiff As Integer) As UShort()
-            Return ReadTagAt(data, tiff, tiff + CInt(BitConverter.ToUInt32(data, tiff + 4)))
+            Dim ifd = OffsetOrInvalid(BitConverter.ToUInt32(data, tiff + 4))
+            If ifd < 0 OrElse CLng(tiff) + ifd >= data.Length Then Return Nothing
+            Return ReadTagAt(data, tiff, tiff + ifd)
         End Function
 
         ' Den Eintrag 0x4001 aus dem Verzeichnis bei ifd; Verweise zaehlen ab tiff.

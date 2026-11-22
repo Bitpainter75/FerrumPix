@@ -12154,4 +12154,28 @@
   <data name="Der_Ordner_des_Verweisziels_fehlt_0_e5dd2884" xml:space="preserve">
     <value>リンク先のフォルダーがありません: {0}</value>
   </data>
+  <data name="Nach_einem_Absturz_gesperrt_0_auf_1_d843585f" xml:space="preserve">
+    <value>クラッシュのためブロック中: {1} 上の {0}。</value>
+  </data>
+  <data name="Nach_einem_Fehler_gesperrt_0_auf_1_49ea1294" xml:space="preserve">
+    <value>エラーのためブロック中: {1} 上の {0}。</value>
+  </data>
+  <data name="Gesperrte_Modelle_rechnen_dort_auf_dem_Prozessor_326d7d28" xml:space="preserve">
+    <value>ブロック中のモデルは、新しいグラフィックドライバーまたは新しいプログラムバージョンが入るまで、そのカードではなくプロセッサーで計算します。</value>
+  </data>
+  <data name="Auf_der_Grafikkarte_gesperrte_Modelle_bf8f7fe2" xml:space="preserve">
+    <value>グラフィックカードでブロック中のモデル</value>
+  </data>
+  <data name="Sperren_aufheben_765e6ae1" xml:space="preserve">
+    <value>ブロックを解除</value>
+  </data>
+  <data name="Gibt_die_Modelle_wieder_f_r_die_Grafikkarte_frei_4d12eb43" xml:space="preserve">
+    <value>モデルを再びグラフィックカードで使えるようにします。再びクラッシュした場合は、次回起動時に再びブロックされます。</value>
+  </data>
+  <data name="Bearbeitung_gespeichert_Die_inzwischen_anderswo__f2a2ce73" xml:space="preserve">
+    <value>編集内容を保存しました。その間に別の場所で変更されたバージョンは {0} として横に残してあります。</value>
+  </data>
+  <data name="Die_Bearbeitung_wurde_inzwischen_anderswo_ge_nde_24ac72b9" xml:space="preserve">
+    <value>編集内容はその間に別の場所で変更されており、そのまま残ります。表示するには画像を開き直してください。</value>
+  </data>
 </root>

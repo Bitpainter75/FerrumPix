@@ -90,7 +90,7 @@ Namespace Services
             Try
                 Dim input = New List(Of NamedOnnxValue) From {
                     NamedOnnxValue.CreateFromTensor("image", tensor)}
-                Using result = session.Run(input)
+                Using runGuard = GpuModelBlockService.GuardRun(session), result = session.Run(input)
                     Dim output = TryCast(result.First().Value, DenseTensor(Of Single))
                     If output Is Nothing Then Return Nothing
                     ' Der Tensor gehoert der Ergebnisliste und stirbt mit ihr - also kopieren.
@@ -193,7 +193,7 @@ Namespace Services
                     NamedOnnxValue.CreateFromTensor("orig_im_size",
                         New DenseTensor(Of Single)(New Single() {CSng(ModelEdge), CSng(ModelEdge)},
                                                    New Integer() {2}))}
-                Using result = session.Run(input)
+                Using runGuard = GpuModelBlockService.GuardRun(session), result = session.Run(input)
                     Dim masks = TryCast(result.First(Function(r) r.Name = "masks").Value, DenseTensor(Of Single))
                     If masks Is Nothing Then Return Nothing
                     Return AsAlphaImage(masks, einbettung, edgePixels, extentPixels, grain, points)

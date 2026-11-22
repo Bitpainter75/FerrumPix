@@ -685,7 +685,7 @@ Namespace Services
                         span(layer * 2 + i) = Clamp01(b)
                     Next
                 End Sub)
-            Using run = session.Run(New List(Of NamedOnnxValue) From {
+            Using runGuard = GpuModelBlockService.GuardRun(session), run = session.Run(New List(Of NamedOnnxValue) From {
                     NamedOnnxValue.CreateFromTensor(inputName, tensor),
                     NamedOnnxValue.CreateFromTensor(condName, condTensor)})
                 Dim output = TryCast(run.First().Value, DenseTensor(Of Single))

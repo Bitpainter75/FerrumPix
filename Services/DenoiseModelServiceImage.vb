@@ -397,7 +397,7 @@ Namespace Services
             Dim writeR = Math.Min(window.Right, If(keep.Right < target.Width, keep.Right + overlap, keep.Right))
             Dim writeB = Math.Min(window.Bottom, If(keep.Bottom < target.Height, keep.Bottom + overlap, keep.Bottom))
 
-            Using run = session.Run(New List(Of NamedOnnxValue) From {
+            Using runGuard = GpuModelBlockService.GuardRun(session), run = session.Run(New List(Of NamedOnnxValue) From {
                     NamedOnnxValue.CreateFromTensor(name, tensor)})
                 Dim output = TryCast(run.First().Value, DenseTensor(Of Single))
                 If output Is Nothing Then Return

@@ -173,8 +173,13 @@ Namespace Services
             End Get
         End Property
 
-        ''' <summary>Wieviel eigenen Speicher die benutzte Karte hat, in Mebibyte. 0 heisst
+        ''' <summary>Wieviel eigenen Speicher die benutzte Karte INSGESAMT hat, in Mebibyte. 0 heisst
         ''' unbekannt - dann darf niemand daraus etwas ableiten.
+        '''
+        ''' ES IST DIE GESAMTGROESSE, NICHT DER FREIE SPEICHER. Was andere Programme (Browser,
+        ''' Spiele, die Oberflaeche selbst) gerade auf der Karte belegen, steht nicht darin; ein
+        ''' Budget je Prozess (VK_EXT_memory_budget) wird nicht gefragt. Wer daraus eine Kachel
+        ''' bemisst, rechnet mit einer leeren Karte.
         '''
         ''' Die Zahl kommt von Vulkan (<see cref="VulkanMemoryService"/>), weil sie sonst nirgends
         ''' steht: die Laufzeit nennt sie nicht, Skia kennt nur seinen eigenen Zwischenspeicher, und
@@ -190,7 +195,8 @@ Namespace Services
             End Get
         End Property
 
-        ''' <summary>Der eigene Speicher EINER BESTIMMTEN Karte, in Mebibyte. 0 heisst unbekannt.
+        ''' <summary>Der eigene Speicher EINER BESTIMMTEN Karte, in Mebibyte, als GESAMTGROESSE und
+        ''' nicht als freier Speicher (siehe <see cref="DeviceMemoryMiB"/>). 0 heisst unbekannt.
         '''
         ''' Wer einen laufenden Auftrag bemisst, fragt mit dem Schluessel, unter dem dessen Sitzung
         ''' gebaut wurde, und nicht nach der gerade aktiven Karte: zwischen dem Bau der Sitzung und
@@ -644,7 +650,17 @@ Namespace Services
                             Return ProbeResult.Untested
                         End If
                         attachedOn = probedOn
-                        Using session = CreateSessionWithin(file, options, probedOn, abandoned)
+                        ' Ein Modell, das auf dieser Karte nach einem ABSTURZ gesperrt ist, probt nicht:
+                        ' es risse die Probe sonst mit. Das naechste Modell versucht es. Eine Sperre
+                        ' aus einem gefangenen Fehler probt dagegen weiter und faellt, wenn es anlaeuft.
+                        If GpuModelBlockService.IsCrashBlocked(Path.GetFileName(file), probedOn) Then
+                            DiagnosticLogService.LogAlways("Grafik", $"Probe uebergeht {Path.GetFileName(file)}: auf dieser Karte gesperrt")
+                            Continue For
+                        End If
+                        ' Die Laufmarke um den Aufbau, wie beim Modellaufbau selbst.
+                        Using GpuModelBlockService.EnterRun(Path.GetFileName(file), probedOn)
+                            Using session = CreateSessionWithin(file, options, probedOn, abandoned)
+                            End Using
                         End Using
                         AiModelService.ClearGpuFailedModel(Path.GetFileName(file), probedOn)
                         NoteSuccess(probedOn)

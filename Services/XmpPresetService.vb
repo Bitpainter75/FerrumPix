@@ -332,9 +332,10 @@ Namespace Services
             ' Unser Standard (ColorPriority) entspricht Adobes 2; nur die abweichenden Werte umschalten.
             Dim styleVal As Double
             If TryGetXmpDouble(values, "PostCropVignetteStyle", styleVal) Then
-                Select Case CInt(Math.Round(styleVal))
-                    Case 1 : adj.VignetteStyle = VignetteStyle.HighlightPriority
-                    Case 3 : adj.VignetteStyle = VignetteStyle.PaintOverlay
+                ' Ohne CInt: ein endlicher, aber riesiger Wert liefe dort ueber.
+                Select Case Math.Round(styleVal)
+                    Case 1.0 : adj.VignetteStyle = VignetteStyle.HighlightPriority
+                    Case 3.0 : adj.VignetteStyle = VignetteStyle.PaintOverlay
                     Case Else : adj.VignetteStyle = VignetteStyle.ColorPriority
                 End Select
             End If
@@ -681,15 +682,18 @@ Namespace Services
         Private Shared Function ApplyParametricCurve(values As Dictionary(Of String, String), pointCurve As String) As String
             ' "Shadows" ist in VB der Shadowing-Modifier und als Variablenname nicht zulässig - daher
             ' die -Amount-Endungen.
-            Dim shadowsAmount = GetXmpDoubleOrDefault(values, "ParametricShadows", 0)
-            Dim darksAmount = GetXmpDoubleOrDefault(values, "ParametricDarks", 0)
-            Dim lightsAmount = GetXmpDoubleOrDefault(values, "ParametricLights", 0)
-            Dim highlightsAmount = GetXmpDoubleOrDefault(values, "ParametricHighlights", 0)
+            ' Auf die Bereiche der Regler geklemmt (Zonen -100 bis 100, Teilungen 0 bis 100): ein
+            ' riesiger Wert aus einer kaputten Datei rechnete sich sonst bis ins Unendliche hoch.
+            ' Werte eines gueltigen Presets liegen darin und bleiben unveraendert.
+            Dim shadowsAmount = Math.Max(-100.0, Math.Min(100.0, GetXmpDoubleOrDefault(values, "ParametricShadows", 0)))
+            Dim darksAmount = Math.Max(-100.0, Math.Min(100.0, GetXmpDoubleOrDefault(values, "ParametricDarks", 0)))
+            Dim lightsAmount = Math.Max(-100.0, Math.Min(100.0, GetXmpDoubleOrDefault(values, "ParametricLights", 0)))
+            Dim highlightsAmount = Math.Max(-100.0, Math.Min(100.0, GetXmpDoubleOrDefault(values, "ParametricHighlights", 0)))
             If shadowsAmount = 0 AndAlso darksAmount = 0 AndAlso lightsAmount = 0 AndAlso highlightsAmount = 0 Then Return pointCurve
 
-            Dim shadowSplit = GetXmpDoubleOrDefault(values, "ParametricShadowSplit", 25) * 2.55
-            Dim midtoneSplit = GetXmpDoubleOrDefault(values, "ParametricMidtoneSplit", 50) * 2.55
-            Dim highlightSplit = GetXmpDoubleOrDefault(values, "ParametricHighlightSplit", 75) * 2.55
+            Dim shadowSplit = Math.Max(0.0, Math.Min(100.0, GetXmpDoubleOrDefault(values, "ParametricShadowSplit", 25))) * 2.55
+            Dim midtoneSplit = Math.Max(0.0, Math.Min(100.0, GetXmpDoubleOrDefault(values, "ParametricMidtoneSplit", 50))) * 2.55
+            Dim highlightSplit = Math.Max(0.0, Math.Min(100.0, GetXmpDoubleOrDefault(values, "ParametricHighlightSplit", 75))) * 2.55
 
             ' GEMESSENE ZONEN, wo vorhanden: die vier Zonen als Kennlinie einer verbreiteten
             ' RAW-Entwicklung (ToneSliderCurves, gemessen bei +-50 mit den Standardteilungen 25/50/75).
@@ -714,7 +718,7 @@ Namespace Services
                         ToneSliderCurves.Lift("ParametricLights", lightsAmount, u) +
                         ToneSliderCurves.Lift("ParametricHighlights", highlightsAmount, u))
                     Dim y = ImageProcessor.EvaluateCurveSpline(measuredBase, Math.Max(0.0, Math.Min(255.0, lifted)))
-                    measured.Add($"{mx},{CInt(Math.Max(0, Math.Min(255, Math.Round(y))))}")
+                    measured.Add($"{mx},{CurveLevel(y)}")
                     If mx = 255 Then Exit Do
                     mx = Math.Min(255, mx + 8)
                 Loop
@@ -744,11 +748,18 @@ Namespace Services
             Dim x = 0
             Do
                 Dim y = ImageProcessor.EvaluateCurveSpline(basePoints, x) + InterpolateNodes(nodesX, nodesY, x)
-                result.Add($"{x},{CInt(Math.Max(0, Math.Min(255, Math.Round(y))))}")
+                result.Add($"{x},{CurveLevel(y)}")
                 If x = 255 Then Exit Do
                 x = Math.Min(255, x + 8)
             Loop
             Return String.Join(";", result)
+        End Function
+
+        ''' <summary>Ein Kurvenwert als Stufe 0 bis 255. Fuer endliche Werte wie bisher gerundet und
+        ''' geklemmt; NaN, das CInt mit einem Ueberlauf quittierte, wird 0.</summary>
+        Private Shared Function CurveLevel(y As Double) As Integer
+            If Double.IsNaN(y) Then Return 0
+            Return CInt(Math.Max(0, Math.Min(255, Math.Round(y))))
         End Function
 
         Private Shared Function GetXmpDoubleOrDefault(values As Dictionary(Of String, String), name As String, fallback As Double) As Double
@@ -836,7 +847,7 @@ Namespace Services
             If amount IsNot Nothing Then
                 Dim parsed As Double
                 If Double.TryParse(amount.Replace("+", ""), NumberStyles.Float,
-                                   CultureInfo.InvariantCulture, parsed) Then
+                                   CultureInfo.InvariantCulture, parsed) AndAlso Double.IsFinite(parsed) Then
                     result.Amount = parsed
                     result.HasAmount = True
                 End If
@@ -912,7 +923,13 @@ Namespace Services
             Dim raw As String = Nothing
             If Not values.TryGetValue(name, raw) Then Return False
             raw = raw.Replace("+", "")
-            Return Double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, result)
+            ' Nur eine endliche Zahl zaehlt: "NaN" und "1E+400" (unendlich) liess Double.TryParse
+            ' durch, und das erste CInt danach warf einen Ueberlauf, der das ganze Preset scheitern
+            ' liess. So faellt nur dieser eine Regler weg.
+            If Not Double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, result) Then Return False
+            If Double.IsFinite(result) Then Return True
+            result = 0
+            Return False
         End Function
 
         ''' <summary>Die Einträge einer crs:-Liste (rdf:Seq aus rdf:li), roh als Text. Nothing, wenn
@@ -938,8 +955,11 @@ Namespace Services
                 If parts.Length <> 2 Then Continue For
                 Dim px As Double
                 Dim py As Double
+                ' Ein Punkt mit "NaN" oder unendlichem Wert faellt weg; das Klemmen der Bildkette
+                ' (ParseCurvePoints) faengt nur endliche Werte ein.
                 If Double.TryParse(parts(0).Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, px) AndAlso
-                   Double.TryParse(parts(1).Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, py) Then
+                   Double.TryParse(parts(1).Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, py) AndAlso
+                   Double.IsFinite(px) AndAlso Double.IsFinite(py) Then
                     points.Add(px.ToString(CultureInfo.InvariantCulture) & "," & py.ToString(CultureInfo.InvariantCulture))
                 End If
             Next
@@ -964,7 +984,7 @@ Namespace Services
             If Not m.Success Then Return fallback
             Dim raw = m.Groups("v").Value.Replace("+", "")
             Dim d As Double
-            If Double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, d) Then Return d
+            If Double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, d) AndAlso Double.IsFinite(d) Then Return d
             Return fallback
         End Function
 

@@ -665,7 +665,7 @@ Namespace Services
             Dim name = session.InputMetadata.Keys.First()
             Dim input = New List(Of NamedOnnxValue) From {NamedOnnxValue.CreateFromTensor(name, tensor)}
             phase.Restart()
-            Using result = session.Run(input)
+            Using runGuard = GpuModelBlockService.GuardRun(session), result = session.Run(input)
                 timing.InferenceMs = phase.ElapsedMilliseconds
                 phase.Restart()
                 Dim output = TryCast(result.First().Value, DenseTensor(Of Single))

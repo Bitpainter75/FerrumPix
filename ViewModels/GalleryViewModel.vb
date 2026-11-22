@@ -17670,11 +17670,16 @@ Namespace ViewModels
             Dim resolved = Await ResolveCopyTargetAsync(source, targetFolder, movePath, duplicate, run)
             Dim target = resolved.Path
             If String.IsNullOrEmpty(target) Then Return False
+            ' Teildateien eines abgebrochenen früheren Laufs im Zielordner wegräumen, einmal je Lauf
+            ' und Ordner (StagedFileTransfer.RemoveStaleParts).
+            Dim cleanFolder = If(run Is Nothing OrElse run.FirstVisit(IO.Path.GetDirectoryName(target)),
+                                 IO.Path.GetDirectoryName(target), Nothing)
 
             ' Kopieren kann bei großen Dateien und Ordnern Sekunden dauern - nicht auf dem UI-Thread.
             ' TransferPath legt den Inhalt erst vollständig neben das Ziel und hängt ihn dann um;
             ' ein vorhandenes Ziel ersetzt es nur, wenn es zum Überschreiben freigegeben ist.
             Dim outcome = Await Task.Run(Function()
+                               If cleanFolder IsNot Nothing Then StagedFileTransfer.RemoveStaleParts(cleanFolder)
                                Dim result = TransferPath(source, target, movePath, resolved.ReplaceConfirmed)
                                ' Beim Verschieben ziehen Katalogzeilen und Kacheln mit. Eine Kopie ist
                                ' ein NEUES Bild, die Zeilen des Originals bleiben, wo sie sind. Hat sie
@@ -17940,16 +17945,35 @@ Namespace ViewModels
         ''' mittendrin scheitert, hinterlässt so keinen halben Ordner am Ziel, und ein Ziel, das
         ''' inzwischen entstanden ist, lässt das Umbenennen scheitern, statt ersetzt zu werden.
         ''' Scheitert der letzte Schritt, geht beim Verschieben der Inhalt an die Quelle zurück,
-        ''' bei der Kopie fällt die Nachbardatei weg. Die Begleitdateien folgen erst danach.</summary>
+        ''' bei der Kopie fällt die Nachbardatei weg. Die Begleitdateien folgen erst danach.
+        '''
+        ''' Verschoben wird über ein reines Umbenennen (StagedFileTransfer.TryRenameOnly). Geht das
+        ''' nur über eine Kopie (anderes Dateisystem), kopiert TransferPath selbst in eine Teildatei
+        ''' und entfernt die Quelle erst, wenn die Kopie am Ziel hängt. So ist eine liegengebliebene
+        ''' Teildatei nie die einzige Fassung, und das Aufräumen darf sie wegnehmen
+        ''' (StagedFileTransfer.RemoveStaleParts).</summary>
         Private Shared Function TransferPath(source As String, target As String, movePath As Boolean, replaceConfirmed As Boolean) As TransferOutcome
             Dim isFile = File.Exists(source)
             If isFile Then ThrowIfTargetSidecarConflict(source, target, replaceConfirmed)
-            Dim staging = ImageProcessor.SiblingPath(target, ".ferrumpix-new-", "", reserveBytes:=16)
+            Dim staging As String = Nothing
+            ' Verschieben über eine Dateisystemgrenze: am Ziel eine Kopie, die Quelle bleibt bis
+            ' zuletzt. Für das Zurücknehmen gilt es dann wie eine Kopie.
+            Dim copiedMove = False
             Try
-                If isFile Then
-                    If movePath Then File.Move(source, staging) Else File.Copy(source, staging)
+                If movePath AndAlso Not isFile Then
+                    ' Ein Ordner geht nur innerhalb desselben Datenträgers, wie bisher.
+                    staging = StagedFileTransfer.StagingPathFor(target)
+                    Directory.Move(source, staging)
+                ElseIf movePath Then
+                    staging = StagedFileTransfer.StagingPathFor(target)
+                    If Not StagedFileTransfer.TryRenameOnly(source, staging) Then
+                        copiedMove = True
+                        staging = StagedFileTransfer.PartPathFor(target)
+                        File.Copy(source, staging)
+                    End If
                 Else
-                    If movePath Then Directory.Move(source, staging) Else CopyDirectory(source, staging)
+                    staging = StagedFileTransfer.PartPathFor(target)
+                    If isFile Then File.Copy(source, staging) Else CopyDirectory(source, staging)
                 End If
             Catch
                 ' Liegt die Quelle noch da, ist alles in der Nachbardatei Halbfertiges und gehört weg.
@@ -17971,10 +17995,10 @@ Namespace ViewModels
                 outcome.LeftoverOldVersions = RunWithTargetSetAside(target, replaceConfirmed, Sub() MoveFileOrFolder(staging, target))
             Catch ex As Exception
                 Try
-                    If movePath Then MoveFileOrFolder(staging, source) Else DeletePathIfPresent(staging)
+                    If movePath AndAlso Not copiedMove Then MoveFileOrFolder(staging, source) Else DeletePathIfPresent(staging)
                 Catch backEx As Exception
                     DiagnosticLogService.LogException("Gallery.TransferPath.Back", backEx)
-                    If movePath Then
+                    If movePath AndAlso Not copiedMove Then
                         Throw New IOException(String.Format(
                             LocalizationService.T("Der Vorgang ist gescheitert, und die alte Fassung ließ sich nicht zurückholen. Sie liegt unter {0}"),
                             staging), ex)
@@ -17983,8 +18007,24 @@ Namespace ViewModels
                 Throw
             End Try
 
+            ' Über Dateisystemgrenzen: die Kopie hängt am Ziel, erst jetzt geht die Quelle. Lässt sie
+            ' sich nicht entfernen, ist aus dem Verschieben eine Kopie geworden: die Quelle behält
+            ' ihre Begleitdateien, das Ziel bekommt Kopien, und der Pfad wird gemeldet.
+            Dim sourceStays = False
+            If copiedMove Then
+                Try
+                    File.Delete(source)
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Gallery.TransferPath.RemoveSource", ex)
+                    outcome.LeftoverOldVersions.Add(source)
+                    sourceStays = True
+                End Try
+            End If
+
             If isFile Then
-                outcome.FailedCompanions = If(movePath, RawSidecarService.AccompanyMove(source, target), RawSidecarService.AccompanyCopy(source, target))
+                outcome.FailedCompanions = If(movePath AndAlso Not sourceStays,
+                                              RawSidecarService.AccompanyMove(source, target),
+                                              RawSidecarService.AccompanyCopy(source, target))
             End If
             Return outcome
         End Function
@@ -18017,6 +18057,8 @@ Namespace ViewModels
             Private ReadOnly _sources As HashSet(Of String)
             ' Stamm-XMP eines übertragenen Ziels, zu jeder die Stamm-XMP seiner Quelle.
             Private ReadOnly _claimedStems As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+            ' Zielordner, in denen der Lauf schon aufgeräumt hat.
+            Private ReadOnly _visitedFolders As New HashSet(Of String)(StringComparer.Ordinal)
 
             Public Sub New(sources As IEnumerable(Of String))
                 _sources = New HashSet(Of String)(sources.Select(Function(s) Key(s)), StringComparer.OrdinalIgnoreCase)
@@ -18024,6 +18066,13 @@ Namespace ViewModels
 
             Private Shared Function Key(path As String) As String
                 Return FileOperationPolicy.ResolveLinks(NormalizePath(path))
+            End Function
+
+            ''' <summary>True beim ersten Ziel des Laufs in diesem Ordner: dann räumt der Lauf dort
+            ''' liegengebliebene Teildateien weg, bei jedem weiteren Ziel nicht mehr.</summary>
+            Public Function FirstVisit(folder As String) As Boolean
+                If String.IsNullOrEmpty(folder) Then Return False
+                Return _visitedFolders.Add(NormalizePath(folder))
             End Function
 
             ''' <summary>Der Vergleichsschlüssel der Stamm-XMP einer Datei, leer für einen Ordner oder

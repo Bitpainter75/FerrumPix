@@ -723,10 +723,6 @@ Namespace Services
             Return New String() {entry.FileName}.Concat(If(entry.Predecessors, Array.Empty(Of String)()))
         End Function
 
-        ''' <summary>Modelle, die in diesem Programmlauf auf einer Karte gescheitert sind, je Datei
-        ''' und Karte. Nicht gemerkt: der Grund kann voruebergehend sein (belegter Speicher).</summary>
-        Private Shared ReadOnly _gpuFailedModels As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-
         ''' <summary>Gilt eine Sperre fuer die Karte, an die WIRKLICH angehaengt wurde? Geprueft wurde
         ''' vorher das Ziel; TryApply bestimmt die Karte aber neu, und wurde dazwischen umgewaehlt,
         ''' haengt es an einer anderen. Ist die oder das Modell auf ihr gesperrt, bleibt es beim
@@ -735,39 +731,43 @@ Namespace Services
             Return IsGpuFailedModel(fileName, deviceKey) OrElse GpuAccelerationService.IsCardKnownFailed(deviceKey)
         End Function
 
+        ''' <summary>Ist dieses Modell auf dieser Karte gesperrt, nach einem Absturz oder einem
+        ''' Fehler, auch aus einem frueheren Programmlauf? Die Sperren stehen in
+        ''' <see cref="GpuModelBlockService"/> (karte-gesperrt.json) und verfallen mit neuem Treiber
+        ''' oder neuem Bau der Anwendung.</summary>
         Private Shared Function IsGpuFailedModel(fileName As String, deviceKey As String) As Boolean
-            SyncLock _gpuFailedModels
-                Return _gpuFailedModels.Contains(fileName & "|" & deviceKey)
-            End SyncLock
+            Return GpuModelBlockService.IsBlocked(fileName, deviceKey)
         End Function
 
         ''' <summary>Fuer die Probe: das Modell sperren, AUSSER es laeuft schon auf dieser Karte.
         ''' Pruefen und Sperren unter _lock, demselben Schloss wie Veroeffentlichen und Entsperren
-        ''' im Sitzungsaufbau; siehe dort.</summary>
+        ''' im Sitzungsaufbau; siehe dort. Kartenname und Treiber werden VOR dem Schloss gelesen:
+        ''' der Kartenname nimmt das Schloss der Grafikbeschleunigung, und unter _lock waere das die
+        ''' umgekehrte Reihenfolge zur Kartenabfrage (die unter ihrem Schloss die Laufzeit hier laedt).</summary>
         Friend Shared Sub NoteGpuFailedModelUnlessRunning(fileName As String, deviceKey As String)
             If String.IsNullOrEmpty(deviceKey) Then Return
+            Dim label = GpuAccelerationService.DeviceLabelFor(deviceKey)
+            Dim driver = GpuModelBlockService.CurrentDriver(deviceKey)
             SyncLock _lock
                 If _sessions.Any(Function(kv) String.Equals(Path.GetFileName(kv.Key), fileName, StringComparison.OrdinalIgnoreCase) AndAlso
                                               String.Equals(kv.Value.Accelerator, deviceKey, StringComparison.Ordinal)) Then Return
-                NoteGpuFailedModel(fileName, deviceKey)
+                GpuModelBlockService.Note(fileName, deviceKey, GpuModelBlockService.ReasonError, label, driver)
             End SyncLock
         End Sub
 
         ''' <summary>Die GPU-Probe hat dieses Modell auf dieser Karte gerade laufen sehen: die Sperre
-        ''' gilt nicht mehr, sonst bliebe es trotz bestaetigter Tauglichkeit bis zum Programmende
-        ''' auf dem Prozessor.</summary>
+        ''' aus einem FEHLER gilt nicht mehr, sonst bliebe es trotz bestaetigter Tauglichkeit auf dem
+        ''' Prozessor. Eine Sperre aus einem Absturz bleibt (der kann erst im Lauf kommen).</summary>
         Friend Shared Sub ClearGpuFailedModel(fileName As String, deviceKey As String)
-            SyncLock _gpuFailedModels
-                _gpuFailedModels.Remove(fileName & "|" & deviceKey)
-            End SyncLock
+            GpuModelBlockService.ClearError(fileName, deviceKey)
         End Sub
 
         ''' <summary>Auch die GPU-Probe sperrt so ein Modell, das auf der angehaengten Karte an sich
-        ''' selbst scheitert (GpuAccelerationService.Probe).</summary>
+        ''' selbst scheitert (GpuAccelerationService.Probe). Die Sperre steht in der Sperrdatei und
+        ''' gilt ueber einen Neustart hinaus, bis neuer Treiber, neuer Bau oder der Knopf in den
+        ''' Einstellungen sie aufhebt. Nicht unter _lock rufen (siehe oben).</summary>
         Friend Shared Sub NoteGpuFailedModel(fileName As String, deviceKey As String)
-            SyncLock _gpuFailedModels
-                _gpuFailedModels.Add(fileName & "|" & deviceKey)
-            End SyncLock
+            GpuModelBlockService.Note(fileName, deviceKey, GpuModelBlockService.ReasonError)
         End Sub
 
         ''' <summary>Darf diese DATEI auf die Grafikkarte? Die Antwort steht am Register-Eintrag,
@@ -976,7 +976,12 @@ Namespace Services
                                 ' gesperrtes Modell die ganze Karte.
                                 appliedTo = ""
                             Else
-                                created = GpuAccelerationService.CreateSessionWithin(filePath, options, appliedTo, abandoned)
+                                ' Die Laufmarke um den Aufbau: stirbt der Prozess im Treiber, sperrt
+                                ' sie beim naechsten Start dieses Modell auf dieser Karte.
+                                Using GpuModelBlockService.EnterRun(fileName, appliedTo)
+                                    created = GpuAccelerationService.CreateSessionWithin(filePath, options, appliedTo, abandoned)
+                                End Using
+                                GpuModelBlockService.RegisterSession(created, fileName, appliedTo)
                                 builtWith = appliedTo
                                 GpuAccelerationService.NoteSuccess(appliedTo)
                             End If

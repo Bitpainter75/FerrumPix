@@ -122,6 +122,10 @@ Namespace ViewModels
         ' Heisst wie die EIGENSCHAFT und nicht wie das Feld dahinter, damit der Waechter ihn ohne
         ' Sonderregel findet; sein Inhalt ist der Schluessel der Karte, kein Listeneintrag.
         Private _savedSelectedGpuDevice As String = ""
+        ''' Die Modellsperren der Grafikkarte beim Oeffnen: "Sperren aufheben" wirkt sofort, ein
+        ''' Abbrechen traegt die aufgehobenen wieder ein (GpuModelBlockService.RestoreMissing).
+        Private _savedGpuModelBlocks As IReadOnlyList(Of GpuModelBlockService.BlockEntry) =
+            Array.Empty(Of GpuModelBlockService.BlockEntry)()
         Private _savedFaceRecognitionEnabled As Boolean = False
         Private _savedFaceMinimumSizePercent As Double = 0
         Private _savedPhotoMapEnabled As Boolean = False
@@ -3909,6 +3913,41 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Gibt es Modelle, die auf einer Karte gesperrt sind? Nur dann erscheint die Zeile.</summary>
+        Public ReadOnly Property HasGpuModelBlocks As Boolean
+            Get
+                Return GpuModelBlockService.Entries().Count > 0
+            End Get
+        End Property
+
+        ''' <summary>Welches Modell auf welcher Karte gesperrt ist, nach einem Absturz oder einem
+        ''' Fehler, und wie lange. Ein Dateiblick, laedt weder Laufzeit noch Treiber.</summary>
+        Public ReadOnly Property GpuModelBlocksText As String
+            Get
+                Dim entries = GpuModelBlockService.Entries()
+                If entries.Count = 0 Then Return ""
+                Dim lines As New List(Of String)()
+                For Each entry In entries
+                    Dim card = If(String.IsNullOrWhiteSpace(entry.DeviceLabel), entry.Device, entry.DeviceLabel)
+                    Dim pattern = If(entry.Reason = GpuModelBlockService.ReasonCrash,
+                                     LocalizationService.T("Nach einem Absturz gesperrt: {0} auf {1}."),
+                                     LocalizationService.T("Nach einem Fehler gesperrt: {0} auf {1}."))
+                    lines.Add(String.Format(pattern, entry.Model, card))
+                Next
+                lines.Add(LocalizationService.T("Gesperrte Modelle rechnen dort auf dem Prozessor, bis ein neuer Grafiktreiber oder eine neue Programmfassung kommt."))
+                Return String.Join(Environment.NewLine, lines)
+            End Get
+        End Property
+
+        Private Sub RaiseGpuModelBlocksChanged()
+            Me.RaisePropertyChanged(NameOf(HasGpuModelBlocks))
+            Me.RaisePropertyChanged(NameOf(GpuModelBlocksText))
+        End Sub
+
+        ''' <summary>Alle Modellsperren aufheben. Wirkt sofort; Abbrechen traegt sie wieder ein.</summary>
+        Public ReadOnly Property ClearGpuModelBlocksCommand As ICommand = ReactiveCommand.Create(
+            Sub() GpuModelBlockService.ClearAll())
+
         ''' <summary>Wurde waehrend einer laufenden Prüfung eine neue verlangt, etwa weil eine
         ''' andere Karte gewaehlt wurde? Dann laeuft sie danach, statt still zu verfallen.</summary>
         Private _gpuAccelerationRecheck As Boolean
@@ -5479,6 +5518,10 @@ Namespace ViewModels
             If GpuAccelerationService.IsChecked Then BuildGpuDeviceOptions()
             AddHandler GpuAccelerationService.Checked,
                 Sub(sender, e) Avalonia.Threading.Dispatcher.UIThread.Post(AddressOf OnGpuDevicesChecked)
+            ' Sperren kommen aus jedem Faden (Modellaufbau, Probe, Treiberwechsel) und gehen mit dem
+            ' Knopf; die Zeile folgt beidem.
+            AddHandler GpuModelBlockService.Changed,
+                Sub(sender, e) Avalonia.Threading.Dispatcher.UIThread.Post(AddressOf RaiseGpuModelBlocksChanged)
             FetchModelCommand = ReactiveCommand.Create(Of ModelGroup)(
                 Sub(g)
                     Dim ignored = FetchModelGroupAsync(g)
@@ -5742,6 +5785,7 @@ Namespace ViewModels
             _savedGpuImageProcessing = _gpuImageProcessing
             _savedModelThreadCount = _modelThreadCount
             _savedSelectedGpuDevice = _gpuAccelerationDevice
+            _savedGpuModelBlocks = GpuModelBlockService.Entries()
             _savedFaceRecognitionEnabled = _faceRecognitionEnabled
             _savedFaceMinimumSizePercent = _faceMinimumSizePercent
             _savedPhotoMapEnabled = _photoMapEnabled
@@ -5965,6 +6009,9 @@ Namespace ViewModels
             ModelThreads = AppSettingsService.EffectiveModelThreadCount(_savedModelThreadCount)
             SelectedGpuDevice = GpuDeviceOptions.FirstOrDefault(
                 Function(o) String.Equals(o.Key, _savedSelectedGpuDevice, StringComparison.Ordinal))
+            ' Aufgehobene Modellsperren zurueck; was seither dazukam, bleibt.
+            GpuModelBlockService.RestoreMissing(_savedGpuModelBlocks)
+            RaiseGpuModelBlocksChanged()
             FaceRecognitionEnabled = _savedFaceRecognitionEnabled
             FaceMinimumSizePercent = _savedFaceMinimumSizePercent
             PhotoMapEnabled = _savedPhotoMapEnabled

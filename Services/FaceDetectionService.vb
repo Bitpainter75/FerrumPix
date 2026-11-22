@@ -232,7 +232,7 @@ Namespace Services
             End Using
 
             Dim inputName = session.InputMetadata.First().Key
-            Using outputs = session.Run(New List(Of NamedOnnxValue) From {
+            Using runGuard = GpuModelBlockService.GuardRun(session), outputs = session.Run(New List(Of NamedOnnxValue) From {
                     NamedOnnxValue.CreateFromTensor(inputName,
                         New DenseTensor(Of Single)(input, New Integer() {1, 3, DetectorEdge, DetectorEdge}))})
 
@@ -516,7 +516,7 @@ Namespace Services
             End Using
 
             Dim inputName = session.InputMetadata.First().Key
-            Using outputs = session.Run(New List(Of NamedOnnxValue) From {
+            Using runGuard = GpuModelBlockService.GuardRun(session), outputs = session.Run(New List(Of NamedOnnxValue) From {
                     NamedOnnxValue.CreateFromTensor(inputName,
                         New DenseTensor(Of Single)(input, New Integer() {1, 3, RecognizerEdge, RecognizerEdge}))})
                 Return outputs.First().AsTensor(Of Single)().ToArray()

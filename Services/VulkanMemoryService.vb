@@ -49,8 +49,13 @@ Namespace Services
             ''' Derselbe Schluessel, den GpuAccelerationService fuehrt: Hersteller und Geraet, hex.
             Public Property Key As String = ""
             Public Property Name As String = ""
-            ''' Der groesste kartenEIGENE Speicherhaufen, in Mebibyte. 0 heisst unbekannt.
+            ''' Die GESAMTGROESSE des groessten kartenEIGENEN Speicherhaufens, in Mebibyte. 0 heisst
+            ''' unbekannt. Kein freier Speicher und kein Budget: was andere Programme dort belegen,
+            ''' steht hier nicht.
             Public Property DeviceLocalMiB As Integer
+            ''' Die Treiberfassung, wie Vulkan sie meldet (driverVersion, je Hersteller anders
+            ''' gepackt). Nur zum Vergleichen: eine andere Zahl heisst ein anderer Treiber.
+            Public Property DriverVersion As UInteger
         End Class
 
         Private Shared ReadOnly _lock As New Object()
@@ -71,8 +76,25 @@ Namespace Services
             End Get
         End Property
 
-        ''' <summary>Der eigene Speicher der Karte mit diesem Schluessel, in Mebibyte. 0 heisst
-        ''' unbekannt - dann darf der Aufrufer NICHTS annehmen.
+        ''' <summary>Die Treiberfassung der Karte mit diesem Schluessel als Text, oder leer, wenn
+        ''' Vulkan sie nicht nennt. Verglichen wird wie beim Speicher nur Hersteller und Geraet.
+        ''' Fragt Vulkan beim ersten Aufruf je Sitzung (siehe <see cref="Devices"/>).</summary>
+        Public Shared Function DriverVersionFor(key As String) As String
+            If String.IsNullOrWhiteSpace(key) Then Return ""
+            Dim parts = key.Split(":"c)
+            If parts.Length < 2 Then Return ""
+            Dim wanted = parts(0) & ":" & parts(1)
+            For Each device In Devices
+                If String.Equals(device.Key, wanted, StringComparison.OrdinalIgnoreCase) AndAlso device.DriverVersion <> 0UI Then
+                    Return "vulkan " & device.DriverVersion.ToString(Globalization.CultureInfo.InvariantCulture)
+                End If
+            Next
+            Return ""
+        End Function
+
+        ''' <summary>Die GESAMTGROESSE des eigenen Speichers der Karte mit diesem Schluessel, in
+        ''' Mebibyte. 0 heisst unbekannt - dann darf der Aufrufer NICHTS annehmen. Wie viel davon
+        ''' gerade frei ist, sagt die Zahl nicht.
         '''
         ''' Der Schluessel von <see cref="GpuAccelerationService"/> traegt hinten den Steckplatz
         ''' ("10de:2d05:0000:02:00.0"), Vulkan kennt ihn nicht. Verglichen werden deshalb nur
@@ -180,6 +202,7 @@ Namespace Services
             ' deviceType(4) deviceName(256) ...
             Dim props(1023) As Byte
             deviceProps(handle, props)
+            Dim driverVersion = BitConverter.ToUInt32(props, 4)
             Dim vendorId = BitConverter.ToUInt32(props, 8)
             Dim deviceId = BitConverter.ToUInt32(props, 12)
             Dim name = Text.Encoding.ASCII.GetString(props, 20, 256).TrimEnd(ChrW(0)).Trim()
@@ -201,6 +224,7 @@ Namespace Services
             Return New VulkanDevice With {
                 .Key = $"{vendorId:x4}:{deviceId:x4}",
                 .Name = name,
+                .DriverVersion = driverVersion,
                 .DeviceLocalMiB = CInt(Math.Min(Integer.MaxValue, CLng(largest \ (1024UL * 1024UL))))
             }
         End Function

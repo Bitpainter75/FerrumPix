@@ -289,7 +289,7 @@ Namespace Services
             Dim tensor = New DenseTensor(Of Single)(input, New Integer() {1, 3, ModelEdge, ModelEdge})
             Dim name = session.InputMetadata.Keys.First()
             Dim scores As Single()
-            Using output = session.Run(New NamedOnnxValue() {NamedOnnxValue.CreateFromTensor(name, tensor)})
+            Using runGuard = GpuModelBlockService.GuardRun(session), output = session.Run(New NamedOnnxValue() {NamedOnnxValue.CreateFromTensor(name, tensor)})
                 scores = output.First().AsTensor(Of Single)().ToArray()
             End Using
 

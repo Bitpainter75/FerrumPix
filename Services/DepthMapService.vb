@@ -110,7 +110,7 @@ Namespace Services
             cancel.ThrowIfCancellationRequested()
             Dim input = New List(Of NamedOnnxValue) From {
                 NamedOnnxValue.CreateFromTensor("image", tensor)}
-            Using result = session.Run(input)
+            Using runGuard = GpuModelBlockService.GuardRun(session), result = session.Run(input)
                 Dim output = TryCast(result.First().Value, DenseTensor(Of Single))
                 If output Is Nothing Then Return Nothing
                 cancel.ThrowIfCancellationRequested()

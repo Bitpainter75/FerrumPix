@@ -322,8 +322,15 @@ Namespace Services
             Dim version = CInt(buf(4)) * 256 + buf(5)
             If version <> 1 AndAlso version <> 2 Then Return Nothing
             Dim isPsb = version = 2
-            Dim docHeight = CInt((CLng(buf(14)) << 24) Or (CLng(buf(15)) << 16) Or (CLng(buf(16)) << 8) Or buf(17))
-            Dim docWidth = CInt((CLng(buf(18)) << 24) Or (CLng(buf(19)) << 16) Or (CLng(buf(20)) << 8) Or buf(21))
+            ' Hoehe und Breite sind vorzeichenlose 32 Bit. Erst als Long gegen die Grenzen des
+            ' Formats (PSD 30 000, PSB 300 000 Pixel je Seite, wie im flachen Weg), dann umwandeln:
+            ' ein Wert ueber 2^31 warf sonst schon beim CInt einen Ueberlauf.
+            Dim longHeight = (CLng(buf(14)) << 24) Or (CLng(buf(15)) << 16) Or (CLng(buf(16)) << 8) Or buf(17)
+            Dim longWidth = (CLng(buf(18)) << 24) Or (CLng(buf(19)) << 16) Or (CLng(buf(20)) << 8) Or buf(21)
+            Dim maxSide = If(isPsb, 300_000L, 30_000L)
+            If longHeight < 1 OrElse longHeight > maxSide OrElse longWidth < 1 OrElse longWidth > maxSide Then Return Nothing
+            Dim docHeight = CInt(longHeight)
+            Dim docWidth = CInt(longWidth)
             Dim depth = CInt(buf(22)) * 256 + buf(23)
             Dim colorMode = CInt(buf(24)) * 256 + buf(25)
 
@@ -394,12 +401,14 @@ Namespace Services
             For i = 0 To layerCount - 1
                 Dim rec = ReadLayerRecord(fs, isPsb)
                 If rec Is Nothing Then Return Nothing
-                totalPixels += CLng(Math.Max(0, rec.Right - rec.Left)) * Math.Max(0, rec.Bottom - rec.Top)
+                ' Differenzen in Long: die Kanten sind beliebige 32-Bit-Zahlen aus der Datei, und
+                ' "Right - Left" lief in Integer ueber, bevor das CLng griff.
+                totalPixels += Math.Max(0L, CLng(rec.Right) - rec.Left) * Math.Max(0L, CLng(rec.Bottom) - rec.Top)
                 ' Die Maske zählt mit. Sie ist ein weiteres Raster im Speicher, und eine Datei, in
                 ' der jede Ebene eine bildgroße Maske trägt, käme sonst auf das Doppelte des Deckels.
                 If rec.HasMaskRect Then
-                    totalPixels += CLng(Math.Max(0, rec.MaskRight - rec.MaskLeft)) *
-                                   Math.Max(0, rec.MaskBottom - rec.MaskTop)
+                    totalPixels += Math.Max(0L, CLng(rec.MaskRight) - rec.MaskLeft) *
+                                   Math.Max(0L, CLng(rec.MaskBottom) - rec.MaskTop)
                 End If
                 ' Beide Masken und ihr umschließendes Ergebnis liegen gleichzeitig im Speicher.
                 If rec.CombineVectorMask Then
@@ -410,8 +419,8 @@ Namespace Services
                     Dim unionHeight = Math.Max(CLng(rec.MaskBottom) + maskPad, CLng(rec.VectorMaskBottom) + vectorPad) -
                                       Math.Min(CLng(rec.MaskTop) - maskPad, CLng(rec.VectorMaskTop) - vectorPad)
                     If unionWidth <= 0 OrElse unionHeight <= 0 OrElse unionWidth > MaxTotalLayerPixels \ unionHeight Then Return Nothing
-                    Dim temporaryPixels = CLng(Math.Max(0, rec.VectorMaskRight - rec.VectorMaskLeft)) *
-                                          Math.Max(0, rec.VectorMaskBottom - rec.VectorMaskTop) + unionWidth * unionHeight
+                    Dim temporaryPixels = Math.Max(0L, CLng(rec.VectorMaskRight) - rec.VectorMaskLeft) *
+                                          Math.Max(0L, CLng(rec.VectorMaskBottom) - rec.VectorMaskTop) + unionWidth * unionHeight
                     totalPixels += unionWidth * unionHeight
                     ' Beim Weichzeichnen bestehen gepolsterte Ein- und Ausgabebitmaps sowie das
                     ' vergrößerte Ergebnis neben den ursprünglichen Masken. Konservativ beide

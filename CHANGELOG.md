@@ -25,6 +25,13 @@
 
 - A damaged or crafted Sony ARW file no longer crashes the program.
 
+- The first start with a new picture library, or after an update that extends it, no longer
+  fails now and then with a database error when two parts of the program open it at once.
+
+- If the graphics driver crashes the program while a model runs on the graphics card, that model
+  stays on the processor for this card from the next start on, until a new driver or a new
+  program version arrives. The settings show which model is affected and can lift the block.
+
 - WebP pictures get their gallery tile again when the thumbnail cache is switched off or the
   picture lies in a temporary folder.
 
@@ -42,3 +49,19 @@
   The same goes for "photo.cr2" and "photo.nef" from different folders, whose XMP files would
   meet as "photo.xmp", and a foreign XMP file already in the destination now only skips that one
   picture instead of stopping the rest.
+
+- If pasting or moving a picture is interrupted, for example by a crash, the half-copied file no
+  longer stays hidden in the destination folder: the next paste or move into that folder removes
+  it.
+
+- A damaged LUT file no longer causes an error every time the picture is drawn; it simply has no
+  effect.
+
+- Saving an edit beside a picture no longer silently overwrites what another FerrumPix window,
+  another computer or a sync service changed in the meantime: ratings, labels and keywords from
+  there stay, and a different edit is kept next to the picture instead of being lost.
+
+- A preset with a single broken value now loads with all its other settings instead of failing
+  with an arithmetic overflow.
+
+- Damaged PSD files and Canon CR2 files with impossible sizes are rejected cleanly.

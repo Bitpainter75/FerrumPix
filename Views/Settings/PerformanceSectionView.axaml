@@ -154,6 +154,24 @@
                                        FontSize="{DynamicResource FP.Font.Small}"
                                        TextWrapping="Wrap"
                                        Classes="no-translate"/>
+                            <!-- Modelle, die auf einer Karte gesperrt sind (GpuModelBlockService,
+                                 karte-gesperrt.json): nach einem Absturz im Treiber oder einem Fehler
+                                 im Aufbau. Nur sichtbar, wenn es welche gibt. Der Knopf hebt alle auf;
+                                 Abbrechen traegt sie wieder ein. -->
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasGpuModelBlocks}">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Auf der Grafikkarte gesperrte Modelle" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="{Binding GpuModelBlocksText}"
+                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                               FontSize="{DynamicResource FP.Font.Body}"
+                                               TextWrapping="Wrap"
+                                               Classes="no-translate"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Classes="ghost" Padding="12,7"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding ClearGpuModelBlocksCommand}"
+                                        ToolTip.Tip="Gibt die Modelle wieder für die Grafikkarte frei. Stürzt eines erneut ab, ist es beim nächsten Start wieder gesperrt.">Sperren aufheben</Button>
+                            </Grid>
                         </StackPanel>
 
                         <!-- Der dritte Weg auf die Grafikhardware, deshalb hier bei den beiden

@@ -656,7 +656,9 @@ Namespace Services
         End Function
 
         Private Shared Function Sample(curve As Double(), v As Double) As Double
-            If v <= 0.0 Then Return curve(0)
+            ' "Not (v > 0)" statt "v <= 0": fuer jede Zahl dasselbe, aber auch NaN landet hier, statt
+            ' in CInt(Math.Floor(NaN)) einen Ueberlauf zu werfen. Kein Mehraufwand im Pixelweg.
+            If Not (v > 0.0) Then Return curve(0)
             If v >= 1.0 Then Return curve(_grid - 1)
             Dim pos = v * (_grid - 1)
             Dim i = CInt(Math.Floor(pos))

@@ -25,7 +25,12 @@ Namespace Services
     '''
     ''' GELADEN WIRD ERST BEI BEDARF (AiModelService.RuntimeAvailable): beim Start fasst FerrumPix
     ''' keinen der beiden Teile an. Der Schutz greift deshalb beim ersten echten Gebrauch, und eine
-    ''' gesperrte KI-Funktion meldet sich beim naechsten Versuch, statt erneut abzustuerzen.</summary>
+    ''' gesperrte KI-Funktion meldet sich beim naechsten Versuch, statt erneut abzustuerzen.
+    '''
+    ''' DIE EINZELNEN MODELLE auf der Karte schuetzt <see cref="GpuModelBlockService"/>: er legt
+    ''' seine Laufmarken in denselben Ordner, mit derselben Fassung, und macht aus einer
+    ''' liegengebliebenen keine Sperre dieses Teils, sondern eine dauerhafte Sperre des Paares aus
+    ''' Modell und Karte.</summary>
     Public NotInheritable Class NativeStartGuard
         Private Sub New()
         End Sub
@@ -41,7 +46,7 @@ Namespace Services
 
         Private Shared ReadOnly _blocked As New HashSet(Of String)(StringComparer.Ordinal)
 
-        Private Shared ReadOnly Property GuardDirectory As String
+        Friend Shared ReadOnly Property GuardDirectory As String
             Get
                 If Not String.IsNullOrEmpty(DirectoryOverride) Then Return DirectoryOverride
                 Return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -59,7 +64,7 @@ Namespace Services
 
         ''' <summary>Fassung und Aenderungszeit der Programmdatei. Aendert sich eines davon, wird
         ''' ein gesperrter Teil wieder versucht.</summary>
-        Private Shared Function CurrentStamp() As String
+        Friend Shared Function CurrentStamp() As String
             If Not String.IsNullOrEmpty(StampOverride) Then Return StampOverride
             Dim version = ""
             Try
@@ -155,7 +160,7 @@ Namespace Services
 
         ''' <summary>Gehoert die Merkdatei einem anderen, noch laufenden FerrumPix? Dann steckt der
         ''' gerade selbst in dem Aufruf, und das ist kein Absturz.</summary>
-        Private Shared Function IsOtherRunningInstance(pid As Integer) As Boolean
+        Friend Shared Function IsOtherRunningInstance(pid As Integer) As Boolean
             If pid <= 0 OrElse pid = Environment.ProcessId Then Return False
             Try
                 Using other = Process.GetProcessById(pid)

@@ -822,7 +822,9 @@ Namespace Services
                     Dim size = (CInt(section(sizeOffset)) << 24) Or (CInt(section(sizeOffset + 1)) << 16) Or
                                (CInt(section(sizeOffset + 2)) << 8) Or CInt(section(sizeOffset + 3))
                     Dim dataOffset = sizeOffset + 4
-                    If size < 0 OrElse dataOffset + size > section.Length Then Exit While
+                    ' In Long verglichen: eine Groesse nahe 2^31 liess die Summe sonst ueberlaufen,
+                    ' bevor die Pruefung greifen konnte.
+                    If size < 0 OrElse CLng(dataOffset) + size > section.Length Then Exit While
 
                     If id = wanted AndAlso size > 0 Then
                         Dim data(size - 1) As Byte
@@ -928,15 +930,19 @@ Namespace Services
 
             header.IsPsb = version = 2
             header.Channels = CInt(buf(12)) * 256 + buf(13)
-            header.Height = CInt((CLng(buf(14)) << 24) Or (CLng(buf(15)) << 16) Or (CLng(buf(16)) << 8) Or buf(17))
-            header.Width = CInt((CLng(buf(18)) << 24) Or (CLng(buf(19)) << 16) Or (CLng(buf(20)) << 8) Or buf(21))
+            ' Hoehe und Breite sind vorzeichenlose 32 Bit: erst als Long gegen die Grenze, dann
+            ' umwandeln. Ein Wert ueber 2^31 warf sonst schon beim CInt einen Ueberlauf.
+            Dim height = (CLng(buf(14)) << 24) Or (CLng(buf(15)) << 16) Or (CLng(buf(16)) << 8) Or buf(17)
+            Dim width = (CLng(buf(18)) << 24) Or (CLng(buf(19)) << 16) Or (CLng(buf(20)) << 8) Or buf(21)
             header.Depth = CInt(buf(22)) * 256 + buf(23)
             header.ColorMode = CInt(buf(24)) * 256 + buf(25)
 
             Dim maxSide = If(header.IsPsb, 300_000, 30_000)
             If header.Channels < 1 OrElse header.Channels > 56 Then Return False
-            If header.Width < 1 OrElse header.Width > maxSide Then Return False
-            If header.Height < 1 OrElse header.Height > maxSide Then Return False
+            If width < 1 OrElse width > maxSide Then Return False
+            If height < 1 OrElse height > maxSide Then Return False
+            header.Height = CInt(height)
+            header.Width = CInt(width)
             If CLng(header.Width) * header.Height > MaxPixels Then Return False
 
             ' Nicht nur die Fläche deckeln, sondern den tatsächlichen SPITZENVERBRAUCH schätzen.

@@ -3,6 +3,8 @@ Imports System.Collections.Concurrent
 Imports System.Collections.Generic
 Imports System.IO
 Imports System.Linq
+Imports System.Security.Cryptography
+Imports System.Text
 Imports System.Xml
 Imports System.Xml.Linq
 
@@ -188,34 +190,482 @@ Namespace Services
                                         Optional developedThumbnail As Boolean? = Nothing,
                                         Optional requireAbsent As Boolean = False,
                                         Optional edited As Boolean? = Nothing) As Boolean
-            If String.IsNullOrWhiteSpace(rawPath) OrElse adjustments Is Nothing Then Return False
+            Return WriteChecked(rawPath, adjustments, Nothing, developedThumbnail, edited, requireAbsent).Succeeded
+        End Function
+
+        ' ── Stand beim Lesen, Vergleich vor dem Schreiben ─────────────────────────
+        ' Wer eine Begleitdatei liest, lange damit arbeitet und dann schreibt (der Editor), merkt
+        ' sich ihren Stand (SidecarStamp). Vor dem Schreiben wird er mit der Platte verglichen,
+        ' immer ueber die Bytes, nie nur ueber Zeit und Laenge: grob aufloesende Dateisysteme (FAT,
+        ' SMB) tragen nach zwei Schreibvorgaengen dieselbe Zeit, und eine geaenderte Bewertung
+        ' aendert die Laenge nicht. Ist die Datei inzwischen anders, gibt es vier Ausgaenge
+        ' (SidecarWriteOutcome); keiner verliert eine Bearbeitung still.
+        '
+        ' Zwischen Prozessen dieser Anwendung haelt eine benannte Sperre je Begleitdatei Lesen und
+        ' Schreiben zusammen (LockAcrossProcesses). Gegen andere Programme und gegen einen zweiten
+        ' Rechner auf derselben Freigabe hilft sie nicht: dort vergleicht der Schreiber unmittelbar
+        ' vor dem Umbenennen noch einmal die Bytes mit dem Stand, auf dem seine Entscheidung beruht,
+        ' und faengt bei einer Abweichung von vorn an (hoechstens MaxWriteAttempts mal). Das Fenster
+        ' zwischen diesem Vergleich und dem Umbenennen schliesst das nicht ganz.
+
+        ''' <summary>Der Stand einer Begleitdatei, wie ein Leser ihn gesehen hat: ob sie da war, ein
+        ''' SHA-256 ihrer Bytes, das Rezept des gemeinten Schluessels in vergleichbarer Form und ihr
+        ''' Katalogblock. Der Editor holt ihn beim Oeffnen (<see cref="ReadStamp"/>) und reicht ihn
+        ''' beim Speichern an <see cref="TryWriteChecked"/>.</summary>
+        Public NotInheritable Class SidecarStamp
+            ''' Der Schluessel, fuer den der Stand gilt: die Datei oder eine ihrer Varianten.
+            Public ReadOnly Property ItemPath As String
+            Public ReadOnly Property Exists As Boolean
+            ''' SHA-256 der Bytes; Nothing ohne Datei oder wenn sie sich nicht lesen liess.
+            Public ReadOnly Property ContentHash As String
+            ''' Das Rezept als JSON nach dem Lesen und erneuten Schreiben. Nothing heisst: kein Rezept
+            ''' (keine Datei, oder nur Katalogdaten mit neutralem Rezept und ohne Vermerk
+            ''' "bearbeitet"). <see cref="UnknownRecipe"/> heisst: nicht verstanden.
+            Friend ReadOnly Property RecipeKey As String
+            ''' Der Katalogblock des Schluessels; Nothing ohne Block.
+            Friend ReadOnly Property Catalog As RawSidecarCatalogData
+            ''' Die Bytes selbst, nur fuer das Aufheben unter dem Schreibvorgang; der Editor
+            ''' bekommt einen Stand ohne sie.
+            Friend ReadOnly Property Bytes As Byte()
+
+            Friend Sub New(itemPath As String, exists As Boolean, contentHash As String, recipeKey As String,
+                           catalog As RawSidecarCatalogData, bytes As Byte())
+                Me.ItemPath = itemPath
+                Me.Exists = exists
+                Me.ContentHash = contentHash
+                Me.RecipeKey = recipeKey
+                Me.Catalog = catalog
+                Me.Bytes = bytes
+            End Sub
+
+            ''' <summary>Derselbe Stand ohne die Bytes.</summary>
+            Friend Function WithoutBytes() As SidecarStamp
+                Return New SidecarStamp(ItemPath, Exists, ContentHash, RecipeKey, Catalog, Nothing)
+            End Function
+
+            ''' <summary>Liegt auf der Platte noch genau dieser Inhalt? Ein Stand mit unbekanntem
+            ''' Inhalt gleicht nie.</summary>
+            Friend Function SameContentAs(other As SidecarStamp) As Boolean
+                If other Is Nothing OrElse Exists <> other.Exists Then Return False
+                If Not Exists Then Return True
+                Return ContentHash IsNot Nothing AndAlso String.Equals(ContentHash, other.ContentHash, StringComparison.Ordinal)
+            End Function
+        End Class
+
+        ''' <summary>Steht fuer ein Rezept, das sich nicht lesen liess. Gleicht keinem anderen und
+        ''' keinem JSON, ein Vergleich damit faellt also immer auf die sichere Seite.</summary>
+        Friend Const UnknownRecipe As String = "?unbekannt"
+
+        ''' <summary>Was <see cref="TryWriteChecked"/> getan hat.</summary>
+        Public Enum SidecarWriteOutcome
+            ''' Die Datei war, wie sie gelesen wurde; der neue Stand ist geschrieben.
+            Written
+            ''' Ein anderer hat nur Katalog, Beschreibung, Varianten oder Vermerke geaendert, oder
+            ''' dasselbe Rezept geschrieben: unser Rezept mit seinen uebrigen Teilen ist geschrieben.
+            Merged
+            ''' Am Rezept war seit dem Lesen nichts geaendert, ein anderer hat es aber neu
+            ''' geschrieben: seine Fassung bleibt, geschrieben wird nichts.
+            Adopted
+            ''' Beide haben das Rezept geaendert: die Fassung der Platte liegt daneben als
+            ''' <see cref="SidecarWriteResult.PreservedPath"/>, unsere ist geschrieben.
+            Preserved
+            Failed
+        End Enum
+
+        Public NotInheritable Class SidecarWriteResult
+            Public Property Outcome As SidecarWriteOutcome = SidecarWriteOutcome.Failed
+            ''' Bei Preserved die aufgehobene fremde Fassung.
+            Public Property PreservedPath As String
+            ''' Der Stand fuer das naechste Speichern. Nach Adopted bleibt es der alte: der Leser
+            ''' zeigt weiter seinen Stand, und speichert er spaeter eine Aenderung daran, muss die
+            ''' fremde Fassung aufgehoben werden statt ersetzt.
+            Public Property Stamp As SidecarStamp
+
+            Public ReadOnly Property Succeeded As Boolean
+                Get
+                    Return Outcome <> SidecarWriteOutcome.Failed
+                End Get
+            End Property
+        End Class
+
+        ''' <summary>So oft wird neu entschieden, wenn ein anderes Programm zwischen Pruefung und
+        ''' Umbenennen schreibt. Danach gilt das Schreiben als gescheitert.</summary>
+        Private Const MaxWriteAttempts As Integer = 3
+
+        ''' <summary>Hoechstens so viele aufgehobene fremde Fassungen je Begleitdatei
+        ''' (".other", ".other2" bis ".other4"). Sind alle belegt und anders, wird nicht geschrieben.</summary>
+        Public Const MaxOtherVersions As Integer = 4
+        Public Const OtherVersionSuffix As String = ".other"
+
+        ''' <summary>Der Stand der Begleitdatei zu diesem Schluessel (Datei oder Variante), fuer
+        ''' <see cref="TryWriteChecked"/>. VOR dem Lesen des Rezepts holen: aendert ein anderer die
+        ''' Datei dazwischen, ist der Stand der aeltere, und das Speichern hebt die fremde Fassung
+        ''' im Zweifel auf, statt sie zu ersetzen.</summary>
+        Public Shared Function ReadStamp(rawPath As String) As SidecarStamp
+            If String.IsNullOrWhiteSpace(rawPath) Then Return Nothing
+            SyncLock _writeLock
+                Return CaptureStamp(rawPath).WithoutBytes()
+            End SyncLock
+        End Function
+
+        ''' <summary>Ein Stand, der nichts weiss: fuer einen Leser, der den Stand nicht holen konnte.
+        ''' Jede vorhandene Datei gilt dann als fremd geaendert, und ihr Rezept wird aufgehoben, bevor
+        ''' ein anderes sie ersetzt.</summary>
+        Public Shared Function UnknownStamp(rawPath As String) As SidecarStamp
+            Return New SidecarStamp(rawPath, True, Nothing, UnknownRecipe, Nothing, Nothing)
+        End Function
+
+        ''' <summary>Die Pfade der aufgehobenen fremden Fassungen dieser Datei, ob vorhanden oder
+        ''' nicht: "foto.cr2.fpxmp.other", dann ".other2" bis ".other4".</summary>
+        Public Shared Function OtherVersionPaths(rawPath As String) As List(Of String)
+            Dim sidecar = SidecarPathFor(rawPath)
+            Dim result As New List(Of String)()
+            For index = 1 To MaxOtherVersions
+                result.Add(sidecar & OtherVersionSuffix & If(index = 1, "", index.ToString(Globalization.CultureInfo.InvariantCulture)))
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Schreibt das Rezept wie <see cref="TryWrite"/>, vergleicht aber vorher die
+        ''' Datei mit dem Stand <paramref name="opened"/> beim Lesen. Ohne Stand (Nothing) wie
+        ''' TryWrite. Siehe <see cref="SidecarWriteOutcome"/> fuer die Ausgaenge.</summary>
+        Public Shared Function TryWriteChecked(rawPath As String, adjustments As ImageAdjustments,
+                                               opened As SidecarStamp,
+                                               Optional developedThumbnail As Boolean? = Nothing,
+                                               Optional edited As Boolean? = Nothing) As SidecarWriteResult
+            If opened IsNot Nothing AndAlso Not String.Equals(opened.ItemPath, rawPath, PathIdentity.Comparison) Then
+                ' Der Stand eines anderen Schluessels taugt nicht als Vergleich. Unbekannt ist
+                ' sicherer als keiner: dann wird eine abweichende Datei aufgehoben statt ersetzt.
+                DiagnosticLogService.LogAlways("Sidecar.Write", $"Stand gehoert zu einem anderen Schluessel: {Path.GetFileName(opened.ItemPath)}")
+                opened = New SidecarStamp(rawPath, True, Nothing, UnknownRecipe, Nothing, Nothing)
+            End If
+            Return WriteChecked(rawPath, adjustments, opened, developedThumbnail, edited, requireAbsent:=False)
+        End Function
+
+        Private Shared Function WriteChecked(rawPath As String, adjustments As ImageAdjustments, opened As SidecarStamp,
+                                             developedThumbnail As Boolean?, edited As Boolean?,
+                                             requireAbsent As Boolean) As SidecarWriteResult
+            Dim failed = New SidecarWriteResult With {.Outcome = SidecarWriteOutcome.Failed, .Stamp = opened}
+            If String.IsNullOrWhiteSpace(rawPath) OrElse adjustments Is Nothing Then Return failed
             Try
-                Dim variantId As String = Nothing
-                Dim file = VariantKey.Split(rawPath, variantId)
-                If variantId.Length > 0 Then
-                    Return WriteVariantRecipe(file, variantId, adjustments, edited) = ModifyRecipeResult.Written
-                End If
                 SyncLock _writeLock
-                    Dim existing As ImageAdjustments = Nothing
-                    Dim state = ReadRecipe(rawPath, existing)
-                    If state = SidecarReadResult.Unreadable Then Return False
-                    Dim catalog = LibraryService.Instance.GetSidecarCatalogData(rawPath)
-                    Return TryWriteCore(rawPath, adjustments, catalog, developedThumbnail, edited,
-                                        requireAbsent OrElse state = SidecarReadResult.Missing)
+                    Using crossLock = LockAcrossProcesses(rawPath)
+                        If crossLock Is Nothing Then Return failed
+                        For attempt = 1 To MaxWriteAttempts
+                            Dim disk As SidecarStamp = Nothing
+                            Dim result = WriteCheckedOnce(rawPath, adjustments, opened, developedThumbnail, edited,
+                                                          requireAbsent, disk)
+                            If result IsNot Nothing Then Return result
+                            ' Nothing: gescheitert. Hat sich die Datei seit der Entscheidung geaendert,
+                            ' wird neu entschieden, sonst bleibt es dabei.
+                            If disk Is Nothing OrElse CaptureStamp(rawPath, parse:=False).SameContentAs(disk) Then Return failed
+                            DiagnosticLogService.LogAlways("Sidecar.Write",
+                                $"waehrend des Schreibens von aussen geaendert, Versuch {attempt}: {Path.GetFileName(SidecarPathFor(rawPath))}")
+                        Next
+                        Return failed
+                    End Using
                 End SyncLock
-            Catch
-                Return False
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Sidecar.Write", ex)
+                Return failed
             End Try
         End Function
+
+        ''' <summary>Ein Durchgang von <see cref="WriteChecked"/>: Platte lesen, entscheiden,
+        ''' schreiben. Nothing heisst gescheitert; <paramref name="disk"/> ist dann der Stand, auf dem
+        ''' die Entscheidung beruhte, oder Nothing, wenn es gar nicht so weit kam.</summary>
+        Private Shared Function WriteCheckedOnce(rawPath As String, adjustments As ImageAdjustments, opened As SidecarStamp,
+                                                 developedThumbnail As Boolean?, edited As Boolean?,
+                                                 requireAbsent As Boolean, ByRef disk As SidecarStamp) As SidecarWriteResult
+            Dim variantId As String = Nothing
+            Dim file = VariantKey.Split(rawPath, variantId)
+            Dim captured = CaptureStamp(rawPath)
+            Dim existing As ImageAdjustments = Nothing
+            Dim state = ReadRecipe(rawPath, existing)
+            If state = SidecarReadResult.Unreadable Then Return Nothing
+            If requireAbsent AndAlso captured.Exists Then Return Nothing
+            disk = captured
+
+            Dim outcome = SidecarWriteOutcome.Written
+            Dim preserved As String = Nothing
+            Dim diskChanged = opened IsNot Nothing AndAlso Not opened.SameContentAs(captured)
+            If diskChanged Then
+                Dim ours = NormalizedRecipe(adjustments)
+                If String.Equals(captured.RecipeKey, opened.RecipeKey, StringComparison.Ordinal) OrElse
+                   String.Equals(captured.RecipeKey, ours, StringComparison.Ordinal) Then
+                    ' Das Rezept der Platte ist das gelesene oder schon unseres: der andere hat nur
+                    ' den Rest geaendert, und der bleibt beim Schreiben stehen.
+                    outcome = SidecarWriteOutcome.Merged
+                ElseIf String.Equals(ours, opened.RecipeKey, StringComparison.Ordinal) Then
+                    ' Wir haben am Rezept nichts geaendert, der andere schon: seine Fassung gilt.
+                    DiagnosticLogService.LogAlways("Sidecar.Write", $"fremde Fassung uebernommen: {Path.GetFileName(SidecarPathFor(file))}")
+                    SyncCatalogFromFile(file)
+                    Return New SidecarWriteResult With {.Outcome = SidecarWriteOutcome.Adopted, .Stamp = opened}
+                ElseIf captured.Exists Then
+                    ' Beide haben das Rezept geaendert: die Fassung der Platte geht nicht verloren.
+                    preserved = PreserveOtherVersion(SidecarPathFor(file), captured.Bytes)
+                    If preserved Is Nothing Then
+                        DiagnosticLogService.LogAlways("Sidecar.Write",
+                            $"fremde Fassung nicht aufzuheben, nichts geschrieben: {Path.GetFileName(SidecarPathFor(file))}")
+                        Return Nothing
+                    End If
+                    outcome = SidecarWriteOutcome.Preserved
+                End If
+            End If
+
+            Dim written As Boolean
+            If variantId.Length > 0 Then
+                written = WriteVariantRecipe(file, variantId, adjustments, edited, guard:=captured) = ModifyRecipeResult.Written
+            Else
+                Dim catalog = LibraryService.Instance.GetSidecarCatalogData(rawPath)
+                ' Was ein anderer seit dem Lesen am Katalog geaendert hat, gilt Feld fuer Feld vor
+                ' dem Stand der eigenen Datenbank, der davon nichts weiss.
+                If diskChanged Then catalog = MergeCatalog(opened.Catalog, captured.Catalog, catalog)
+                written = TryWriteCore(rawPath, adjustments, catalog, developedThumbnail, edited,
+                                       requireAbsent:=Not captured.Exists, guard:=captured)
+            End If
+            If Not written Then Return Nothing
+            If diskChanged Then
+                DiagnosticLogService.LogAlways("Sidecar.Write",
+                    $"fremde Aenderung gefunden, Ausgang {outcome}: {Path.GetFileName(SidecarPathFor(file))}")
+                If variantId.Length = 0 Then SyncCatalogFromFile(file)
+            End If
+            Return New SidecarWriteResult With {
+                .Outcome = outcome,
+                .PreservedPath = preserved,
+                .Stamp = If(opened Is Nothing, Nothing, CaptureStamp(rawPath).WithoutBytes())}
+        End Function
+
+        ''' <summary>Liest die Begleitdatei EINMAL als Bytes und leitet alles aus diesen ab.
+        ''' Fehlt sie, ein Stand ohne Datei; laesst sie sich nicht lesen, einer mit unbekanntem
+        ''' Inhalt. Ohne <paramref name="parse"/> nur Dasein und Hash, fuer den Vergleich vor dem
+        ''' Umbenennen.</summary>
+        Private Shared Function CaptureStamp(rawPath As String, Optional parse As Boolean = True) As SidecarStamp
+            Dim sidecar = SidecarPathFor(rawPath)
+            Select Case ProbeSidecar(sidecar)
+                Case SidecarReadResult.Missing
+                    Return New SidecarStamp(rawPath, False, Nothing, Nothing, Nothing, Nothing)
+                Case SidecarReadResult.Unreadable
+                    Return New SidecarStamp(rawPath, True, Nothing, UnknownRecipe, Nothing, Nothing)
+            End Select
+            Dim bytes As Byte()
+            Try
+                bytes = File.ReadAllBytes(sidecar)
+            Catch ex As FileNotFoundException
+                Return New SidecarStamp(rawPath, False, Nothing, Nothing, Nothing, Nothing)
+            Catch ex As DirectoryNotFoundException
+                Return New SidecarStamp(rawPath, False, Nothing, Nothing, Nothing, Nothing)
+            Catch
+                Return New SidecarStamp(rawPath, True, Nothing, UnknownRecipe, Nothing, Nothing)
+            End Try
+            Dim hash = Convert.ToHexString(SHA256.HashData(bytes))
+            If Not parse Then Return New SidecarStamp(rawPath, True, hash, UnknownRecipe, Nothing, bytes)
+            Dim recipeKey = UnknownRecipe
+            Dim catalog As RawSidecarCatalogData = Nothing
+            Try
+                Using stream As New MemoryStream(bytes, writable:=False)
+                    Dim root = XDocument.Load(stream).Root
+                    recipeKey = RecipeKeyFromRoot(root, rawPath)
+                    catalog = CatalogFromRoot(root, rawPath)
+                End Using
+            Catch
+                recipeKey = UnknownRecipe
+            End Try
+            Return New SidecarStamp(rawPath, True, hash, recipeKey, catalog, bytes)
+        End Function
+
+        ''' <summary>Das Rezept des Schluessels in vergleichbarer Form (siehe
+        ''' <see cref="SidecarStamp.RecipeKey"/>). Dieselben Regeln wie <see cref="ReadRecipeCore"/>:
+        ''' was dort unlesbar ist, ist hier <see cref="UnknownRecipe"/>.</summary>
+        Private Shared Function RecipeKeyFromRoot(root As XElement, rawPath As String) As String
+            If root Is Nothing OrElse root.Name <> Ns + "recipe" Then Return UnknownRecipe
+            Dim version As Integer
+            If Not Integer.TryParse(root.Attribute("version")?.Value, Globalization.NumberStyles.Integer,
+                                    Globalization.CultureInfo.InvariantCulture, version) Then Return UnknownRecipe
+            If version < 1 OrElse version > VariantsFormatVersion Then Return UnknownRecipe
+            Dim variants As VariantSet = Nothing
+            If Not TryParseVariants(root, variants) Then Return UnknownRecipe
+            Dim variantId As String = Nothing
+            Dim file = VariantKey.Split(rawPath, variantId)
+            Dim json As String
+            If variantId.Length > 0 Then
+                Dim entry = variants?.Find(variantId)
+                If entry Is Nothing Then Return UnknownRecipe
+                json = entry.Json
+            Else
+                Dim node = root.Element(Ns + "adjustments")
+                If node Is Nothing Then Return UnknownRecipe
+                json = node.Value
+            End If
+            Dim adjustments = FpxService.DeserializeAdjustments(json)
+            If adjustments Is Nothing Then Return UnknownRecipe
+            DenoiseModelService.MigrateLegacyRecipe(adjustments, file)
+            Dim key = NormalizedRecipe(adjustments)
+            ' Eine Datei, die nur Katalogdaten traegt (angelegt von einem Stern oder Stichwort, mit
+            ' neutralem Rezept und ohne Vermerk "bearbeitet"), hat kein Rezept. Sonst hielte das
+            ' Speichern im Editor einen Stern, der waehrenddessen vergeben wurde, fuer ein fremdes
+            ' Rezept und hoebe die Datei auf.
+            If variantId.Length = 0 AndAlso root.Attribute(EditedAttribute) Is Nothing AndAlso
+               String.Equals(key, NormalizedRecipe(New ImageAdjustments()), StringComparison.Ordinal) Then Return Nothing
+            Return key
+        End Function
+
+        ''' <summary>Ein Rezept so, wie es in die Datei ginge: gebackene Vorgaenge noch anzuwenden
+        ''' (siehe TryWriteCore), als JSON.</summary>
+        Private Shared Function NormalizedRecipe(adjustments As ImageAdjustments) As String
+            If adjustments Is Nothing Then Return Nothing
+            Dim copy = adjustments.Clone()
+            copy.BakedOperationsApplied = False
+            Return FpxService.SerializeAdjustments(copy)
+        End Function
+
+        ''' <summary>Der Katalog fuer das Schreiben nach einer fremden Aenderung: jedes Feld, das auf
+        ''' der Platte anders ist als beim Lesen, kommt von der Platte (es ist juenger als unser
+        ''' Stand), jedes andere aus der eigenen Datenbank.</summary>
+        Private Shared Function MergeCatalog(opened As RawSidecarCatalogData, disk As RawSidecarCatalogData,
+                                             own As RawSidecarCatalogData) As RawSidecarCatalogData
+            If disk Is Nothing Then Return own
+            Dim result As New RawSidecarCatalogData With {
+                .Rating = own?.Rating, .IsFavorite = own?.IsFavorite, .ColorLabel = own?.ColorLabel,
+                .Keywords = If(own?.Keywords, New List(Of String)()), .HasKeywords = own IsNot Nothing AndAlso own.HasKeywords,
+                .PickState = own?.PickState}
+            If disk.Rating.HasValue AndAlso Not Nullable.Equals(disk.Rating, opened?.Rating) Then result.Rating = disk.Rating
+            If disk.IsFavorite.HasValue AndAlso Not Nullable.Equals(disk.IsFavorite, opened?.IsFavorite) Then result.IsFavorite = disk.IsFavorite
+            If disk.ColorLabel IsNot Nothing AndAlso
+               Not String.Equals(disk.ColorLabel, opened?.ColorLabel, StringComparison.OrdinalIgnoreCase) Then result.ColorLabel = disk.ColorLabel
+            If disk.PickState.HasValue AndAlso Not Nullable.Equals(disk.PickState, opened?.PickState) Then result.PickState = disk.PickState
+            If disk.HasKeywords AndAlso
+               (opened Is Nothing OrElse Not opened.HasKeywords OrElse Not SameKeywords(disk.Keywords, opened.Keywords)) Then
+                result.Keywords = disk.Keywords.ToList()
+                result.HasKeywords = True
+            End If
+            Return result
+        End Function
+
+        Private Shared Function SameKeywords(a As List(Of String), b As List(Of String)) As Boolean
+            Dim left = New HashSet(Of String)(If(a, New List(Of String)()), StringComparer.OrdinalIgnoreCase)
+            Return left.SetEquals(If(b, New List(Of String)()))
+        End Function
+
+        ''' <summary>Nach einer uebernommenen fremden Aenderung: die Datenbank holt den Katalogblock
+        ''' aus der Datei nach, wie der Katalogindex es tut. Nur RAW und PSD tragen einen.</summary>
+        Private Shared Sub SyncCatalogFromFile(file As String)
+            If Not IsReadOnlyFormat(file) Then Return
+            Try
+                LibraryService.Instance.ImportFpxmpCatalogData(file)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Sidecar.SyncCatalog", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Legt die fremde Fassung neben die Begleitdatei, unter dem ersten freien Namen
+        ''' aus <see cref="OtherVersionPaths"/>. Liegt dieselbe Fassung dort schon, bleibt es bei
+        ''' der einen. Atomar ueber eine Nachbardatei und ein Umbenennen, das nichts ersetzt.
+        ''' Nothing, wenn alle Namen mit anderen Fassungen belegt sind oder das Schreiben scheitert:
+        ''' dann darf der Aufrufer nicht schreiben.</summary>
+        Private Shared Function PreserveOtherVersion(sidecar As String, bytes As Byte()) As String
+            If bytes Is Nothing Then Return Nothing
+            Dim imagePath = sidecar.Substring(0, sidecar.Length - Extension.Length)
+            For Each candidate In OtherVersionPaths(imagePath)
+                Dim temp As String = Nothing
+                Try
+                    If CompanionExists(candidate) Then
+                        If File.ReadAllBytes(candidate).AsSpan().SequenceEqual(bytes) Then Return candidate
+                        Continue For
+                    End If
+                    temp = ImageProcessor.AtomicSiblingPath(candidate)
+                    Using fs = New FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None)
+                        fs.Write(bytes, 0, bytes.Length)
+                        fs.Flush(flushToDisk:=True)
+                    End Using
+                    ImageProcessor.CarryOverFileMode(sidecar, temp)
+                    File.Move(temp, candidate, overwrite:=False)
+                    Return candidate
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Sidecar.PreserveOther", ex)
+                    Try
+                        If temp IsNot Nothing AndAlso File.Exists(temp) Then File.Delete(temp)
+                    Catch
+                    End Try
+                    ' Entstand der Name eben von aussen, wird der naechste versucht; jeder andere
+                    ' Fehler (keine Rechte, Freigabe weg) trifft auch die uebrigen.
+                    If temp Is Nothing OrElse Not File.Exists(candidate) Then Return Nothing
+                End Try
+            Next
+            Return Nothing
+        End Function
+
+        ''' <summary>Haelt Lesen und Schreiben dieser Begleitdatei gegen andere Prozesse dieser
+        ''' Anwendung zusammen: eine benannte Sperre, deren Name aus dem aufgeloesten Pfad entsteht.
+        ''' Sie ist auf demselben Faden mehrfach zu nehmen, die verschachtelten Schreiber (Katalog aus
+        ''' der Datenbank, Varianten) duerfen sie also erneut verlangen. Nothing, wenn sie nach
+        ''' <see cref="CrossProcessLockTimeoutMs"/> noch belegt ist: dann wird nicht geschrieben.
+        ''' Gibt es auf der Plattform keine benannten Sperren, bleibt es beim Vergleich vor dem
+        ''' Umbenennen (ein Leerobjekt).</summary>
+        Private Shared Function LockAcrossProcesses(rawPath As String) As IDisposable
+            Dim sidecar = SidecarPathFor(rawPath)
+            Dim key As String
+            Try
+                key = Path.GetFullPath(ImageProcessor.ResolveWriteTarget(sidecar))
+            Catch
+                key = sidecar
+            End Try
+            If PathIdentity.IgnoresCase Then key = key.ToUpperInvariant()
+            Dim name = "FerrumPix.Sidecar." & Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key))).Substring(0, 40)
+            Dim mutex As Threading.Mutex
+            Try
+                mutex = New Threading.Mutex(False, name)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Sidecar.CrossProcessLock", ex)
+                Return New CrossProcessLock(Nothing)
+            End Try
+            Try
+                If Not mutex.WaitOne(CrossProcessLockTimeoutMs) Then
+                    mutex.Dispose()
+                    DiagnosticLogService.LogAlways("Sidecar.CrossProcessLock", $"belegt, nicht geschrieben: {Path.GetFileName(sidecar)}")
+                    Return Nothing
+                End If
+            Catch ex As Threading.AbandonedMutexException
+                ' Ein anderer Prozess endete, waehrend er sie hielt: sie gehoert jetzt uns, und die
+                ' Datei ist dank des atomaren Schreibens trotzdem ganz.
+            End Try
+            Return New CrossProcessLock(mutex)
+        End Function
+
+        Private Const CrossProcessLockTimeoutMs As Integer = 10000
+
+        Private NotInheritable Class CrossProcessLock
+            Implements IDisposable
+            Private _mutex As Threading.Mutex
+
+            Public Sub New(mutex As Threading.Mutex)
+                _mutex = mutex
+            End Sub
+
+            Public Sub Dispose() Implements IDisposable.Dispose
+                Dim held = _mutex
+                _mutex = Nothing
+                If held Is Nothing Then Return
+                Try
+                    held.ReleaseMutex()
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Sidecar.CrossProcessLock", ex)
+                End Try
+                held.Dispose()
+            End Sub
+        End Class
 
         ''' <summary>Der Datenbankstand wird erst unter der Schreibsperre gelesen, damit ein
         ''' wartender Schreiber keinen aelteren Katalogstand nach einem neueren zurueckschreibt.</summary>
         Friend Shared Function TryWriteCatalogFromLibrary(rawPath As String, library As LibraryService) As Boolean
             If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsReadOnlyFormat(rawPath) OrElse library Is Nothing Then Return False
             SyncLock _writeLock
-                Dim catalog = library.GetSidecarCatalogData(rawPath)
-                Return TryWriteCatalog(rawPath, catalog.Rating.Value, catalog.IsFavorite.Value,
-                                       catalog.ColorLabel, catalog.Keywords, catalog.PickState.Value)
+                Using crossLock = LockAcrossProcesses(rawPath)
+                    If crossLock Is Nothing Then Return False
+                    Dim catalog = library.GetSidecarCatalogData(rawPath)
+                    Return TryWriteCatalog(rawPath, catalog.Rating.Value, catalog.IsFavorite.Value,
+                                           catalog.ColorLabel, catalog.Keywords, catalog.PickState.Value)
+                End Using
             End SyncLock
         End Function
 
@@ -234,34 +684,38 @@ Namespace Services
             If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsReadOnlyFormat(rawPath) Then Return False
             ' Lesen und Schreiben unter DERSELBEN Sperre: sonst kann ein anderer Schreiber dieser
             ' Anwendung die Datei zwischen beiden aendern, und sie wuerde mit dem alten Rezept ersetzt.
+            ' Dazu die Sperre ueber Prozesse hinweg (LockAcrossProcesses).
             SyncLock _writeLock
-                Dim variantId As String = Nothing
-                Dim file = VariantKey.Split(rawPath, variantId)
-                If variantId.Length > 0 Then
-                    Return WriteVariantCatalog(file, variantId, New RawSidecarCatalogData With {
+                Using crossLock = LockAcrossProcesses(rawPath)
+                    If crossLock Is Nothing Then Return False
+                    Dim variantId As String = Nothing
+                    Dim file = VariantKey.Split(rawPath, variantId)
+                    If variantId.Length > 0 Then
+                        Return WriteVariantCatalog(file, variantId, New RawSidecarCatalogData With {
+                            .Rating = Math.Max(0, Math.Min(5, rating)),
+                            .IsFavorite = isFavorite,
+                            .ColorLabel = If(colorLabel, "").Trim(),
+                            .Keywords = NormalizeKeywords(keywords),
+                            .HasKeywords = True,
+                            .PickState = LibraryService.NormalizePickState(pickState)})
+                    End If
+                    Dim adjustments As ImageAdjustments = Nothing
+                    Dim state = ReadRecipe(rawPath, adjustments)
+                    If state = SidecarReadResult.Unreadable Then Return False
+                    If state = SidecarReadResult.Missing Then adjustments = New ImageAdjustments()
+                    Dim catalog = New RawSidecarCatalogData With {
                         .Rating = Math.Max(0, Math.Min(5, rating)),
                         .IsFavorite = isFavorite,
                         .ColorLabel = If(colorLabel, "").Trim(),
                         .Keywords = NormalizeKeywords(keywords),
                         .HasKeywords = True,
-                        .PickState = LibraryService.NormalizePickState(pickState)})
-                End If
-                Dim adjustments As ImageAdjustments = Nothing
-                Dim state = ReadRecipe(rawPath, adjustments)
-                If state = SidecarReadResult.Unreadable Then Return False
-                If state = SidecarReadResult.Missing Then adjustments = New ImageAdjustments()
-                Dim catalog = New RawSidecarCatalogData With {
-                    .Rating = Math.Max(0, Math.Min(5, rating)),
-                    .IsFavorite = isFavorite,
-                    .ColorLabel = If(colorLabel, "").Trim(),
-                    .Keywords = NormalizeKeywords(keywords),
-                    .HasKeywords = True,
-                    .PickState = LibraryService.NormalizePickState(pickState)
-                }
-                ' Hiess es "fehlt", wird nur angelegt, wenn am Ziel noch immer nichts liegt: eine Datei,
-                ' die ein anderes Programm inzwischen hingelegt hat, wird nicht ersetzt.
-                Return TryWriteCore(rawPath, adjustments, catalog, Nothing, Nothing,
-                                    requireAbsent:=state = SidecarReadResult.Missing)
+                        .PickState = LibraryService.NormalizePickState(pickState)
+                    }
+                    ' Hiess es "fehlt", wird nur angelegt, wenn am Ziel noch immer nichts liegt: eine Datei,
+                    ' die ein anderes Programm inzwischen hingelegt hat, wird nicht ersetzt.
+                    Return TryWriteCore(rawPath, adjustments, catalog, Nothing, Nothing,
+                                        requireAbsent:=state = SidecarReadResult.Missing)
+                End Using
             End SyncLock
         End Function
 
@@ -310,26 +764,46 @@ Namespace Services
                                                     Optional decideEdited As Func(Of ImageAdjustments, Boolean) = Nothing) As ModifyRecipeResult
             If String.IsNullOrWhiteSpace(rawPath) OrElse createWhenMissing Is Nothing OrElse modify Is Nothing Then Return ModifyRecipeResult.Failed
             Try
+                ' Die Sperre im Prozess, die ueber Prozesse hinweg und der Vergleich vor dem
+                ' Umbenennen (siehe den Block bei TryWriteChecked). Aendert ein anderes Programm die
+                ' Datei zwischen Lesen und Schreiben, wird neu gelesen und die Aenderung noch einmal
+                ' auf den neuen Stand gelegt, statt seinen Stand zu ersetzen.
                 SyncLock _writeLock
-                    Dim adjustments As ImageAdjustments = Nothing
-                    Dim state = ReadRecipe(rawPath, adjustments)
-                    If state = SidecarReadResult.Unreadable Then Return ModifyRecipeResult.Unreadable
-                    If state = SidecarReadResult.Missing Then adjustments = createWhenMissing()
-                    If adjustments Is Nothing Then Return ModifyRecipeResult.Failed
-                    modify(adjustments)
-                    If decideEdited IsNot Nothing Then edited = decideEdited(adjustments)
-                    Dim variantId As String = Nothing
-                    Dim file = VariantKey.Split(rawPath, variantId)
-                    If variantId.Length > 0 Then
-                        ' Eine Variante ohne Begleitdatei gibt es nicht; "fehlt" heisst hier, dass
-                        ' es nichts zu aendern gibt.
-                        If state <> SidecarReadResult.Read Then Return ModifyRecipeResult.Failed
-                        Return WriteVariantRecipe(file, variantId, adjustments, edited)
-                    End If
-                    Dim catalog = LibraryService.Instance.GetSidecarCatalogData(rawPath)
-                    Dim written = TryWriteCore(rawPath, adjustments, catalog, developedThumbnail, edited,
-                                               requireAbsent:=state = SidecarReadResult.Missing)
-                    Return If(written, ModifyRecipeResult.Written, ModifyRecipeResult.Failed)
+                    Using crossLock = LockAcrossProcesses(rawPath)
+                        If crossLock Is Nothing Then Return ModifyRecipeResult.Failed
+                        For attempt = 1 To MaxWriteAttempts
+                            ' Der Stand VOR dem Lesen: aendert sich die Datei dazwischen, faellt das
+                            ' beim Vergleich vor dem Umbenennen auf.
+                            Dim captured = CaptureStamp(rawPath, parse:=False)
+                            Dim adjustments As ImageAdjustments = Nothing
+                            Dim state = ReadRecipe(rawPath, adjustments)
+                            If state = SidecarReadResult.Unreadable Then Return ModifyRecipeResult.Unreadable
+                            If state = SidecarReadResult.Missing Then adjustments = createWhenMissing()
+                            If adjustments Is Nothing Then Return ModifyRecipeResult.Failed
+                            modify(adjustments)
+                            If decideEdited IsNot Nothing Then edited = decideEdited(adjustments)
+                            Dim variantId As String = Nothing
+                            Dim file = VariantKey.Split(rawPath, variantId)
+                            Dim written As Boolean
+                            If variantId.Length > 0 Then
+                                ' Eine Variante ohne Begleitdatei gibt es nicht; "fehlt" heisst hier, dass
+                                ' es nichts zu aendern gibt.
+                                If state <> SidecarReadResult.Read Then Return ModifyRecipeResult.Failed
+                                Dim variantResult = WriteVariantRecipe(file, variantId, adjustments, edited, guard:=captured)
+                                If variantResult = ModifyRecipeResult.Unreadable Then Return variantResult
+                                written = variantResult = ModifyRecipeResult.Written
+                            Else
+                                Dim catalog = LibraryService.Instance.GetSidecarCatalogData(rawPath)
+                                written = TryWriteCore(rawPath, adjustments, catalog, developedThumbnail, edited,
+                                                       requireAbsent:=state = SidecarReadResult.Missing, guard:=captured)
+                            End If
+                            If written Then Return ModifyRecipeResult.Written
+                            If CaptureStamp(rawPath, parse:=False).SameContentAs(captured) Then Return ModifyRecipeResult.Failed
+                            DiagnosticLogService.LogAlways("Sidecar.ModifyRecipe",
+                                $"waehrend des Schreibens von aussen geaendert, Versuch {attempt}: {Path.GetFileName(SidecarPathFor(file))}")
+                        Next
+                        Return ModifyRecipeResult.Failed
+                    End Using
                 End SyncLock
             Catch ex As Exception
                 DiagnosticLogService.LogException("Sidecar.ModifyRecipe", ex)
@@ -340,6 +814,9 @@ Namespace Services
         ''' <param name="description">Titel und die uebrigen beschreibenden Felder. Nothing laesst den
         ''' Block der vorhandenen Datei stehen: jeder andere Schreiber (Rezept, Sterne, Stichwoerter)
         ''' kennt ihn nicht, und er stammt nicht aus der Datenbank wie der Katalogblock.</param>
+        ''' <param name="guard">Der Stand, auf dem der Aufrufer seine Entscheidung gebaut hat. Liegt
+        ''' unmittelbar vor dem Umbenennen etwas anderes auf der Platte, wird nichts ersetzt und das
+        ''' Ergebnis ist False; der Aufrufer liest dann neu (siehe WriteChecked).</param>
         Private Shared Function TryWriteCore(rawPath As String, adjustments As ImageAdjustments,
                                              catalog As RawSidecarCatalogData,
                                              developedThumbnail As Boolean?,
@@ -347,8 +824,10 @@ Namespace Services
                                              Optional requireAbsent As Boolean = False,
                                              Optional description As ImageDescription = Nothing,
                                              Optional imported As ForeignCatalogService.ImportedMetadata = Nothing,
-                                             Optional variants As VariantSet = Nothing) As Boolean
+                                             Optional variants As VariantSet = Nothing,
+                                             Optional guard As SidecarStamp = Nothing) As Boolean
             If String.IsNullOrWhiteSpace(rawPath) OrElse adjustments Is Nothing Then Return False
+            ' Die Sperre ueber Prozesse hinweg nehmen die Aufrufer: sie muss schon ueber ihrem Lesen liegen.
             SyncLock _writeLock
                 Dim temp As String = Nothing
                 Dim target As String = Nothing
@@ -414,6 +893,15 @@ Namespace Services
                         fs.Flush(flushToDisk:=True)
                     End Using
                     ImageProcessor.CarryOverFileMode(finalTarget, temp)
+                    ' Unmittelbar vor dem Umbenennen: liegt noch der Stand da, auf dem der Aufrufer
+                    ' entschieden hat? Sonst hat ein anderes Programm geschrieben, und dessen Fassung
+                    ' wird nicht ersetzt.
+                    If guard IsNot Nothing AndAlso Not CaptureStamp(rawPath, parse:=False).SameContentAs(guard) Then
+                        DiagnosticLogService.LogAlways("Sidecar.Write",
+                            $"vor dem Umbenennen von aussen geaendert, nicht ersetzt: {Path.GetFileName(target)}")
+                        File.Delete(temp)
+                        Return False
+                    End If
                     ' Ohne Ueberschreiben wirft Move, wenn am Ziel inzwischen eine Datei liegt.
                     File.Move(temp, finalTarget, overwrite:=Not requireAbsent)
                     ' Den gemerkten Drehwinkel verwerfen, statt auf einen geaenderten Zeitstempel zu
@@ -505,11 +993,13 @@ Namespace Services
             NoteInBatch(targetPath, added:=True)
             Try
                 Dim sidecar = SidecarPathFor(sourcePath)
-                If CompanionExists(sidecar) Then File.Move(sidecar, SidecarPathFor(targetPath), overwrite:=False)
+                ' Ueber StagedFileTransfer: unter dem Endnamen liegt nie eine halbe Datei.
+                If CompanionExists(sidecar) Then StagedFileTransfer.CarryFile(sidecar, SidecarPathFor(targetPath), moveFile:=True)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Sidecar.AccompanyMove", ex)
                 failed.Add(SidecarPathFor(sourcePath))
             End Try
+            CarryOtherVersions(sourcePath, targetPath, moveFiles:=True, failed:=failed)
             CarryModelDenoiseFile(sourcePath, targetPath, moveFile:=True, failed:=failed)
             CarryXmpCompanions(sourcePath, targetPath, moveFiles:=True, failed:=failed)
             CarryRrdataFiles(sourcePath, targetPath, moveFiles:=True, failed:=failed)
@@ -521,11 +1011,12 @@ Namespace Services
             NoteInBatch(targetPath, added:=True)
             Try
                 Dim sidecar = SidecarPathFor(sourcePath)
-                If CompanionExists(sidecar) Then File.Copy(sidecar, SidecarPathFor(targetPath), overwrite:=False)
+                If CompanionExists(sidecar) Then StagedFileTransfer.CarryFile(sidecar, SidecarPathFor(targetPath), moveFile:=False)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Sidecar.AccompanyCopy", ex)
                 failed.Add(SidecarPathFor(sourcePath))
             End Try
+            CarryOtherVersions(sourcePath, targetPath, moveFiles:=False, failed:=failed)
             CarryModelDenoiseFile(sourcePath, targetPath, moveFile:=False, failed:=failed)
             CarryXmpCompanions(sourcePath, targetPath, moveFiles:=False, failed:=failed)
             CarryRrdataFiles(sourcePath, targetPath, moveFiles:=False, failed:=failed)
@@ -550,12 +1041,8 @@ Namespace Services
             For Each companion In companions
                 Try
                     Dim target = RrdataSidecarService.RenamedFor(companion, sourcePath, targetPath)
-                    If moveFiles Then
-                        File.Move(companion, target, overwrite:=False)
-                        NoteInBatch(companion, added:=False)
-                    Else
-                        File.Copy(companion, target, overwrite:=False)
-                    End If
+                    StagedFileTransfer.CarryFile(companion, target, moveFiles)
+                    If moveFiles Then NoteInBatch(companion, added:=False)
                     NoteInBatch(target, added:=True)
                 Catch ex As FileNotFoundException
                     ' Inzwischen von aussen entfernt (die Liste eines Stapels ist bis zu einer
@@ -591,6 +1078,24 @@ Namespace Services
             End SyncLock
         End Function
 
+        ''' <summary>Die aufgehobenen fremden Fassungen der .fpxmp (".fpxmp.other" bis ".other4",
+        ''' <see cref="PreserveOtherVersion"/>) gehen mit wie die .fpxmp, jede unter ihrem Namen
+        ''' am neuen Bild. Eine vorhandene am Ziel wird nie ueberschrieben, sie wird gemeldet.</summary>
+        Private Shared Sub CarryOtherVersions(sourcePath As String, targetPath As String, moveFiles As Boolean,
+                                              failed As List(Of String))
+            Dim sources = OtherVersionPaths(sourcePath)
+            Dim targets = OtherVersionPaths(targetPath)
+            For index = 0 To sources.Count - 1
+                Try
+                    If Not CompanionExists(sources(index)) Then Continue For
+                    StagedFileTransfer.CarryFile(sources(index), targets(index), moveFiles)
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Sidecar.CarryOther", ex)
+                    failed.Add(sources(index))
+                End Try
+            Next
+        End Sub
+
         ''' <summary>Die .fpdnz (ModelDenoiseFileService) geht mit wie die .fpxmp. Ihr Schluessel
         ''' kennt den Pfad nicht, nur Groesse und Aenderungszeit der RAW; behaelt die Kopie die
         ''' Aenderungszeit nicht, passt sie eben nicht mehr und das Modell rechnet. Eine vorhandene
@@ -600,12 +1105,9 @@ Namespace Services
             Dim source = ModelDenoiseFileService.PathFor(sourcePath)
             Try
                 If Not CompanionExists(source) Then Return
-                Dim target = ModelDenoiseFileService.PathFor(targetPath)
-                If moveFile Then
-                    File.Move(source, target, overwrite:=False)
-                Else
-                    File.Copy(source, target, overwrite:=False)
-                End If
+                ' Ueber eine Teildatei: eine abgebrochene Kopie (die .fpdnz ist gross) liegt nie halb
+                ' unter dem Endnamen.
+                StagedFileTransfer.CarryFile(source, ModelDenoiseFileService.PathFor(targetPath), moveFile)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Sidecar.CarryModelDenoise", ex)
                 failed.Add(source)
@@ -626,6 +1128,8 @@ Namespace Services
             NoteInBatch(rawPath, added:=False)
             Dim companions As New List(Of String) From {SidecarPathFor(rawPath), rawPath & ".xmp",
                                                         ModelDenoiseFileService.PathFor(rawPath)}
+            ' Die aufgehobenen fremden Fassungen der .fpxmp gehoeren ebenso zum Bild.
+            companions.AddRange(OtherVersionPaths(rawPath))
             Dim stemXmp = StemXmpPathFor(rawPath)
             ' Erst nachsehen, ob es die Stamm-XMP gibt: HasStemSibling zaehlt den Ordner auf. Ist sie
             ' nicht erreichbar, wird sie gemeldet statt still uebergangen (CompanionExists).
@@ -801,11 +1305,7 @@ Namespace Services
                     End If
                     Return
                 End If
-                If moveFile Then
-                    File.Move(source, target)
-                Else
-                    File.Copy(source, target)
-                End If
+                StagedFileTransfer.CarryFile(source, target, moveFile)
                 XmpSidecarService.ForgetFolderListing(Path.GetDirectoryName(target))
             Catch ex As Exception
                 DiagnosticLogService.LogException("Sidecar.AccompanyXmp", ex)
@@ -1632,20 +2132,23 @@ Namespace Services
             rawPath = VariantKey.FileOf(rawPath)
             Try
                 SyncLock _writeLock
-                    Dim adjustments As ImageAdjustments = Nothing
-                    Dim state = ReadRecipe(rawPath, adjustments)
-                    If state = SidecarReadResult.Unreadable Then Return False
-                    If state = SidecarReadResult.Missing Then adjustments = New ImageAdjustments()
-                    Dim merged = If(TryReadDescription(rawPath), New ImageDescription())
-                    For Each pair In changes
-                        merged.SetValue(pair.Key, ImageDescriptionService.NormalizeValue(pair.Key, pair.Value))
-                    Next
-                    Dim catalog = LibraryService.Instance.GetSidecarCatalogData(rawPath)
-                    ' Ein leerer Block muss ausdruecklich als leer hinein, sonst behielte TryWriteCore
-                    ' den alten aus der Datei.
-                    Return TryWriteCore(rawPath, adjustments, catalog, Nothing, Nothing,
-                                        requireAbsent:=state = SidecarReadResult.Missing,
-                                        description:=merged)
+                    Using crossLock = LockAcrossProcesses(rawPath)
+                        If crossLock Is Nothing Then Return False
+                        Dim adjustments As ImageAdjustments = Nothing
+                        Dim state = ReadRecipe(rawPath, adjustments)
+                        If state = SidecarReadResult.Unreadable Then Return False
+                        If state = SidecarReadResult.Missing Then adjustments = New ImageAdjustments()
+                        Dim merged = If(TryReadDescription(rawPath), New ImageDescription())
+                        For Each pair In changes
+                            merged.SetValue(pair.Key, ImageDescriptionService.NormalizeValue(pair.Key, pair.Value))
+                        Next
+                        Dim catalog = LibraryService.Instance.GetSidecarCatalogData(rawPath)
+                        ' Ein leerer Block muss ausdruecklich als leer hinein, sonst behielte TryWriteCore
+                        ' den alten aus der Datei.
+                        Return TryWriteCore(rawPath, adjustments, catalog, Nothing, Nothing,
+                                            requireAbsent:=state = SidecarReadResult.Missing,
+                                            description:=merged)
+                    End Using
                 End SyncLock
             Catch ex As Exception
                 DiagnosticLogService.LogException("Sidecar.WriteDescription", ex)
@@ -1764,14 +2267,17 @@ Namespace Services
                 If incoming Is Nothing OrElse incoming.IsEmpty Then Return False
                 If incoming.SameAs(TryReadImported(rawPath)) Then Return False
                 SyncLock _writeLock
-                    Dim adjustments As ImageAdjustments = Nothing
-                    Dim state = ReadRecipe(rawPath, adjustments)
-                    If state = SidecarReadResult.Unreadable Then Return False
-                    If state = SidecarReadResult.Missing Then adjustments = New ImageAdjustments()
-                    Dim catalog = LibraryService.Instance.GetSidecarCatalogData(rawPath)
-                    If Not TryWriteCore(rawPath, adjustments, catalog, Nothing, Nothing,
-                                        requireAbsent:=state = SidecarReadResult.Missing,
-                                        imported:=incoming) Then Return False
+                    Using crossLock = LockAcrossProcesses(rawPath)
+                        If crossLock Is Nothing Then Return False
+                        Dim adjustments As ImageAdjustments = Nothing
+                        Dim state = ReadRecipe(rawPath, adjustments)
+                        If state = SidecarReadResult.Unreadable Then Return False
+                        If state = SidecarReadResult.Missing Then adjustments = New ImageAdjustments()
+                        Dim catalog = LibraryService.Instance.GetSidecarCatalogData(rawPath)
+                        If Not TryWriteCore(rawPath, adjustments, catalog, Nothing, Nothing,
+                                            requireAbsent:=state = SidecarReadResult.Missing,
+                                            imported:=incoming) Then Return False
+                    End Using
                 End SyncLock
                 ExifService.Invalidate(rawPath)
                 Return True
@@ -1788,10 +2294,22 @@ Namespace Services
             Try
                 Dim sidecar = SidecarPathFor(rawPath)
                 If Not File.Exists(sidecar) Then Return Nothing
-                Dim doc = XDocument.Load(sidecar)
-                Dim root = doc.Root
+                Return CatalogFromRoot(XDocument.Load(sidecar).Root, rawPath)
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Der Katalogblock des Schluessels aus einem schon gelesenen Dokument, nach den
+        ''' Regeln von <see cref="TryReadCatalog"/>. Die Formatversion wird ohne Umwandlung gelesen:
+        ''' eine Zahl jenseits von Integer oder ein Wort darin heisst "nicht verstanden", kein
+        ''' Ueberlauf.</summary>
+        Private Shared Function CatalogFromRoot(root As XElement, rawPath As String) As RawSidecarCatalogData
+            Try
                 If root Is Nothing OrElse root.Name <> Ns + "recipe" Then Return Nothing
-                Dim version = CInt(root.Attribute("version")?.Value)
+                Dim invariant = Globalization.CultureInfo.InvariantCulture
+                Dim version As Integer
+                If Not Integer.TryParse(root.Attribute("version")?.Value, Globalization.NumberStyles.Integer, invariant, version) Then Return Nothing
                 If version < 1 OrElse version > VariantsFormatVersion Then Return Nothing
                 Dim catalogNode = root.Element(Ns + "catalog")
                 Dim variantId = VariantKey.IdOf(rawPath)
@@ -1805,7 +2323,7 @@ Namespace Services
                 Dim result As New RawSidecarCatalogData()
                 Dim ratingNode = catalogNode.Element(Ns + "rating")
                 Dim rating As Integer
-                If ratingNode IsNot Nothing AndAlso Integer.TryParse(ratingNode.Value, rating) Then
+                If ratingNode IsNot Nothing AndAlso Integer.TryParse(ratingNode.Value, Globalization.NumberStyles.Integer, invariant, rating) Then
                     result.Rating = Math.Max(0, Math.Min(5, rating))
                 End If
                 Dim favoriteNode = catalogNode.Element(Ns + "favorite")
@@ -1817,7 +2335,7 @@ Namespace Services
                 If colorLabelNode IsNot Nothing Then result.ColorLabel = colorLabelNode.Value.Trim()
                 Dim pickNode = catalogNode.Element(Ns + "pick")
                 Dim pick As Integer
-                If pickNode IsNot Nothing AndAlso Integer.TryParse(pickNode.Value, pick) Then
+                If pickNode IsNot Nothing AndAlso Integer.TryParse(pickNode.Value, Globalization.NumberStyles.Integer, invariant, pick) Then
                     result.PickState = LibraryService.NormalizePickState(pick)
                 End If
                 Dim keywordsNode = catalogNode.Element(Ns + "keywords")

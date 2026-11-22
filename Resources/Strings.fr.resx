@@ -12114,4 +12114,28 @@
   <data name="Der_Ordner_des_Verweisziels_fehlt_0_e5dd2884" xml:space="preserve">
     <value>Le dossier de la cible du lien est introuvable : {0}</value>
   </data>
+  <data name="Nach_einem_Absturz_gesperrt_0_auf_1_d843585f" xml:space="preserve">
+    <value>Bloqué après un plantage : {0} sur {1}.</value>
+  </data>
+  <data name="Nach_einem_Fehler_gesperrt_0_auf_1_49ea1294" xml:space="preserve">
+    <value>Bloqué après une erreur : {0} sur {1}.</value>
+  </data>
+  <data name="Gesperrte_Modelle_rechnen_dort_auf_dem_Prozessor_326d7d28" xml:space="preserve">
+    <value>Les modèles bloqués y sont calculés sur le processeur jusqu'à l'arrivée d'un nouveau pilote graphique ou d'une nouvelle version du programme.</value>
+  </data>
+  <data name="Auf_der_Grafikkarte_gesperrte_Modelle_bf8f7fe2" xml:space="preserve">
+    <value>Modèles bloqués sur la carte graphique</value>
+  </data>
+  <data name="Sperren_aufheben_765e6ae1" xml:space="preserve">
+    <value>Lever les blocages</value>
+  </data>
+  <data name="Gibt_die_Modelle_wieder_f_r_die_Grafikkarte_frei_4d12eb43" xml:space="preserve">
+    <value>Autorise à nouveau les modèles sur la carte graphique. Si l'un d'eux plante encore, il sera de nouveau bloqué au prochain démarrage.</value>
+  </data>
+  <data name="Bearbeitung_gespeichert_Die_inzwischen_anderswo__f2a2ce73" xml:space="preserve">
+    <value>Modification enregistrée. La version modifiée ailleurs entre-temps se trouve à côté sous le nom {0}.</value>
+  </data>
+  <data name="Die_Bearbeitung_wurde_inzwischen_anderswo_ge_nde_24ac72b9" xml:space="preserve">
+    <value>La modification a été changée ailleurs entre-temps et reste ainsi. Rouvrez l'image pour la voir.</value>
+  </data>
 </root>

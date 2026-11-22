@@ -173,51 +173,56 @@ Namespace Services
             Dim createdId As String = Nothing
             Try
                 SyncLock _writeLock
-                    ' Ohne Begleitdatei entsteht zuerst die der Standardvariante, wie bei jedem
-                    ' anderen ersten Schreiben.
-                    If ProbeSidecar(SidecarPathFor(file)) = SidecarReadResult.Missing Then
-                        If sourceId.Length > 0 OrElse createWhenMissing Is Nothing Then Return ModifyRecipeResult.Failed
-                        Dim first = createWhenMissing()
-                        If first Is Nothing Then Return ModifyRecipeResult.Failed
-                        If Not TryWriteCore(file, first, LibraryService.Instance.GetSidecarCatalogData(file), Nothing,
-                                            IsEditedRecipe(file, first), requireAbsent:=True) Then Return ModifyRecipeResult.Failed
-                    End If
-                    Dim result = ModifyVariantsDocument(file,
-                        Function(root, variants)
-                            If NameTaken(variants.Entries, newName, Nothing) Then Return False
-                            Dim entry As New VariantEntry With {.Id = VariantKey.NewId(), .Name = newName}
-                            While variants.Find(entry.Id) IsNot Nothing
-                                entry.Id = VariantKey.NewId()
-                            End While
-                            Dim source = If(sourceId.Length = 0, Nothing, variants.Find(sourceId))
-                            If sourceId.Length > 0 AndAlso source Is Nothing Then Return False
-                            Dim sourceCatalog = If(source Is Nothing, root.Element(Ns + "catalog"), source.Catalog)
-                            If sourceCatalog IsNot Nothing Then entry.Catalog = New XElement(sourceCatalog)
-                            If fromCurrent Then
-                                entry.Json = If(source Is Nothing, root.Element(Ns + "adjustments")?.Value, source.Json)
-                                If source IsNot Nothing Then
-                                    entry.Edited = source.Edited
+                    ' Auch gegen andere Prozesse: zwischen dem Anlegen der Standardvariante und dem
+                    ' Eintragen der neuen darf niemand dazwischen schreiben.
+                    Using crossLock = LockAcrossProcesses(file)
+                        If crossLock Is Nothing Then Return ModifyRecipeResult.Failed
+                        ' Ohne Begleitdatei entsteht zuerst die der Standardvariante, wie bei jedem
+                        ' anderen ersten Schreiben.
+                        If ProbeSidecar(SidecarPathFor(file)) = SidecarReadResult.Missing Then
+                            If sourceId.Length > 0 OrElse createWhenMissing Is Nothing Then Return ModifyRecipeResult.Failed
+                            Dim first = createWhenMissing()
+                            If first Is Nothing Then Return ModifyRecipeResult.Failed
+                            If Not TryWriteCore(file, first, LibraryService.Instance.GetSidecarCatalogData(file), Nothing,
+                                                IsEditedRecipe(file, first), requireAbsent:=True) Then Return ModifyRecipeResult.Failed
+                        End If
+                        Dim result = ModifyVariantsDocument(file,
+                            Function(root, variants)
+                                If NameTaken(variants.Entries, newName, Nothing) Then Return False
+                                Dim entry As New VariantEntry With {.Id = VariantKey.NewId(), .Name = newName}
+                                While variants.Find(entry.Id) IsNot Nothing
+                                    entry.Id = VariantKey.NewId()
+                                End While
+                                Dim source = If(sourceId.Length = 0, Nothing, variants.Find(sourceId))
+                                If sourceId.Length > 0 AndAlso source Is Nothing Then Return False
+                                Dim sourceCatalog = If(source Is Nothing, root.Element(Ns + "catalog"), source.Catalog)
+                                If sourceCatalog IsNot Nothing Then entry.Catalog = New XElement(sourceCatalog)
+                                If fromCurrent Then
+                                    entry.Json = If(source Is Nothing, root.Element(Ns + "adjustments")?.Value, source.Json)
+                                    If source IsNot Nothing Then
+                                        entry.Edited = source.Edited
+                                    Else
+                                        Dim editedValue = root.Attribute(EditedAttribute)?.Value
+                                        entry.Edited = If(editedValue Is Nothing, IsEditedFile(file),
+                                                          String.Equals(editedValue, "true", StringComparison.OrdinalIgnoreCase))
+                                    End If
                                 Else
-                                    Dim editedValue = root.Attribute(EditedAttribute)?.Value
-                                    entry.Edited = If(editedValue Is Nothing, IsEditedFile(file),
-                                                      String.Equals(editedValue, "true", StringComparison.OrdinalIgnoreCase))
+                                    Dim start = StartValuesFor(file)
+                                    start.BakedOperationsApplied = False
+                                    entry.Json = FpxService.SerializeAdjustments(start)
+                                    entry.Edited = False
                                 End If
-                            Else
-                                Dim start = StartValuesFor(file)
-                                start.BakedOperationsApplied = False
-                                entry.Json = FpxService.SerializeAdjustments(start)
-                                entry.Edited = False
-                            End If
-                            If String.IsNullOrWhiteSpace(entry.Json) Then Return False
-                            variants.Entries.Add(entry)
-                            createdId = entry.Id
-                            ' Zwei Varianten derselben Aufnahme saehen in der Galerie gleich aus,
-                            ' solange dort die Vorschau der Kamera steht.
-                            root.SetAttributeValue(DevelopedThumbnailAttribute, "true")
-                            Return True
-                        End Function)
-                    If result = ModifyRecipeResult.Written Then newKey = VariantKey.Make(file, createdId)
-                    Return result
+                                If String.IsNullOrWhiteSpace(entry.Json) Then Return False
+                                variants.Entries.Add(entry)
+                                createdId = entry.Id
+                                ' Zwei Varianten derselben Aufnahme saehen in der Galerie gleich aus,
+                                ' solange dort die Vorschau der Kamera steht.
+                                root.SetAttributeValue(DevelopedThumbnailAttribute, "true")
+                                Return True
+                            End Function)
+                        If result = ModifyRecipeResult.Written Then newKey = VariantKey.Make(file, createdId)
+                        Return result
+                    End Using
                 End SyncLock
             Catch ex As Exception
                 DiagnosticLogService.LogException("Sidecar.Variants", ex)
@@ -303,9 +308,11 @@ Namespace Services
         End Function
 
         ''' <summary>Schreibt Rezept und Vermerk EINER zusaetzlichen Variante; alles andere in der
-        ''' Datei bleibt, wie es ist. Nothing laesst den jeweiligen Teil stehen.</summary>
+        ''' Datei bleibt, wie es ist. Nothing laesst den jeweiligen Teil stehen. Zu
+        ''' <paramref name="guard"/> siehe <see cref="ModifyVariantsDocument"/>.</summary>
         Private Shared Function WriteVariantRecipe(file As String, id As String, adjustments As ImageAdjustments,
-                                                   edited As Boolean?) As ModifyRecipeResult
+                                                   edited As Boolean?,
+                                                   Optional guard As SidecarStamp = Nothing) As ModifyRecipeResult
             If adjustments Is Nothing Then Return ModifyRecipeResult.Failed
             ' Wie beim Schreiben der Standardvariante: neben der Datei liegt kein Pixel, gebackene
             ' Vorgaenge sind also noch anzuwenden.
@@ -319,7 +326,7 @@ Namespace Services
                     entry.Json = json
                     If edited.HasValue Then entry.Edited = edited.Value
                     Return True
-                End Function)
+                End Function, guard)
         End Function
 
         ''' <summary>Schreibt den Katalogblock EINER zusaetzlichen Variante.</summary>
@@ -338,47 +345,60 @@ Namespace Services
         ''' (Rezept und Katalog der Standardvariante, Beschreibung, Uebernommenes), bleibt Zeichen
         ''' fuer Zeichen stehen. <paramref name="change"/> sagt mit False, dass nichts zu schreiben
         ''' ist. Eine fehlende Datei ist hier ein Fehlschlag: eine Variante ohne Standardvariante
-        ''' gibt es nicht.</summary>
+        ''' gibt es nicht. <paramref name="guard"/> wie bei TryWriteCore: weicht die Platte vor dem
+        ''' Umbenennen davon ab, wird nichts ersetzt (Failed).</summary>
         Private Shared Function ModifyVariantsDocument(file As String,
-                                                       change As Func(Of XElement, VariantSet, Boolean)) As ModifyRecipeResult
+                                                       change As Func(Of XElement, VariantSet, Boolean),
+                                                       Optional guard As SidecarStamp = Nothing) As ModifyRecipeResult
             If String.IsNullOrWhiteSpace(file) OrElse change Is Nothing Then Return ModifyRecipeResult.Failed
             Dim temp As String = Nothing
             Try
                 SyncLock _writeLock
-                    Dim target = SidecarPathFor(file)
-                    Select Case ProbeSidecar(target)
-                        Case SidecarReadResult.Missing : Return ModifyRecipeResult.Failed
-                        Case SidecarReadResult.Unreadable : Return ModifyRecipeResult.Unreadable
-                    End Select
-                    ' Dieselbe Pruefung wie jeder Leser: eine Datei, die wir nicht verstehen, wird
-                    ' nicht angefasst.
-                    Dim ignored As ImageAdjustments = Nothing
-                    If ReadRecipe(file, ignored) <> SidecarReadResult.Read Then Return ModifyRecipeResult.Unreadable
-                    Dim doc = XDocument.Load(target)
-                    Dim root = doc.Root
-                    Dim variants As VariantSet = Nothing
-                    If Not TryParseVariants(root, variants) Then Return ModifyRecipeResult.Unreadable
-                    If variants Is Nothing Then variants = New VariantSet()
-                    If Not change(root, variants) Then Return ModifyRecipeResult.Failed
-                    root.Element(Ns + VariantsElement)?.Remove()
-                    root.Element(Ns + "versions")?.Remove()
-                    Dim block = VariantsNode(variants)
-                    If block IsNot Nothing Then root.Add(block)
-                    root.SetAttributeValue("version", If(block Is Nothing, FormatVersion, VariantsFormatVersion))
-                    root.SetElementValue(Ns + "savedUtc", DateTime.UtcNow.ToString("O"))
+                    Using crossLock = LockAcrossProcesses(file)
+                        If crossLock Is Nothing Then Return ModifyRecipeResult.Failed
+                        Dim target = SidecarPathFor(file)
+                        Select Case ProbeSidecar(target)
+                            Case SidecarReadResult.Missing : Return ModifyRecipeResult.Failed
+                            Case SidecarReadResult.Unreadable : Return ModifyRecipeResult.Unreadable
+                        End Select
+                        ' Dieselbe Pruefung wie jeder Leser: eine Datei, die wir nicht verstehen, wird
+                        ' nicht angefasst.
+                        Dim ignored As ImageAdjustments = Nothing
+                        If ReadRecipe(file, ignored) <> SidecarReadResult.Read Then Return ModifyRecipeResult.Unreadable
+                        Dim doc = XDocument.Load(target)
+                        Dim root = doc.Root
+                        Dim variants As VariantSet = Nothing
+                        If Not TryParseVariants(root, variants) Then Return ModifyRecipeResult.Unreadable
+                        If variants Is Nothing Then variants = New VariantSet()
+                        If Not change(root, variants) Then Return ModifyRecipeResult.Failed
+                        root.Element(Ns + VariantsElement)?.Remove()
+                        root.Element(Ns + "versions")?.Remove()
+                        Dim block = VariantsNode(variants)
+                        If block IsNot Nothing Then root.Add(block)
+                        root.SetAttributeValue("version", If(block Is Nothing, FormatVersion, VariantsFormatVersion))
+                        root.SetElementValue(Ns + "savedUtc", DateTime.UtcNow.ToString("O"))
 
-                    Dim finalTarget = ImageProcessor.ResolveWriteTarget(target)
-                    temp = ImageProcessor.AtomicSiblingPath(finalTarget)
-                    Using fs = New FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None)
-                        Using writer = XmlWriter.Create(fs, New XmlWriterSettings With {.Indent = True})
-                            doc.Save(writer)
+                        Dim finalTarget = ImageProcessor.ResolveWriteTarget(target)
+                        temp = ImageProcessor.AtomicSiblingPath(finalTarget)
+                        Using fs = New FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None)
+                            Using writer = XmlWriter.Create(fs, New XmlWriterSettings With {.Indent = True})
+                                doc.Save(writer)
+                            End Using
+                            fs.Flush(flushToDisk:=True)
                         End Using
-                        fs.Flush(flushToDisk:=True)
+                        ImageProcessor.CarryOverFileMode(finalTarget, temp)
+                        ' Wie bei der Standardvariante (TryWriteCore): hat ein anderes Programm seit
+                        ' dem Stand des Aufrufers geschrieben, wird nichts ersetzt.
+                        If guard IsNot Nothing AndAlso Not CaptureStamp(file, parse:=False).SameContentAs(guard) Then
+                            DiagnosticLogService.LogAlways("Sidecar.Variants",
+                                $"vor dem Umbenennen von aussen geaendert, nicht ersetzt: {IO.Path.GetFileName(target)}")
+                            IO.File.Delete(temp)
+                            Return ModifyRecipeResult.Failed
+                        End If
+                        IO.File.Move(temp, finalTarget, overwrite:=True)
+                        ForgetDisplayFacts(target)
+                        Return ModifyRecipeResult.Written
                     End Using
-                    ImageProcessor.CarryOverFileMode(finalTarget, temp)
-                    IO.File.Move(temp, finalTarget, overwrite:=True)
-                    ForgetDisplayFacts(target)
-                    Return ModifyRecipeResult.Written
                 End SyncLock
             Catch ex As Exception
                 DiagnosticLogService.LogException("Sidecar.Variants", ex)

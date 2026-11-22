@@ -310,7 +310,7 @@ Namespace Services
         Private Shared Function MeasureScale(session As InferenceSession, name As String) As Integer
             Const probe As Integer = 32
             Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, probe, probe})
-            Using run = session.Run(New List(Of NamedOnnxValue) From {
+            Using runGuard = GpuModelBlockService.GuardRun(session), run = session.Run(New List(Of NamedOnnxValue) From {
                     NamedOnnxValue.CreateFromTensor(name, tensor)})
                 Dim output = TryCast(run.First().Value, DenseTensor(Of Single))
                 If output Is Nothing Then Return 0
@@ -425,7 +425,7 @@ Namespace Services
                 Next
             Next
 
-            Using run = session.Run(New List(Of NamedOnnxValue) From {
+            Using runGuard = GpuModelBlockService.GuardRun(session), run = session.Run(New List(Of NamedOnnxValue) From {
                     NamedOnnxValue.CreateFromTensor(name, tensor)})
                 Dim output = TryCast(run.First().Value, DenseTensor(Of Single))
                 If output Is Nothing Then Return

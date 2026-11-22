@@ -1422,7 +1422,12 @@ Namespace Services
         ''' <paramref name="retryWithoutEmptyXmp"/> falsch laesst den zweiten Versuch ueber
         ''' <see cref="EmptyXmpTolerantTiffReader"/> weg; die Datei wirft dann wie vor dem Rueckweg.
         ''' Das braucht nur eine Entscheidung, die das Aussehen bestimmt und bisher am Wurf hing
-        ''' (RawDecodeService.IsFinishedRgb).</summary>
+        ''' (RawDecodeService.IsFinishedRgb).
+        '''
+        ''' WIRFT BEI EINER KAPUTTEN DATEI, und zwar nicht nur Lese- und Formatfehler: die Bibliothek
+        ''' laesst bei veraenderten CR3 und CR2 auch ArgumentException (Kodierungsname aus der Datei),
+        ''' IndexOutOfRangeException und OverflowException heraus. Deshalb faengt hier nichts zentral
+        ''' (IsFinishedRgb haengt am Wurf), und jeder Aufrufer braucht ein Catch fuer jede Ausnahme.</summary>
         Public Shared Function ReadMetadataDirectories(path As String, Optional retryWithoutEmptyXmp As Boolean = True) As IReadOnlyList(Of MetadataExtractor.Directory)
             ' Sigma X3F kennt MetadataExtractor nicht; die Angaben kommen aus dem eingebetteten JPEG
             ' oder dem Kopfdatenblock der Datei (siehe X3fPreviewService.ReadMetadataDirectories).
