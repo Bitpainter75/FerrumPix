@@ -1722,6 +1722,51 @@ Namespace Services
             Return False
         End Function
 
+        ''' <summary>Liegt neben einem Bild, das selbst keine RAW ist, eine RAW desselben Stamms
+        ''' (foto.cr2 neben foto.jpg)? Dann gehoert die ersetzte Form "foto.xmp" der RAW, und das Bild
+        ''' liest und schreibt nur seine angehaengte "foto.jpg.xmp" (XmpSidecarService.FindSidecar,
+        ''' SidecarPathToCreate, FolderSidecarStamps.StampFor). Dieselbe Stammfrage wie
+        ''' <see cref="HasStemSibling"/>, nur dass allein eine RAW zaehlt
+        ''' (<see cref="RawPreviewService.IsCameraRaw"/>).
+        '''
+        ''' Ist die Datei selbst eine RAW, False: ihr gehoert die Stamm-XMP wie bisher, auch neben
+        ''' einer zweiten RAW.
+        '''
+        ''' Laesst sich der Ordner nicht auflisten (Ausfuehr-, aber kein Leserecht), wird je
+        ''' RAW-Endung nach dem Namen gefragt, klein und gross geschrieben; das geht ohne Leserecht.
+        ''' Eine Endung in gemischter Schreibweise ("foto.Cr2") sieht nur die Auflistung. Scheitert
+        ''' auch das, True: eine XMP, die einer anderen Datei gehoeren kann, wird im Zweifel nicht
+        ''' angefasst.</summary>
+        Friend Shared Function HasCameraRawStemSibling(imagePath As String) As Boolean
+            If String.IsNullOrWhiteSpace(imagePath) OrElse RawPreviewService.IsCameraRaw(imagePath) Then Return False
+            Dim folder As String = Nothing
+            Dim stem As String = Nothing
+            Try
+                folder = Path.GetDirectoryName(imagePath)
+                stem = Path.GetFileNameWithoutExtension(imagePath)
+                If String.IsNullOrEmpty(folder) OrElse Not Directory.Exists(folder) Then Return False
+                Return HasCameraRawStemSiblingAmong(Directory.EnumerateFiles(folder, stem & ".*"), imagePath)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Sidecar.HasCameraRawStemSibling", ex)
+            End Try
+            Try
+                For Each ext In RawPreviewService.SupportedExtensions
+                    If File.Exists(Path.Combine(folder, stem & ext)) Then Return True
+                    If Not PathIdentity.IgnoresCase AndAlso File.Exists(Path.Combine(folder, stem & ext.ToUpperInvariant())) Then Return True
+                Next
+                Return False
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Sidecar.HasCameraRawStemSibling", ex)
+                Return True
+            End Try
+        End Function
+
+        ''' <summary>Dieselbe Frage ueber eine schon gelesene Liste von Pfaden desselben Ordners.</summary>
+        Friend Shared Function HasCameraRawStemSiblingAmong(candidates As IEnumerable(Of String), imagePath As String) As Boolean
+            If RawPreviewService.IsCameraRaw(imagePath) Then Return False
+            Return HasStemSiblingAmong(candidates.Where(Function(candidate) RawPreviewService.IsCameraRaw(candidate)), imagePath)
+        End Function
+
         ''' <summary>Nur die Drehung aus dem Sidecar (0/90/180/270; 0 wenn keiner da ist). Der
         ''' ANZEIGE-Weg braucht ausschliesslich diesen einen Wert: Viewer, Filmstreifen und Kacheln
         ''' zeigen die schnelle eingebettete RAW-Vorschau, nicht die entwickelte Datei - Belichtung

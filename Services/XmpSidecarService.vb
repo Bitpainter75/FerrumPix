@@ -54,7 +54,9 @@ Namespace Services
         ''' ("foto.cr2" -> "foto.xmp"), andere HÄNGEN AN ("foto.cr2.xmp"). Wer nur
         ''' <c>Path.ChangeExtension</c> benutzt, findet die halbe Welt nicht. Angehängt wird zuerst
         ''' geprüft, weil diese Form eindeutig zur Bilddatei gehört - "foto.xmp" könnte daneben auch zu
-        ''' "foto.jpg" gehören, wenn beide im selben Ordner liegen.
+        ''' "foto.jpg" gehören, wenn beide im selben Ordner liegen. Ist eine davon eine RAW, gehört
+        ''' "foto.xmp" ihr: ein Nicht-RAW-Bild mit einer RAW desselben Stamms daneben bekommt nur die
+        ''' angehängte Form, sonst mischten sich Bewertung und Stichwörter beider Dateien.
         '''
         ''' Die Endung zählt in jeder Schreibweise ("foto.cr2.XMP", "foto.Xmp", siehe
         ''' <see cref="ExistingXmpPath"/>); geliefert wird der Name, wie er auf der Platte steht.
@@ -67,11 +69,23 @@ Namespace Services
                 Dim replaced = Path.ChangeExtension(imagePath, ".xmp")
                 If Not String.IsNullOrEmpty(replaced) Then
                     replaced = ExistingXmpPath(replaced, strict:=False)
-                    If replaced IsNot Nothing Then Return replaced
+                    ' Liegt neben einem Nicht-RAW-Bild eine RAW desselben Stamms, gehoert ihr die
+                    ' ersetzte Form (RawSidecarService.HasCameraRawStemSibling).
+                    If replaced IsNot Nothing AndAlso Not RawSidecarService.HasCameraRawStemSibling(imagePath) Then Return replaced
                 End If
             Catch
             End Try
             Return Nothing
+        End Function
+
+        ''' <summary>Der Name fuer eine NEUE XMP zu <paramref name="imagePath"/>, wenn
+        ''' <see cref="FindSidecar"/> keine liefert: die ersetzte Form "foto.xmp", ausser neben einem
+        ''' Nicht-RAW-Bild liegt eine RAW desselben Stamms. Der gehoert "foto.xmp" (vorhanden oder
+        ''' nicht), das Bild bekommt dann die angehaengte Form "foto.jpg.xmp".</summary>
+        Public Shared Function SidecarPathToCreate(imagePath As String) As String
+            If String.IsNullOrWhiteSpace(imagePath) Then Return Nothing
+            If RawSidecarService.HasCameraRawStemSibling(imagePath) Then Return imagePath & ".xmp"
+            Return Path.ChangeExtension(imagePath, ".xmp")
         End Function
 
         ' ── Die Endung in jeder Schreibweise ─────────────────────────────────────

@@ -1822,7 +1822,7 @@ Namespace Services
             If String.IsNullOrEmpty(sidecarPath) Then
                 ' Neu anlegen (nur wenn ausdrücklich erlaubt) in der Adobe-Form.
                 If Not createIfMissing Then Return False
-                sidecarPath = IO.Path.ChangeExtension(imagePath, ".xmp")
+                sidecarPath = XmpSidecarService.SidecarPathToCreate(imagePath)
                 If String.IsNullOrWhiteSpace(sidecarPath) Then Return False
             End If
 
@@ -1988,7 +1988,7 @@ Namespace Services
             Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
             If String.IsNullOrEmpty(sidecarPath) Then
                 If Not createIfMissing Then Return False
-                sidecarPath = IO.Path.ChangeExtension(imagePath, ".xmp")
+                sidecarPath = XmpSidecarService.SidecarPathToCreate(imagePath)
                 If String.IsNullOrWhiteSpace(sidecarPath) Then Return False
             End If
 
@@ -2074,7 +2074,7 @@ Namespace Services
             Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
             If String.IsNullOrEmpty(sidecarPath) Then
                 If Not createIfMissing Then Return ""
-                sidecarPath = IO.Path.ChangeExtension(imagePath, ".xmp")
+                sidecarPath = XmpSidecarService.SidecarPathToCreate(imagePath)
                 If String.IsNullOrWhiteSpace(sidecarPath) Then Return ""
             End If
 
@@ -2121,7 +2121,7 @@ Namespace Services
             Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
             If String.IsNullOrEmpty(sidecarPath) Then
                 If Not createIfMissing Then Return ""
-                sidecarPath = IO.Path.ChangeExtension(imagePath, ".xmp")
+                sidecarPath = XmpSidecarService.SidecarPathToCreate(imagePath)
             End If
             Try
                 SyncLock _sidecarWriteLock
@@ -2205,7 +2205,7 @@ Namespace Services
             Dim existed = Not String.IsNullOrEmpty(sidecarPath)
             If Not existed Then
                 If Not createIfMissing Then Return ""
-                sidecarPath = IO.Path.ChangeExtension(imagePath, ".xmp")
+                sidecarPath = XmpSidecarService.SidecarPathToCreate(imagePath)
                 If String.IsNullOrWhiteSpace(sidecarPath) Then Return ""
             End If
 
@@ -2487,7 +2487,7 @@ Namespace Services
             Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
             If String.IsNullOrEmpty(sidecarPath) Then
                 If Not createIfMissing Then Return ""
-                sidecarPath = IO.Path.ChangeExtension(imagePath, ".xmp")
+                sidecarPath = XmpSidecarService.SidecarPathToCreate(imagePath)
                 If String.IsNullOrWhiteSpace(sidecarPath) Then Return ""
             End If
 

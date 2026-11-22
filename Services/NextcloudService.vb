@@ -968,7 +968,59 @@ Namespace Services
             Public Property RemotePath As String = ""
             ''' Der ETag aus DERSELBEN Antwort, für ein bedingtes Zurückschreiben.
             Public Property ETag As String = ""
+            ''' Bei NotFound: der Name, unter dem eine neue XMP angelegt wird. "foto.xmp", ausser
+            ''' neben einem Nicht-RAW-Bild liegt eine RAW desselben Stamms, dann "foto.jpg.xmp"
+            ''' (<see cref="ReplacedXmpBelongsToRaw"/>).
+            Public Property NewRemotePath As String = ""
         End Class
+
+        ''' <summary>Gehoert die ersetzte Form ("foto.xmp") neben <paramref name="filePathInTree"/> einer
+        ''' RAW desselben Stamms auf dem Server? Dieselbe Regel wie lokal
+        ''' (XmpSidecarService.FindSidecar, RawSidecarService.HasCameraRawStemSiblingAmong), nur mit
+        ''' den Namen im Ordner der Serverdatei als Grundlage. Ist die Datei selbst eine RAW, False.
+        ''' Ohne Liste (Nothing) True: eine XMP, die einer anderen Datei gehoeren kann, wird im
+        ''' Zweifel nicht angefasst.</summary>
+        Public Shared Function ReplacedXmpBelongsToRaw(filePathInTree As String, namesInFolder As IEnumerable(Of String)) As Boolean
+            If String.IsNullOrWhiteSpace(filePathInTree) Then Return False
+            If namesInFolder Is Nothing Then Return True
+            Dim folder = filePathInTree.Substring(0, filePathInTree.LastIndexOf("/"c) + 1)
+            Return RawSidecarService.HasCameraRawStemSiblingAmong(namesInFolder.Select(Function(name) folder & name), filePathInTree)
+        End Function
+
+        ''' <summary>Die Namen der Dateien im Ordner der Serverdatei (PROPFIND, Tiefe 1), ohne
+        ''' Unterordner. Nothing, wenn die Antwort fehlt oder nicht zu lesen ist.</summary>
+        Private Shared Async Function ListFolderFileNamesAsync(filePathInTree As String, cancellationToken As CancellationToken) As Task(Of List(Of String))
+            Dim folder = filePathInTree.Substring(0, Math.Max(0, filePathInTree.LastIndexOf("/"c)))
+            Try
+                Dim rumpf = "<?xml version=""1.0""?><d:propfind xmlns:d=""DAV:""><d:prop><d:resourcetype/></d:prop></d:propfind>"
+                Using request = New HttpRequestMessage(New HttpMethod("PROPFIND"), FileUrl(folder) & "/")
+                    request.Headers.Add("Depth", "1")
+                    request.Content = New StringContent(rumpf, Encoding.UTF8, "application/xml")
+                    Using response = Await GetClient().SendAsync(request, cancellationToken).ConfigureAwait(False)
+                        If Not response.IsSuccessStatusCode Then
+                            Await SetErrorFromResponse(response, cancellationToken).ConfigureAwait(False)
+                            Return Nothing
+                        End If
+                        Dim body = Await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
+                        Dim names As New List(Of String)()
+                        For Each entry In XDocument.Parse(body).Descendants(DavNs + "response")
+                            If entry.Descendants(DavNs + "collection").Any() Then Continue For
+                            Dim href = entry.Elements(DavNs + "href").Select(Function(e) e.Value).FirstOrDefault()
+                            If String.IsNullOrWhiteSpace(href) Then Continue For
+                            Dim trimmed = href.TrimEnd("/"c)
+                            names.Add(Uri.UnescapeDataString(trimmed.Substring(trimmed.LastIndexOf("/"c) + 1)))
+                        Next
+                        Return names
+                    End Using
+                End Using
+            Catch ex As OperationCanceledException
+                Throw
+            Catch ex As Exception
+                LastError = ex.Message
+                DiagnosticLogService.LogException("Nextcloud.XmpOrdnerliste", ex)
+                Return Nothing
+            End Try
+        End Function
 
         ''' <summary>Holt ein Adobe-XMP neben einer Serverdatei nach <paramref name="localTargetPath"/>.
         ''' Das ist bewusst nicht der .fpxmp-Weg: XMP trägt austauschbare Katalogdaten, .fpxmp das
@@ -991,8 +1043,21 @@ Namespace Services
                 ' eine Auflistung des Ordners und bleiben unberücksichtigt.
                 Dim appended = filePathInTree & ".xmp"
                 Dim replaced = IO.Path.ChangeExtension(filePathInTree, ".xmp")
+                ' Die ersetzte Form gehoert einer RAW desselben Stamms, wenn eine neben einem
+                ' Nicht-RAW-Bild liegt (ReplacedXmpBelongsToRaw). Gefragt wird erst, wenn die
+                ' angehaengte Form fehlt; laesst sich der Ordner nicht lesen, gilt das als Fehler.
+                Dim ownsReplaced As Boolean? = Nothing
+                If RawPreviewService.IsCameraRaw(filePathInTree) Then ownsReplaced = True
                 For Each candidate In {appended, appended.Substring(0, appended.Length - 4) & ".XMP",
                                        replaced, replaced.Substring(0, replaced.Length - 4) & ".XMP"}.Distinct(StringComparer.Ordinal)
+                    If Not candidate.StartsWith(filePathInTree & ".", StringComparison.Ordinal) Then
+                        If Not ownsReplaced.HasValue Then
+                            Dim names = Await ListFolderFileNamesAsync(filePathInTree, cancellationToken).ConfigureAwait(False)
+                            If names Is Nothing Then Return result
+                            ownsReplaced = Not ReplacedXmpBelongsToRaw(filePathInTree, names)
+                        End If
+                        If Not ownsReplaced.Value Then Continue For
+                    End If
                     Using response = Await GetClient().GetAsync(FileUrl(candidate), cancellationToken).ConfigureAwait(False)
                         If response.StatusCode = HttpStatusCode.NotFound Then Continue For
                         If Not response.IsSuccessStatusCode Then
@@ -1009,6 +1074,7 @@ Namespace Services
                     End Using
                 Next
                 result.State = SidecarFetchState.NotFound
+                result.NewRemotePath = If(ownsReplaced.HasValue AndAlso Not ownsReplaced.Value, appended, replaced)
                 Return result
             Catch ex As OperationCanceledException
                 Throw
@@ -1144,7 +1210,8 @@ Namespace Services
 
         ''' <summary>Schreibt ein XMP zurück, und zwar NUR mit Bedingung: lag beim Abruf eines vor
         ''' (<paramref name="fetched"/> Found), unter seinem Pfad und nur, wenn dort noch derselbe
-        ''' Stand liegt (If-Match); lag keins vor, als <c>foto.xmp</c> und nur, wenn dort inzwischen
+        ''' Stand liegt (If-Match); lag keins vor, als <c>foto.xmp</c> (neben einer RAW desselben
+        ''' Stamms als <c>foto.jpg.xmp</c>, siehe SidecarFetchResult.NewRemotePath) und nur, wenn dort inzwischen
         ''' nichts entstanden ist (If-None-Match). Nach einem gescheiterten Abruf schreibt es nicht.
         ''' Ein Abruf ohne ETag bietet keine Bedingung und wird deshalb ebenfalls nicht
         ''' überschrieben.</summary>
@@ -1158,7 +1225,8 @@ Namespace Services
                     Return Await PutFileAsync(localXmpPath, fetched.RemotePath, cancellationToken,
                                               ifMatchETag:=fetched.ETag).ConfigureAwait(False)
                 Case SidecarFetchState.NotFound
-                    Return Await PutFileAsync(localXmpPath, IO.Path.ChangeExtension(filePathInTree, ".xmp"), cancellationToken,
+                    Dim target = If(String.IsNullOrEmpty(fetched.NewRemotePath), IO.Path.ChangeExtension(filePathInTree, ".xmp"), fetched.NewRemotePath)
+                    Return Await PutFileAsync(localXmpPath, target, cancellationToken,
                                               onlyIfAbsent:=True).ConfigureAwait(False)
                 Case Else
                     Return New NextcloudPutResult()

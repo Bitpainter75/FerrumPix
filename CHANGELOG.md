@@ -1,4 +1,4 @@
-## Unreleased
+## 0.9.90
 
 ### Changes
 
@@ -40,6 +40,10 @@
   deleting, renaming and moving when file operations outside the home folder are allowed. When a
   picture cannot be deleted, the message now says why, and DELETE in the gallery shows it instead
   of doing nothing.
+
+- A JPEG or other picture next to a RAW with the same name no longer reads or writes the RAW's
+  sidecar (photo.xmp): its rating, label and keywords go to its own photo.jpg.xmp, so the two no
+  longer mix their metadata. The same applies to sidecars on a Nextcloud server.
 
 - Cameras without their own brightness entry now develop at the typical brightness of their brand
   instead of a fixed value, so they no longer come out noticeably too bright.

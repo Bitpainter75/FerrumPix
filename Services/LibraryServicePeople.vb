@@ -1412,7 +1412,7 @@ Namespace Services
             Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
             If String.IsNullOrEmpty(sidecarPath) Then
                 If Not createIfMissing Then Return
-                sidecarPath = IO.Path.ChangeExtension(imagePath, ".xmp")
+                sidecarPath = XmpSidecarService.SidecarPathToCreate(imagePath)
                 If String.IsNullOrWhiteSpace(sidecarPath) Then Return
             End If
 

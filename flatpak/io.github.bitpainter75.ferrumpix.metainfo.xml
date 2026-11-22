@@ -112,6 +112,25 @@
 
   <releases>
 
+    <release version="0.9.90-1" date="2026-11-23">
+      <description>
+        <p>This update makes FerrumPix significantly faster on multi-core processors, improves lens profile matching and enables file operations on network shares:</p>
+        <p xml:lang="de">Dieses Update beschleunigt FerrumPix auf Prozessoren mit mehreren Kernen deutlich, verbessert die Zuordnung von Objektivprofilen und ermöglicht Dateioperationen auf Netzwerkfreigaben:</p>
+        <ul>
+          <li>Many operations now take advantage of all available CPU cores, including TIFF and PNG export, 16-bit export, opening RAW and HEIC files, straightening, rotating, warp grid transformations, selections, and layer shadows and glows. The results remain exactly the same.</li>
+          <li xml:lang="de">Viele Vorgänge nutzen jetzt alle verfügbaren Prozessorkerne, darunter der Export als TIFF und PNG, der 16-Bit-Export, das Öffnen von RAW- und HEIC-Dateien, Geraderichten, Drehen, Verzerrungen mit dem Gitter, Auswahlen sowie Schatten- und Scheineffekte von Ebenen. Die Bildergebnisse bleiben dabei exakt gleich.</li>
+
+          <li>Lens profiles are now matched more accurately and recognised more often. FerrumPix no longer assigns a profile from a different lens series, model or manufacturer, while Olympus, Panasonic, Leica and Tamron lenses are now correctly recognised even on camera bodies from other brands. Cameras without a specific brightness calibration now use the typical brightness calibration for their manufacturer during RAW development.</li>
+          <li xml:lang="de">Objektivprofile werden jetzt genauer zugeordnet und häufiger erkannt. FerrumPix verwendet nicht mehr versehentlich das Profil einer anderen Objektivserie, eines anderen Modells oder Herstellers. Objektive von Olympus, Panasonic, Leica und Tamron werden nun auch an Kameragehäusen anderer Marken richtig erkannt. Für Kameras ohne eigene Helligkeitskalibrierung verwendet die RAW-Entwicklung jetzt den typischen Wert des jeweiligen Herstellers.</li>
+
+          <li>Folders added through the file dialog and network shares opened in the file manager now support deleting, renaming and moving files, provided file operations outside the home folder are enabled. If a photo cannot be deleted, FerrumPix now explains why.</li>
+          <li xml:lang="de">In Ordnern, die über den Dateidialog hinzugefügt wurden, und auf Netzwerkfreigaben, die im Dateimanager geöffnet wurden, kannst du jetzt Dateien löschen, umbenennen und verschieben, sofern Dateioperationen außerhalb des persönlichen Ordners erlaubt sind. Wenn sich ein Foto nicht löschen lässt, zeigt FerrumPix jetzt den Grund an.</li>
+
+          <li>Fixed several issues: grabbing a handle of a warp tool no longer briefly shows the unwarped image; presets containing a vignette now restore the correct vignette style; the mouse wheel scrolls a vertical filmstrip in the editor again; and "Overwrite All" during batch processing, pasting or moving no longer overwrites an image created earlier in the same operation.</li>
+          <li xml:lang="de">Mehrere Fehler wurden behoben: Beim Anfassen eines Griffs der Verzerrungswerkzeuge erscheint das Bild nicht mehr kurzzeitig unverzerrt. Vorgaben mit Vignette stellen jetzt die richtige Vignettenart wieder her. Das Mausrad scrollt wieder durch einen senkrechten Filmstreifen im Editor. Und „Alle überschreiben“ überschreibt bei der Stapelverarbeitung, beim Einfügen oder Verschieben keine Bilder mehr, die während desselben Vorgangs entstanden sind.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.89-1" date="2026-11-22">
       <description>
         <p>This update opens many more picture formats, lets you save edits alongside photos without changing the originals, adds line spacing for text and produces more faithful conversions of film negatives:</p>
