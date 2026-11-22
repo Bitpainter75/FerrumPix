@@ -116,30 +116,37 @@ Namespace Services
             Next
 
             Dim ok = True
-            For strip = 0 To stripCount - 1
-                Dim result As TResult
-                SyncLock gate
-                    While results(strip) Is Nothing AndAlso Not failed
-                        Monitor.Wait(gate)
-                    End While
-                    result = results(strip)
-                    results(strip) = Nothing
-                    written = strip + 1
-                    Monitor.PulseAll(gate)
-                End SyncLock
-                If result Is Nothing OrElse Not write(strip, result) Then
-                    ok = False
-                    Exit For
+            Dim loopDone = False
+            Try
+                For strip = 0 To stripCount - 1
+                    Dim result As TResult
+                    SyncLock gate
+                        While results(strip) Is Nothing AndAlso Not failed
+                            Monitor.Wait(gate)
+                        End While
+                        result = results(strip)
+                        results(strip) = Nothing
+                        written = strip + 1
+                        Monitor.PulseAll(gate)
+                    End SyncLock
+                    If result Is Nothing OrElse Not write(strip, result) Then
+                        ok = False
+                        Exit For
+                    End If
+                Next
+                loopDone = True
+            Finally
+                ' Die Kerne anhalten, die noch warten oder rechnen. Auch wenn das Schreiben selbst
+                ' wirft (volle Platte, Strom ueber seiner Grenze): ohne diesen Block warteten sie
+                ' fuer immer auf einen Streifen, der nie mehr geschrieben wird.
+                If Not ok OrElse Not loopDone Then
+                    SyncLock gate
+                        failed = True
+                        Monitor.PulseAll(gate)
+                    End SyncLock
                 End If
-            Next
-            If Not ok Then
-                ' Die Kerne anhalten, die noch warten oder rechnen.
-                SyncLock gate
-                    failed = True
-                    Monitor.PulseAll(gate)
-                End SyncLock
-            End If
-            Task.WaitAll(tasks)
+                Task.WaitAll(tasks)
+            End Try
             failure?.Throw()
             Return ok
         End Function
