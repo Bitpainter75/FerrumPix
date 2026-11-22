@@ -5216,8 +5216,11 @@ Namespace Services
         End Function
 
         ''' <summary>Die Grundbelichtung fuer DIESE Datei. Ohne die Einstellung bleibt es beim
-        ''' festen Wert; mit ihr entscheidet das Kameramodell aus den EXIF-Daten. Ein unbekanntes
-        ''' Modell oder eine unlesbare Datei fuehrt IMMER auf den festen Wert zurueck - nie raten.</summary>
+        ''' festen Wert; mit ihr entscheidet das Kameramodell aus den EXIF-Daten. Eine Kamera ohne
+        ''' Eintrag bekommt den Rueckfall der Tabelle (<see cref="CameraBaselineTable.FallbackBaseExposureFor"/>,
+        ''' der Median ihrer Marke), ausser sie schreibt selbst DNG: dort sagt die Datei mit ihrer
+        ''' eigenen Grundbelichtung, wie hell sie gemeint ist, und die Tabelle rechnet solche Kameras
+        ''' bewusst nicht ein. Eine unlesbare Datei fuehrt IMMER auf den festen Wert zurueck.</summary>
         Private Shared Function BaseExposureForFile(path As String) As Double
             ' Lineares Licht: keine Grundbelichtung, weder die feste noch eine je Kamera (siehe
             ' LinearBaseExposureEv).
@@ -5228,21 +5231,48 @@ Namespace Services
                 ' an alle Formate heran. Bei Canon CRW, Minolta MRW, Panasonic RAW und Leaf findet der
                 ' Metadatenleser Marke und Modell gar nicht (36 Modelle im Pruefbestand); die Tabelle
                 ' griffe dort nie. Die EXIF-Angaben bleiben der zweite Anlauf fuer aeltere Eintraege.
+                ' Erst wenn KEINER der beiden Namen einen Eintrag hat, gilt der Rueckfall; die Kameras
+                ' mit Eintrag rechnen damit genau wie vorher.
+                Dim hasEntry = False
+                Dim fallbackMaker As String = Nothing
                 Dim facts = ReadFileMetadata(path)
                 If facts IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(facts.NormalizedModel) Then
-                    Dim viaLibRaw = CameraBaselineTable.BaseExposureFor(facts.NormalizedMake, facts.NormalizedModel, BaseExposureEv)
-                    If viaLibRaw <> BaseExposureEv Then Return viaLibRaw
+                    If CameraBaselineTable.HasBaseExposureEntry(facts.NormalizedMake, facts.NormalizedModel) Then
+                        hasEntry = True
+                        Dim viaLibRaw = CameraBaselineTable.BaseExposureFor(facts.NormalizedMake, facts.NormalizedModel, BaseExposureEv)
+                        If viaLibRaw <> BaseExposureEv Then Return viaLibRaw
+                    End If
+                    fallbackMaker = facts.NormalizedMake
                 End If
                 Dim verzeichnisse = ExifService.ReadMetadataDirectories(path)
                 Dim ifd0 = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
-                If ifd0 Is Nothing Then Return BaseExposureEv
-                Return CameraBaselineTable.BaseExposureFor(
-                    ifd0.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake),
-                    ifd0.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel),
-                    BaseExposureEv)
+                Dim exifMake As String = Nothing
+                If ifd0 IsNot Nothing Then
+                    exifMake = ifd0.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake)
+                    Dim exifModel = ifd0.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel)
+                    If CameraBaselineTable.HasBaseExposureEntry(exifMake, exifModel) Then
+                        Return CameraBaselineTable.BaseExposureFor(exifMake, exifModel, BaseExposureEv)
+                    End If
+                End If
+                ' Ein Eintrag, der genau auf dem Anker liegt, ergibt den festen Wert; er ist trotzdem
+                ' ein Eintrag und kein Fall fuer den Rueckfall.
+                If hasEntry Then Return BaseExposureEv
+                If IsCameraWrittenDng(path, ifd0) Then Return BaseExposureEv
+                If String.IsNullOrWhiteSpace(fallbackMaker) Then fallbackMaker = exifMake
+                Return CameraBaselineTable.FallbackBaseExposureFor(fallbackMaker, BaseExposureEv)
             Catch
                 Return BaseExposureEv
             End Try
+        End Function
+
+        ''' <summary>Eine DNG, die die Kamera (oder ihre Firmware) selbst geschrieben hat, also keine
+        ''' aus einer anderen RAW umgewandelte (OriginalRawFileName fehlt). Sie traegt ihre eigene
+        ''' Grundbelichtung (<see cref="BaselineExposureStops"/>); eine umgewandelte entwickelt wie
+        ''' ihr Original und bekommt deshalb auch dessen Rueckfall.</summary>
+        Private Shared Function IsCameraWrittenDng(path As String,
+                                                   ifd0 As MetadataExtractor.Formats.Exif.ExifIfd0Directory) As Boolean
+            If Not path.EndsWith(".dng", StringComparison.OrdinalIgnoreCase) Then Return False
+            Return ifd0 Is Nothing OrElse Not ifd0.ContainsTag(OriginalRawFileNameTag)
         End Function
 
         ''' <summary>Die Farbkalibrierung fuer DIESE Datei: der Eintrag ihres Kameramodells, sonst

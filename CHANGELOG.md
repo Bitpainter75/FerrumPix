@@ -36,6 +36,9 @@
   folder, can be deleted from, renamed in and moved again when file operations outside the home
   folder are allowed, instead of being treated as a system folder.
 
+- Cameras without their own brightness entry now develop at the typical brightness of their brand
+  instead of a fixed value, so they no longer come out noticeably too bright.
+
 - Automatic lens matching is stricter and finds more: a lens is no longer matched to the profile
   of a different lens line, model code or brand, or one with a different teleconverter. Olympus,
   Panasonic and Leica lenses are recognised on bodies of other brands, Tamron lenses on Sony

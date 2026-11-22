@@ -86,6 +86,17 @@ Namespace Services
             ''' (ShadowSaturationSteps Stufen), und fuer welche Generation sie gilt.
             Public ShadowSaturation As Single()
             Public ShadowSaturationGeneration As Integer
+            ''' Der Rueckfall fuer Kameras ohne Eintrag (Schalter "fallback" der Ressource): True fuer
+            ''' den Median der Marke, False fuer den festen Anker (der Notbehelf).
+            Public BrandMedianFallback As Boolean
+            ''' Der Median aller Versaetze, fuer eine Marke mit zu wenigen Eintraegen.
+            Public OverallMedianOffset As Double
+            ''' Die Versaetze, wie sie geladen wurden, als Grundlage der Mediane. Eine eigene Kopie:
+            ''' die Messprogramme belegen Offsets fuer ihre Suche um, der Rueckfall soll davon nichts
+            ''' sehen.
+            Public FallbackSource As KeyValuePair(Of String, Double)()
+            ''' Der Median der Versaetze je Marke, beim ersten Bedarf gebildet.
+            Public ReadOnly BrandMedians As New System.Collections.Concurrent.ConcurrentDictionary(Of String, Double)(StringComparer.Ordinal)
 
             Public Sub New(referenceOffsetEv As Double, maxShiftEv As Double,
                            offsets As Dictionary(Of String, Double),
@@ -127,6 +138,7 @@ Namespace Services
             Dim defaultGeneration = 1
             Dim shadowSaturation As Single() = Nothing
             Dim shadowSaturationGeneration = 0
+            Dim brandMedianFallback = False
             ' Anker und Deckel werden erst zugewiesen, wenn die ganze Datei gelesen ist. Sonst
             ' stuende nach einem Abbruch zwischen beiden der eine Wert aus der Datei neben dem
             ' anderen aus dem Notbehelf - eine Mischung, die es nirgends geben darf.
@@ -217,6 +229,16 @@ Namespace Services
                                 shadowEntry.GetProperty("factor").EnumerateArray().Select(Function(v) v.GetDouble()).ToArray())
                             shadowSaturationGeneration = shadowEntry.GetProperty("generation").GetInt32()
                         End If
+                        ' Der Rueckfall fuer Kameras ohne Eintrag: "brandMedian" oder "anchor". Ein
+                        ' unbekannter Wert ist ein Fehler der Datei und kein stiller Anker.
+                        Dim fallbackEntry As JsonElement
+                        If root.TryGetProperty("fallback", fallbackEntry) Then
+                            Select Case fallbackEntry.GetString()
+                                Case "brandMedian" : brandMedianFallback = True
+                                Case "anchor" : brandMedianFallback = False
+                                Case Else : Throw New InvalidDataException("Kamera-Referenzwerte: unbekannter Rueckfall.")
+                            End Select
+                        End If
                         referenceOffsetEv = readReferenceOffsetEv
                         maxShiftEv = readMaxShiftEv
                     End Using
@@ -234,6 +256,7 @@ Namespace Services
                 defaultGeneration = 1
                 shadowSaturation = Nothing
                 shadowSaturationGeneration = 0
+                brandMedianFallback = False
                 referenceOffsetEv = DefaultReferenceOffsetEv
                 maxShiftEv = DefaultMaxShiftEv
             End Try
@@ -254,6 +277,10 @@ Namespace Services
             result.DefaultProfileGeneration = defaultGeneration
             result.ShadowSaturation = shadowSaturation
             result.ShadowSaturationGeneration = shadowSaturationGeneration
+            ' Ohne Eintraege gibt es keinen Median; dann bleibt es beim Anker.
+            result.BrandMedianFallback = brandMedianFallback AndAlso offsets.Count > 0
+            result.OverallMedianOffset = If(offsets.Count > 0, Median(offsets.Values), referenceOffsetEv)
+            result.FallbackSource = offsets.ToArray()
             Return result
         End Function
 
@@ -368,7 +395,8 @@ Namespace Services
         End Property
 
         ''' <summary>Die Grundbelichtung fuer diese Kamera. Unbekanntes Modell oder fehlende Angaben:
-        ''' der uebergebene Standardwert bleibt unveraendert.</summary>
+        ''' der uebergebene Standardwert bleibt unveraendert. Was eine Kamera ohne Eintrag bekommt,
+        ''' entscheidet der Aufrufer mit <see cref="FallbackBaseExposureFor"/>.</summary>
         Public Shared Function BaseExposureFor(maker As String, model As String,
                                                    standardEv As Double) As Double
             Dim k = Key(maker, model)
@@ -380,6 +408,69 @@ Namespace Services
             If delta > Resource.MaxShiftEv Then delta = Resource.MaxShiftEv
             If delta < -Resource.MaxShiftEv Then delta = -Resource.MaxShiftEv
             Return standardEv - delta
+        End Function
+
+        ''' <summary>Hat dieses Modell einen eigenen Eintrag der Grundbelichtung?</summary>
+        Public Shared Function HasBaseExposureEntry(maker As String, model As String) As Boolean
+            Dim k = Key(maker, model)
+            Return k.Length > 0 AndAlso Resource.Offsets.ContainsKey(k)
+        End Function
+
+        ''' <summary>Mindestzahl der Eintraege einer Marke, ab der ihr Median gilt; darunter der
+        ''' Median aller. Mit fuenf statt drei aenderte sich der mittlere Fehler um hoechstens
+        ''' 0,002 EV (Diagnostics/Grundbelichtung/rueckfall.py).</summary>
+        Friend Const BrandMedianMinimumEntries As Integer = 3
+
+        ''' <summary>Die Grundbelichtung fuer eine Kamera OHNE eigenen Eintrag.
+        '''
+        ''' WOZU: frueher bekam sie den festen Wert, also einen Versatz gleich dem Anker. Der liegt
+        ''' einseitig: der Median aller Eintraege steht rund eine halbe Blende ueber ihm, eine Kamera
+        ''' ohne Eintrag kam im Mittel so viel zu hell gegen die Referenz heraus. Jeden Eintrag so
+        ''' behandelt, als fehle er, und aus den uebrigen vorhergesagt (646 Eintraege): fester Anker
+        ''' 0,58 EV im Mittel daneben, Median aller 0,32, Median der Marke 0,28
+        ''' (Diagnostics/Grundbelichtung/rueckfall.py). Deshalb der Median der Marke, bei weniger als
+        ''' <see cref="BrandMedianMinimumEntries"/> Eintraegen der Median aller.
+        '''
+        ''' Die Marke ist das erste Wort des Herstellers wie in <see cref="Key"/>, OM Digital zaehlt
+        ''' zu Olympus; die Eintraege einer Marke sind die, deren Schluessel mit ihr beginnt. Der
+        ''' Anker selbst bleibt der Bezug, der Deckel gilt wie fuer einen Eintrag. Steht die
+        ''' Ressource auf "anchor" oder ist sie nicht lesbar, bleibt der Standardwert.</summary>
+        Public Shared Function FallbackBaseExposureFor(maker As String, standardEv As Double) As Double
+            If Not Resource.BrandMedianFallback Then Return standardEv
+            Dim offset = Resource.OverallMedianOffset
+            Dim brand = BrandToken(maker)
+            If brand.Length > 0 Then
+                offset = Resource.BrandMedians.GetOrAdd(brand, Function(b) BrandMedianOffset(b))
+            End If
+            Dim delta = offset - Resource.ReferenceOffsetEv
+            If delta > Resource.MaxShiftEv Then delta = Resource.MaxShiftEv
+            If delta < -Resource.MaxShiftEv Then delta = -Resource.MaxShiftEv
+            Return standardEv - delta
+        End Function
+
+        ''' <summary>Die Marke als Schluesselanfang: erstes Wort des Herstellers, nur Buchstaben und
+        ''' Ziffern; OM Digital Solutions schreibt die frueheren Olympus-Modelle fort.</summary>
+        Private Shared Function BrandToken(maker As String) As String
+            Dim token = LettersAndDigitsOnly(If(maker, "").Split(" "c)(0))
+            If token = "OM" OrElse token = "OMDIGITAL" Then Return "OLYMPUS"
+            Return token
+        End Function
+
+        ''' <summary>Median der Eintraege dieser Marke, oder der Median aller, wenn sie zu wenige hat.</summary>
+        Private Shared Function BrandMedianOffset(brand As String) As Double
+            Dim values As New List(Of Double)
+            For Each pair In Resource.FallbackSource
+                If pair.Key.StartsWith(brand, StringComparison.Ordinal) Then values.Add(pair.Value)
+            Next
+            Return If(values.Count >= BrandMedianMinimumEntries, Median(values), Resource.OverallMedianOffset)
+        End Function
+
+        ''' <summary>Median; bei gerader Anzahl das Mittel der beiden mittleren Werte.</summary>
+        Private Shared Function Median(values As IEnumerable(Of Double)) As Double
+            Dim sorted = values.OrderBy(Function(v) v).ToArray()
+            Dim n = sorted.Length
+            If n = 0 Then Return 0.0
+            Return If(n Mod 2 = 1, sorted(n \ 2), (sorted(n \ 2 - 1) + sorted(n \ 2)) / 2.0)
         End Function
 
         ''' <summary>Der Standard der Farbkalibrierung fuer Kameras ohne eigenen Eintrag, oder

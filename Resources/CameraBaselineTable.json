@@ -2,6 +2,8 @@
   "formatVersion": 1,
   "description": "Camera baseline offsets in EV, keyed by normalized maker/model: the mean of our own development measured against Adobe's rendering and Adobe's BaselineExposure, relative to the fixed anchor referenceOffsetEv (the earlier entry of the Canon EOS R6, which is now measured like every model).",
   "maxShiftEv": 2.0,
+  "fallback": "brandMedian",
+  "fallbackDescription": "What a camera without an entry gets: brandMedian is the median offset of the entries of its brand (at least three, otherwise the median of all entries), anchor keeps the fixed anchor. Camera DNGs keep the fixed value, their own BaselineExposure applies.",
   "offsets": {
     "CANONEOS1000D": -0.086,
     "CANONEOS100D": 0.36,
