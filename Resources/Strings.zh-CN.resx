@@ -12151,4 +12151,7 @@
   <data name="Gesichtsrahmen_mit_Namen_ein_aus_c8933f16" xml:space="preserve">
     <value>显示/隐藏带姓名的人脸框</value>
   </data>
+  <data name="Dokumentation_0401e23e" xml:space="preserve">
+    <value>文档</value>
+  </data>
 </root>

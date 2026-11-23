@@ -50,6 +50,21 @@
                             </Button>
                         </Grid>
 
+                        <!-- Das Handbuch, eine Zeile wie Homepage und GitHub. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Dokumentation" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="https://ferrumpix.app/docs" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="ghost" Padding="12,7"
+                                    Tag="https://ferrumpix.app/docs" Click="OnLicenseLinkClick">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-square-out.svg" Width="18" Height="18"/>
+                                    <TextBlock Text="Öffnen"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="GitHub Repository" FontSize="{DynamicResource FP.Font.Body}"/>

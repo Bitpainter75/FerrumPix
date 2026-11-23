@@ -12197,4 +12197,7 @@
   <data name="Gesichtsrahmen_mit_Namen_ein_aus_c8933f16" xml:space="preserve">
     <value>이름이 있는 얼굴 테두리 켜기/끄기</value>
   </data>
+  <data name="Dokumentation_0401e23e" xml:space="preserve">
+    <value>문서</value>
+  </data>
 </root>

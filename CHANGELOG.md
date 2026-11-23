@@ -6,6 +6,9 @@
   switched on and off with a new button in the footer. Confirmed names, suggestions and faces
   without a name look different, and the frames follow zoom, rotation and cropping.
 
+- The settings link to the documentation: an entry below the homepage opens the manual in the
+  browser.
+
 - Exported JPEG files now carry a small sRGB colour profile, so every program shows their colours
   the same way, also when the picture is saved without metadata.
 
