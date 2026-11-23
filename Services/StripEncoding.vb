@@ -50,8 +50,33 @@ Namespace Services
             End Get
         End Property
 
-        Friend Shared Function StripCount(height As Integer) As Integer
-            Return (height + RowsPerStrip - 1) \ RowsPerStrip
+        ''' Obergrenze eines Streifenpuffers, wenn ein Bild so breit ist, dass 64 Zeilen nicht mehr
+        ''' in einen Puffer passen (256 MB).
+        Friend Const WideStripBytes As Long = 256L * 1024L * 1024L
+
+        ''' <summary>Zeilen je Streifen fuer ein Bild, dessen Puffer fuer einen Streifen von r Zeilen
+        ''' <paramref name="stripBytes"/>(r) Bytes brauchen (der groesste Puffer des Schreibers), oder
+        ''' 0, wenn nicht einmal eine Zeile in einen Puffer passt; dann schreibt der Aufrufer nicht
+        ''' in Streifen.
+        '''
+        ''' DIE EINTEILUNG BESTIMMT DIE DATEI: beim PNG endet jeder Streifen mit einem Sync-Flush,
+        ''' beim TIFF ist jeder ein eigener zlib-Strom. Es bleibt deshalb bei
+        ''' <see cref="RowsPerStrip"/>, solange jeder Puffer dafuer angelegt werden kann, und genau
+        ''' das ging auch frueher, als die Groessen noch als Integer fuer 64 Zeilen gerechnet wurden:
+        ''' jede Datei, die damals entstand, entsteht Byte fuer Byte gleich. Nur darueber, bei einem
+        ''' Panorama mit Millionen Bildpunkten Breite, wo die Rechnung frueher ueberlief, werden es
+        ''' so viele Zeilen, dass ein Puffer <see cref="WideStripBytes"/> nicht uebersteigt, und
+        ''' mindestens eine.</summary>
+        Friend Shared Function RowsPerStripFor(stripBytes As Func(Of Integer, Long)) As Integer
+            If stripBytes(RowsPerStrip) <= Array.MaxLength Then Return RowsPerStrip
+            For rows = RowsPerStrip - 1 To 2 Step -1
+                If stripBytes(rows) <= WideStripBytes Then Return rows
+            Next
+            Return If(stripBytes(1) <= Array.MaxLength, 1, 0)
+        End Function
+
+        Friend Shared Function StripCount(height As Integer, rowsPerStrip As Integer) As Integer
+            Return CInt((CLng(height) + rowsPerStrip - 1) \ rowsPerStrip)
         End Function
 
         ''' <summary>Packt <paramref name="stripCount"/> Streifen auf allen Kernen und schreibt sie
@@ -154,7 +179,7 @@ Namespace Services
         ''' <summary>Platz, den Deflate fuer <paramref name="rawLength"/> Bytes hoechstens braucht,
         ''' samt zlib-Kopf, Pruefsumme und den Abschluessen eines Streifens. Deflate legt im
         ''' schlechtesten Fall je Block von 64 KB fuenf Bytes dazu; hier ist reichlich Luft.</summary>
-        Friend Shared Function PackedBound(rawLength As Integer) As Integer
+        Friend Shared Function PackedBound(rawLength As Long) As Long
             Return rawLength + rawLength \ 100 + 1024
         End Function
 
@@ -167,8 +192,11 @@ Namespace Services
             Private ReadOnly _free As New System.Collections.Concurrent.ConcurrentBag(Of Byte())()
             Private ReadOnly _size As Integer
 
-            Public Sub New(rawLength As Integer)
-                _size = PackedBound(rawLength)
+            ''' <summary><paramref name="rawLength"/> ist die Rohgroesse des laengsten Streifens.
+            ''' Dass der Puffer dafuer angelegt werden kann, sichert der Aufrufer ueber
+            ''' <see cref="RowsPerStripFor"/>.</summary>
+            Public Sub New(rawLength As Long)
+                _size = CInt(PackedBound(rawLength))
             End Sub
 
             ''' <summary>Ein leerer Strom fester Groesse ueber einem freien oder neuen Puffer.</summary>
@@ -215,16 +243,20 @@ Namespace Services
             Dim height = pixmap.Height
             Dim sampleBytes = If(deep, 2, 1)
             Dim pixelBytes = 4 * sampleBytes
+            ' Die Einteilung beeinflusst hier nur, wie gelesen wird, nicht die Datei.
+            Dim rowsPerStrip = RowsPerStripFor(Function(r) r * CLng(width) * pixelBytes)
+            If rowsPerStrip = 0 Then Return True
+            Dim bufferRows = Math.Min(rowsPerStrip, height)
             Dim found = 0
-            Parallel.For(0, StripCount(height), New ParallelOptions With {.MaxDegreeOfParallelism = Workers},
-                Function() New Byte(RowsPerStrip * width * pixelBytes - 1) {},
+            Parallel.For(0, StripCount(height, rowsPerStrip), New ParallelOptions With {.MaxDegreeOfParallelism = Workers},
+                Function() New Byte(bufferRows * width * pixelBytes - 1) {},
                 Function(strip, loopState, rgba)
                     If Volatile.Read(found) <> 0 Then
                         loopState.Stop()
                         Return rgba
                     End If
-                    Dim firstRow = strip * RowsPerStrip
-                    Dim rows = Math.Min(RowsPerStrip, height - firstRow)
+                    Dim firstRow = strip * rowsPerStrip
+                    Dim rows = Math.Min(rowsPerStrip, height - firstRow)
                     If Not ReadRows(pixmap, firstRow, rows, deep, rgba) Then
                         Interlocked.Exchange(found, 1)
                         Return rgba

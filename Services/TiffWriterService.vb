@@ -82,10 +82,18 @@ Namespace Services
         Private Const TagExifIfdPointer As Integer = &H8769
         Private Const TagGpsIfdPointer As Integer = &H8825
 
-        ''' Zeilen je Streifen. Klein genug, dass ein Leser nicht das ganze Bild auf einmal
-        ''' entpacken muss, gross genug, dass die Streifentabelle kurz bleibt. Dieselbe Zahl, in
-        ''' der die Streifen gepackt werden (siehe PackStrip).
-        Private Const RowsPerStrip As Integer = StripEncoding.RowsPerStrip
+        ''' <summary>Zeilen je Streifen fuer ein Bild dieser Breite, oder 0, wenn nicht einmal eine
+        ''' Zeile in einen Puffer passt. In der Regel <see cref="StripEncoding.RowsPerStrip"/>: klein
+        ''' genug, dass ein Leser nicht das ganze Bild auf einmal entpacken muss, gross genug, dass
+        ''' die Streifentabelle kurz bleibt. Weniger nur bei sehr breiten Bildern
+        ''' (<see cref="StripEncoding.RowsPerStripFor"/>). Dieselbe Zahl steht im Tag ROWSPERSTRIP
+        ''' und teilt die Streifen beim Packen ein (siehe PackStrip). Der groessere der beiden
+        ''' Puffer zaehlt: RGBA zum Lesen und der gepackte Streifen.</summary>
+        Friend Shared Function StripRows(width As Integer, sampleBytes As Integer, samples As Integer) As Integer
+            Return StripEncoding.RowsPerStripFor(
+                Function(r) Math.Max(r * CLng(width) * 4 * sampleBytes,
+                                     StripEncoding.PackedBound(r * CLng(width) * samples * sampleBytes)))
+        End Function
 
         ''' <summary>Schreibt <paramref name="bitmap"/> atomar nach <paramref name="targetPath"/>.
         ''' <paramref name="metadata"/> darf Nothing sein (Uebernahme aus oder nichts lesbar). Ein
@@ -125,6 +133,10 @@ Namespace Services
                 Dim hasAlpha = bitmap.AlphaType <> SKAlphaType.Opaque AndAlso
                                StripEncoding.HasTransparency(pixmap, deep)
                 Dim samples = If(hasAlpha, 4, 3)
+                Dim rowsPerStrip = StripRows(width, sampleBytes, samples)
+                If rowsPerStrip = 0 Then Return False
+                ' Die Puffer fassen nur so viele Zeilen, wie ein Streifen wirklich hat.
+                Dim bufferRows = Math.Min(rowsPerStrip, height)
 
                 Using tif = Tiff.ClientOpen("ferrumpix.tif", "w", output, New RetainingTiffStream())
                     If tif Is Nothing Then Return False
@@ -139,7 +151,7 @@ Namespace Services
                     tif.SetField(TiffTag.ORIENTATION, Orientation.TOPLEFT)
                     tif.SetField(TiffTag.COMPRESSION, Compression.ADOBE_DEFLATE)
                     tif.SetField(TiffTag.PREDICTOR, Predictor.HORIZONTAL)
-                    tif.SetField(TiffTag.ROWSPERSTRIP, RowsPerStrip)
+                    tif.SetField(TiffTag.ROWSPERSTRIP, rowsPerStrip)
                     tif.SetField(TiffTag.XRESOLUTION, 72.0)
                     tif.SetField(TiffTag.YRESOLUTION, 72.0)
                     tif.SetField(TiffTag.RESOLUTIONUNIT, ResUnit.INCH)
@@ -152,13 +164,14 @@ Namespace Services
                     ' in Reihenfolge weg (WriteRawStrip). Vorher packte LibTiff zeilenweise auf
                     ' einem Kern, und das war bei grossen Bildern der groesste Teil der Ausgabe.
                     ' Die Tags oben bleiben, wie sie waren: Deflate im zlib-Format, waagerechte
-                    ' Vorhersage, 64 Zeilen je Streifen. Siehe PackStrip.
-                    Dim bufferBytes = StripEncoding.RowsPerStrip * width * 4 * sampleBytes
-                    Dim outputs As New StripEncoding.PackedBuffers(StripEncoding.RowsPerStrip * width * samples * sampleBytes)
+                    ' Vorhersage, 64 Zeilen je Streifen (weniger nur bei sehr breiten Bildern, siehe
+                    ' StripRows). Siehe PackStrip.
+                    Dim bufferBytes = bufferRows * width * 4 * sampleBytes
+                    Dim outputs As New StripEncoding.PackedBuffers(bufferRows * CLng(width) * samples * sampleBytes)
                     Dim ok = StripEncoding.EncodeInOrder(Of Byte(), MemoryStream)(
-                        StripEncoding.StripCount(height),
+                        StripEncoding.StripCount(height, rowsPerStrip),
                         Function() New Byte(bufferBytes - 1) {},
-                        Function(buffer, strip) PackStrip(pixmap, strip, deep, samples, buffer, outputs),
+                        Function(buffer, strip) PackStrip(pixmap, strip, rowsPerStrip, deep, samples, buffer, outputs),
                         Function(strip, packed)
                             Dim written = tif.WriteRawStrip(strip, packed.GetBuffer(), CInt(packed.Length)) >= 0
                             outputs.Return(packed)
@@ -180,12 +193,12 @@ Namespace Services
         ''' <paramref name="buffer"/>, dem Arbeitspuffer des Kerns (Platz fuer einen Streifen RGBA);
         ''' gepackt wird in einen Puffer aus <paramref name="outputs"/>. Nothing, wenn Skia nicht
         ''' lesen kann.</summary>
-        Private Shared Function PackStrip(pixmap As SKPixmap, strip As Integer, deep As Boolean,
+        Private Shared Function PackStrip(pixmap As SKPixmap, strip As Integer, rowsPerStrip As Integer, deep As Boolean,
                                           samples As Integer, buffer As Byte(),
                                           outputs As StripEncoding.PackedBuffers) As MemoryStream
             Dim width = pixmap.Width
-            Dim firstRow = strip * StripEncoding.RowsPerStrip
-            Dim rows = Math.Min(StripEncoding.RowsPerStrip, pixmap.Height - firstRow)
+            Dim firstRow = strip * rowsPerStrip
+            Dim rows = Math.Min(rowsPerStrip, pixmap.Height - firstRow)
             Dim sampleBytes = If(deep, 2, 1)
             Dim sourcePixelBytes = 4 * sampleBytes
             Dim rowBytes = width * samples * sampleBytes

@@ -310,19 +310,24 @@ Namespace Services
         Private Shared Function EncodeStrips(pixmap As SKPixmap, deep As Boolean, hasAlpha As Boolean,
                                              head As Byte(), Optional unpremultiply As Byte() = Nothing) As SKData
             Dim width = pixmap.Width, height = pixmap.Height
+            Dim rowsPerStrip = StripRows(width, deep, hasAlpha)
+            If rowsPerStrip = 0 Then Return Nothing
+            ' Die Puffer fassen nur so viele Zeilen, wie ein Streifen wirklich hat: ein flaches
+            ' Panorama braucht keinen Platz fuer 64.
+            Dim bufferRows = Math.Min(rowsPerStrip, height)
             Using output As New MemoryStream()
                 output.Write(head, 0, head.Length)
                 Using idat As New IdatStream(output)
                     Dim zlibHeader = If(deep, ZlibHeaderDefault, ZlibHeaderStrong)
                     idat.Write(zlibHeader, 0, zlibHeader.Length)
                     Dim adler = 1UI
-                    Dim stripCount = StripEncoding.StripCount(height)
+                    Dim stripCount = StripEncoding.StripCount(height, rowsPerStrip)
                     Dim outputs As New StripEncoding.PackedBuffers(
-                        StripEncoding.RowsPerStrip * (width * PngPixelBytes(deep, hasAlpha) + 1))
+                        bufferRows * (CLng(width) * PngPixelBytes(deep, hasAlpha) + 1))
                     Dim ok = StripEncoding.EncodeInOrder(Of StripBuffers, PackedStrip)(
                         stripCount,
-                        Function() New StripBuffers(width, deep, hasAlpha),
-                        Function(buffers, strip) PackStrip(pixmap, strip, deep, hasAlpha, strip = stripCount - 1,
+                        Function() New StripBuffers(width, deep, hasAlpha, bufferRows),
+                        Function(buffers, strip) PackStrip(pixmap, strip, rowsPerStrip, deep, hasAlpha, strip = stripCount - 1,
                                                            unpremultiply, buffers, outputs),
                         Function(strip, packed)
                             idat.Write(packed.Data.GetBuffer(), 0, packed.Length)
@@ -339,6 +344,17 @@ Namespace Services
                 WriteChunk(output, "IEND", Array.Empty(Of Byte)(), 0)
                 Return SKData.CreateCopy(output.GetBuffer(), CULng(output.Length))
             End Using
+        End Function
+
+        ''' <summary>Zeilen je Streifen fuer ein Bild dieser Breite, oder 0, wenn nicht einmal eine
+        ''' Zeile in einen Puffer passt (<see cref="StripEncoding.RowsPerStripFor"/>). Der groessere
+        ''' der beiden Puffer zaehlt: RGBA samt der Zeile davor und der gepackte Streifen.</summary>
+        Friend Shared Function StripRows(width As Integer, deep As Boolean, hasAlpha As Boolean) As Integer
+            Dim sourcePixelBytes = If(deep, 8L, 4L)
+            Dim pixelBytes = CLng(PngPixelBytes(deep, hasAlpha))
+            Return StripEncoding.RowsPerStripFor(
+                Function(r) Math.Max((r + 1L) * width * sourcePixelBytes,
+                                     StripEncoding.PackedBound(r * (width * pixelBytes + 1L))))
         End Function
 
         ''' Bytes je Bildpunkt im PNG: drei oder vier Werte zu einem oder zwei Byte.
@@ -375,17 +391,17 @@ Namespace Services
                 .CompressionStrategy = Compression.ZLibCompressionStrategy.Filtered}
         End Function
 
-        ''' <summary>Filtert und packt einen Streifen von <see cref="StripEncoding.RowsPerStrip"/>
+        ''' <summary>Filtert und packt einen Streifen von <paramref name="rowsPerStrip"/>
         ''' Zeilen. Die Zeile vor dem Streifen wird mitgelesen, weil die Filter sie brauchen; vor der
         ''' ersten Zeile des Bildes steht eine Zeile aus Nullen, wie es PNG vorsieht. Gerechnet wird
         ''' in den Puffern des Kerns (<paramref name="buffers"/>), gepackt in einen Puffer aus
         ''' <paramref name="outputs"/>. Nothing, wenn Skia nicht lesen kann.</summary>
-        Private Shared Function PackStrip(pixmap As SKPixmap, strip As Integer, deep As Boolean, hasAlpha As Boolean,
-                                          isLast As Boolean, unpremultiply As Byte(), buffers As StripBuffers,
-                                          outputs As StripEncoding.PackedBuffers) As PackedStrip
+        Private Shared Function PackStrip(pixmap As SKPixmap, strip As Integer, rowsPerStrip As Integer, deep As Boolean,
+                                          hasAlpha As Boolean, isLast As Boolean, unpremultiply As Byte(),
+                                          buffers As StripBuffers, outputs As StripEncoding.PackedBuffers) As PackedStrip
             Dim width = pixmap.Width
-            Dim firstRow = strip * StripEncoding.RowsPerStrip
-            Dim rows = Math.Min(StripEncoding.RowsPerStrip, pixmap.Height - firstRow)
+            Dim firstRow = strip * rowsPerStrip
+            Dim rows = Math.Min(rowsPerStrip, pixmap.Height - firstRow)
             Dim readFrom = If(firstRow > 0, firstRow - 1, 0)
             Dim readRows = rows + (firstRow - readFrom)
             Dim sourceRowBytes = width * If(deep, 8, 4)
@@ -440,18 +456,18 @@ Namespace Services
         End Function
 
         ''' <summary>Die Arbeitspuffer eines Kerns fuer <see cref="PackStrip"/>, einmal angelegt
-        ''' und fuer alle seine Streifen benutzt: ein Streifen RGBA samt der Zeile davor, die
-        ''' aktuelle und die vorige Zeile in der Anordnung des PNG und die fuenf gefilterten Fassungen
-        ''' einer Zeile, je mit ihrem Filterbyte vorweg.</summary>
+        ''' und fuer alle seine Streifen benutzt: ein Streifen RGBA von <paramref name="rows"/> Zeilen
+        ''' samt der Zeile davor, die aktuelle und die vorige Zeile in der Anordnung des PNG und die
+        ''' fuenf gefilterten Fassungen einer Zeile, je mit ihrem Filterbyte vorweg.</summary>
         Private NotInheritable Class StripBuffers
             Public ReadOnly Rgba As Byte()
             Public ReadOnly Current As Byte()
             Public ReadOnly Previous As Byte()
             Public ReadOnly Candidates As Byte()()
 
-            Public Sub New(width As Integer, deep As Boolean, hasAlpha As Boolean)
+            Public Sub New(width As Integer, deep As Boolean, hasAlpha As Boolean, rows As Integer)
                 Dim rowBytes = width * PngPixelBytes(deep, hasAlpha)
-                Rgba = New Byte((StripEncoding.RowsPerStrip + 1) * width * If(deep, 8, 4) - 1) {}
+                Rgba = New Byte((rows + 1) * width * If(deep, 8, 4) - 1) {}
                 Current = New Byte(rowBytes - 1) {}
                 Previous = New Byte(rowBytes - 1) {}
                 Candidates = New Byte(4)() {}
