@@ -30,11 +30,33 @@ Namespace Services
         Private Sub New()
         End Sub
 
-        Public Const ModelFile As String = "midas-small"
+        Public Const ModelFile As String = "depth-anything-v2-small"
 
-        ''' <summary>Kantenlaenge, auf die das Modell rechnet. Fest: die kleine Fassung ist auf
-        ''' 256 Pixel trainiert.</summary>
-        Public Const ModelEdge As Integer = 256
+        ''' <summary>Laenge der LAENGEREN Seite, auf die das Modell rechnet. Das Seitenverhaeltnis
+        ''' des Bildes bleibt, beide Seiten werden auf ein Vielfaches von <see cref="ModelPatch"/>
+        ''' gerundet (<see cref="ModelSize"/>).
+        '''
+        ''' 518 ist die Groesse aus dem Training. Gemessen am fertigen Bild (Maske, Nebel, Unschaerfe
+        ''' nach dem gefuehrten Filter) bringt die doppelte Kante keinen messbaren Gewinn, kostet auf
+        ''' dem Prozessor aber das Achtfache und auf der Karte rund 2 GB.</summary>
+        Public Const ModelEdge As Integer = 518
+
+        ''' <summary>Kantenlaenge eines Bildflecks des Modells: beide Seiten des Eingangs muessen ein
+        ''' Vielfaches davon sein.</summary>
+        Public Const ModelPatch As Integer = 14
+
+        ''' <summary>Die Masse, auf die ein Bild fuer das Modell gebracht wird: laengere Seite
+        ''' <see cref="ModelEdge"/>, Seitenverhaeltnis wie das Bild, beide Seiten auf ein Vielfaches
+        ''' von <see cref="ModelPatch"/> gerundet und mindestens ein Fleck.</summary>
+        Friend Shared Function ModelSize(imageWidth As Integer, imageHeight As Integer) As (Width As Integer, Height As Integer)
+            Dim longest = Math.Max(1, Math.Max(imageWidth, imageHeight))
+            Dim scale = ModelEdge / CDbl(longest)
+            Dim fit = Function(side As Integer) As Integer
+                          Dim patches = CInt(Math.Round(side * scale / ModelPatch, MidpointRounding.AwayFromZero))
+                          Return Math.Max(1, Math.Min(ModelEdge \ ModelPatch, patches)) * ModelPatch
+                      End Function
+            Return (fit(imageWidth), fit(imageHeight))
+        End Function
 
         Public Shared ReadOnly Property Available As Boolean
             Get
@@ -76,55 +98,76 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Die Karte, wie das Modell sie liefert: Alpha8 mit <see cref="ModelEdge"/> Punkten
-        ''' Kantenlaenge, gespreizt auf 0 bis 255, noch nicht auf das Bild ausgerichtet. Wirft bei
-        ''' Abbruch und Fehler; <see cref="Compute"/> faengt beides.</summary>
+        ''' <summary>Die Karte, wie das Modell sie liefert: Alpha8 in den Massen von
+        ''' <see cref="ModelSize"/>, gespreizt auf 0 bis 255, noch nicht auf das Bild ausgerichtet.
+        ''' Wirft bei Abbruch und Fehler; <see cref="Compute"/> faengt beides.
+        '''
+        ''' Scheitert der Lauf auf der Grafikkarte (voller Grafikspeicher, weil ein anderes Programm
+        ''' ihn belegt), rechnet derselbe Aufruf noch einmal auf dem Prozessor
+        ''' (<see cref="AiModelService.RunWithProcessorFallback"/>).</summary>
         Friend Shared Function ComputeModelMap(image As SKBitmap, cancel As CancellationToken) As SKBitmap
             cancel.ThrowIfCancellationRequested()
-            Dim session = AiModelService.SessionFor(ModelFile)
-            If session Is Nothing Then Return Nothing
+            Dim size = ModelSize(image.Width, image.Height)
+            Dim mw = size.Width, mh = size.Height
 
-            ' Das Modell rechnet auf einem festen Quadrat. Das Bild wird darauf VERZERRT, nicht
-            ' eingepasst: eine Auffuellung mit Schwarz haette das Netz als sehr weit entfernte
-            ' Flaeche gelesen und die Spreizung der echten Tiefen zusammengedrueckt.
-            Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, ModelEdge, ModelEdge})
-            Using small = New SKBitmap(ModelEdge, ModelEdge, SKColorType.Bgra8888, SKAlphaType.Unpremul)
-                If Not ImageProcessor.ScalePixelsFast(image, small, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
+            ' Das Seitenverhaeltnis bleibt, das Modell rechnet auf freier Groesse in Vielfachen seines
+            ' Bildflecks. Eine Auffuellung auf ein Quadrat haette das Netz als sehr weit entfernte
+            ' Flaeche gelesen und die Spreizung der echten Tiefen zusammengedrueckt. Verkleinert wird
+            ' mit Mipmaps: von 24 MP auf 518 Punkte liesse lineares Abtasten allein die meisten
+            ' Bildpunkte aus, und feine Strukturen kaemen als Zufallsmuster in den Eingang.
+            Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, mh, mw})
+            Using small = New SKBitmap(mw, mh, SKColorType.Bgra8888, SKAlphaType.Unpremul)
+                If Not ImageProcessor.ScalePixelsFast(image, small, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear)) Then Return Nothing
                 ' Normierung aus dem Training des Modells - nicht geraten.
                 Dim average = New Single() {0.485F, 0.456F, 0.406F}
                 Dim spread = New Single() {0.229F, 0.224F, 0.225F}
                 Dim target = tensor.Buffer.Span
-                Dim layer = ModelEdge * ModelEdge
-                For y = 0 To ModelEdge - 1
+                Dim layer = mw * mh
+                Dim stride = small.RowBytes
+                Dim bytes(stride * mh - 1) As Byte
+                Marshal.Copy(small.GetPixels(), bytes, 0, bytes.Length)
+                For y = 0 To mh - 1
                     If y Mod 16 = 0 Then cancel.ThrowIfCancellationRequested()
-                    For x = 0 To ModelEdge - 1
-                        Dim p = small.GetPixel(x, y)
-                        Dim i = y * ModelEdge + x
-                        target(i) = (p.Red / 255.0F - average(0)) / spread(0)
-                        target(layer + i) = (p.Green / 255.0F - average(1)) / spread(1)
-                        target(layer * 2 + i) = (p.Blue / 255.0F - average(2)) / spread(2)
+                    For x = 0 To mw - 1
+                        Dim o = y * stride + x * 4
+                        Dim i = y * mw + x
+                        target(i) = (bytes(o + 2) / 255.0F - average(0)) / spread(0)
+                        target(layer + i) = (bytes(o + 1) / 255.0F - average(1)) / spread(1)
+                        target(layer * 2 + i) = (bytes(o) / 255.0F - average(2)) / spread(2)
                     Next
                 Next
             End Using
 
             cancel.ThrowIfCancellationRequested()
+            Return AiModelService.RunWithProcessorFallback(ModelFile,
+                Function(loaded) RunModel(loaded.Session, tensor, mw, mh, cancel))
+        End Function
+
+        ''' <summary>Ein Lauf des Modells auf einer Sitzung: Tensor hinein, gespreizte Karte heraus.</summary>
+        Private Shared Function RunModel(session As InferenceSession, tensor As DenseTensor(Of Single),
+                                         width As Integer, height As Integer, cancel As CancellationToken) As SKBitmap
+            If session Is Nothing Then Return Nothing
             Dim input = New List(Of NamedOnnxValue) From {
-                NamedOnnxValue.CreateFromTensor("image", tensor)}
+                NamedOnnxValue.CreateFromTensor("pixel_values", tensor)}
             Using runGuard = GpuModelBlockService.GuardRun(session), result = session.Run(input)
                 Dim output = TryCast(result.First().Value, DenseTensor(Of Single))
                 If output Is Nothing Then Return Nothing
                 cancel.ThrowIfCancellationRequested()
-                Return AsGrayscale(output.Buffer.ToArray(), cancel)
+                Return AsGrayscale(output.Buffer.ToArray(), width, height, cancel)
             End Using
         End Function
 
-        Private Shared Function AsGrayscale(values As Single(), cancel As CancellationToken) As SKBitmap
-            If values Is Nothing OrElse values.Length < ModelEdge * ModelEdge Then Return Nothing
-            Dim offset = values.Length - ModelEdge * ModelEdge
+        ''' <summary>Die Ausgabe des Modells (inverse Tiefe, gross ist nah, in den Massen des Eingangs)
+        ''' als Alpha8, gespreizt auf 0 bis 255.</summary>
+        Private Shared Function AsGrayscale(values As Single(), width As Integer, height As Integer,
+                                            cancel As CancellationToken) As SKBitmap
+            Dim count = width * height
+            If values Is Nothing OrElse count <= 0 OrElse values.Length < count Then Return Nothing
+            Dim offset = values.Length - count
 
             Dim min = Single.MaxValue, max = Single.MinValue
             For i = offset To values.Length - 1
-                If (i - offset) Mod (ModelEdge * 16) = 0 Then cancel.ThrowIfCancellationRequested()
+                If (i - offset) Mod (width * 16) = 0 Then cancel.ThrowIfCancellationRequested()
                 Dim v = values(i)
                 If Single.IsNaN(v) OrElse Single.IsInfinity(v) Then Continue For
                 If v < min Then min = v
@@ -134,18 +177,23 @@ Namespace Services
             ' Ein voellig flaches Ergebnis ist keine Tiefenkarte, sondern ein Fehlschlag.
             If span <= 0.0001F Then Return Nothing
 
-            Dim small = New SKBitmap(New SKImageInfo(ModelEdge, ModelEdge, SKColorType.Alpha8, SKAlphaType.Premul))
-            Dim buffer(ModelEdge * ModelEdge - 1) As Byte
-            For i = 0 To buffer.Length - 1
-                Dim v = (values(offset + i) - min) / span
-                buffer(i) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(v * 255.0F)))))
+            Dim small = New SKBitmap(New SKImageInfo(width, height, SKColorType.Alpha8, SKAlphaType.Premul))
+            Dim stride = small.RowBytes
+            Dim buffer(stride * height - 1) As Byte
+            For y = 0 To height - 1
+                For x = 0 To width - 1
+                    Dim v = (values(offset + y * width + x) - min) / span
+                    ' Ein nicht endlicher Wert zaehlt als fern statt den Punkt zu verfaelschen.
+                    If Single.IsNaN(v) OrElse Single.IsInfinity(v) Then v = 0.0F
+                    buffer(y * stride + x) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(v * 255.0F)))))
+                Next
             Next
             Runtime.InteropServices.Marshal.Copy(buffer, 0, small.GetPixels(), buffer.Length)
             Return small
         End Function
 
         ''' <summary>Kantenlaenge, auf der <see cref="AlignToImage"/> seine Koeffizienten rechnet.
-        ''' Das Vierfache des Modells: fein genug, dass die Kanten des Fotos darin noch scharf
+        ''' Rund das Doppelte des Modells: fein genug, dass die Kanten des Fotos darin noch scharf
         ''' liegen, und klein genug fuer gut 13 Kastenfilter in einem Bruchteil einer Sekunde.</summary>
         Private Const AlignEdge As Integer = 1024
 
@@ -156,11 +204,11 @@ Namespace Services
         ''' Die Statistik der Farbe wird dafuer nicht neu gerechnet.</summary>
         Private Const AlignPasses As Integer = 2
 
-        ''' <summary>Zieht die Tiefenkarte des Modells (<paramref name="small"/>, 256 x 256) auf die
+        ''' <summary>Zieht die Tiefenkarte des Modells (<paramref name="small"/>) auf die
         ''' Groesse von <paramref name="image"/> und legt dabei ihre Kanten auf die Kanten des Fotos.
         '''
-        ''' Das Modell sieht das Bild nur mit 256 Punkten Kantenlaenge, und seine Karte ist auch
-        ''' dort an Umrissen weich. Bilinear hochgezogen wurde daraus bei 20 MP ein Uebergang von
+        ''' Das Modell sieht das Bild nur mit <see cref="ModelEdge"/> Punkten an der laengeren Seite,
+        ''' und seine Karte ist auch dort an Umrissen weich. Bilinear hochgezogen wurde daraus bei 20 MP ein Uebergang von
         ''' mehreren Dutzend Bildpunkten: der Himmel neben einem Kopf bekam die Naehe des Kopfes,
         ''' und Nebel nach Tiefe liess dort einen klaren Saum stehen.
         '''
@@ -174,7 +222,10 @@ Namespace Services
         ''' Kante kommt so in voller Aufloesung aus dem Foto, nicht aus der Rechenstufe.
         '''
         ''' <paramref name="radiusModelPixels"/> ist der Radius in Punkten des Modells, damit er
-        ''' unabhaengig von der Bildgroesse dieselbe Unschaerfe der Modellkarte ueberbrueckt.
+        ''' unabhaengig von der Bildgroesse dieselbe Unschaerfe der Modellkarte ueberbrueckt. Als
+        ''' Punkt des Modells zaehlt ein Punkt DIESER Karte (ihre laengere Seite), nicht eine feste
+        ''' Zahl: mit einem Radius aus einer groeberen Karte gerechnet machte der Filter die feinere
+        ''' Karte an einem Drittel der gemessenen Kanten breiter, als sie hereinkam.
         ''' <paramref name="epsilon"/> ist die Varianz der Farbe (Kanaele 0 bis 1), unter der eine
         ''' Farbschwankung nicht mehr als Kante gilt.</summary>
         ''' <returns>Alpha8 in Bildgroesse, Nothing bei einem Farbformat ausser BGRA und RGBA.</returns>
@@ -195,7 +246,8 @@ Namespace Services
             Dim lw = Math.Max(1, CInt(Math.Round(w * scale)))
             Dim lh = Math.Max(1, CInt(Math.Round(h * scale)))
             Dim n = lw * lh
-            Dim radius = Math.Max(1, CInt(Math.Round(radiusModelPixels * Math.Max(lw, lh) / ModelEdge)))
+            Dim mapEdge = Math.Max(1, Math.Max(small.Width, small.Height))
+            Dim radius = Math.Max(1, CInt(Math.Round(radiusModelPixels * Math.Max(lw, lh) / mapEdge)))
 
             ' Fuehrung und Karte in der Rechenstufe, Werte 0 bis 1.
             Dim gR(n - 1), gG(n - 1), gB(n - 1), p(n - 1) As Single
@@ -237,7 +289,7 @@ Namespace Services
             Dim Mean = Function(u As Single()) BoxMean(u, lw, lh, radius)
 
             Dim eps = CSng(Math.Max(0.000001, epsilon))
-            Dim modelScale = Math.Max(lw, lh) / CDbl(ModelEdge)
+            Dim modelScale = Math.Max(lw, lh) / CDbl(mapEdge)
 
             Dim maR As Single() = Nothing, maG As Single() = Nothing, maB As Single() = Nothing
             Dim mOffset As Single() = Nothing

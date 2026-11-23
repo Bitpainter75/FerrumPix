@@ -439,10 +439,11 @@ Namespace Services
                                         .FileName = "mobilesam-decoder-v1.onnx", .Group = "Objektauswahl",
                                         .Purpose = "Maskendekodierer", .Bytes = 16496934,
                                         .Sha256 = "a21b65b6e1b75e2c6265b36835747a0ab9169ec1ed725139a78ce90297f95126"},
-                New ModelEntry With {.Key = "midas-small",
-                                        .FileName = "midas-small-v1.onnx", .Group = "Tiefe",
-                                        .Purpose = "Tiefenkarte", .Bytes = 66339845, .GpuAllowed = True,
-                                        .Sha256 = "007d73146ac82eb424d7306fb2e9d15fb4d2702d5129040d9e68adeb28bc384e"},
+                New ModelEntry With {.Key = "depth-anything-v2-small",
+                                        .FileName = "depth-anything-v2-small-v1.onnx", .Group = "Tiefe",
+                                        .Purpose = "Tiefenkarte", .Bytes = 99060839, .GpuAllowed = True,
+                                        .NewInGroup = True, .ReplacesFiles = New String() {"midas-small-v1.onnx"},
+                                        .Sha256 = "afb6a5c28f3b6bf1618c6e43f02073ef9dfdc70e937502d51603e57b0a1df10c"},
                 New ModelEntry With {.Key = "lama",
                                         .FileName = "lama-v1.onnx", .Group = "Objekt entfernen",
                                         .Purpose = "Lücken füllen", .Bytes = 110513159, .GpuAllowed = True,
@@ -736,7 +737,64 @@ Namespace Services
         ''' <see cref="GpuModelBlockService"/> (karte-gesperrt.json) und verfallen mit neuem Treiber
         ''' oder neuem Bau der Anwendung.</summary>
         Private Shared Function IsGpuFailedModel(fileName As String, deviceKey As String) As Boolean
-            Return GpuModelBlockService.IsBlocked(fileName, deviceKey)
+            Return GpuModelBlockService.IsBlocked(fileName, deviceKey) OrElse IsGpuRunFailed(fileName, deviceKey)
+        End Function
+
+        ''' <summary>Modelle, deren LAUF auf einer Karte in diesem Programmlauf gescheitert ist
+        ''' (Dateiname und Karte). Nur im Speicher und nur bis zum Programmende: der haeufigste Grund
+        ''' ist Grafikspeicher, den gerade ein anderes Programm belegt, und das ist ein Zustand des
+        ''' Augenblicks, keine Eigenschaft von Modell und Treiber wie die Sperren in
+        ''' <see cref="GpuModelBlockService"/>.</summary>
+        Private Shared ReadOnly _gpuRunFailed As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Private Shared ReadOnly _gpuRunFailedLock As New Object()
+
+        Private Shared Function IsGpuRunFailed(fileName As String, deviceKey As String) As Boolean
+            If String.IsNullOrEmpty(fileName) OrElse String.IsNullOrEmpty(deviceKey) Then Return False
+            SyncLock _gpuRunFailedLock
+                Return _gpuRunFailed.Contains(fileName & "|" & deviceKey)
+            End SyncLock
+        End Function
+
+        ''' <summary>Der Lauf dieses Modells ist auf dieser Karte gescheitert: bis zum Programmende
+        ''' rechnet es auf dem Prozessor. Die naechste Frage nach der Sitzung baut sie dort neu
+        ''' (<see cref="LoadSession"/> vergleicht das Ziel).</summary>
+        Friend Shared Sub NoteGpuRunFailed(fileName As String, deviceKey As String)
+            If String.IsNullOrEmpty(fileName) OrElse String.IsNullOrEmpty(deviceKey) Then Return
+            SyncLock _gpuRunFailedLock
+                _gpuRunFailed.Add(fileName & "|" & deviceKey)
+            End SyncLock
+        End Sub
+
+        ''' <summary>Rechnet mit dem Modell <paramref name="key"/> und weicht auf den Prozessor aus,
+        ''' wenn der Lauf auf der Grafikkarte scheitert.
+        '''
+        ''' Der Aufbau einer Sitzung faellt schon selbst auf den Prozessor zurueck
+        ''' (<see cref="LoadSession"/>). Der LAUF tat das nicht: reichte der Grafikspeicher erst
+        ''' beim Rechnen nicht, weil ein anderes Programm ihn belegt, flog die Ausnahme zum Aufrufer,
+        ''' der nur noch melden konnte, dass es nicht ging, und die Sitzung blieb auf der Karte, so
+        ''' dass auch der naechste Versuch scheiterte. Hier wird das Modell fuer diese Karte bis zum
+        ''' Programmende vermerkt, die Sitzung auf dem Prozessor neu geholt und EINMAL neu gerechnet.
+        '''
+        ''' Ein Abbruch ist kein Fehler der Karte und geht unveraendert hinaus. Scheitert auch der
+        ''' Lauf auf dem Prozessor, fliegt dessen Ausnahme.</summary>
+        ''' <returns>Das Ergebnis von <paramref name="run"/>, Nothing ohne Sitzung.</returns>
+        Public Shared Function RunWithProcessorFallback(Of T As Class)(key As String, run As Func(Of SessionHandle, T)) As T
+            Dim loaded = SessionAndDeviceFor(key)
+            If loaded Is Nothing OrElse loaded.Session Is Nothing Then Return Nothing
+            If Not loaded.OnGpu Then Return run(loaded)
+            Try
+                Return run(loaded)
+            Catch ex As OperationCanceledException
+                Throw
+            Catch ex As Exception
+                Dim fileName = BestFile(key)
+                NoteGpuRunFailed(fileName, loaded.Accelerator)
+                DiagnosticLogService.LogAlways("KiModell",
+                    $"Lauf auf der Grafikkarte gescheitert, weiter auf dem Prozessor: {fileName} - {ex.Message}")
+            End Try
+            Dim onProcessor = SessionAndDeviceFor(key)
+            If onProcessor Is Nothing OrElse onProcessor.Session Is Nothing Then Return Nothing
+            Return run(onProcessor)
         End Function
 
         ''' <summary>Fuer die Probe: das Modell sperren, AUSSER es laeuft schon auf dieser Karte.
