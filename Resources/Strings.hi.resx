@@ -12194,4 +12194,7 @@
   <data name="Die_Bearbeitung_wurde_inzwischen_anderswo_ge_nde_24ac72b9" xml:space="preserve">
     <value>संपादन इस बीच कहीं और बदल दिया गया और वैसा ही रहेगा। देखने के लिए छवि फिर से खोलें।</value>
   </data>
+  <data name="Gesichtsrahmen_mit_Namen_ein_aus_c8933f16" xml:space="preserve">
+    <value>नाम सहित चेहरे के फ़्रेम चालू/बंद</value>
+  </data>
 </root>

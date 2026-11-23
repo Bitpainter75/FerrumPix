@@ -1,99 +1,16 @@
-## 0.9.90
+## Unreleased
 
 ### Changes
 
-- Exporting to TIFF and PNG is much faster: the file is now compressed on all processor cores
-  instead of one. The pixels stay the same.
+- The viewer can show a frame around every detected face with the person's name below it,
+  switched on and off with a new button in the footer. Confirmed names, suggestions and faces
+  without a name look different, and the frames follow zoom, rotation and cropping.
 
-- HEIC and HEIF pictures open faster on computers with many processor cores.
-
-- RAW files open and export noticeably faster on computers with several processor cores: a
-  step of the RAW development that ran on one core now uses all of them. The picture stays
-  exactly the same.
-
-- 16-bit exports from RAW files are quicker, because the RAW development no longer runs twice
-  for the 8-bit and the 16-bit picture.
-
-- Straighten, perspective, rotate, flip and the warp grid now use all processor cores. Moving a
-  slider on a straightened or rotated picture responds noticeably faster, and so do growing,
-  shrinking, bordering and refining a selection and the outline and fill of a selection layer.
-
-- Shadow and glow of a selection layer are drawn on all processor cores, so a picture with such a
-  layer reacts much faster. Glow on objects is quicker as well.
+- Exported JPEG files now carry a small sRGB colour profile, so every program shows their colours
+  the same way, also when the picture is saved without metadata.
 
 ### Fixes
 
-- A damaged or crafted Sony ARW file no longer crashes the program.
+- The white balance picker ignores points where a colour channel is blown out, so a click near
+  bright highlights no longer pulls the result towards the colour of the clipped channel.
 
-- Grabbing a handle of the warp grid, the envelope or a warp line again no longer shows the
-  picture briefly without the warp drawn so far, and a single click on a handle no longer
-  leaves it unwarped.
-
-- Presets and sidecars that set a vignette without naming its style, or with style 0, now get the
-  highlight priority vignette they were made with instead of color priority.
-
-- Flatpak: folders added through the system file dialog, such as a network share inside the home
-  folder, can be deleted from, renamed in and moved again when file operations outside the home
-  folder are allowed, instead of being treated as a system folder.
-
-- Network shares opened through the file manager on GNOME, XFCE or Cinnamon can be used for
-  deleting, renaming and moving when file operations outside the home folder are allowed. When a
-  picture cannot be deleted, the message now says why, and DELETE in the gallery shows it instead
-  of doing nothing.
-
-- A JPEG or other picture next to a RAW with the same name no longer reads or writes the RAW's
-  sidecar (photo.xmp): its rating, label and keywords go to its own photo.jpg.xmp, so the two no
-  longer mix their metadata. The same applies to sidecars on a Nextcloud server.
-
-- Cameras without their own brightness entry now develop at the typical brightness of their brand
-  instead of a fixed value, so they no longer come out noticeably too bright.
-
-- Automatic lens matching is stricter and finds more: a lens is no longer matched to the profile
-  of a different lens line, model code or brand, or one with a different teleconverter. Olympus,
-  Panasonic and Leica lenses are recognised on bodies of other brands, Tamron lenses on Sony
-  bodies, and the Pentax K-1, K-S1 and Fujifilm X-T100 bodies are recognised correctly. When in
-  doubt a lens now gets no profile rather than a wrong one.
-
-- The first start with a new picture library, or after an update that extends it, no longer
-  fails now and then with a database error when two parts of the program open it at once.
-
-- If the graphics driver crashes the program while a model runs on the graphics card, that model
-  stays on the processor for this card from the next start on, until a new driver or a new
-  program version arrives. The settings show which model is affected and can lift the block.
-
-- WebP pictures get their gallery tile again when the thumbnail cache is switched off or the
-  picture lies in a temporary folder.
-
-- The mouse wheel scrolls the filmstrip in the editor again when the filmstrip sits on the left
-  or right.
-
-- On Linux and macOS, saving over an existing picture or sidecar file keeps its access rights, so
-  a private photo stays private, and saving through a symbolic link updates the file it points to
-  instead of replacing the link.
-
-- Batch processing, pasting and moving in the gallery no longer let "Overwrite all" replace a
-  picture written earlier in the same run or another picture of the selection, for example the
-  camera JPEG next to its RAW, or the first of two "photo.jpg" from different folders, which
-  moving could lose for good. Such a file now gets a new name like "photo (1).jpg" instead.
-  The same goes for "photo.cr2" and "photo.nef" from different folders, whose XMP files would
-  meet as "photo.xmp", and a foreign XMP file already in the destination now only skips that one
-  picture instead of stopping the rest.
-
-- If pasting or moving a picture is interrupted, for example by a crash, the half-copied file no
-  longer stays hidden in the destination folder: the next paste or move into that folder removes
-  it, but leaves a slow copy alone that is still being written.
-
-- If moving a picture to another drive cannot remove the original afterwards, the original keeps
-  its rating, keywords and people in the library, and the copy gets them too.
-
-- A damaged LUT file no longer causes an error every time the picture is drawn; it simply has no
-  effect.
-
-- Saving an edit beside a picture no longer silently overwrites what another FerrumPix window,
-  another computer or a sync service changed in the meantime: ratings, labels and keywords from
-  there stay, and a different edit is kept next to the picture instead of being lost.
-
-- A preset with a single broken value now loads with all its other settings instead of failing
-  with an arithmetic overflow.
-
-- Damaged PSD files and Canon CR2 files with impossible sizes are rejected cleanly.

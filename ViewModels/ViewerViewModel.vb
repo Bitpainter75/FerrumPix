@@ -454,6 +454,12 @@ Namespace ViewModels
                 End If
                 ' Vor dem Freigeben des alten Bildes: das Peaking kopiert das neue sofort.
                 If Not Object.ReferenceEquals(previous, value) Then RefreshFocusPeaking()
+                ' Die Gesichtsrahmen einen Takt spaeter: wer das Bild setzt, setzt danach im selben
+                ' Lauf, ob es eine entwickelte RAW ist (RunBitmapLoad), und davon haengt die Geometrie ab.
+                If Not Object.ReferenceEquals(previous, value) Then
+                    FaceFrames.Clear()
+                    Dispatcher.UIThread.Post(Sub() RefreshFaceFrameGeometry(), DispatcherPriority.Background)
+                End If
                 If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
             End Set
         End Property
@@ -544,6 +550,148 @@ Namespace ViewModels
                             End Try
                         End Sub)
                 End Sub, TaskScheduler.Default)
+        End Sub
+
+        ' ── Gesichtsrahmen ────────────────────────────────────────────────────────
+        '
+        ' Rahmen mit Namen ueber den erkannten Gesichtern, ein- und ausgeschaltet in der Fusszeile.
+        ' Die Gesichter sind dieselben Zeilen wie im Personen-Reiter der Leiste (InfoPanel.People),
+        ' es gibt also keine zweite Abfrage. Die Lage rechnet FaceFrameLayout in Anteile des
+        ' GEZEIGTEN Bildes um; die Ansicht legt sie ueber das Bild und folgt Zoom, Verschiebung und
+        ' der noch nicht gespeicherten Drehung des Betrachters.
+        '
+        ' Bezugsgroesse und Geometrie haengen nur am gezeigten Bild und werden einmal je Bild im
+        ' Hintergrund geholt (Kopfdaten, Beistelldatei). Namen und Bestaetigung aendern danach nur
+        ' noch die Beschriftung und kosten nichts.
+
+        Private _showFaceFrames As Boolean = AppSettingsService.Load().ViewerFaceFrames
+        Private _faceFrameToken As Integer
+        Private _faceFrameReference As (Width As Integer, Height As Integer)
+        Private _faceFrameGeometry As ImageAdjustments
+        Private _faceFrameQuarterTurn As Integer
+        Private _faceFrameReady As Boolean
+        Private ReadOnly _faceFrameWatched As New List(Of PersonFaceEntry)()
+
+        ''' <summary>Die Rahmen zum gezeigten Bild, leer bei ausgeschaltetem Schalter.</summary>
+        Public ReadOnly Property FaceFrames As New ObservableCollection(Of FaceFrame)()
+
+        ''' <summary>Gesichtsrahmen mit Namen ueber dem Bild. Gemerkt in den Einstellungen
+        ''' (ViewerFaceFrames). Gedrueckt (Akzent) heisst an.</summary>
+        Public Property ShowFaceFrames As Boolean
+            Get
+                Return _showFaceFrames
+            End Get
+            Set(value As Boolean)
+                If _showFaceFrames = value Then Return
+                Me.RaiseAndSetIfChanged(_showFaceFrames, value)
+                AppSettingsService.Update(Sub(s) s.ViewerFaceFrames = value)
+                RefreshFaceFrameGeometry()
+            End Set
+        End Property
+
+        Private _toggleFaceFramesCommand As ICommand
+
+        Public ReadOnly Property ToggleFaceFramesCommand As ICommand
+            Get
+                If _toggleFaceFramesCommand Is Nothing Then
+                    _toggleFaceFramesCommand = ReactiveCommand.Create(Sub() ShowFaceFrames = Not ShowFaceFrames)
+                End If
+                Return _toggleFaceFramesCommand
+            End Get
+        End Property
+
+        ''' <summary>Haengt die Rahmen an die Gesichterliste der Leiste: neue Zeilen beim Bildwechsel,
+        ''' neue Namen beim Benennen.</summary>
+        Private Sub HookFaceFrameSources()
+            AddHandler InfoPanel.People.CollectionChanged, Sub(s, e) WatchFaceEntries()
+        End Sub
+
+        Private Sub WatchFaceEntries()
+            For Each entry In _faceFrameWatched
+                RemoveHandler entry.PropertyChanged, AddressOf OnFaceEntryChanged
+            Next
+            _faceFrameWatched.Clear()
+            For Each entry In InfoPanel.People
+                AddHandler entry.PropertyChanged, AddressOf OnFaceEntryChanged
+                _faceFrameWatched.Add(entry)
+            Next
+            RebuildFaceFrames()
+        End Sub
+
+        Private Sub OnFaceEntryChanged(sender As Object, e As System.ComponentModel.PropertyChangedEventArgs)
+            ' Der Ausschnitt kommt im Hintergrund nach und aendert am Rahmen nichts.
+            If e.PropertyName = NameOf(PersonFaceEntry.Thumbnail) Then Return
+            RebuildFaceFrames()
+        End Sub
+
+        ''' <summary>Holt Bezugsgroesse und Geometrie zum gezeigten Bild. Nach dem Setzen des Bildes
+        ''' gerufen, und zwar einen Takt spaeter: ob eine RAW entwickelt gezeigt wird
+        ''' (<see cref="IsRawDeveloped"/>), steht erst nach der Zuweisung fest.</summary>
+        Private Sub RefreshFaceFrameGeometry()
+            Dim token = System.Threading.Interlocked.Increment(_faceFrameToken)
+            _faceFrameReady = False
+            FaceFrames.Clear()
+            Dim path = _currentImagePath
+            If Not _showFaceFrames OrElse _currentImage Is Nothing OrElse String.IsNullOrWhiteSpace(path) Then Return
+            Dim recipeKey = ItemPathFor(path)
+            Dim developed = IsRawDeveloped
+            Task.Run(Function() ReadFaceFrameGeometry(path, recipeKey, developed)).ContinueWith(
+                Sub(done)
+                    Dispatcher.UIThread.Post(
+                        Sub()
+                            If token <> _faceFrameToken OrElse Not done.IsCompletedSuccessfully Then Return
+                            Dim result = done.Result
+                            _faceFrameReference = result.Reference
+                            _faceFrameGeometry = result.Geometry
+                            _faceFrameQuarterTurn = result.QuarterTurn
+                            _faceFrameReady = True
+                            RebuildFaceFrames()
+                        End Sub)
+                End Sub, TaskScheduler.Default)
+        End Sub
+
+        ''' <summary>Auf welchem Weg das gezeigte Bild entstand, als Geometrie. Dieselbe Verzweigung
+        ''' wie <see cref="DecodeViewerBitmapWithState"/> und <see cref="DecodeNonRawViewerBitmap"/>:
+        ''' eine entwickelte RAW und ein Bild mit Rezept durchlaufen die Geometrie des Rezepts, die
+        ''' eingebettete Vorschau einer RAW und eine PSD nur ihre gespeicherte Vierteldrehung, alles
+        ''' andere wird gezeigt, wie es in der Datei steht.</summary>
+        Private Shared Function ReadFaceFrameGeometry(path As String, recipeKey As String, developed As Boolean) As (Reference As (Width As Integer, Height As Integer), Geometry As ImageAdjustments, QuarterTurn As Integer)
+            Dim reference = (0, 0)
+            Dim geometry As ImageAdjustments = Nothing
+            Dim quarterTurn = 0
+            Try
+                Dim file = VariantKey.FileOf(path)
+                reference = XmpFaceRegionService.ReadOrientedPixelSize(file)
+                If RawPreviewService.IsSupportedRaw(file) Then
+                    If developed Then
+                        geometry = If(RawSidecarService.Exists(file), RawSidecarService.TryRead(recipeKey), Nothing)
+                        If geometry Is Nothing Then geometry = ImageAdjustments.ForUneditedRaw(file)
+                    Else
+                        quarterTurn = RawSidecarService.ReadRotationDegrees(recipeKey)
+                    End If
+                ElseIf Not SvgPreviewService.IsSupportedSvg(file) AndAlso RawSidecarService.HasRecipeBeside(If(recipeKey, file)) Then
+                    geometry = RawSidecarService.TryRead(If(recipeKey, file))
+                ElseIf PsdPreviewService.IsSupportedPsd(file) Then
+                    quarterTurn = RawSidecarService.ReadRotationDegrees(If(recipeKey, file))
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Viewer.FaceFrames", ex)
+            End Try
+            Return (reference, geometry, quarterTurn)
+        End Function
+
+        ''' <summary>Baut die Rahmen aus den Zeilen der Leiste und der gemerkten Geometrie.</summary>
+        Private Sub RebuildFaceFrames()
+            FaceFrames.Clear()
+            If Not _showFaceFrames OrElse Not _faceFrameReady OrElse _currentImage Is Nothing Then Return
+            For Each entry In InfoPanel.People
+                Dim box = FaceFrameLayout.MapBox(entry.BoxX, entry.BoxY, entry.BoxWidth, entry.BoxHeight,
+                                                 _faceFrameReference.Width, _faceFrameReference.Height,
+                                                 _faceFrameGeometry, _faceFrameQuarterTurn)
+                If Not box.HasValue Then Continue For
+                FaceFrames.Add(New FaceFrame(box.Value.Left, box.Value.Top, box.Value.Right, box.Value.Bottom,
+                                             entry.Name, FaceFrameLayout.KindOf(entry.Name, entry.IsManual)))
+            Next
         End Sub
 
         ' Das Bild, das LibRaw fuer die Anzeige entwickelt hat. Nur eine Referenz zum Vergleich mit
@@ -1312,6 +1460,7 @@ Namespace ViewModels
         Public Sub New(mainVm As IViewerHost)
             _mainVm = mainVm
             FilmstripItems = New BulkObservableCollection(Of ImageItem)()
+            HookFaceFrameSources()
 
             _navDebouncer = New FilmstripNavigationDebouncer(wrapAround:=True,
                                                                getCurrentIndex:=Function() _currentIndex,

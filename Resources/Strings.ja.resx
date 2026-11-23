@@ -12190,4 +12190,7 @@
   <data name="Die_Bearbeitung_wurde_inzwischen_anderswo_ge_nde_24ac72b9" xml:space="preserve">
     <value>編集内容はその間に別の場所で変更されており、そのまま残ります。表示するには画像を開き直してください。</value>
   </data>
+  <data name="Gesichtsrahmen_mit_Namen_ein_aus_c8933f16" xml:space="preserve">
+    <value>名前付きの顔枠の表示/非表示</value>
+  </data>
 </root>

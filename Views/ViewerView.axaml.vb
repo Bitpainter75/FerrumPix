@@ -1201,8 +1201,10 @@ Namespace Views
                 AddHandler _subscribedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
                 AddHandler _subscribedVm.CenteredZoomRequested, AddressOf OnCenteredZoomRequested
                 AddHandler _subscribedVm.InfoPanel.NavigatorPanRequested, AddressOf OnNavigatorPanRequested
+                AddHandler _subscribedVm.FaceFrames.CollectionChanged, AddressOf OnFaceFramesChanged
                 ' Eine Aenderung der Seite, solange die Ansicht nicht im Baum hing, kam hier nicht an.
                 ApplyFilmstripPlacement()
+                RebuildFaceFrameVisuals()
             End If
         End Sub
 
@@ -1211,7 +1213,113 @@ Namespace Views
             RemoveHandler _subscribedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
             RemoveHandler _subscribedVm.CenteredZoomRequested, AddressOf OnCenteredZoomRequested
             RemoveHandler _subscribedVm.InfoPanel.NavigatorPanRequested, AddressOf OnNavigatorPanRequested
+            RemoveHandler _subscribedVm.FaceFrames.CollectionChanged, AddressOf OnFaceFramesChanged
             _subscribedVm = Nothing
+        End Sub
+
+        ' ── Gesichtsrahmen ────────────────────────────────────────────────────────
+        '
+        ' Die Rahmen liegen in Anteilen des gezeigten Bildes vor (ViewerViewModel.FaceFrames). Hier
+        ' werden sie zu Rechtecken mit Namensschild auf FaceFrameCanvas. Die Ebene liegt NEBEN der
+        ' Huelle des Bildes, nicht darin: Drehen und Spiegeln des Betrachters laufen als
+        ' RenderTransform der Huelle, und in ihr stuende der Name dann quer oder spiegelverkehrt.
+        ' Die Ecken gehen deshalb ueber TranslatePoint durch die Huelle, so wie beim Zuschnitt-Rahmen.
+        '
+        ' Aufbauen und Verschieben sind getrennt: aufgebaut wird nur, wenn sich die Rahmen aendern,
+        ' verschoben nach jedem Layoutlauf. Das Verschieben setzt nur Lage und Groesse; bleiben die
+        ' Werte gleich, loest es keinen neuen Lauf aus.
+
+        Private ReadOnly _faceFrameVisuals As New List(Of (Frame As FaceFrame, Box As Avalonia.Controls.Shapes.Rectangle, Label As Border))()
+        Private _faceFrameLayoutHooked As Boolean
+
+        Private Sub OnFaceFramesChanged(sender As Object, e As Specialized.NotifyCollectionChangedEventArgs)
+            RebuildFaceFrameVisuals()
+        End Sub
+
+        Private Sub RebuildFaceFrameVisuals()
+            Dim canvas = Me.FindControl(Of Canvas)("FaceFrameCanvas")
+            If canvas Is Nothing Then Return
+            canvas.Children.Clear()
+            _faceFrameVisuals.Clear()
+            Dim vm = GetVm()
+            If vm Is Nothing Then Return
+            If Not _faceFrameLayoutHooked Then
+                Dim image = Me.FindControl(Of Image)("MainImage")
+                If image IsNot Nothing Then
+                    AddHandler image.LayoutUpdated, Sub(s, e) UpdateFaceFramePositions()
+                    _faceFrameLayoutHooked = True
+                End If
+            End If
+            For Each frame In vm.FaceFrames
+                Dim box As New Avalonia.Controls.Shapes.Rectangle With {.StrokeThickness = 2, .IsHitTestVisible = False}
+                ' Vorschlag und Handarbeit sehen verschieden aus, wie in der Leiste: bestaetigt
+                ' durchgezogen, vorgeschlagen und unbenannt gestrichelt; unbenannt ohne Schild.
+                If frame.Kind <> FaceFrameKind.Confirmed Then
+                    box.StrokeDashArray = New Avalonia.Collections.AvaloniaList(Of Double) From {4.0, 3.0}
+                End If
+                If frame.Kind = FaceFrameKind.Unnamed Then
+                    box.Stroke = New Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromArgb(&HE6, &HFF, &HFF, &HFF))
+                Else
+                    box.Bind(Avalonia.Controls.Shapes.Shape.StrokeProperty, Me.GetResourceObservable("FP.Accent"))
+                End If
+                canvas.Children.Add(box)
+                Dim label As Border = Nothing
+                If frame.Kind <> FaceFrameKind.Unnamed Then
+                    Dim text As New TextBlock With {
+                        .Text = frame.Label,
+                        .Foreground = Avalonia.Media.Brushes.White,
+                        .FontWeight = If(frame.Kind = FaceFrameKind.Confirmed, Avalonia.Media.FontWeight.SemiBold, Avalonia.Media.FontWeight.Normal),
+                        .FontStyle = If(frame.Kind = FaceFrameKind.Suggested, Avalonia.Media.FontStyle.Italic, Avalonia.Media.FontStyle.Normal)
+                    }
+                    text.Bind(TextBlock.FontSizeProperty, Me.GetResourceObservable("FP.Font.Small"))
+                    label = New Border With {
+                        .Background = New Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromArgb(&HCC, &H1A, &H1D, &H24)),
+                        .CornerRadius = New CornerRadius(4),
+                        .Padding = New Thickness(6, 2),
+                        .IsHitTestVisible = False,
+                        .Child = text
+                    }
+                    canvas.Children.Add(label)
+                End If
+                _faceFrameVisuals.Add((frame, box, label))
+            Next
+            UpdateFaceFramePositions()
+        End Sub
+
+        ''' <summary>Legt die Rahmen auf das Bild, wie es gerade gezoomt, verschoben, gedreht und
+        ''' gespiegelt ist. Das Schild steht unter dem Rahmen, am linken Rand.</summary>
+        Private Sub UpdateFaceFramePositions()
+            If _faceFrameVisuals.Count = 0 Then Return
+            Dim image = Me.FindControl(Of Image)("MainImage")
+            Dim layer = Me.FindControl(Of Canvas)("FaceFrameCanvas")
+            If image Is Nothing OrElse layer Is Nothing OrElse Not layer.IsVisible Then Return
+            Dim size = image.Bounds.Size
+            If size.Width <= 0 OrElse size.Height <= 0 Then Return
+            For Each visual In _faceFrameVisuals
+                ' Alle vier Ecken: bei einem Winkel, der kein Vielfaches von 90 Grad ist, liegen zwei
+                ' gegenueberliegende allein nicht mehr auf dem umschliessenden Rechteck.
+                Dim x1 = Double.MaxValue, y1 = Double.MaxValue, x2 = Double.MinValue, y2 = Double.MinValue
+                Dim complete = True
+                For Each corner In {New Point(visual.Frame.Left, visual.Frame.Top), New Point(visual.Frame.Right, visual.Frame.Top),
+                                    New Point(visual.Frame.Left, visual.Frame.Bottom), New Point(visual.Frame.Right, visual.Frame.Bottom)}
+                    Dim mapped = image.TranslatePoint(New Point(corner.X * size.Width, corner.Y * size.Height), layer)
+                    If Not mapped.HasValue Then
+                        complete = False
+                        Exit For
+                    End If
+                    x1 = Math.Min(x1, mapped.Value.X) : x2 = Math.Max(x2, mapped.Value.X)
+                    y1 = Math.Min(y1, mapped.Value.Y) : y2 = Math.Max(y2, mapped.Value.Y)
+                Next
+                If Not complete Then Continue For
+                Canvas.SetLeft(visual.Box, x1)
+                Canvas.SetTop(visual.Box, y1)
+                visual.Box.Width = Math.Max(1, x2 - x1)
+                visual.Box.Height = Math.Max(1, y2 - y1)
+                If visual.Label IsNot Nothing Then
+                    Canvas.SetLeft(visual.Label, x1)
+                    Canvas.SetTop(visual.Label, y2 + 3)
+                End If
+            Next
         End Sub
 
         ' ── Navigator im Infopanel ───────────────────────────────────────────────
@@ -1411,6 +1519,14 @@ Namespace Views
             If e.PropertyName = NameOf(ViewerViewModel.IsCompareMode) OrElse
                e.PropertyName = NameOf(ViewerViewModel.RotationAngle) OrElse
                e.PropertyName = NameOf(ViewerViewModel.ScaleX) Then PublishNavigator()
+
+            ' Drehen und Spiegeln aendern nur die RenderTransform, keinen Layoutlauf: die Rahmen
+            ' werden danach von Hand nachgezogen, sobald die Bindung die Transformation gesetzt hat.
+            If e.PropertyName = NameOf(ViewerViewModel.RotationAngle) OrElse
+               e.PropertyName = NameOf(ViewerViewModel.ScaleX) OrElse
+               e.PropertyName = NameOf(ViewerViewModel.ShowFaceFrames) Then
+                Dispatcher.UIThread.Post(AddressOf UpdateFaceFramePositions, DispatcherPriority.Render)
+            End If
 
             If e.PropertyName = NameOf(ViewerViewModel.IsFullscreenMode) Then
                 ' Rein und raus beginnt eingepasst, und ein Filmstreifen im Vollbild geht an seinen

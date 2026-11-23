@@ -1834,11 +1834,18 @@ Namespace Services
                 If IsExifSegment(segment) Then PatchExifToWrittenSize(segment, 10, frame.Width, frame.Height)
             Next
 
+            ' Das sRGB-Profil, das der Kodierer selbst geschrieben hat (JpegEncoder), bleibt: es
+            ' beschreibt die geschriebenen Punkte. Das Entfernen unten nimmt jedes APP2 mit, es kommt
+            ' deshalb hinter den Aufnahmedaten wieder hinein.
+            Dim ownProfile = ReadJpegIccSegments(targetBytes)
             Dim stripped = StripJpegMetadataSegments(targetBytes)
             Dim insertAt = FindJpegMetadataInsertOffset(stripped)
-            Dim output As New List(Of Byte)(stripped.Length + metadataSegments.Sum(Function(s) s.Length))
+            Dim output As New List(Of Byte)(stripped.Length + metadataSegments.Sum(Function(s) s.Length) + ownProfile.Sum(Function(s) s.Length))
             output.AddRange(stripped.Take(insertAt))
             For Each segment In metadataSegments
+                output.AddRange(segment)
+            Next
+            For Each segment In ownProfile
                 output.AddRange(segment)
             Next
             output.AddRange(stripped.Skip(insertAt))
@@ -1945,6 +1952,34 @@ Namespace Services
             segment(3) = CByte(length And &HFF)
             Buffer.BlockCopy(payload, 0, segment, 4, payload.Length)
             Return segment
+        End Function
+
+        ''' <summary>Die ICC-Segmente (APP2 mit der Kennung „ICC_PROFILE") eines fertig kodierten JPEG,
+        ''' in ihrer Reihenfolge. Ein grosses Profil steht in mehreren Teilen, die zusammen bleiben
+        ''' muessen.</summary>
+        Private Shared Function ReadJpegIccSegments(bytes As Byte()) As List(Of Byte())
+            Dim result As New List(Of Byte())()
+            If bytes Is Nothing OrElse bytes.Length < 4 OrElse bytes(0) <> &HFF OrElse bytes(1) <> &HD8 Then Return result
+            Dim offset = 2
+            While offset + 4 <= bytes.Length
+                If bytes(offset) <> &HFF Then Exit While
+                Dim marker = bytes(offset + 1)
+                If marker = &HDA OrElse marker = &HD9 Then Exit While
+                If marker = &H1 OrElse (marker >= &HD0 AndAlso marker <= &HD7) Then
+                    offset += 2
+                    Continue While
+                End If
+                Dim length = ReadUInt16BE(bytes, offset + 2)
+                If length < 2 OrElse offset + 2 + length > bytes.Length Then Exit While
+                Dim totalLength = 2 + length
+                If marker = &HE2 Then
+                    Dim segment(totalLength - 1) As Byte
+                    Array.Copy(bytes, offset, segment, 0, totalLength)
+                    If IsJpegIccSegment(segment) Then result.Add(segment)
+                End If
+                offset += totalLength
+            End While
+            Return result
         End Function
 
         Private Shared Function StripJpegMetadataSegments(bytes As Byte()) As Byte()

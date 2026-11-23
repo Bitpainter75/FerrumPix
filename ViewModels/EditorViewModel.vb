@@ -6838,11 +6838,15 @@ Namespace ViewModels
             ' Vergleichsbild OHNE Farbbearbeitung (siehe ApplyWhiteBalanceFromPick), nie Alpha.
             BeginColorPickAt(AddressOf ApplyWhiteBalanceFromPick, sampleRadius:=WhiteBalancePickRadius,
                              previewSampler:=CreateProbePickSampler(
-                                 Sub(probe) probe.CopyPixelAdjustmentsFrom(New ImageAdjustments())))
+                                 Sub(probe) probe.CopyPixelAdjustmentsFrom(New ImageAdjustments()),
+                                 skipClipped:=True))
         End Sub
 
         ''' <summary>Wie weit die Pipette des Weissabgleichs mittelt, in Bildpunkten.</summary>
         Private Const WhiteBalancePickRadius As Integer = 2
+
+        ''' <summary>Ab diesem Wert (0,98 von 255) gilt ein Kanal im Vergleichsbild als angeschlagen.</summary>
+        Private Const ClippedProbeLevel As Byte = 250
 
         ''' <summary>Setzt den Weissabgleich so, dass die aufgenommene Stelle neutral wird.
         '''
@@ -6876,9 +6880,13 @@ Namespace ViewModels
             End If
             probe.CopyPixelAdjustmentsFrom(New ImageAdjustments())
 
-            Dim raw = SampleProbePixel(probe, xPercent, yPercent)
+            ' Angeschlagene Punkte fallen einzeln heraus (AverageProbePixel). Bleibt keiner, ist die
+            ' Stelle ausgefressen und nicht etwa unlesbar: dann dieselbe Bitte wie bei Weiss unten.
+            Dim raw = SampleProbePixel(probe, xPercent, yPercent, skipClipped:=True)
             If Not raw.HasValue Then
-                StatusText = LocalizationService.T("Diese Stelle lässt sich nicht messen")
+                StatusText = If(SampleProbePixel(probe, xPercent, yPercent).HasValue,
+                                LocalizationService.T("Diese Stelle trägt keine Farbe - bitte auf ein helles Grau klicken"),
+                                LocalizationService.T("Diese Stelle lässt sich nicht messen"))
                 Return
             End If
 
@@ -6957,20 +6965,28 @@ Namespace ViewModels
         ''' vorbei am Zwischenspeicher: ein Render mit fremdem Rezept über den Basis-Cache würde
         ''' den warmen Stand des Editors wegwerfen. Für einen Klick ist der Preis vertretbar.</para></summary>
         Private Function SampleProbePixel(probe As ImageAdjustments,
-                                          xPercent As Double, yPercent As Double) As SKColor?
+                                          xPercent As Double, yPercent As Double,
+                                          Optional skipClipped As Boolean = False) As SKColor?
             Dim source = GetPreviewSource()
             If source Is Nothing OrElse probe Is Nothing Then Return Nothing
 
             Using rendered = ImageProcessor.RenderPreviewSkBitmap(source, probe)
-                Return AverageProbePixel(rendered, xPercent, yPercent)
+                Return AverageProbePixel(rendered, xPercent, yPercent, skipClipped)
             End Using
         End Function
 
         ''' <summary>Der gemittelte Bildpunkt eines Vergleichsbilds an der Stelle (Anteile 0 bis 1).
         ''' Geteilt zwischen dem Klick (<see cref="SampleProbePixel"/>) und der Anzeige an der
-        ''' Pipette (<see cref="CreateProbePickSampler"/>), damit beide denselben Wert nennen.</summary>
+        ''' Pipette (<see cref="CreateProbePickSampler"/>), damit beide denselben Wert nennen.
+        '''
+        ''' <para><paramref name="skipClipped"/>: Punkte, deren hellster Kanal anschlaegt, fallen
+        ''' EINZELN heraus, bevor gemittelt wird. Fuer den Weissabgleich: ein Kanal an der Klemmung
+        ''' traegt nur noch deren Farbe, und schon einer davon zieht den Mittelwert dorthin. Den
+        ''' Mittelwert hinterher zu pruefen faengt das nicht ab. Bleibt kein Punkt uebrig, kommt
+        ''' Nothing.</para></summary>
         Private Shared Function AverageProbePixel(rendered As SKBitmap,
-                                                  xPercent As Double, yPercent As Double) As SKColor?
+                                                  xPercent As Double, yPercent As Double,
+                                                  Optional skipClipped As Boolean = False) As SKColor?
             If rendered Is Nothing OrElse rendered.Width <= 0 OrElse rendered.Height <= 0 Then Return Nothing
             Dim px = Math.Max(0, Math.Min(rendered.Width - 1, CInt(xPercent * rendered.Width)))
             Dim py = Math.Max(0, Math.Min(rendered.Height - 1, CInt(yPercent * rendered.Height)))
@@ -6984,6 +7000,8 @@ Namespace ViewModels
             For sampleY As Integer = firstY To lastY
                 For sampleX As Integer = firstX To lastX
                     Dim pixel = rendered.GetPixel(sampleX, sampleY)
+                    If skipClipped AndAlso
+                       Math.Max(pixel.Red, Math.Max(pixel.Green, pixel.Blue)) >= ClippedProbeLevel Then Continue For
                     sumR += pixel.Red
                     sumG += pixel.Green
                     sumB += pixel.Blue
@@ -14218,7 +14236,8 @@ Namespace ViewModels
         ''' <param name="usesDisplayedColor">True, wenn der Klick gerade doch die angezeigte Farbe
         ''' nimmt (Regler bedienen eine Ebene); dann gilt auch hier die angezeigte.</param>
         Private Function CreateProbePickSampler(neutralize As Action(Of ImageAdjustments),
-                                                Optional usesDisplayedColor As Func(Of Boolean) = Nothing) As Func(Of Double, Double, Avalonia.Media.Color?)
+                                                Optional usesDisplayedColor As Func(Of Boolean) = Nothing,
+                                                Optional skipClipped As Boolean = False) As Func(Of Double, Double, Avalonia.Media.Color?)
             Return Function(xFraction As Double, yFraction As Double) As Avalonia.Media.Color?
                        If usesDisplayedColor IsNot Nothing AndAlso usesDisplayedColor() Then Return Nothing
                        If _colorPickProbeImage Is Nothing AndAlso Not _colorPickProbeTried Then
@@ -14230,7 +14249,12 @@ Namespace ViewModels
                                _colorPickProbeImage = ImageProcessor.RenderPreviewSkBitmap(source, probe)
                            End If
                        End If
-                       Dim sample = AverageProbePixel(_colorPickProbeImage, xFraction, yFraction)
+                       Dim sample = AverageProbePixel(_colorPickProbeImage, xFraction, yFraction, skipClipped)
+                       ' Ganz ausgefressen: die Farbe des Vergleichsbilds zeigen, wie sie dort steht,
+                       ' statt auf die Farbe des Schirms zurueckzufallen. Der Klick weist die Stelle ab.
+                       If Not sample.HasValue AndAlso skipClipped Then
+                           sample = AverageProbePixel(_colorPickProbeImage, xFraction, yFraction)
+                       End If
                        If Not sample.HasValue Then Return Nothing
                        Return Avalonia.Media.Color.FromRgb(sample.Value.Red, sample.Value.Green, sample.Value.Blue)
                    End Function

@@ -54,6 +54,33 @@ Namespace Services
         ''' in einen Puffer passen (256 MB).
         Friend Const WideStripBytes As Long = 256L * 1024L * 1024L
 
+        ''' Wie viel Speicher die Puffer aller Kerne zusammen hoechstens belegen sollen (1 GB). Bei
+        ''' einem normalen Foto liegt ein Streifen bei wenigen Megabyte, die Grenze greift nie; bei
+        ''' einem breiten Panorama in 16 Bit kann ein Streifen von 64 Zeilen Hunderte Megabyte haben,
+        ''' und einer je Kern sprengte den Speicher. Dann rechnen weniger Kerne. Die Datei bleibt
+        ''' dieselbe: die Streifen sind voneinander unabhaengig, nur ihre Einteilung bestimmt die Bytes.
+        '''
+        ''' UNTERGRENZE: ein Kern braucht immer seine Arbeitspuffer, den Streifen, den er gerade
+        ''' packt, und den, der gerade geschrieben wird, also rund das Dreifache eines Streifens (bei
+        ''' einem flachen, sehr breiten PNG mehr, dort zaehlen die Zeilenpuffer), auch wenn das ueber
+        ''' dem Budget liegt. Weniger ginge nur mit weniger Zeilen je Streifen, und die
+        ''' bleiben bis Array.MaxLength bei 64, damit jede frueher geschriebene Datei gleich entsteht
+        ''' (<see cref="RowsPerStripFor"/>).
+        Friend Const StripMemoryBudget As Long = 1024L * 1024L * 1024L
+
+        ''' <summary>Wie viele Kerne packen, wenn ein Kern <paramref name="workBytes"/> Bytes an
+        ''' Arbeitspuffern anlegt (ALLE, beim PNG auch die Zeilen und die fuenf gefilterten
+        ''' Fassungen: bei einem flachen, sehr breiten Bild sind sie der groessere Teil) und ein
+        ''' gepackter Streifen bis <paramref name="packedBytes"/> Bytes hat. Beides 0 heisst
+        ''' unbekannt: dann alle.</summary>
+        Friend Shared Function WorkersFor(workBytes As Long, packedBytes As Long) As Integer
+            If workBytes <= 0 AndAlso packedBytes <= 0 Then Return Workers
+            ' Je Kern seine Arbeitspuffer, der Streifen, den er packt, und einer, der geschrieben wird.
+            Dim perWorker = Math.Max(0L, workBytes) + 2L * Math.Max(0L, packedBytes)
+            Dim allowed = StripMemoryBudget \ Math.Max(1L, perWorker)
+            Return CInt(Math.Max(1L, Math.Min(CLng(Workers), allowed)))
+        End Function
+
         ''' <summary>Zeilen je Streifen fuer ein Bild, dessen Puffer fuer einen Streifen von r Zeilen
         ''' <paramref name="stripBytes"/>(r) Bytes brauchen (der groesste Puffer des Schreibers), oder
         ''' 0, wenn nicht einmal eine Zeile in einen Puffer passt; dann schreibt der Aufrufer nicht
@@ -95,7 +122,9 @@ Namespace Services
         Friend Shared Function EncodeInOrder(Of TState, TResult As Class)(stripCount As Integer,
                                                                         createState As Func(Of TState),
                                                                         pack As Func(Of TState, Integer, TResult),
-                                                                        write As Func(Of Integer, TResult, Boolean)) As Boolean
+                                                                        write As Func(Of Integer, TResult, Boolean),
+                                                                        Optional workBytes As Long = 0,
+                                                                        Optional packedBytes As Long = 0) As Boolean
             If stripCount <= 0 Then Return True
             Dim results(stripCount - 1) As TResult
             Dim gate As New Object()
@@ -103,7 +132,12 @@ Namespace Services
             Dim written = 0
             Dim failed = False
             Dim failure As ExceptionDispatchInfo = Nothing
-            Dim window = WindowStrips
+            ' Kerne und Fenster nach dem Speicher (WorkersFor). Wird gekuerzt, rechnet kein Kern
+            ' einem nicht geschriebenen Streifen voraus: neben dem, der gerade geschrieben wird
+            ' (written steht schon dahinter), liegt dann nur noch der eigene. Sonst stapelten sich
+            ' riesige Streifen.
+            Dim workerLimit = WorkersFor(workBytes, packedBytes)
+            Dim window = If(workerLimit < Workers, workerLimit, WindowStrips)
 
             Dim work As Action =
                 Sub()
@@ -134,7 +168,7 @@ Namespace Services
                     End Try
                 End Sub
 
-            Dim workerCount = Math.Min(Workers, stripCount)
+            Dim workerCount = Math.Min(workerLimit, stripCount)
             Dim tasks(workerCount - 1) As Task
             For i = 0 To workerCount - 1
                 tasks(i) = Task.Run(work)
@@ -248,7 +282,10 @@ Namespace Services
             If rowsPerStrip = 0 Then Return True
             Dim bufferRows = Math.Min(rowsPerStrip, height)
             Dim found = 0
-            Parallel.For(0, StripCount(height, rowsPerStrip), New ParallelOptions With {.MaxDegreeOfParallelism = Workers},
+            ' Auch hier je Kern ein Puffer fuer einen Streifen: bei einem sehr breiten Bild so wenige
+            ' Kerne, wie ins Speicherbudget passen (WorkersFor), sonst scheiterte schon die Pruefung.
+            Dim readers = WorkersFor(CLng(bufferRows) * width * pixelBytes, 0)
+            Parallel.For(0, StripCount(height, rowsPerStrip), New ParallelOptions With {.MaxDegreeOfParallelism = readers},
                 Function() New Byte(bufferRows * width * pixelBytes - 1) {},
                 Function(strip, loopState, rgba)
                     If Volatile.Read(found) <> 0 Then

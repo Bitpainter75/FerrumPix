@@ -176,7 +176,9 @@ Namespace Services
                             Dim written = tif.WriteRawStrip(strip, packed.GetBuffer(), CInt(packed.Length)) >= 0
                             outputs.Return(packed)
                             Return written
-                        End Function)
+                        End Function,
+                        workBytes:=CLng(bufferBytes),
+                        packedBytes:=StripEncoding.PackedBound(bufferRows * CLng(width) * samples * sampleBytes))
                     If Not ok Then Return False
                     ' Das Verzeichnis schreibt LibTiff beim Schliessen selbst.
                 End Using

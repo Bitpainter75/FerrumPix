@@ -12194,4 +12194,7 @@
   <data name="Die_Bearbeitung_wurde_inzwischen_anderswo_ge_nde_24ac72b9" xml:space="preserve">
     <value>การแก้ไขถูกเปลี่ยนจากที่อื่นในระหว่างนั้นและจะคงไว้อย่างนั้น เปิดภาพใหม่เพื่อดู</value>
   </data>
+  <data name="Gesichtsrahmen_mit_Namen_ein_aus_c8933f16" xml:space="preserve">
+    <value>เปิด/ปิดกรอบใบหน้าพร้อมชื่อ</value>
+  </data>
 </root>

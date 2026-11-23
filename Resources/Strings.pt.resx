@@ -12149,4 +12149,7 @@
   <data name="Die_Bearbeitung_wurde_inzwischen_anderswo_ge_nde_24ac72b9" xml:space="preserve">
     <value>A edição foi alterada em outro lugar nesse meio-tempo e continua assim. Reabra a imagem para vê-la.</value>
   </data>
+  <data name="Gesichtsrahmen_mit_Namen_ein_aus_c8933f16" xml:space="preserve">
+    <value>Molduras de rostos com nomes ligar/desligar</value>
+  </data>
 </root>

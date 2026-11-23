@@ -13,6 +13,13 @@ Namespace Services
     '''
     ''' Kodiert wird ueber das Pixmap wie im <see cref="PngEncoder"/>; JPEG kennt kein Alpha, der
     ''' Aufrufer legt transparente Bereiche vorher auf Weiss.
+    '''
+    ''' MIT sRGB-PROFIL. Die geschriebenen Bildpunkte sind immer sRGB (FORMATE_UND_SPEICHERN,
+    ''' Farbmanagement). Das Pixmap bekommt deshalb den Farbraum sRGB zugeschrieben - nicht
+    ''' umgerechnet, nur benannt -, und Skia legt dafuer ein kleines ICC-Profil in APP2. Ohne das trug
+    ''' ein JPEG ohne Aufnahmedaten gar keine Farbangabe, und ein Programm, das dann nicht sRGB
+    ''' annimmt, deutete die Datei nach Belieben. Das Profil der QUELLE bleibt weiter draussen
+    ''' (ImageProcessorSave.IsJpegIccSegment); dieses hier beschreibt die geschriebenen Punkte.
     ''' </summary>
     Public NotInheritable Class JpegEncoder
 
@@ -27,7 +34,11 @@ Namespace Services
                 Dim options = New SKJpegEncoderOptions(Math.Max(1, Math.Min(100, quality)),
                                                        SKJpegEncoderDownsample.Downsample444,
                                                        SKJpegEncoderAlphaOption.Ignore)
-                Return pixmap.Encode(options)
+                Using srgb = SKColorSpace.CreateSrgb()
+                    Using tagged = New SKPixmap(pixmap.Info.WithColorSpace(srgb), pixmap.GetPixels(), pixmap.RowBytes)
+                        Return tagged.Encode(options)
+                    End Using
+                End Using
             End Using
         End Function
 

@@ -12190,4 +12190,7 @@
   <data name="Die_Bearbeitung_wurde_inzwischen_anderswo_ge_nde_24ac72b9" xml:space="preserve">
     <value>Obróbka została w międzyczasie zmieniona gdzie indziej i tak pozostaje. Otwórz zdjęcie ponownie, aby ją zobaczyć.</value>
   </data>
+  <data name="Gesichtsrahmen_mit_Namen_ein_aus_c8933f16" xml:space="preserve">
+    <value>Ramki twarzy z imionami wł./wył.</value>
+  </data>
 </root>

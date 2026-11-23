@@ -12150,4 +12150,7 @@
   <data name="Die_Bearbeitung_wurde_inzwischen_anderswo_ge_nde_24ac72b9" xml:space="preserve">
     <value>La modification a été changée ailleurs entre-temps et reste ainsi. Rouvrez l'image pour la voir.</value>
   </data>
+  <data name="Gesichtsrahmen_mit_Namen_ein_aus_c8933f16" xml:space="preserve">
+    <value>Cadres de visages avec noms activer/désactiver</value>
+  </data>
 </root>

@@ -277,6 +277,12 @@
                                            RenderOptions.BitmapInterpolationMode="MediumQuality" />
                                 </Panel>
                             </Border>
+                            <!-- GESICHTSRAHMEN: neben dem Bild statt in seiner Huelle, damit die Namen
+                                 beim Drehen und Spiegeln des Betrachters lesbar bleiben. Die Lage
+                                 rechnet der Code ueber TranslatePoint durch dieselbe Huelle
+                                 (UpdateFaceFramePositions), sie folgt also Zoom, Drehung und Spiegeln. -->
+                            <Canvas Name="FaceFrameCanvas" IsHitTestVisible="False"
+                                    IsVisible="{Binding ShowFaceFrames}"/>
                             <Canvas Name="CropSelectionCanvas" IsHitTestVisible="False">
                                 <Border Name="CropSelectionRect"
                                         IsVisible="False"
@@ -774,6 +780,17 @@
                                       IsChecked="{Binding IsFocusPeakingEnabled, Mode=TwoWay}"
                                       ToolTip.Tip="Fokus-Peaking ein/aus">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/crosshair-simple.svg"
+                                           Width="18" Height="18"/>
+                        </ToggleButton>
+                        <!-- GESICHTSRAHMEN mit Namen ueber dem Bild, gemerkt in den Einstellungen
+                             (ViewerFaceFrames). Nur da, wo es den Personen-Reiter gibt, also bei
+                             eingeschalteter Gesichtserkennung. -->
+                        <ToggleButton Classes="icon-btn" Width="28" Height="28"
+                                      Margin="-5,0,0,0"
+                                      IsVisible="{Binding InfoPanel.HasPeopleTab}"
+                                      IsChecked="{Binding ShowFaceFrames, Mode=TwoWay}"
+                                      ToolTip.Tip="Gesichtsrahmen mit Namen ein/aus">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/scan-smiley.svg"
                                            Width="18" Height="18"/>
                         </ToggleButton>
                         <!-- Dateiname steht jetzt als Fenstertitel oben in der Mitte. -->

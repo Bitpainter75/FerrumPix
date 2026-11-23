@@ -12190,4 +12190,7 @@
   <data name="Die_Bearbeitung_wurde_inzwischen_anderswo_ge_nde_24ac72b9" xml:space="preserve">
     <value>De bewerking is intussen elders gewijzigd en blijft zo. Open de afbeelding opnieuw om die te zien.</value>
   </data>
+  <data name="Gesichtsrahmen_mit_Namen_ein_aus_c8933f16" xml:space="preserve">
+    <value>Gezichtskaders met namen aan/uit</value>
+  </data>
 </root>

@@ -12190,4 +12190,7 @@
   <data name="Die_Bearbeitung_wurde_inzwischen_anderswo_ge_nde_24ac72b9" xml:space="preserve">
     <value>Úprava byla mezitím změněna jinde a zůstává tak. Pro zobrazení obrázek znovu otevřete.</value>
   </data>
+  <data name="Gesichtsrahmen_mit_Namen_ein_aus_c8933f16" xml:space="preserve">
+    <value>Rámečky obličejů se jmény zap./vyp.</value>
+  </data>
 </root>

@@ -334,7 +334,9 @@ Namespace Services
                             outputs.Return(packed.Data)
                             adler = StripEncoding.CombineAdler32(adler, packed.Adler, packed.RawLength)
                             Return True
-                        End Function)
+                        End Function,
+                        workBytes:=StripBuffers.ByteCount(width, deep, hasAlpha, bufferRows),
+                        packedBytes:=StripEncoding.PackedBound(bufferRows * (CLng(width) * PngPixelBytes(deep, hasAlpha) + 1L)))
                     If Not ok Then Return Nothing
                     ' Die Pruefsumme steht wie alle Zahlen im zlib-Strom mit dem hohen Byte zuerst.
                     Dim tail = {CByte(adler >> 24), CByte((adler >> 16) And &HFFUI),
@@ -464,6 +466,14 @@ Namespace Services
             Public ReadOnly Current As Byte()
             Public ReadOnly Previous As Byte()
             Public ReadOnly Candidates As Byte()()
+
+            ''' <summary>Was <see cref="StripBuffers"/> fuer diese Masse anlegt: der Streifen RGBA
+            ''' samt der Zeile davor, zwei Zeilen und fuenf gefilterte Fassungen mit Filterbyte.
+            ''' Fuer das Speicherbudget (StripEncoding.WorkersFor).</summary>
+            Public Shared Function ByteCount(width As Integer, deep As Boolean, hasAlpha As Boolean, rows As Integer) As Long
+                Dim rowBytes = CLng(width) * PngPixelBytes(deep, hasAlpha)
+                Return (rows + 1L) * width * If(deep, 8L, 4L) + 2L * rowBytes + 5L * (rowBytes + 1L)
+            End Function
 
             Public Sub New(width As Integer, deep As Boolean, hasAlpha As Boolean, rows As Integer)
                 Dim rowBytes = width * PngPixelBytes(deep, hasAlpha)

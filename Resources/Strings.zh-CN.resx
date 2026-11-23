@@ -12148,4 +12148,7 @@
   <data name="Die_Bearbeitung_wurde_inzwischen_anderswo_ge_nde_24ac72b9" xml:space="preserve">
     <value>编辑内容其间已在别处修改，并保持不变。请重新打开图像以查看。</value>
   </data>
+  <data name="Gesichtsrahmen_mit_Namen_ein_aus_c8933f16" xml:space="preserve">
+    <value>显示/隐藏带姓名的人脸框</value>
+  </data>
 </root>
