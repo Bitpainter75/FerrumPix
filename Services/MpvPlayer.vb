@@ -68,6 +68,35 @@ Namespace Services
         ''' einem Wert von vorhin sitzen bleibt.</summary>
         Private _loadedPath As String = Nothing
 
+        ' Ladeauftraege, die mpv angenommen, aber noch nicht begonnen hat. LoadCore meldet das Laden
+        ' sofort (FileLoaded), mpv spielt bis zu seinem eigenen "start-file" aber noch den vorigen
+        ' Film zu Ende ab: dessen Zeit, Laufzeit und Ende treffen in dieser Spanne weiter ein. Bis
+        ' zum Beginn des neuen Films gehen sie nicht hinaus (AwaitingNewFile), sonst bekaeme der
+        ' neue die Laufzeit des alten und gleich darauf dessen Ende.
+        '
+        ' KEIN Zaehler je Film: ein verspaetetes "start-file" eines gestoppten Films kann die Sperre
+        ' fuer den naechsten zu frueh oeffnen. Durch kommt dann nur das Ende des gestoppten Films mit
+        ' dem Grund Stop, und das wertet der Betrachter aus dem Stand des Spielers aus; Zeit und
+        ' Laufzeit meldet mpv mit dem Wert, der beim Abholen gilt. Eine Kennung je Film verlangte
+        ' eine Abfrage an mpv vom Ereignisfaden aus, und native Aufrufe gehoeren allein dem
+        ' Befehlsfaden.
+        Private _loadsAwaitingStart As Integer = 0
+        Private _lastLoadTimestamp As Long = 0
+        ' Laenger wartet niemand auf den Beginn: bleibt "start-file" aus, sollen die Meldungen
+        ' nicht fuer immer verschwinden.
+        Private Const AwaitStartSeconds As Double = 2.0
+
+        ''' <summary>Stammen eintreffende Meldungen noch vom vorigen Film? Wahr zwischen einem
+        ''' angenommenen Ladeauftrag und mpvs Beginn des neuen Films, hoechstens
+        ''' <see cref="AwaitStartSeconds"/> lang.</summary>
+        Private Function AwaitingNewFile() As Boolean
+            If Volatile.Read(_loadsAwaitingStart) <= 0 Then Return False
+            Dim waited = (Diagnostics.Stopwatch.GetTimestamp() - Volatile.Read(_lastLoadTimestamp)) / CDbl(Diagnostics.Stopwatch.Frequency)
+            If waited < AwaitStartSeconds Then Return True
+            Volatile.Write(_loadsAwaitingStart, 0)
+            Return False
+        End Function
+
         Private _eventLoopStopping As Boolean = False
 
         ' Geteilter Zustand unter _syncRoot.
@@ -453,7 +482,11 @@ Namespace Services
                 Return
             End If
             SetPauseCore(True)
+            ' VOR dem Befehl gezaehlt: mpvs "start-file" kann eintreffen, bevor der Aufruf zurueck ist.
+            Volatile.Write(_lastLoadTimestamp, Diagnostics.Stopwatch.GetTimestamp())
+            Interlocked.Increment(_loadsAwaitingStart)
             If CommandAsyncRaw(_handle, "loadfile", path, "replace") < 0 Then
+                If Interlocked.Decrement(_loadsAwaitingStart) < 0 Then Volatile.Write(_loadsAwaitingStart, 0)
                 LogState("Laden abgewiesen")
                 Return
             End If
@@ -461,7 +494,13 @@ Namespace Services
             ' VOR dem Abspielen melden: der Betrachter setzt daran seine Anzeige zurueck, und ein
             ' Zuruecksetzen NACH dem ersten Zeitbericht loeschte genau den wieder.
             RaiseEvent FileLoaded(path)
-            If PendingPlay() Then SetPauseCore(False)
+            If PendingPlay() Then
+                SetPauseCore(False)
+                ' AUSDRUECKLICH gemeldet: mpv meldet eine Pause, die ueber "ja" wieder bei "nein"
+                ' landet, nicht immer, und die Anzeige kann ihren Stand nach FileLoaded gelesen
+                ' haben, bevor die Pause hier aufgehoben war. Diese Meldung kommt sicher danach.
+                RaiseEvent PauseChanged(False)
+            End If
             LogState("geladen")
         End Sub
 
@@ -513,6 +552,8 @@ Namespace Services
 
         Private Sub StopCore()
             _loadedPath = Nothing
+            ' Ein Stop nimmt auch einen Ladeauftrag zurueck, der noch nicht begonnen hat.
+            Volatile.Write(_loadsAwaitingStart, 0)
             ' MITGESCHRIEBEN, weil der Stop den gemerkten Pfad loescht und damit den Riegel gegen das
             ' zweite Laden aufhebt. Faellt einer zwischen zwei Ladeauftraege, laden beide - und genau
             ' diese Abfolge ist die letzte offene Frage zum Absturz unter macOS. Ohne diese Zeile
@@ -722,6 +763,8 @@ Namespace Services
                     Case MpvInterop.MpvEventId.None
                     Case MpvInterop.MpvEventId.StartFile
                         loggedMessages = 0
+                        ' Der neue Film beginnt: ab hier gehoeren die Meldungen ihm.
+                        If Interlocked.Decrement(_loadsAwaitingStart) < 0 Then Volatile.Write(_loadsAwaitingStart, 0)
                     Case MpvInterop.MpvEventId.LogMessage
                         ' Je Datei eine begrenzte Zahl: eine Datei, die bei jedem Bild warnt, soll
                         ' das Protokoll nicht fuellen. Die ersten Meldungen sind die, die den
@@ -735,7 +778,9 @@ Namespace Services
                         HandlePropertyChange(ev)
                     Case MpvInterop.MpvEventId.EndFile
                         Dim endData = Marshal.PtrToStructure(Of MpvInterop.MpvEventEndFile)(ev.Data)
-                        RaiseEvent EndReached(CInt(endData.Reason), endData.Error)
+                        ' Das Ende des ERSETZTEN Films, waehrend der naechste schon geladen gemeldet
+                        ' ist, geht niemanden mehr an (siehe _loadsAwaitingStart).
+                        If Not AwaitingNewFile() Then RaiseEvent EndReached(CInt(endData.Reason), endData.Error)
                     Case MpvInterop.MpvEventId.Shutdown
                         ' mpv beendet sich selbst - etwa weil eine Ausgabe wegfiel. Der Handle ist
                         ' danach nur noch zum Wegwerfen gut, und wer das nicht erfährt, schickt
@@ -754,9 +799,11 @@ Namespace Services
             Select Case ev.ReplyUserData
                 Case PropTimePos
                     If prop.Format <> MpvInterop.MpvFormat.Double OrElse prop.Data = IntPtr.Zero Then Return
+                    If AwaitingNewFile() Then Return
                     RaiseEvent TimeChanged(Marshal.PtrToStructure(Of Double)(prop.Data))
                 Case PropDuration
                     If prop.Format <> MpvInterop.MpvFormat.Double OrElse prop.Data = IntPtr.Zero Then Return
+                    If AwaitingNewFile() Then Return
                     RaiseEvent DurationChanged(Marshal.PtrToStructure(Of Double)(prop.Data))
                 Case PropPause
                     If prop.Format <> MpvInterop.MpvFormat.Flag OrElse prop.Data = IntPtr.Zero Then Return

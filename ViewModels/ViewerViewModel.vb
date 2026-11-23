@@ -3673,14 +3673,7 @@ Namespace ViewModels
             Try
                 _mediaPlayer = New MpvPlayer(AppSettingsService.Load().VideoHardwareAcceleration)
                 _mediaPlayer.SetMuted(_isVideoMuted)
-                AddHandler _mediaPlayer.TimeChanged, AddressOf OnVideoTimeChanged
-                AddHandler _mediaPlayer.DurationChanged, AddressOf OnVideoLengthChanged
-                AddHandler _mediaPlayer.EndReached, AddressOf OnVideoEndReached
-                AddHandler _mediaPlayer.FileLoaded, AddressOf OnVideoFileLoaded
-                AddHandler _mediaPlayer.PauseChanged, AddressOf OnVideoPauseChanged
-                AddHandler _mediaPlayer.MuteChanged, AddressOf OnVideoMuteChanged
-                AddHandler _mediaPlayer.InitializationFailed, AddressOf OnVideoInitializationFailed
-                AddHandler _mediaPlayer.PlaybackTerminated, AddressOf OnVideoPlaybackTerminated
+                _playerSubscription = New PlayerSubscription(Me, _mediaPlayer)
                 ' ERST JETZT anstoßen: der Aufbau läuft auf einem eigenen Faden und kann scheitern,
                 ' bevor diese Zeile erreicht ist. Im Konstruktor angestoßen, ginge die Meldung
                 ' darüber an niemanden.
@@ -3738,8 +3731,7 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>Der Spieler hat wirklich geladen: die Anzeige faengt von vorn an.</summary>
-        Private Sub OnVideoFileLoaded(path As String)
-            Dim player = _mediaPlayer
+        Private Sub OnVideoFileLoaded(player As MpvPlayer, path As String)
             Dispatcher.UIThread.Post(Sub()
                                          If Not IsCurrentPlayer(player) Then Return
                                          VideoPositionSeconds = 0
@@ -3760,10 +3752,17 @@ Namespace ViewModels
         ''' <summary>Gehoert eine eingereihte Meldung noch zum Spieler, der jetzt gilt? Die Meldungen
         ''' kommen von mpvs Faeden und werden auf den Anzeigefaden gestellt; bis sie dort laufen,
         ''' kann der Spieler weggeworfen und ersetzt sein. Das Abmelden der Ereignisse hilft gegen
-        ''' schon Eingereihtes nicht.</summary>
+        ''' schon Eingereihtes nicht. Wer der Absender ist, sagt <see cref="PlayerSubscription"/>.</summary>
         Private Function IsCurrentPlayer(player As MpvPlayer) As Boolean
             Return player IsNot Nothing AndAlso Object.ReferenceEquals(player, _mediaPlayer)
         End Function
+
+        ''' <summary>Wird gerade an der Suchleiste gezogen?</summary>
+        Public ReadOnly Property IsVideoScrubbing As Boolean
+            Get
+                Return _isVideoScrubbing
+            End Get
+        End Property
 
         ''' <summary>Die Ansicht meldet, dass an der Suchleiste gezogen wird.</summary>
         Public Sub BeginVideoScrub()
@@ -3810,15 +3809,79 @@ Namespace ViewModels
 
         Private Sub DetachMediaPlayerHandlers(player As MpvPlayer)
             If player Is Nothing Then Return
-            RemoveHandler player.TimeChanged, AddressOf OnVideoTimeChanged
-            RemoveHandler player.DurationChanged, AddressOf OnVideoLengthChanged
-            RemoveHandler player.EndReached, AddressOf OnVideoEndReached
-            RemoveHandler player.FileLoaded, AddressOf OnVideoFileLoaded
-            RemoveHandler player.PauseChanged, AddressOf OnVideoPauseChanged
-            RemoveHandler player.MuteChanged, AddressOf OnVideoMuteChanged
-            RemoveHandler player.InitializationFailed, AddressOf OnVideoInitializationFailed
-            RemoveHandler player.PlaybackTerminated, AddressOf OnVideoPlaybackTerminated
+            Dim subscription = _playerSubscription
+            If subscription Is Nothing OrElse Not Object.ReferenceEquals(subscription.Player, player) Then Return
+            subscription.Detach()
+            _playerSubscription = Nothing
         End Sub
+
+        Private _playerSubscription As PlayerSubscription
+
+        ''' <summary>Die Abos an EINEM Spieler. Die Ereignisse des Spielers nennen ihren Absender
+        ''' nicht; hier steht er fest daneben und geht mit jeder Meldung an den Betrachter. Lese der
+        ''' Betrachter stattdessen beim Eintreffen sein Feld, bekaeme eine Meldung, die der alte
+        ''' Spieler gerade noch ausloest, waehrend er schon ersetzt ist, den NEUEN als Absender, und
+        ''' ein altes Ende beendete den neuen Film.</summary>
+        Private NotInheritable Class PlayerSubscription
+            Private ReadOnly _owner As ViewerViewModel
+            Public ReadOnly Player As MpvPlayer
+
+            Public Sub New(owner As ViewerViewModel, player As MpvPlayer)
+                _owner = owner
+                Me.Player = player
+                AddHandler player.TimeChanged, AddressOf OnTime
+                AddHandler player.DurationChanged, AddressOf OnDuration
+                AddHandler player.EndReached, AddressOf OnEnd
+                AddHandler player.FileLoaded, AddressOf OnLoaded
+                AddHandler player.PauseChanged, AddressOf OnPause
+                AddHandler player.MuteChanged, AddressOf OnMute
+                AddHandler player.InitializationFailed, AddressOf OnFailed
+                AddHandler player.PlaybackTerminated, AddressOf OnTerminated
+            End Sub
+
+            Public Sub Detach()
+                RemoveHandler Player.TimeChanged, AddressOf OnTime
+                RemoveHandler Player.DurationChanged, AddressOf OnDuration
+                RemoveHandler Player.EndReached, AddressOf OnEnd
+                RemoveHandler Player.FileLoaded, AddressOf OnLoaded
+                RemoveHandler Player.PauseChanged, AddressOf OnPause
+                RemoveHandler Player.MuteChanged, AddressOf OnMute
+                RemoveHandler Player.InitializationFailed, AddressOf OnFailed
+                RemoveHandler Player.PlaybackTerminated, AddressOf OnTerminated
+            End Sub
+
+            Private Sub OnTime(seconds As Double)
+                _owner.OnVideoTimeChanged(Player, seconds)
+            End Sub
+
+            Private Sub OnDuration(seconds As Double)
+                _owner.OnVideoLengthChanged(Player, seconds)
+            End Sub
+
+            Private Sub OnEnd(reason As Integer, [error] As Integer)
+                _owner.OnVideoEndReached(Player, reason, [error])
+            End Sub
+
+            Private Sub OnLoaded(path As String)
+                _owner.OnVideoFileLoaded(Player, path)
+            End Sub
+
+            Private Sub OnPause(isPaused As Boolean)
+                _owner.OnVideoPauseChanged(Player, isPaused)
+            End Sub
+
+            Private Sub OnMute(isMuted As Boolean)
+                _owner.OnVideoMuteChanged(Player, isMuted)
+            End Sub
+
+            Private Sub OnFailed(ex As Exception)
+                _owner.OnVideoInitializationFailed(Player, ex)
+            End Sub
+
+            Private Sub OnTerminated()
+                _owner.OnVideoPlaybackTerminated(Player)
+            End Sub
+        End Class
 
         Private Sub ToggleVideoPlayPause()
             If _mediaPlayer Is Nothing Then Return
@@ -3846,8 +3909,7 @@ Namespace ViewModels
             VideoPositionSeconds = target
         End Sub
 
-        Private Sub OnVideoTimeChanged(seconds As Double)
-            Dim player = _mediaPlayer
+        Private Sub OnVideoTimeChanged(player As MpvPlayer, seconds As Double)
             ' Geprueft wird BEIM AUSFUEHREN auf dem Anzeigefaden, nicht beim Einreihen: zwischen
             ' beidem kann ein Sprung, ein Zug an der Suchleiste oder ein anderer Film liegen.
             Dispatcher.UIThread.Post(Sub()
@@ -3858,15 +3920,18 @@ Namespace ViewModels
                                      End Sub)
         End Sub
 
-        Private Sub OnVideoInitializationFailed(ex As Exception)
+        Private Sub OnVideoInitializationFailed(player As MpvPlayer, ex As Exception)
             Dispatcher.UIThread.Post(Sub()
                                           DiagnosticLogService.LogException("VideoPlayback.Initialize", ex)
+                                          ' Ein laengst ersetzter Spieler, dessen Aufbau spaet scheitert,
+                                          ' nimmt dem jetzigen nichts weg.
+                                          If Not IsCurrentPlayer(player) Then Return
                                           _videoPlaybackRuntimeFailed = True
                                           _pendingVideoAutoplay = False
                                           IsVideoPlaying = False
                                           _isVideoEnded = False
 
-                                          Dim failedPlayer = _mediaPlayer
+                                          Dim failedPlayer = player
                                           If failedPlayer IsNot Nothing Then
                                               DetachMediaPlayerHandlers(failedPlayer)
                                               failedPlayer.Dispose()
@@ -3882,9 +3947,10 @@ Namespace ViewModels
         ''' <summary>mpv hat sich selbst beendet. Der Spieler ist danach tot; Befehle an ihn
         ''' verpuffen, und ohne diesen Weg bliebe eine Oberfläche stehen, die weiter ein laufendes
         ''' Video anzeigt. Weggeworfen wird er hier, das nächste Video legt einen neuen an.</summary>
-        Private Sub OnVideoPlaybackTerminated()
+        Private Sub OnVideoPlaybackTerminated(player As MpvPlayer)
             Dispatcher.UIThread.Post(Sub()
                                           DiagnosticLogService.LogAlways("VideoPlayback", "mpv hat sich beendet")
+                                          If Not IsCurrentPlayer(player) Then Return
                                           _pendingVideoAutoplay = False
                                           IsVideoPlaying = False
                                           _isVideoEnded = True
@@ -3893,8 +3959,7 @@ Namespace ViewModels
                                       End Sub)
         End Sub
 
-        Private Sub OnVideoLengthChanged(seconds As Double)
-            Dim player = _mediaPlayer
+        Private Sub OnVideoLengthChanged(player As MpvPlayer, seconds As Double)
             Dispatcher.UIThread.Post(Sub()
                                          If Not IsCurrentPlayer(player) Then Return
                                          VideoDurationSeconds = Math.Max(0, seconds)
@@ -3905,8 +3970,7 @@ Namespace ViewModels
         ''' vorigen Film gehoert.</summary>
         Private Const StaleVideoEndMilliseconds As Double = 500
 
-        Private Sub OnVideoEndReached(reason As Integer, [error] As Integer)
-            Dim player = _mediaPlayer
+        Private Sub OnVideoEndReached(player As MpvPlayer, reason As Integer, [error] As Integer)
             Dispatcher.UIThread.Post(Sub()
                                           If Not IsCurrentPlayer(player) Then Return
                                           If reason <> CInt(MpvInterop.MpvEndFileReason.Eof) Then
@@ -3942,16 +4006,14 @@ Namespace ViewModels
                                       End Sub)
         End Sub
 
-        Private Sub OnVideoPauseChanged(isPaused As Boolean)
-            Dim player = _mediaPlayer
+        Private Sub OnVideoPauseChanged(player As MpvPlayer, isPaused As Boolean)
             Dispatcher.UIThread.Post(Sub()
                                          If Not IsCurrentPlayer(player) Then Return
                                          IsVideoPlaying = Not isPaused AndAlso Not _isVideoEnded
                                      End Sub)
         End Sub
 
-        Private Sub OnVideoMuteChanged(isMuted As Boolean)
-            Dim player = _mediaPlayer
+        Private Sub OnVideoMuteChanged(player As MpvPlayer, isMuted As Boolean)
             Dispatcher.UIThread.Post(Sub()
                                          If Not IsCurrentPlayer(player) Then Return
                                          IsVideoMuted = isMuted

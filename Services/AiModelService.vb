@@ -790,7 +790,7 @@ Namespace Services
                 If Not NoteRunFailureForRetry(key, loaded.Accelerator, ex, Nothing) Then Throw
             End Try
             Dim onProcessor = SessionAndDeviceFor(key)
-            If onProcessor Is Nothing OrElse onProcessor.Session Is Nothing Then Return Nothing
+            If onProcessor Is Nothing OrElse onProcessor.Session Is Nothing OrElse onProcessor.OnGpu Then Return Nothing
             Return run(onProcessor)
         End Function
 
@@ -799,9 +799,9 @@ Namespace Services
         ''' gescheitert und lohnt ein zweiter Versuch?
         '''
         ''' Wahr heisst: das Modell ist fuer diese Karte bis zum Programmende vermerkt
-        ''' (<see cref="NoteGpuRunFailed"/>), und die naechste Sitzung liegt woanders, in aller Regel
-        ''' auf dem Prozessor. Der Dienst ruft sich dann selbst noch einmal; weil die Kachelgroesse
+        ''' (<see cref="NoteGpuRunFailed"/>), und die naechste Sitzung liegt auf dem Prozessor. Der Dienst ruft sich dann selbst noch einmal; weil die Kachelgroesse
         ''' am Rechenwerk haengt, faengt er dabei von vorn an. Falsch bei einem Abbruch, bei einem
+        ''' Fehler, der nicht aus der Modelllaufzeit kommt, bei einem
         ''' Lauf, der schon auf dem Prozessor war, und wenn keine andere Sitzung zu haben ist: dann
         ''' bleibt es bei der Meldung des Dienstes.
         '''
@@ -811,14 +811,20 @@ Namespace Services
                                                       cancel As Threading.CancellationToken) As Boolean
             If String.IsNullOrEmpty(accelerator) Then Return False
             If TypeOf ex Is OperationCanceledException OrElse cancel.IsCancellationRequested Then Return False
+            ' Nur ein Fehler der LAUFZEIT ist einer der Karte. Die Fangbloecke der Dienste umfassen
+            ' auch Fortschrittsmeldung, Bitmaps und Nacharbeit; ein Fehler dort naehme das Modell
+            ' sonst grundlos von der Karte, und der zweite Lauf scheiterte an derselben Stelle.
+            If Not TypeOf ex Is OnnxRuntimeException Then Return False
             Dim fileName = BestFile(key)
             If String.IsNullOrEmpty(fileName) Then Return False
             NoteGpuRunFailed(fileName, accelerator)
             DiagnosticLogService.LogAlways("KiModell",
                 $"Lauf auf der Grafikkarte gescheitert, weiter auf dem Prozessor: {fileName} - {ex?.Message}")
+            ' Nur weiter, wenn die naechste Sitzung wirklich auf dem PROZESSOR liegt. Wurde gerade auf
+            ' eine andere Karte umgewaehlt, liefe der zweite Versuch sonst wieder auf einer Karte, und
+            ' scheiterte er dort, der dritte auf der naechsten.
             Dim nextSession = SessionAndDeviceFor(key)
-            Return nextSession IsNot Nothing AndAlso nextSession.Session IsNot Nothing AndAlso
-                   Not String.Equals(nextSession.Accelerator, accelerator, StringComparison.Ordinal)
+            Return nextSession IsNot Nothing AndAlso nextSession.Session IsNot Nothing AndAlso Not nextSession.OnGpu
         End Function
 
         ''' <summary>Fuer die Probe: das Modell sperren, AUSSER es laeuft schon auf dieser Karte.

@@ -555,6 +555,10 @@ Namespace Views
             Dim vm = GetVm()
             If vm Is Nothing Then Return
             If IsWithinInfoSidebar(e.Source) Then Return
+            ' Ueber der Suchleiste eines Videos gehoert das Rad der Suchleiste (fuenf Sekunden je
+            ' Raste, OnVideoSeekSliderWheel). Dieser Handler laeuft im Tunnel, also vor ihr; ohne
+            ' diese Zeile blaetterte das Rad dort zum naechsten Bild.
+            If IsWithinVideoSeekSlider(e.Source) Then Return
             ' Der Knopf in der Fusszeile: ueber dem Bild tut das Rad nichts. Der Filmstreifen rollt
             ' weiter, er ist nicht das Bild.
             If ImageWheelLock.IsViewerDisabled AndAlso Not IsWithinFilmstrip(e.Source) Then
@@ -735,6 +739,15 @@ Namespace Views
             Dim ctrl = TryCast(source, Control)
             While ctrl IsNot Nothing
                 If TypeOf ctrl Is ListBox Then Return True
+                ctrl = TryCast(ctrl.Parent, Control)
+            End While
+            Return False
+        End Function
+
+        Private Shared Function IsWithinVideoSeekSlider(source As Object) As Boolean
+            Dim ctrl = TryCast(source, Control)
+            While ctrl IsNot Nothing
+                If String.Equals(ctrl.Name, "VideoSeekSlider", StringComparison.Ordinal) Then Return True
                 ctrl = TryCast(ctrl.Parent, Control)
             End While
             Return False
@@ -1867,9 +1880,14 @@ Namespace Views
         End Sub
 
         ''' <summary>Der Fang ging ohne Loslassen verloren (Aufklappfenster, anderes Geraet): der Zug
-        ''' ist trotzdem zu Ende, sonst bliebe die Stelle fuer immer stehen.</summary>
+        ''' ist trotzdem zu Ende, sonst bliebe die Stelle fuer immer stehen. Die zuletzt gezogene
+        ''' Stelle geht noch an den Spieler, wie beim Loslassen; sonst zeigte der Regler sie kurz
+        ''' und spraenge mit der naechsten Zeitmeldung zurueck.</summary>
         Public Sub OnVideoSeekSliderCaptureLost(sender As Object, e As PointerCaptureLostEventArgs)
-            GetVm()?.EndVideoScrub()
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse Not vm.IsVideoScrubbing Then Return
+            CommitVideoSeek(sender)
+            vm.EndVideoScrub()
         End Sub
 
         ''' <summary>Das Rad verstellt den Regler selbst (RoundSlider); hier geht der neue Wert als
