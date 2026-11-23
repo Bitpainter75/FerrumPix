@@ -1249,7 +1249,10 @@
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/pause.svg" Width="18" Height="18" IsVisible="{Binding IsVideoPlaying}"/>
                         </Panel>
                     </Button>
+                    <!-- Kein Zuruecksetzen per Doppelklick: der Wert ist eine Stelle im Film, zwei
+                         schnelle Klicks sprangen sonst an den Anfang. Das Rad springt um fuenf Sekunden. -->
                     <icons:RoundSlider Grid.Column="1" Name="VideoSeekSlider" Margin="10,0"
+                                       ResetOnDoubleClick="False" WheelIncrement="5"
                                        Minimum="0" Maximum="{Binding VideoDurationSeconds}"
                                        Value="{Binding VideoPositionSeconds, Mode=OneWay}"/>
                     <TextBlock Grid.Column="2" Text="{Binding VideoTimeText}" Foreground="White" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" Margin="0,0,10,0"/>

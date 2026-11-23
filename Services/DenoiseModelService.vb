@@ -422,7 +422,10 @@ Namespace Services
                 Next
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("Entrauschen", ex.Message)
-                Return Nothing
+                ' Auf der Karte gescheitert (etwa belegter Grafikspeicher): derselbe Auftrag noch
+                ' einmal, jetzt auf dem Prozessor und mit dessen Kachelgroesse.
+                If Not AiModelService.NoteRunFailureForRetry(ModelFile, loaded.Accelerator, ex, cancel) Then Return Nothing
+                Return DenoiseLinear(data, width, height, normalization, toneMatrix, iso, cancel)
             End Try
             If RestoreCoarseLevelsEnabled Then
                 RestoreCoarseLevels(samples, result, width, height, CoarseLevelCell, CoarseLevelLuminanceOnly, forward, scale)

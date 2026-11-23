@@ -82,6 +82,10 @@ Namespace Views
                                                               Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo:=True)
                                        seekSlider.AddHandler(InputElement.PointerReleasedEvent, AddressOf OnVideoSeekSliderPointerReleased,
                                                               Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo:=True)
+                                       seekSlider.AddHandler(InputElement.PointerCaptureLostEvent, AddressOf OnVideoSeekSliderCaptureLost,
+                                                              Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo:=True)
+                                       seekSlider.AddHandler(InputElement.PointerWheelChangedEvent, AddressOf OnVideoSeekSliderWheel,
+                                                              Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo:=True)
                                    End If
                                    UpdateVideoPlaybackBarVisibility()
                                End Sub
@@ -1851,11 +1855,28 @@ Namespace Views
 
         Public Sub OnVideoSeekSliderPointerReleased(sender As Object, e As PointerReleasedEventArgs)
             CommitVideoSeek(sender)
+            GetVm()?.EndVideoScrub()
         End Sub
 
         Public Sub OnVideoSeekSliderPointerPressed(sender As Object, e As PointerPressedEventArgs)
             If Not e.GetCurrentPoint(TryCast(sender, Control)).Properties.IsLeftButtonPressed Then Return
+            ' Ab hier gehoert die Stelle dem Zug: die laufende Wiedergabe schreibt sie nicht mehr,
+            ' bis losgelassen wird (ViewerViewModel.BeginVideoScrub).
+            GetVm()?.BeginVideoScrub()
             Dispatcher.UIThread.Post(Sub() CommitVideoSeek(sender), DispatcherPriority.Input)
+        End Sub
+
+        ''' <summary>Der Fang ging ohne Loslassen verloren (Aufklappfenster, anderes Geraet): der Zug
+        ''' ist trotzdem zu Ende, sonst bliebe die Stelle fuer immer stehen.</summary>
+        Public Sub OnVideoSeekSliderCaptureLost(sender As Object, e As PointerCaptureLostEventArgs)
+            GetVm()?.EndVideoScrub()
+        End Sub
+
+        ''' <summary>Das Rad verstellt den Regler selbst (RoundSlider); hier geht der neue Wert als
+        ''' Sprung an den Spieler. Ohne das aenderte das Rad nur die Anzeige, und die naechste
+        ''' Zeitmeldung setzte den Griff zurueck.</summary>
+        Public Sub OnVideoSeekSliderWheel(sender As Object, e As PointerWheelEventArgs)
+            CommitVideoSeek(sender)
         End Sub
 
         Private Sub CommitVideoSeek(sender As Object)

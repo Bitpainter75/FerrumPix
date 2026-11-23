@@ -479,6 +479,25 @@ Namespace Services
             LoadCore(path)
         End Sub
 
+        ''' <summary>Spielt mpv gerade? Wahr, wenn ein Film geladen ist und die Pause aufgehoben
+        ''' wurde. Gefuehrt vom Befehlsfaden (<see cref="SetPauseCore"/>, <see cref="LoadCore"/>) und
+        ''' von mpvs eigener Meldung, also der Stand, den mpv wirklich hat.
+        '''
+        ''' WOFUER: die Anzeige darf ihren Abspielknopf nicht aus einzelnen Meldungen
+        ''' zusammensetzen. Beim Laden setzt der Spieler die Pause, meldet das Laden und hebt sie
+        ''' sofort wieder auf; mpv fasst beobachtete Werte zusammen und meldet eine Pause, die
+        ''' wieder beim alten Wert landet, unter Umstaenden gar nicht. Und das Ende des VORIGEN
+        ''' Films kommt als eigene Meldung oft erst nach dem Laden des naechsten an. Wer hier
+        ''' fragt, bekommt den Stand, nicht die Geschichte.</summary>
+        Public ReadOnly Property IsPlaying As Boolean
+            Get
+                SyncLock _syncRoot
+                    If _disposed Then Return False
+                    Return Not _isPaused AndAlso Volatile.Read(_loadedPath) IsNot Nothing
+                End SyncLock
+            End Get
+        End Property
+
         Private Sub TogglePauseCore()
             If _initializationFailed Then Return
 

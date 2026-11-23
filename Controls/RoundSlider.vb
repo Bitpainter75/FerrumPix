@@ -69,6 +69,13 @@ Namespace Controls
             End Set
         End Property
 
+        ''' <summary>Setzt ein Doppelklick den Regler auf <see cref="DefaultValue"/> zurueck? Ab Werk
+        ''' ja, so wie es jeder Regler der Anpassungen erwartet. Aus fuer einen Regler, dessen Wert
+        ''' eine STELLE ist und keinen Ausgangswert hat: an der Suchleiste eines Videos sprangen zwei
+        ''' schnelle Klicks sonst an den Anfang.</summary>
+        Public Shared ReadOnly ResetOnDoubleClickProperty As StyledProperty(Of Boolean) =
+            AvaloniaProperty.Register(Of RoundSlider, Boolean)(NameOf(ResetOnDoubleClick), True)
+
         ''' <summary>Rechtsklick schaltet den EINZELVERGLEICH: der Wert geht auf den Standardwert,
         ''' der eingestellte wird gemerkt, und der nächste Rechtsklick holt ihn zurück. Ab Werk aus;
         ''' das Anpassungspanel des Editors schaltet es per Stil ein (EditorView.axaml). Das
@@ -153,6 +160,15 @@ Namespace Controls
             End Get
             Set(value As Double)
                 SetValue(DefaultValueProperty, value)
+            End Set
+        End Property
+
+        Public Property ResetOnDoubleClick As Boolean
+            Get
+                Return GetValue(ResetOnDoubleClickProperty)
+            End Get
+            Set(value As Boolean)
+                SetValue(ResetOnDoubleClickProperty, value)
             End Set
         End Property
 
@@ -346,7 +362,7 @@ Namespace Controls
                 Return
             End If
             If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then Return
-            If e.ClickCount >= 2 Then
+            If e.ClickCount >= 2 AndAlso ResetOnDoubleClick Then
                 Value = ClampValue(DefaultValue)
                 e.Handled = True
                 Return

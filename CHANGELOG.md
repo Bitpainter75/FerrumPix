@@ -19,7 +19,11 @@
 - The white balance picker ignores points where a colour channel is blown out, so a click near
   bright highlights no longer pulls the result towards the colour of the clipped channel.
 
-- When the graphics card runs out of memory while the depth map is computed, for example because
-  another program is using it, FerrumPix now continues on the processor instead of reporting that
-  the depth could not be computed.
+- Videos in the viewer: two quick clicks on the seek bar no longer jump back to the start, the
+  handle no longer slips away under the pointer while dragging, the play button shows the right
+  state after switching to another video, and the mouse wheel on the seek bar really jumps.
+
+- When the graphics card runs out of memory during the depth map, denoising, object removal or
+  upscaling, for example because another program is using it, FerrumPix now continues on the
+  processor instead of only reporting that it did not work.
 

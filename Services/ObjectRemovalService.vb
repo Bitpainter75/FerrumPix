@@ -510,7 +510,10 @@ Namespace Services
                 End Using
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("ObjektEntfernen", ex.Message)
-                Return Nothing
+                ' Auf der Karte gescheitert (etwa belegter Grafikspeicher): derselbe Auftrag noch
+                ' einmal, jetzt auf dem Prozessor und mit dessen Obergrenze fuer den Ausschnitt.
+                If Not AiModelService.NoteRunFailureForRetry(ModelFile, loaded.Accelerator, ex, cancel) Then Return Nothing
+                Return Fill(image, mask, cancel)
             Finally
                 ownMask?.Dispose()
             End Try

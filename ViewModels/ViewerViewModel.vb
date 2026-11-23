@@ -244,8 +244,13 @@ Namespace ViewModels
         Private _videoPositionSeconds As Double = 0
         Private _videoDurationSeconds As Double = 0
         Private _isVideoMuted As Boolean = False
-        Private _isSeekingVideo As Boolean = False
+        ' Gezogen wird an der Suchleiste: solange darf die laufende Wiedergabe die Stelle nicht
+        ' ueberschreiben, sonst wandert der Griff unter dem Zeiger weg. Gesetzt von der Ansicht
+        ' (BeginVideoScrub, EndVideoScrub), gelesen auf dem Anzeigefaden.
+        Private _isVideoScrubbing As Boolean = False
         Private _ignoreVideoTimeUpdatesUntilUtc As DateTime = DateTime.MinValue
+        ' Wann der Spieler zuletzt einen Film geladen hat, fuer ein Ende, das noch vom vorigen stammt.
+        Private _videoLoadedAtUtc As DateTime = DateTime.MinValue
         Private _videoPlaybackRuntimeFailed As Boolean = False
         Private _slideshowVideoEndSequence As Integer = 0
 
@@ -3734,13 +3739,40 @@ Namespace ViewModels
 
         ''' <summary>Der Spieler hat wirklich geladen: die Anzeige faengt von vorn an.</summary>
         Private Sub OnVideoFileLoaded(path As String)
+            Dim player = _mediaPlayer
             Dispatcher.UIThread.Post(Sub()
+                                         If Not IsCurrentPlayer(player) Then Return
                                          VideoPositionSeconds = 0
                                          VideoDurationSeconds = 0
-                                         IsVideoPlaying = False
+                                         ' Der STAND des Spielers, nicht "pausiert": er hebt die Pause
+                                         ' gleich nach dem Laden wieder auf, und mpv meldet das nicht
+                                         ' immer (MpvPlayer.IsPlaying). Fest auf Falsch gesetzt zeigte
+                                         ' der Knopf "Abspielen", waehrend der Film lief.
+                                         IsVideoPlaying = player.IsPlaying
                                          _isVideoEnded = False
+                                         _videoLoadedAtUtc = DateTime.UtcNow
+                                         ' Zeitmeldungen des vorigen Films koennen noch unterwegs sein.
+                                         _ignoreVideoTimeUpdatesUntilUtc = _videoLoadedAtUtc.AddMilliseconds(250)
                                          Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
                                      End Sub)
+        End Sub
+
+        ''' <summary>Gehoert eine eingereihte Meldung noch zum Spieler, der jetzt gilt? Die Meldungen
+        ''' kommen von mpvs Faeden und werden auf den Anzeigefaden gestellt; bis sie dort laufen,
+        ''' kann der Spieler weggeworfen und ersetzt sein. Das Abmelden der Ereignisse hilft gegen
+        ''' schon Eingereihtes nicht.</summary>
+        Private Function IsCurrentPlayer(player As MpvPlayer) As Boolean
+            Return player IsNot Nothing AndAlso Object.ReferenceEquals(player, _mediaPlayer)
+        End Function
+
+        ''' <summary>Die Ansicht meldet, dass an der Suchleiste gezogen wird.</summary>
+        Public Sub BeginVideoScrub()
+            _isVideoScrubbing = True
+        End Sub
+
+        ''' <summary>Der Zug an der Suchleiste ist zu Ende (losgelassen oder Fang verloren).</summary>
+        Public Sub EndVideoScrub()
+            _isVideoScrubbing = False
         End Sub
 
         Public Sub StartPendingVideoAutoplay()
@@ -3805,20 +3837,25 @@ Namespace ViewModels
 
         Private Sub SeekVideo(seconds As Double)
             If _mediaPlayer Is Nothing Then Return
-            Try
-                _isSeekingVideo = True
-                _ignoreVideoTimeUpdatesUntilUtc = DateTime.UtcNow.AddMilliseconds(250)
-                _mediaPlayer.Seek(seconds)
-                VideoPositionSeconds = seconds
-            Finally
-                _isSeekingVideo = False
-            End Try
+            ' Keine Stelle ausserhalb des Films und keine, die keine Zahl ist.
+            If Double.IsNaN(seconds) OrElse Double.IsInfinity(seconds) Then Return
+            Dim target = Math.Max(0.0, seconds)
+            If _videoDurationSeconds > 0 Then target = Math.Min(target, _videoDurationSeconds)
+            _ignoreVideoTimeUpdatesUntilUtc = DateTime.UtcNow.AddMilliseconds(250)
+            _mediaPlayer.Seek(target)
+            VideoPositionSeconds = target
         End Sub
 
         Private Sub OnVideoTimeChanged(seconds As Double)
-            If _isSeekingVideo Then Return
-            If DateTime.UtcNow < _ignoreVideoTimeUpdatesUntilUtc Then Return
-            Dispatcher.UIThread.Post(Sub() VideoPositionSeconds = seconds)
+            Dim player = _mediaPlayer
+            ' Geprueft wird BEIM AUSFUEHREN auf dem Anzeigefaden, nicht beim Einreihen: zwischen
+            ' beidem kann ein Sprung, ein Zug an der Suchleiste oder ein anderer Film liegen.
+            Dispatcher.UIThread.Post(Sub()
+                                         If Not IsCurrentPlayer(player) Then Return
+                                         If _isVideoScrubbing Then Return
+                                         If DateTime.UtcNow < _ignoreVideoTimeUpdatesUntilUtc Then Return
+                                         VideoPositionSeconds = seconds
+                                     End Sub)
         End Sub
 
         Private Sub OnVideoInitializationFailed(ex As Exception)
@@ -3857,13 +3894,38 @@ Namespace ViewModels
         End Sub
 
         Private Sub OnVideoLengthChanged(seconds As Double)
-            Dispatcher.UIThread.Post(Sub() VideoDurationSeconds = Math.Max(0, seconds))
+            Dim player = _mediaPlayer
+            Dispatcher.UIThread.Post(Sub()
+                                         If Not IsCurrentPlayer(player) Then Return
+                                         VideoDurationSeconds = Math.Max(0, seconds)
+                                     End Sub)
         End Sub
 
+        ''' <summary>Frist nach dem Laden, in der ein gemeldetes Ende ohne bekannte Laufzeit noch dem
+        ''' vorigen Film gehoert.</summary>
+        Private Const StaleVideoEndMilliseconds As Double = 500
+
         Private Sub OnVideoEndReached(reason As Integer, [error] As Integer)
+            Dim player = _mediaPlayer
             Dispatcher.UIThread.Post(Sub()
+                                          If Not IsCurrentPlayer(player) Then Return
                                           If reason <> CInt(MpvInterop.MpvEndFileReason.Eof) Then
-                                              IsVideoPlaying = False
+                                              ' Ein Film wurde ersetzt oder gestoppt. Das Ende des
+                                              ' ERSETZTEN kommt oft erst an, wenn der naechste schon
+                                              ' laeuft; deshalb der Stand des Spielers statt "steht".
+                                              ' Nur ein STOP kann so ein Nachzuegler sein; ein Fehler oder
+                                              ' das Beenden heisst wirklich, dass nichts mehr laeuft.
+                                              IsVideoPlaying = reason = CInt(MpvInterop.MpvEndFileReason.Stop) AndAlso
+                                                               player.IsPlaying AndAlso Not _isVideoEnded
+                                              Return
+                                          End If
+                                          ' Ein natuerliches Ende, das kurz nach dem Laden des naechsten
+                                          ' Films eintrifft, bevor der seine Laufzeit gemeldet hat,
+                                          ' stammt vom vorigen. Ohne diese Frage galt der neue Film als
+                                          ' zu Ende, und seine Flaeche verschwand.
+                                          If _videoDurationSeconds <= 0 AndAlso
+                                             (DateTime.UtcNow - _videoLoadedAtUtc).TotalMilliseconds < StaleVideoEndMilliseconds Then
+                                              IsVideoPlaying = player.IsPlaying
                                               Return
                                           End If
                                           If _isSlideshowPlaying Then
@@ -3881,11 +3943,19 @@ Namespace ViewModels
         End Sub
 
         Private Sub OnVideoPauseChanged(isPaused As Boolean)
-            Dispatcher.UIThread.Post(Sub() IsVideoPlaying = Not isPaused AndAlso Not _isVideoEnded)
+            Dim player = _mediaPlayer
+            Dispatcher.UIThread.Post(Sub()
+                                         If Not IsCurrentPlayer(player) Then Return
+                                         IsVideoPlaying = Not isPaused AndAlso Not _isVideoEnded
+                                     End Sub)
         End Sub
 
         Private Sub OnVideoMuteChanged(isMuted As Boolean)
-            Dispatcher.UIThread.Post(Sub() IsVideoMuted = isMuted)
+            Dim player = _mediaPlayer
+            Dispatcher.UIThread.Post(Sub()
+                                         If Not IsCurrentPlayer(player) Then Return
+                                         IsVideoMuted = isMuted
+                                     End Sub)
         End Sub
 
         Private Async Sub ContinueSlideshowAfterVideoEndAsync(sequence As Integer)

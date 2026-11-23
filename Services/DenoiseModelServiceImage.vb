@@ -246,7 +246,12 @@ Namespace Services
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("Entrauschen", ex.Message)
                 result?.Dispose()
-                Return Nothing
+                result = Nothing
+                ' Auf der Karte gescheitert (etwa belegter Grafikspeicher): derselbe Auftrag noch
+                ' einmal, jetzt auf dem Prozessor und mit dessen Kachelgroesse. Das umgelegte Bild
+                ' lebt bis zum Finally, der zweite Lauf rechnet also darauf.
+                If Not AiModelService.NoteRunFailureForRetry(ImageModelFile, loaded.Accelerator, ex, cancel) Then Return Nothing
+                Return DenoiseImage(image, strength, cancel)
             Finally
                 padded?.Dispose()
                 ' Nur die eigene Umlegung, nie das Bild des Aufrufers: <converted> ist Nothing,

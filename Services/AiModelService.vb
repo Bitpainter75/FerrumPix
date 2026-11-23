@@ -787,14 +787,38 @@ Namespace Services
             Catch ex As OperationCanceledException
                 Throw
             Catch ex As Exception
-                Dim fileName = BestFile(key)
-                NoteGpuRunFailed(fileName, loaded.Accelerator)
-                DiagnosticLogService.LogAlways("KiModell",
-                    $"Lauf auf der Grafikkarte gescheitert, weiter auf dem Prozessor: {fileName} - {ex.Message}")
+                If Not NoteRunFailureForRetry(key, loaded.Accelerator, ex, Nothing) Then Throw
             End Try
             Dim onProcessor = SessionAndDeviceFor(key)
             If onProcessor Is Nothing OrElse onProcessor.Session Is Nothing Then Return Nothing
             Return run(onProcessor)
+        End Function
+
+        ''' <summary>Fuer Dienste, die ihren Auftrag in Kacheln rechnen und den Fehler selbst fangen
+        ''' (Entrauschen, Objekt entfernen, Hochskalieren): ist der Lauf auf einer Grafikkarte
+        ''' gescheitert und lohnt ein zweiter Versuch?
+        '''
+        ''' Wahr heisst: das Modell ist fuer diese Karte bis zum Programmende vermerkt
+        ''' (<see cref="NoteGpuRunFailed"/>), und die naechste Sitzung liegt woanders, in aller Regel
+        ''' auf dem Prozessor. Der Dienst ruft sich dann selbst noch einmal; weil die Kachelgroesse
+        ''' am Rechenwerk haengt, faengt er dabei von vorn an. Falsch bei einem Abbruch, bei einem
+        ''' Lauf, der schon auf dem Prozessor war, und wenn keine andere Sitzung zu haben ist: dann
+        ''' bleibt es bei der Meldung des Dienstes.
+        '''
+        ''' Das faengt nur, was als AUSNAHME ankommt. Beendet der Treiber den Prozess, greift
+        ''' stattdessen die Laufmarke (<see cref="GpuModelBlockService"/>) beim naechsten Start.</summary>
+        Public Shared Function NoteRunFailureForRetry(key As String, accelerator As String, ex As Exception,
+                                                      cancel As Threading.CancellationToken) As Boolean
+            If String.IsNullOrEmpty(accelerator) Then Return False
+            If TypeOf ex Is OperationCanceledException OrElse cancel.IsCancellationRequested Then Return False
+            Dim fileName = BestFile(key)
+            If String.IsNullOrEmpty(fileName) Then Return False
+            NoteGpuRunFailed(fileName, accelerator)
+            DiagnosticLogService.LogAlways("KiModell",
+                $"Lauf auf der Grafikkarte gescheitert, weiter auf dem Prozessor: {fileName} - {ex?.Message}")
+            Dim nextSession = SessionAndDeviceFor(key)
+            Return nextSession IsNot Nothing AndAlso nextSession.Session IsNot Nothing AndAlso
+                   Not String.Equals(nextSession.Accelerator, accelerator, StringComparison.Ordinal)
         End Function
 
         ''' <summary>Fuer die Probe: das Modell sperren, AUSSER es laeuft schon auf dieser Karte.

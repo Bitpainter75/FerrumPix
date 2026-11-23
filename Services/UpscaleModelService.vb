@@ -148,7 +148,10 @@ Namespace Services
             If image Is Nothing OrElse image.Width <= 0 OrElse image.Height <= 0 Then Return Nothing
             Dim model = ModelFor(key)
             If model Is Nothing Then Return Nothing
-            Dim session = AiModelService.SessionFor(model.Key)
+            ' Sitzung samt Rechenwerk: scheitert der Lauf auf der Karte, muss der Rueckfall wissen,
+            ' auf welcher.
+            Dim loaded = AiModelService.SessionAndDeviceFor(model.Key)
+            Dim session = loaded?.Session
             If session Is Nothing Then Return Nothing
 
             ' Wie beim Entrauschen: die Kachelschleife liest die Bytes fest als BGRA, und ein anders
@@ -262,7 +265,11 @@ Namespace Services
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("Hochskalieren", ex.Message)
                 result?.Dispose()
-                Return Nothing
+                result = Nothing
+                ' Auf der Karte gescheitert (etwa belegter Grafikspeicher): derselbe Auftrag noch
+                ' einmal, jetzt auf dem Prozessor. Das umgelegte Bild lebt bis zum Finally.
+                If Not AiModelService.NoteRunFailureForRetry(model.Key, loaded.Accelerator, ex, cancel) Then Return Nothing
+                Return Upscale(image, key, cancel)
             Finally
                 ' Nur die eigene Umlegung, nie das Bild des Aufrufers.
                 converted?.Dispose()
