@@ -7,7 +7,7 @@
              x:Class="FerrumPix.Views.Settings.ViewerSectionView">
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
-                            <TextBlock Text="Viewer" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Viewer" Foreground="{DynamicResource FP.Text.Accent}" FontSize="{DynamicResource FP.Font.Heading}" FontWeight="SemiBold"/>
                             <TextBlock Text="Legt fest, wie Bilder beim Öffnen dargestellt werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         </StackPanel>
 

@@ -7,7 +7,7 @@
              x:Class="FerrumPix.Views.Settings.ImmichSectionView">
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
-                            <TextBlock Text="Immich" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Immich" Foreground="{DynamicResource FP.Text.Accent}" FontSize="{DynamicResource FP.Font.Heading}" FontWeight="SemiBold"/>
                             <TextBlock Text="Bindet einen self-hosted Immich-Server ein. Alben erscheinen im Navigationsbereich der Galerie; Bilder lassen sich betrachten und (als Kopie) bearbeiten." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         </StackPanel>
 

@@ -7,7 +7,7 @@
              x:Class="FerrumPix.Views.Settings.InfoPanelSectionView">
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
-                            <TextBlock Text="Info-Leiste" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Info-Leiste" Foreground="{DynamicResource FP.Text.Accent}" FontSize="{DynamicResource FP.Font.Heading}" FontWeight="SemiBold"/>
                             <TextBlock Text="Die Leiste rechts neben dem Bild: wo sie erscheint und was sie zeigt. Galerie, Viewer und Editor teilen sie sich." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         </StackPanel>
 

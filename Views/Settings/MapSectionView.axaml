@@ -11,7 +11,7 @@
                          mittig in die freie Spalte. -->
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
-                            <TextBlock Text="Kartenansicht" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Kartenansicht" Foreground="{DynamicResource FP.Text.Accent}" FontSize="{DynamicResource FP.Font.Heading}" FontWeight="SemiBold"/>
                             <TextBlock Text="Zeigt die Fotos in der Galerie auf einer Karte. Die Kartenkacheln kommen aus dem Internet, ab Werk von OpenStreetMap; der Server erfährt dabei, welchen Ausschnitt Sie ansehen. Einmal geladene Kacheln bleiben auf diesem Gerät gespeichert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         </StackPanel>
 

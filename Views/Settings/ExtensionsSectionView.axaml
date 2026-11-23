@@ -4,7 +4,7 @@
              x:Class="FerrumPix.Views.Settings.ExtensionsSectionView">
     <StackPanel Spacing="14">
         <StackPanel Spacing="2">
-            <TextBlock Text="Erweiterungen" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+            <TextBlock Text="Erweiterungen" Foreground="{DynamicResource FP.Text.Accent}" FontSize="{DynamicResource FP.Font.Heading}" FontWeight="SemiBold"/>
             <TextBlock Text="Eine Erweiterung ist eine Datei, die ein Werkzeug mit eigenen Reglern beschreibt. Ist eine geladen, steht im Editor das Werkzeug Erweiterungen in der Gruppe Anpassungen."
                        Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" MaxWidth="660" HorizontalAlignment="Left"/>
         </StackPanel>

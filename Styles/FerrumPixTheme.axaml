@@ -2116,6 +2116,19 @@
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Padding" Value="12"/>
     </Style>
+    <!-- Die Abschnitte der Einstellungsseite tragen einen KRAEFTIGEREN Rahmen als alles in ihnen.
+         Mit derselben duennen Linie wie die kleinen Rahmen innerhalb (Ordnerliste, Vorschaufelder)
+         war beim Durchrollen nicht zu sehen, wo ein Bereich endet und der naechste beginnt; wer
+         die Seite erst durch Rollen kennenlernt statt ueber die Liste links, braucht genau diese
+         Grenze (Rueckmeldung eines Nutzers). Die Farbe ist die des gedaempften Textes und keine
+         Rahmenfarbe: FP.Border.Strong liegt im dunklen Thema nur eine Stufe ueber FP.Border.Normal
+         und hebt sich auch doppelt so breit kaum ab; der gedaempfte Text ist in jedem Thema auf
+         Lesbarkeit gegen den Hintergrund gewaehlt. -->
+    <Style Selector="UserControl.settings-view Border.section">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Text.Muted}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="Padding" Value="16"/>
+    </Style>
     <Style Selector="Border.adjustment-group">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Content}"/>
         <Setter Property="BorderBrush" Value="Transparent"/>

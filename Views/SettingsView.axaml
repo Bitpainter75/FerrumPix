@@ -268,7 +268,10 @@
                  die übrigen danach von oben nach unten, vorgezogen beim Klick links, beim Rollen
                  und beim Suchen. Ein neuer Abschnitt braucht beides, den Rahmen hier und seinen
                  Eintrag in SettingsView.SectionFactories. -->
-            <StackPanel x:Name="SettingsSectionsPanel" Spacing="18" MaxWidth="960" Margin="0,0,0,0">
+            <!-- Abstand zwischen den Abschnitten deutlich groesser als der der Zeilen darin (14):
+                 zusammen mit dem kraeftigeren Rahmen (Border.section in settings-view) sieht man
+                 beim Rollen, wo ein Bereich aufhoert. -->
+            <StackPanel x:Name="SettingsSectionsPanel" Spacing="32" MaxWidth="960" Margin="0,0,0,0">
                 <TextBlock x:Name="SettingsSearchEmpty" IsVisible="False"
                            Text="Keine Einstellung gefunden"
                            Foreground="{DynamicResource FP.Text.Secondary}"
