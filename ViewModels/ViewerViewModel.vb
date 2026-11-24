@@ -3191,6 +3191,10 @@ Namespace ViewModels
                 End If
                 If bmp Is Nothing Then
                     Dim recipeKey = ItemPathFor(path)
+                    ' Bei einer Entwicklung dauert der Decode unten noch; solange bleibt die
+                    ' Flaeche leer. TrySeedFirstFrameFromTile holt bis dahin die fertige
+                    ' Galerie-Kachel als erste Flaeche herein.
+                    TrySeedFirstFrameFromTile(path, recipeKey, token, writeTime)
                     Dim decoded = Await Task.Run(Function() DecodeViewerBitmapUnlessStale(path, reduced, token, recipeKey))
                     bmp = decoded.Bitmap
                     rawDeveloped = decoded.RawDeveloped
@@ -3467,6 +3471,60 @@ Namespace ViewModels
                 ImageWidth = CInt(bmp.Size.Width)
                 ImageHeight = CInt(bmp.Size.Height)
             End If
+            If _isFitToWindow Then UpdateFitZoom()
+            UpdateStatus()
+            Return True
+        End Function
+
+        ''' <summary>Legt die schon fertige Galerie-Kachel eines Bildes als Uebergangsbild auf,
+        ''' solange seine Entwicklung noch rechnet, statt die Flaeche in der Zwischenzeit leer zu
+        ''' lassen.
+        '''
+        ''' Zwischen LoadBitmap (leere Flaeche) und dem fertigen Decode vergeht bei einer Entwicklung
+        ''' - RAW, RAW-Variante oder Nicht-RAW mit Rezept daneben - spuerbar Zeit. Liegt die Kachel
+        ''' fuer genau dieses Bild schon im Cache, ueberbrueckt sie die Wartezeit: dieselbe Aufnahme,
+        ''' nur in Kachelgroesse, darum wirkt der Wechsel auf das volle Bild ohne Sprung.
+        ''' ApplyLoadedBitmap ersetzt sie spaeter durch das volle Ergebnis.
+        '''
+        ''' Schnell geladene Bilder (eingebettete Vorschau, normales JPEG) bleiben bewusst aussen vor:
+        ''' ein Uebergangsbild waere dort beim Blaettern nur ein Flackern, erst klein dann gross.
+        ''' Gibt True zurueck, wenn eine Kachel gesetzt wurde.</summary>
+        ''' <param name="path">Datei des Bildes.</param>
+        ''' <param name="recipeKey">Pfad oder Varianten-Schluessel; nach genau diesem Schluessel
+        ''' legt die Galerie ihre Kachel an, nach der sie hier sucht.</param>
+        ''' <param name="token">Der Lade-Token des Bildes, fuer das hier gesetzt wird.</param>
+        ''' <param name="writeTime">Aenderungszeit der Datei, wie schon vor dem Decode gelesen.</param>
+        Private Function TrySeedFirstFrameFromTile(path As String, recipeKey As String,
+                                                    token As Integer, writeTime As DateTime) As Boolean
+            ' Nur fuer Bilder, die gleich entwickelt werden: genau fuer sie legt die Galerie diese
+            ' Kachel an (DevelopsThumbnail/RendersRecipeTile), darum ist sie hier die richtige
+            ' Quelle. Alles andere laedt schnell - dort waere ein Uebergangsbild nur ein Flackern.
+            Dim willDevelop = VariantKey.IsVariant(recipeKey) OrElse WillDevelopRawInViewer(path) OrElse (Not RawPreviewService.IsSupportedRaw(path) AndAlso RawSidecarService.HasRecipeBeside(If(recipeKey, path)))
+            If Not willDevelop OrElse _slideshowSession Then Return False
+
+            Dim fileSize As Long = 0
+            Try
+                fileSize = New FileInfo(path).Length
+            Catch
+            End Try
+
+            Dim isExact As Boolean = False
+            Dim tile = ThumbnailCacheService.LoadCached(recipeKey, writeTime, fileSize,
+                                                         True, isExact, Nothing,
+                                                         _thumbCacheScopeId, _thumbCacheScopeName)
+            If tile Is Nothing Then Return False
+
+            ' Wer inzwischen weitergeblaettert hat, sieht dieses Bild nicht mehr: Kachel verwerfen.
+            If token <> System.Threading.Volatile.Read(_bitmapLoadToken) Then
+                tile.Dispose()
+                Return False
+            End If
+
+            ' Dieselbe Arbeit wie ApplyLoadedBitmap, nur ohne deren Token-Pruefung - die steht oben.
+            ' Den Ersatz durch das volle Ergebnis besorgt ApplyLoadedBitmap selbst.
+            CurrentImage = tile
+            ImageWidth = CInt(tile.Size.Width)
+            ImageHeight = CInt(tile.Size.Height)
             If _isFitToWindow Then UpdateFitZoom()
             UpdateStatus()
             Return True
