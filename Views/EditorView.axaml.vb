@@ -1028,6 +1028,9 @@ Namespace Views
             Dim size As Integer
             If vm Is Nothing OrElse Not Integer.TryParse(TryCast(TryCast(sender, Button)?.Tag, String), size) Then Return
             vm.EditorGridSize = size
+            ' Die Stufe, die schon eingestellt ist, aendert die Groesse nicht und schaltete das
+            ' Raster deshalb nicht ein: der Knopf wirkte bei ausgeschaltetem Raster tot.
+            If Not vm.EditorShowGrid Then vm.EditorShowGrid = True
         End Sub
 
         ''' Für jeden Editor-Besuch wird eine neue EditorView gebaut (siehe HandleDataContextChanged) -

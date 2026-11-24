@@ -494,6 +494,7 @@ Namespace ViewModels
                     FaceFrames.Clear()
                     FocusFrames.Clear()
                     _announceFocusPointStatus = False
+                    FocusPointNotice = ""
                     Dispatcher.UIThread.Post(Sub() RefreshImageMarkGeometry(), DispatcherPriority.Background)
                 End If
                 If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
@@ -784,9 +785,10 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_showFocusPoints, value)
                 AppSettingsService.Update(Sub(s) s.ViewerFocusPoints = value)
                 Me.RaisePropertyChanged(NameOf(ShowImageMarks))
-                ' Nur das Einschalten von Hand meldet den Grund in der Statuszeile; beim Blaettern
-                ' stuende er sonst bei jedem Bild ohne Angabe an Stelle der Bildgroesse.
+                ' Nur das Einschalten von Hand meldet den Grund rechts in der Fussleiste
+                ' (FocusPointNotice); beim Blaettern stuende er sonst bei jedem Bild ohne Angabe da.
                 _announceFocusPointStatus = value
+                FocusPointNotice = ""
                 RefreshImageMarkGeometry()
             End Set
         End Property
@@ -861,9 +863,24 @@ Namespace ViewModels
             If _announceFocusPointStatus Then
                 _announceFocusPointStatus = False
                 Dim reason = FocusPointReason(status)
-                If reason.Length > 0 Then StatusInfo = reason
+                FocusPointNotice = reason
             End If
         End Sub
+
+        Private _focusPointNotice As String = ""
+
+        ''' <summary>Der Grund, warum nach dem Einschalten von Hand keine Fokusfelder zu sehen
+        ''' sind, fuer den RECHTEN Teil der Fussleiste, wo auch die Zeigerposition steht. Bewusst
+        ''' nicht StatusInfo: dort stehen Bildgroesse und Dateigroesse, und die soll die Meldung
+        ''' nicht verdraengen. Leer, sobald das Bild wechselt oder die Felder ausgeschaltet sind.</summary>
+        Public Property FocusPointNotice As String
+            Get
+                Return _focusPointNotice
+            End Get
+            Private Set(value As String)
+                Me.RaiseAndSetIfChanged(_focusPointNotice, If(value, ""))
+            End Set
+        End Property
 
         ''' <summary>Die Stelle, auf die Z zoomt, wenn Fokusfelder zu sehen sind: die Mitte des
         ''' Felds, das der Bildmitte am naechsten liegt, in Anteilen des gezeigten Bildes. Nothing

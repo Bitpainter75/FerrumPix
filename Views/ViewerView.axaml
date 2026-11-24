@@ -810,7 +810,7 @@
                                       Margin="-5,0,0,0"
                                       IsChecked="{Binding ShowFocusPoints, Mode=TwoWay}"
                                       ToolTip.Tip="{Binding FocusPointHint}">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/frame-corners.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/scan.svg"
                                            Width="18" Height="18"/>
                         </ToggleButton>
                         <!-- Dateiname steht jetzt als Fenstertitel oben in der Mitte. -->
@@ -848,6 +848,12 @@
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Right">
                         <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
+                            <!-- Warum keine Fokusfelder zu sehen sind, nach dem Einschalten von Hand.
+                                 Der Text kommt uebersetzt aus dem ViewModel, deshalb no-translate. -->
+                            <TextBlock Classes="no-translate"
+                                       Text="{Binding FocusPointNotice}" Margin="0,0,20,0"
+                                       IsVisible="{Binding FocusPointNotice, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
+                                       Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding MousePositionText}" Margin="0,0,20,0"
                                        IsVisible="{Binding MousePositionText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
                                        Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
