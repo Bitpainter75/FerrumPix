@@ -1974,21 +1974,19 @@
                                         </DataTemplate>
                                     </Expander.HeaderTemplate>
                                     <StackPanel Spacing="6" Margin="0,8,0,0">
-                                        <!-- Auswahlliste und Namensfeld untereinander und gleich
-                                             breit: sie gehören zusammen (was ist gewählt / wie soll
-                                             es heißen). Die Knöpfe stehen darunter in EINER Reihe zu
-                                             gleichen Teilen. -->
+                                        <!-- Die Auswahlliste, darunter die Knöpfe in EINER Reihe zu
+                                             gleichen Teilen. Der Name steht im Dialog hinter
+                                             Speichern, zusammen mit der Auswahl dessen, was die
+                                             Vorlage enthält. Der Kurzhinweis der Liste nennt, was
+                                             die gewählte Vorlage enthält; er kommt übersetzt aus dem
+                                             ViewModel. -->
                                         <ComboBox ItemsSource="{Binding AdjustmentPresetNames}"
                                                   SelectedItem="{Binding SelectedAdjustmentPresetName}"
                                                   PlaceholderText="Keine Anpassung gespeichert"
+                                                  ToolTip.Tip="{Binding SelectedAdjustmentPresetSummary}"
                                                   MinHeight="32"
                                                   FontSize="{DynamicResource FP.Font.Small}"
                                                   HorizontalAlignment="Stretch" />
-                                        <TextBox Text="{Binding AdjustmentPresetNameDraft}"
-                                                 PlaceholderText="Name"
-                                                 MinHeight="32"
-                                                 FontSize="{DynamicResource FP.Font.Small}"
-                                                 HorizontalAlignment="Stretch" />
                                         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
                                             <Button Classes="ghost"
                                                     HorizontalAlignment="Stretch"
@@ -2011,7 +2009,7 @@
                                                     Padding="4,5"
                                                     IsEnabled="{Binding CanSaveAdjustmentPreset}"
                                                     Command="{Binding SaveAdjustmentPresetCommand}"
-                                                    ToolTip.Tip="Die aktuellen Regler unter diesem Namen merken - ein gleichnamiger Eintrag wird ersetzt">
+                                                    ToolTip.Tip="Die aktuellen Regler als Anpassung speichern, mit Auswahl, welche Regler sie enthält">
                                                 <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/floppy-disk.svg"
                                                                    Width="18" Height="18" />

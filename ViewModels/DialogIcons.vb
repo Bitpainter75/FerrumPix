@@ -59,7 +59,7 @@ Namespace ViewModels
         Private Shared Function FromKind(kind As AppDialogKind, hasCancel As Boolean) As String
             Select Case kind
                 Case AppDialogKind.Rename, AppDialogKind.BatchRename, AppDialogKind.Input : Return "pencil-simple"
-                Case AppDialogKind.SaveAs : Return "floppy-disk"
+                Case AppDialogKind.SaveAs, AppDialogKind.AdjustmentPresetSave : Return "floppy-disk"
                 Case AppDialogKind.FileConflict : Return "warning"
                 Case AppDialogKind.Search : Return "magnifying-glass"
                 Case AppDialogKind.BatchConvert : Return "swap"

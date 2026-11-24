@@ -13377,22 +13377,24 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Zwei markierte Bilder nebeneinander oeffnen. Uebergibt DIESELBE Pfadliste und
-        ''' denselben Cache-Skopus wie das Einzeloeffnen - sonst baut der Betrachter den Ordner aus
-        ''' dem linken Bild neu auf, und aus einer Suchliste heraus stuende ploetzlich ein ganz
-        ''' anderer Filmstreifen da.</summary>
+        ''' <summary>Die markierten Bilder nebeneinander oeffnen: zwei nebeneinander, ab drei in vier
+        ''' Feldern, bei mehr als vier wird im Betrachter durch die Auswahl geblaettert. Videos in
+        ''' der Auswahl bleiben aussen vor. Uebergibt DIESELBE Pfadliste und denselben
+        ''' Cache-Skopus wie das Einzeloeffnen - sonst baut der Betrachter den Ordner aus dem
+        ''' ersten Bild neu auf, und aus einer Suchliste heraus stuende ploetzlich ein ganz anderer
+        ''' Filmstreifen da.</summary>
         Public Sub CompareSelectedInViewer()
             Try
-                Dim gewaehlt = Items.Where(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso
+                Dim gewaehlt = Items.Where(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso Not i.IsVideoFile AndAlso
                                                        i.IsSelected AndAlso Not String.IsNullOrEmpty(i.FilePath)).ToList()
-                If gewaehlt.Count <> 2 Then Return
+                If gewaehlt.Count < 2 Then Return
                 ' Der Vergleich laeuft ueber DATEIPFADE; ein Pseudo-Pfad gleich welcher Serverquelle
                 ' scheitert dort. Das Menue blendet den Eintrag entsprechend aus, hier steht dieselbe
                 ' Bedingung noch einmal - der Weg wird auch ueber Tastenkuerzel erreicht.
                 If gewaehlt.Any(Function(i) i.IsRemoteAsset) OrElse RefuseOffline(gewaehlt) Then Return
                 ' Der Filmstreifen bekommt nur, was sich laden laesst: nichts von einem nicht
                 ' erreichbaren Laufwerk (gemischte Listen, siehe GalleryViewModelOffline).
-                _mainVm.OpenCompareInViewer(gewaehlt(0).ItemPath, gewaehlt(1).ItemPath,
+                _mainVm.OpenCompareInViewer(gewaehlt.Select(Function(i) i.ItemPath).ToList(),
                                             Items.Where(Function(i) (i.IsImage OrElse i.IsVideoFile) AndAlso Not i.IsOffline).Select(Function(i) i.ItemPath).ToList(),
                                             cacheScopeId:=CurrentThumbnailCacheScopeId,
                                             cacheScopeName:=CurrentThumbnailCacheScopeName)
@@ -15937,18 +15939,19 @@ Namespace ViewModels
         ''' <summary>Holt eine im Anpassen-Werkzeug gespeicherte Vorlage über ihren Namen aus den
         ''' Einstellungen. Das Rezept enthält nur die Pixel-Anpassungen - genau das, was der Stapel
         ''' über die vorhandene Bearbeitung legt. Nothing, wenn es die Vorlage nicht mehr gibt oder
-        ''' ihr Rezept unlesbar ist (von Hand bearbeitete Einstellungsdatei).</summary>
+        ''' ihr Rezept unlesbar ist (von Hand bearbeitete Einstellungsdatei).
+        '''
+        ''' EINE TEILVORLAGE KOMMT BESCHRAENKT AUF IHRE EINTRAEGE ZURUECK
+        ''' (AdjustmentEntries.LoadPresetLook): was sie nicht enthaelt, steht auf dem Neutralwert und
+        ''' ueberschreibt im Stapel nichts, auch wenn ihr gespeichertes Rezept dort einen Wert
+        ''' traegt.</summary>
         Private Shared Function LoadAdjustmentPresetLook(name As String) As ImageAdjustments
             Dim trimmedName = If(name, "").Trim()
             If trimmedName.Length = 0 Then Return Nothing
             Dim preset = AppSettingsService.Load().AdjustmentPresets.
                 FirstOrDefault(Function(p) String.Equals(p.Name, trimmedName, StringComparison.OrdinalIgnoreCase))
             If preset Is Nothing Then Return Nothing
-            Try
-                Return FpxService.DeserializeAdjustments(preset.RecipeJson)
-            Catch
-                Return Nothing
-            End Try
+            Return AdjustmentEntries.LoadPresetLook(preset)
         End Function
 
         ''' <summary>Function statt Sub, damit der Befehl als CreateFromTask darauf warten kann und

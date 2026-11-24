@@ -12245,4 +12245,67 @@
   <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
     <value>व्यूअर और पूर्ण स्क्रीन में विकास पूरा होने तक खाली क्षेत्र की जगह तुरंत गैलरी की टाइल दिखाता है। टाइल चित्र से छोटी होती है, इसलिए थोड़ी देर धुंधली दिखती है।</value>
   </data>
+  <data name="RGB_df447551" xml:space="preserve">
+    <value>RGB</value>
+  </data>
+  <data name="Anpassung_speichern_d3939482" xml:space="preserve">
+    <value>समायोजन सहेजें</value>
+  </data>
+  <data name="Die_Anpassung_enth_lt_nur_was_hier_angehakt_ist__aa9b735b" xml:space="preserve">
+    <value>समायोजन में केवल वही रहता है जिस पर यहाँ निशान लगा है। लागू करने पर यह ठीक इन्हीं स्लाइडरों को बदलता है, छवि के बाकी सभी जैसे हैं वैसे रहते हैं।</value>
+  </data>
+  <data name="Alle_Regler_in_die_Anpassung_aufnehmen_e1fadf41" xml:space="preserve">
+    <value>सभी स्लाइडरों को समायोजन में शामिल करें</value>
+  </data>
+  <data name="Alle_Haken_entfernen_66c06e2d" xml:space="preserve">
+    <value>सभी निशान हटाएँ</value>
+  </data>
+  <data name="Regler_einzeln_w_hlen_0955bd5d" xml:space="preserve">
+    <value>स्लाइडर अलग अलग चुनें</value>
+  </data>
+  <data name="Enth_lt_6b3bfaa9" xml:space="preserve">
+    <value>इसमें है:</value>
+  </data>
+  <data name="Alle_Anpassungen_a5e8d6b6" xml:space="preserve">
+    <value>सभी समायोजन</value>
+  </data>
+  <data name="Keine_Anpassungen_0d4d900e" xml:space="preserve">
+    <value>कोई समायोजन नहीं</value>
+  </data>
+  <data name="Die_aktuellen_Regler_als_Anpassung_speichern_mit_e97298b3" xml:space="preserve">
+    <value>मौजूदा स्लाइडरों को समायोजन के रूप में सहेजें और चुनें कि उसमें कौन से स्लाइडर रहें</value>
+  </data>
+  <data name="Bild_anheften_Die_n_chsten_Bilder_werden_daneben_9ba609d9" xml:space="preserve">
+    <value>छवि टाँकें। तुलना के लिए अगली छवियाँ उसके बगल में दिखती हैं</value>
+  </data>
+  <data name="Ausschnitt_aller_Bilder_koppeln_Ausgeschaltet_l__a91f6308" xml:space="preserve">
+    <value>सभी तस्वीरों का दिखने वाला हिस्सा जोड़ता है। बंद होने पर हर तस्वीर अलग हिलाई जा सकती है</value>
+  </data>
+  <data name="Vergleich_mit_zwei_oder_vier_Feldern_f243d3be" xml:space="preserve">
+    <value>दो या चार फ़ील्ड के साथ तुलना</value>
+  </data>
+  <data name="Bezugsbild_wechseln_Bei_zwei_Feldern_wird_das_re_78856c36" xml:space="preserve">
+    <value>संदर्भ तस्वीर बदलें। दो फ़ील्ड में दाईं तस्वीर नई टाँकी गई तस्वीर बनती है, चार में सक्रिय फ़ील्ड की तस्वीर</value>
+  </data>
+  <data name="Kein_Bild_in_diesem_Feld_c325cb67" xml:space="preserve">
+    <value>इस फ़ील्ड में कोई तस्वीर नहीं</value>
+  </data>
+  <data name="Bei_zwei_Feldern_bl_ttert_die_rechte_Fl_che_bei__66e81d0e" xml:space="preserve">
+    <value>दो फ़ील्ड में दायाँ पक्ष आगे बढ़ता है, चार में सक्रिय पक्ष। टाँकी गई तस्वीर अपनी जगह बनी रहती है</value>
+  </data>
+  <data name="Ausschnitt_verschieben_gekoppelt_ziehen_die_ande_1d8abfbd" xml:space="preserve">
+    <value>दिखने वाला हिस्सा हिलाएँ; जुड़े होने पर बाकी पक्ष साथ चलते हैं</value>
+  </data>
+  <data name="Zoomen_Ein_Wert_gilt_f_r_alle_Fl_chen_b33077fc" xml:space="preserve">
+    <value>ज़ूम। एक ही मान सभी पक्षों पर लागू होता है</value>
+  </data>
+  <data name="Aktives_Feld_wechseln_mit_SHIFT_r_ckw_rts_70e7e5e2" xml:space="preserve">
+    <value>सक्रिय फ़ील्ड बदलें, SHIFT के साथ पीछे की ओर</value>
+  </data>
+  <data name="Bei_vier_Feldern_mit_24_Megapixeln_belegt_der_Ve_f9e3b1bd" xml:space="preserve">
+    <value>24 मेगापिक्सेल के चार फ़ील्ड में तुलना आधे रिज़ॉल्यूशन पर लगभग 100 MB और पूरे रिज़ॉल्यूशन पर लगभग 380 MB लेती है।</value>
+  </data>
+  <data name="TAB_38d4aa69" xml:space="preserve">
+    <value>TAB</value>
+  </data>
 </root>

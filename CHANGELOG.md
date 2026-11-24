@@ -9,8 +9,17 @@
 - The viewer can show where the camera focused, switched on and off with a new button in the
   footer, and Z then zooms to 100 percent right at that spot.
 
+- The picture comparison in the viewer can show four pictures at once, in two rows. Select three
+  or four pictures in the gallery and choose Compare, or switch between two and four with a new
+  button next to the chain. Paging changes only the picture you clicked, zoom and position stay
+  in step across all of them, and focus points and focus peaking now work in the comparison too.
+
 - The size of the grid in the editor can be set right there: a small arrow next to the grid button
   opens a slider and a few fixed sizes.
+
+- Saving an adjustment in the editor now asks what it should contain: tick whole groups such as
+  colour or single sliders, and applying it later changes only those and leaves the rest of the
+  picture alone. Adjustments saved before keep working as they did.
 
 - While the viewer develops a picture, it can show the tile from the gallery right away instead of
   an empty area. A new switch in the RAW settings turns this on.

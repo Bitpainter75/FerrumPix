@@ -12241,4 +12241,67 @@
   <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
     <value>Viser straks flisen fra galleriet i fremviseren og i fuld skærm, indtil fremkaldelsen er færdig, i stedet for en tom flade. Flisen er mindre end billedet og ser derfor kortvarigt uskarp ud.</value>
   </data>
+  <data name="RGB_df447551" xml:space="preserve">
+    <value>RGB</value>
+  </data>
+  <data name="Anpassung_speichern_d3939482" xml:space="preserve">
+    <value>Gem justering</value>
+  </data>
+  <data name="Die_Anpassung_enth_lt_nur_was_hier_angehakt_ist__aa9b735b" xml:space="preserve">
+    <value>Justeringen indeholder kun det, der er sat flueben ved her. Når den anvendes, erstatter den netop disse skydere; alle andre på billedet forbliver, som de er.</value>
+  </data>
+  <data name="Alle_Regler_in_die_Anpassung_aufnehmen_e1fadf41" xml:space="preserve">
+    <value>Tag alle skydere med i justeringen</value>
+  </data>
+  <data name="Alle_Haken_entfernen_66c06e2d" xml:space="preserve">
+    <value>Fjern alle flueben</value>
+  </data>
+  <data name="Regler_einzeln_w_hlen_0955bd5d" xml:space="preserve">
+    <value>Vælg skydere enkeltvis</value>
+  </data>
+  <data name="Enth_lt_6b3bfaa9" xml:space="preserve">
+    <value>Indeholder:</value>
+  </data>
+  <data name="Alle_Anpassungen_a5e8d6b6" xml:space="preserve">
+    <value>Alle justeringer</value>
+  </data>
+  <data name="Keine_Anpassungen_0d4d900e" xml:space="preserve">
+    <value>Ingen justeringer</value>
+  </data>
+  <data name="Die_aktuellen_Regler_als_Anpassung_speichern_mit_e97298b3" xml:space="preserve">
+    <value>Gem de aktuelle skydere som justering, og vælg, hvilke skydere den indeholder</value>
+  </data>
+  <data name="Bild_anheften_Die_n_chsten_Bilder_werden_daneben_9ba609d9" xml:space="preserve">
+    <value>Fastgør billedet. De næste billeder vises ved siden af til sammenligning</value>
+  </data>
+  <data name="Ausschnitt_aller_Bilder_koppeln_Ausgeschaltet_l__a91f6308" xml:space="preserve">
+    <value>Kobl billedudsnittet for alle billeder sammen. Slået fra kan hvert billede flyttes for sig</value>
+  </data>
+  <data name="Vergleich_mit_zwei_oder_vier_Feldern_f243d3be" xml:space="preserve">
+    <value>Sammenligning med to eller fire felter</value>
+  </data>
+  <data name="Bezugsbild_wechseln_Bei_zwei_Feldern_wird_das_re_78856c36" xml:space="preserve">
+    <value>Skift referencebillede. Med to felter bliver det højre billede det nye fastgjorte, med fire billedet i det aktive felt</value>
+  </data>
+  <data name="Kein_Bild_in_diesem_Feld_c325cb67" xml:space="preserve">
+    <value>Intet billede i dette felt</value>
+  </data>
+  <data name="Bei_zwei_Feldern_bl_ttert_die_rechte_Fl_che_bei__66e81d0e" xml:space="preserve">
+    <value>Med to felter blader den højre flade, med fire den aktive. Det fastgjorte billede bliver stående</value>
+  </data>
+  <data name="Ausschnitt_verschieben_gekoppelt_ziehen_die_ande_1d8abfbd" xml:space="preserve">
+    <value>Flyt billedudsnittet; når det er koblet sammen, følger de andre flader med</value>
+  </data>
+  <data name="Zoomen_Ein_Wert_gilt_f_r_alle_Fl_chen_b33077fc" xml:space="preserve">
+    <value>Zoom. Én værdi gælder for alle flader</value>
+  </data>
+  <data name="Aktives_Feld_wechseln_mit_SHIFT_r_ckw_rts_70e7e5e2" xml:space="preserve">
+    <value>Skift aktivt felt, baglæns med SHIFT</value>
+  </data>
+  <data name="Bei_vier_Feldern_mit_24_Megapixeln_belegt_der_Ve_f9e3b1bd" xml:space="preserve">
+    <value>Med fire felter på 24 megapixel bruger sammenligningen omkring 100 MB i halv opløsning og omkring 380 MB i fuld.</value>
+  </data>
+  <data name="TAB_38d4aa69" xml:space="preserve">
+    <value>TAB</value>
+  </data>
 </root>

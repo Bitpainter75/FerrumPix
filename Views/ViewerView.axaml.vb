@@ -137,18 +137,51 @@ Namespace Views
             If vm Is Nothing Then Return
             vm.IsCompareViewportLinked = Not vm.IsCompareViewportLinked
             If Not vm.IsCompareViewportLinked Then Return
-            Dim fuehrend = Me.FindControl(Of ScrollViewer)(
-                If(vm.IsCompareRightFocused, "CompareRightScroll", "CompareLeftScroll"))
+            Dim fuehrend = CompareScrollAt(vm.FocusedComparePane)
             If fuehrend IsNot Nothing Then OnCompareScrollChanged(fuehrend, Nothing)
         End Sub
 
-        ''' <summary>Die Marken tragen ihre Flaeche im Tag ("0" links, "1" rechts), die Sterne
-        ''' zusaetzlich den Wert ("0:3"). Ohne diese Zuordnung waere am Knopf nicht ablesbar, welches
-        ''' der beiden Bilder er meint - und genau dafuer sitzen die Marken auf dem Bild.</summary>
-        Private Shared Function PaneFrom(sender As Object) As Integer
-            Dim tag = TryCast(TryCast(sender, Control)?.Tag, String)
-            If String.IsNullOrEmpty(tag) Then Return 0
-            Return If(tag.Split(":"c)(0) = "1", 1, 0)
+        ' ── Die Flaechen des Vergleichs ──────────────────────────────────────────
+        '
+        ' Vier ComparePaneView auf der Buehne (ComparePane0 bis ComparePane3), sichtbar zwei oder
+        ' vier. Was allen gemeinsam ist (Fokus, Ziehen, Zoom am Zeiger, Spiegeln des Ausschnitts,
+        ' Masse zum Zoom), steht hier und greift ueber diese Helfer auf ihre Rollbereiche zu.
+
+        ''' <summary>Alle vier Flaechen in ihrer Reihenfolge; leer, solange die Buehne nicht steht.</summary>
+        Private Function ComparePaneViews() As List(Of ComparePaneView)
+            Dim result As New List(Of ComparePaneView)()
+            For index = 0 To 3
+                Dim view = Me.FindControl(Of ComparePaneView)("ComparePane" & index.ToString(Globalization.CultureInfo.InvariantCulture))
+                If view IsNot Nothing Then result.Add(view)
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Die Rollbereiche der Flaechen, die gerade zur Buehne gehoeren.</summary>
+        Private Function VisibleCompareScrolls() As List(Of ScrollViewer)
+            Dim result As New List(Of ScrollViewer)()
+            For Each view In ComparePaneViews()
+                Dim pane = view.Pane
+                Dim scroll = view.Scroll
+                If pane IsNot Nothing AndAlso pane.IsVisible AndAlso scroll IsNot Nothing Then result.Add(scroll)
+            Next
+            Return result
+        End Function
+
+        Private Function CompareScrollAt(index As Integer) As ScrollViewer
+            Dim views = ComparePaneViews()
+            If index < 0 OrElse index >= views.Count Then Return Nothing
+            Return views(index).Scroll
+        End Function
+
+        ''' <summary>Zu welcher Flaeche ein Rollbereich gehoert; -1, wenn zu keiner.</summary>
+        Private Function ComparePaneIndexOf(scroll As ScrollViewer) As Integer
+            If scroll Is Nothing Then Return -1
+            Dim views = ComparePaneViews()
+            For index = 0 To views.Count - 1
+                If Object.ReferenceEquals(views(index).Scroll, scroll) Then Return index
+            Next
+            Return -1
         End Function
 
         ''' <summary>Das Fussmenue zeigen. Wie in der Galerie ueber die Schaltflaeche statt ueber
@@ -278,54 +311,6 @@ Namespace Views
             If Not IO.File.Exists(path) Then Return Nothing
             Return New ImageItem(path)
         End Function
-
-        Private Sub OnCompareStarClick(sender As Object, e As RoutedEventArgs)
-            Dim tag = TryCast(TryCast(sender, Control)?.Tag, String)
-            If String.IsNullOrEmpty(tag) Then Return
-            Dim parts = tag.Split(":"c)
-            Dim sterne As Integer
-            If parts.Length <> 2 OrElse Not Integer.TryParse(parts(1), sterne) Then Return
-            GetVm()?.SetCompareRating(PaneFrom(sender), sterne)
-            e.Handled = True
-        End Sub
-
-        Private Sub OnCompareFavoriteClick(sender As Object, e As RoutedEventArgs)
-            GetVm()?.ToggleCompareFavorite(PaneFrom(sender))
-            e.Handled = True
-        End Sub
-
-        ''' <summary>Behalten und Verwerfen auf einer Vergleichsflaeche; der Tag traegt Flaeche und
-        ''' Zustand ("0:1", "1:-1").</summary>
-        Private Sub OnComparePickClick(sender As Object, e As RoutedEventArgs)
-            Dim tag = TryCast(TryCast(sender, Control)?.Tag, String)
-            Dim parts = If(tag, "").Split(":"c)
-            Dim state As Integer
-            If parts.Length = 2 AndAlso Integer.TryParse(parts(1), Globalization.NumberStyles.Integer,
-                                                         Globalization.CultureInfo.InvariantCulture, state) Then
-                GetVm()?.ToggleComparePickState(PaneFrom(sender), state)
-            End If
-            e.Handled = True
-        End Sub
-
-        Private Sub OnCompareRightColorLabelClick(sender As Object, e As RoutedEventArgs)
-            GetVm()?.SetCompareRightColorLabel(TryCast(TryCast(sender, Control)?.Tag, String))
-            e.Handled = True
-        End Sub
-
-        Private Sub OnCompareLeftColorLabelClick(sender As Object, e As RoutedEventArgs)
-            GetVm()?.SetCompareLeftColorLabel(TryCast(TryCast(sender, Control)?.Tag, String))
-            e.Handled = True
-        End Sub
-
-        Private Sub OnCompareEditClick(sender As Object, e As RoutedEventArgs)
-            GetVm()?.OpenComparePaneInEditor(PaneFrom(sender))
-            e.Handled = True
-        End Sub
-
-        Private Sub OnCompareDeleteClick(sender As Object, e As RoutedEventArgs)
-            GetVm()?.DeleteComparePane(PaneFrom(sender))
-            e.Handled = True
-        End Sub
 
         Public Sub OnSwapComparePanesClick(sender As Object, e As RoutedEventArgs)
             GetVm()?.SwapComparePanes()
@@ -458,6 +443,15 @@ Namespace Views
                 Return
             End If
 
+            ' TAB wechselt im Vergleich das aktive Feld, mit SHIFT rueckwaerts. Sonst bleibt die
+            ' Taste, was sie ist.
+            If e.Key = Key.Tab AndAlso vm.IsCompareMode AndAlso
+               (e.KeyModifiers = KeyModifiers.None OrElse e.KeyModifiers = KeyModifiers.Shift) Then
+                vm.FocusNextComparePane(backward:=e.KeyModifiers = KeyModifiers.Shift)
+                e.Handled = True
+                Return
+            End If
+
             ' HOCH und RUNTER blaettern wie LINKS und RECHTS: im Betrachter steht nur ein Bild, die
             ' Pfeile haben keine zweite Richtung, nach der man sich bewegen koennte.
             Select Case e.Key
@@ -495,9 +489,10 @@ Namespace Views
                     vm.RenameCurrentCommand.Execute(Nothing)
                     e.Handled = True
                 Case Key.Space
-                    ' Im Vergleich tauscht die Leertaste die Seiten - eine Diashow waere dort
-                    ' sinnlos, und Tauschen ist die Aktion, die man beim Durchsehen einer Serie am
-                    ' haeufigsten braucht.
+                    ' Im Vergleich wechselt die Leertaste das Bezugsbild (bei zwei Feldern tauschen
+                    ' die Seiten, bei vier wird das aktive Feld der neue Bezug) - eine Diashow
+                    ' waere dort sinnlos, und das ist die Aktion, die man beim Durchsehen einer
+                    ' Serie am haeufigsten braucht.
                     If vm.IsCompareMode Then
                         vm.SwapComparePanes()
                     Else
@@ -692,9 +687,7 @@ Namespace Views
         ''' <summary>Die Vergleichsflaeche unter dem Mauszeiger. Verankert wird dort, wo die Maus
         ''' steht - nicht an der fokussierten Flaeche: man zoomt auf das, worauf man zeigt.</summary>
         Private Function ComparePaneUnder(e As PointerEventArgs) As ScrollViewer
-            For Each flaechenName In {"CompareLeftScroll", "CompareRightScroll"}
-                Dim sv = Me.FindControl(Of ScrollViewer)(flaechenName)
-                If sv Is Nothing Then Continue For
+            For Each sv In VisibleCompareScrolls()
                 Dim p = e.GetPosition(sv)
                 If p.X >= 0 AndAlso p.Y >= 0 AndAlso p.X <= sv.Bounds.Width AndAlso p.Y <= sv.Bounds.Height Then Return sv
             Next
@@ -1047,7 +1040,8 @@ Namespace Views
             If vm Is Nothing OrElse Not vm.IsCompareMode Then Return
             Dim sv = TryCast(sender, ScrollViewer)
             If sv Is Nothing Then Return
-            vm.FocusedComparePane = If(TryCast(sv.Tag, String) = "1", 1, 0)
+            ' Eine leere Flaeche nimmt den Fokus nicht an (das entscheidet das ViewModel).
+            vm.FocusedComparePane = ComparePaneIndexOf(sv)
             ' Verschoben wird mit LINKER oder RECHTER Taste - im Einzelbild zieht die rechte, und
             ' der Vergleich soll sich nicht anders anfuehlen. Rechts+Mausrad bleibt Zoomen, das
             ' laeuft ueber den Rad-Handler und beisst sich damit nicht.
@@ -1065,6 +1059,12 @@ Namespace Views
         Private Sub OnCompareViewportSizeChanged(sender As Object, e As SizeChangedEventArgs)
             Dim vm = GetVm()
             If vm Is Nothing Then Return
+            ' Alle sichtbaren Flaechen sind gleich gross (gleiche Spalten und Zeilen), es zaehlt
+            ' deshalb die erste: sie gehoert immer zur Buehne. Eine Flaeche, die beim Umschalten
+            ' auf zwei Felder verschwindet, meldet Groesse null und wuerfe das Einpassen sonst
+            ' auf 100 Prozent.
+            If ComparePaneIndexOf(TryCast(sender, ScrollViewer)) <> 0 Then Return
+            If e.NewSize.Width <= 0 OrElse e.NewSize.Height <= 0 Then Return
             vm.SetCompareViewportSize(e.NewSize.Width, e.NewSize.Height)
             ApplyCompareFitMode()
         End Sub
@@ -1080,7 +1080,7 @@ Namespace Views
             ' Ein laufendes Ziehen beenden, sonst haengt der Zeiger-Fang am ScrollViewer, waehrend
             ' der Editor nach vorn kommt.
             _compareZiehtScroll = Nothing
-            vm.OpenComparePaneInEditor(If(TryCast(sv.Tag, String) = "1", 1, 0))
+            vm.OpenComparePaneInEditor(ComparePaneIndexOf(sv))
             e.Handled = True
         End Sub
 
@@ -1109,14 +1109,49 @@ Namespace Views
         End Sub
 
 
+        ''' <summary>Haengt an den Rollbereich JEDER Flaeche dasselbe: Fokus und Ziehen, Doppelklick,
+        ''' das Spiegeln des Ausschnitts und die Meldung der Groesse.</summary>
         Private Sub LinkComparePanes()
-            Dim left = Me.FindControl(Of ScrollViewer)("CompareLeftScroll")
-            Dim right = Me.FindControl(Of ScrollViewer)("CompareRightScroll")
-            If left Is Nothing OrElse right Is Nothing Then Return
-            RemoveHandler left.ScrollChanged, AddressOf OnCompareScrollChanged
-            RemoveHandler right.ScrollChanged, AddressOf OnCompareScrollChanged
-            AddHandler left.ScrollChanged, AddressOf OnCompareScrollChanged
-            AddHandler right.ScrollChanged, AddressOf OnCompareScrollChanged
+            For Each view In ComparePaneViews()
+                Dim scroll = view.Scroll
+                If scroll Is Nothing Then Continue For
+                RemoveHandler scroll.ScrollChanged, AddressOf OnCompareScrollChanged
+                RemoveHandler scroll.SizeChanged, AddressOf OnCompareViewportSizeChanged
+                RemoveHandler scroll.PointerPressed, AddressOf OnComparePanePressed
+                RemoveHandler scroll.DoubleTapped, AddressOf OnComparePaneDoubleTapped
+                RemoveHandler scroll.PointerMoved, AddressOf OnComparePaneMoved
+                RemoveHandler scroll.PointerReleased, AddressOf OnComparePaneReleased
+                RemoveHandler scroll.PointerCaptureLost, AddressOf OnComparePaneReleased
+                AddHandler scroll.ScrollChanged, AddressOf OnCompareScrollChanged
+                AddHandler scroll.SizeChanged, AddressOf OnCompareViewportSizeChanged
+                AddHandler scroll.PointerPressed, AddressOf OnComparePanePressed
+                AddHandler scroll.DoubleTapped, AddressOf OnComparePaneDoubleTapped
+                AddHandler scroll.PointerMoved, AddressOf OnComparePaneMoved
+                AddHandler scroll.PointerReleased, AddressOf OnComparePaneReleased
+                AddHandler scroll.PointerCaptureLost, AddressOf OnComparePaneReleased
+            Next
+        End Sub
+
+        ''' <summary>Die Flaechen des Betrachters melden ein neues Bild oder ein neues Peaking-Bild:
+        ''' beide brauchen dann die Masse zum Zoom.</summary>
+        Private Sub OnComparePaneChanged(sender As Object, e As PropertyChangedEventArgs)
+            If e.PropertyName = NameOf(ComparePaneViewModel.Image) OrElse
+               e.PropertyName = NameOf(ComparePaneViewModel.FocusPeakingImage) Then
+                ApplyCompareFitMode()
+            ElseIf e.PropertyName = NameOf(ComparePaneViewModel.IsVisible) Then
+                ApplyCompareStageLayout()
+            End If
+        End Sub
+
+        ''' <summary>Zwei oder vier Felder: bei zwei bekommen die zweite Zeile der Buehne und ihr
+        ''' Steg die Hoehe null, die obere Zeile nimmt alles.</summary>
+        Private Sub ApplyCompareStageLayout()
+            Dim stage = Me.FindControl(Of Grid)("CompareStage")
+            Dim vm = GetVm()
+            If stage Is Nothing OrElse vm Is Nothing OrElse stage.RowDefinitions.Count < 3 Then Return
+            Dim four = vm.IsCompareFourFields
+            stage.RowDefinitions(1).Height = New GridLength(If(four, 6, 0))
+            stage.RowDefinitions(2).Height = If(four, New GridLength(1, GridUnitType.Star), New GridLength(0))
         End Sub
 
         ''' <summary>Der Ausschnitt wird als PIXEL-Offset gespiegelt, nicht als Anteil: zwei Aufnahmen
@@ -1132,44 +1167,45 @@ Namespace Views
             If Not vm.IsCompareViewportLinked Then Return
             Dim source = TryCast(sender, ScrollViewer)
             If source Is Nothing Then Return
-            Dim left = Me.FindControl(Of ScrollViewer)("CompareLeftScroll")
-            Dim right = Me.FindControl(Of ScrollViewer)("CompareRightScroll")
-            Dim target = If(ReferenceEquals(source, left), right, left)
-            If target Is Nothing Then Return
-            Dim neu = New Vector(
-                Math.Min(Math.Max(source.Offset.X, 0), Math.Max(0, target.Extent.Width - target.Viewport.Width)),
-                Math.Min(Math.Max(source.Offset.Y, 0), Math.Max(0, target.Extent.Height - target.Viewport.Height)))
-            If Math.Abs(target.Offset.X - neu.X) < 0.5 AndAlso Math.Abs(target.Offset.Y - neu.Y) < 0.5 Then Return
+            ' Die Flaeche, die sich bewegt hat, fuehrt; ALLE anderen sichtbaren folgen ihr.
             _mirrorsRegion = True
             Try
-                target.Offset = neu
+                For Each target In VisibleCompareScrolls()
+                    If Object.ReferenceEquals(target, source) Then Continue For
+                    Dim neu = New Vector(
+                        Math.Min(Math.Max(source.Offset.X, 0), Math.Max(0, target.Extent.Width - target.Viewport.Width)),
+                        Math.Min(Math.Max(source.Offset.Y, 0), Math.Max(0, target.Extent.Height - target.Viewport.Height)))
+                    If Math.Abs(target.Offset.X - neu.X) < 0.5 AndAlso Math.Abs(target.Offset.Y - neu.Y) < 0.5 Then Continue For
+                    target.Offset = neu
+                Next
             Finally
                 _mirrorsRegion = False
             End Try
         End Sub
 
-        ''' <summary>Beide Vergleichsbilder auf denselben Zoom bringen - dieselbe Rechnung wie fuer
-        ''' die einzelne Flaeche (Bildgroesse mal ZoomLevel), damit ein Wert fuer beide gilt.</summary>
+        ''' <summary>Alle Vergleichsbilder auf denselben Zoom bringen - dieselbe Rechnung wie fuer
+        ''' die einzelne Flaeche (Bildgroesse mal ZoomLevel), damit ein Wert fuer alle gilt. Die
+        ''' Peaking-Ebene jeder Flaeche bekommt die Masse ihres Bildes und liegt so deckungsgleich.</summary>
         Private Sub ApplyCompareFitMode()
             Dim vm = GetVm()
             If vm Is Nothing OrElse Not vm.IsCompareMode Then Return
             Dim zoom = Math.Max(0.05, vm.ZoomLevel)
 
-            Dim setze = Sub(imageName As String, source As Avalonia.Media.Imaging.Bitmap)
-                            Dim imageControl = Me.FindControl(Of Image)(imageName)
-                            If imageControl Is Nothing Then Return
-                            If source Is Nothing Then
-                                imageControl.Width = Double.NaN
-                                imageControl.Height = Double.NaN
-                                Return
-                            End If
-                            imageControl.Width = Math.Round(source.Size.Width * zoom, MidpointRounding.AwayFromZero)
-                            imageControl.Height = Math.Round(source.Size.Height * zoom, MidpointRounding.AwayFromZero)
-                            imageControl.MaxWidth = Double.PositiveInfinity
-                            imageControl.MaxHeight = Double.PositiveInfinity
-                        End Sub
-            setze("CompareLeftImage", vm.CompareLeftImage)
-            setze("CompareRightImage", vm.CompareRightImage)
+            For Each view In ComparePaneViews()
+                Dim source = view.Pane?.Image
+                For Each imageControl In {view.PaneImage, view.PeakingImage}
+                    If imageControl Is Nothing Then Continue For
+                    If source Is Nothing Then
+                        imageControl.Width = Double.NaN
+                        imageControl.Height = Double.NaN
+                        Continue For
+                    End If
+                    imageControl.Width = Math.Round(source.Size.Width * zoom, MidpointRounding.AwayFromZero)
+                    imageControl.Height = Math.Round(source.Size.Height * zoom, MidpointRounding.AwayFromZero)
+                    imageControl.MaxWidth = Double.PositiveInfinity
+                    imageControl.MaxHeight = Double.PositiveInfinity
+                Next
+            Next
         End Sub
 
         ''' <summary>Der Betrachter ist wieder der sichtbare Modus. Alles, was am Bild haengt und
@@ -1220,6 +1256,10 @@ Namespace Views
                 AddHandler _subscribedVm.InfoPanel.NavigatorPanRequested, AddressOf OnNavigatorPanRequested
                 AddHandler _subscribedVm.FaceFrames.CollectionChanged, AddressOf OnImageMarksChanged
                 AddHandler _subscribedVm.FocusFrames.CollectionChanged, AddressOf OnImageMarksChanged
+                For Each pane In _subscribedVm.ComparePanes
+                    AddHandler pane.PropertyChanged, AddressOf OnComparePaneChanged
+                Next
+                ApplyCompareStageLayout()
                 ' Eine Aenderung der Seite, solange die Ansicht nicht im Baum hing, kam hier nicht an.
                 ApplyFilmstripPlacement()
                 RebuildImageMarkVisuals()
@@ -1233,6 +1273,9 @@ Namespace Views
             RemoveHandler _subscribedVm.InfoPanel.NavigatorPanRequested, AddressOf OnNavigatorPanRequested
             RemoveHandler _subscribedVm.FaceFrames.CollectionChanged, AddressOf OnImageMarksChanged
             RemoveHandler _subscribedVm.FocusFrames.CollectionChanged, AddressOf OnImageMarksChanged
+            For Each pane In _subscribedVm.ComparePanes
+                RemoveHandler pane.PropertyChanged, AddressOf OnComparePaneChanged
+            Next
             _subscribedVm = Nothing
         End Sub
 
@@ -1352,8 +1395,8 @@ Namespace Views
         ' Die Fokusfelder sind gruen wie in den Suchern der Kameras: die Akzentfarbe gehoert den
         ' bestaetigten Gesichtern, gestricheltes Weiss den unbenannten. Darunter liegt derselbe
         ' Zug dunkel und breiter, damit er auch auf hellem Laub oder Himmel zu sehen ist.
-        Private Shared ReadOnly FocusMarkBrush As New Avalonia.Media.Immutable.ImmutableSolidColorBrush(Avalonia.Media.Color.FromArgb(&HFF, &H5B, &HE3, &H7A))
-        Private Shared ReadOnly FocusMarkShadowBrush As New Avalonia.Media.Immutable.ImmutableSolidColorBrush(Avalonia.Media.Color.FromArgb(&HA0, 0, 0, 0))
+        Friend Shared ReadOnly FocusMarkBrush As New Avalonia.Media.Immutable.ImmutableSolidColorBrush(Avalonia.Media.Color.FromArgb(&HFF, &H5B, &HE3, &H7A))
+        Friend Shared ReadOnly FocusMarkShadowBrush As New Avalonia.Media.Immutable.ImmutableSolidColorBrush(Avalonia.Media.Color.FromArgb(&HA0, 0, 0, 0))
         ' Halbe Armlaenge des Kreuzes und die Luecke in seiner Mitte, in Bildschirmpunkten: es
         ' zeigt eine Stelle, keine Flaeche, und waechst deshalb nicht mit dem Zoom.
         Private Const FocusCrossArm As Double = 13
@@ -1530,24 +1573,29 @@ Namespace Views
             Dim vm = GetVm()
             If vm Is Nothing Then Return
             ' Z bei sichtbaren Fokusfeldern: nicht die Mitte des Sichtfensters halten, sondern das
-            ' Feld in die Mitte ruecken. Nur im Einzelbild, die Felder gehoeren zu ihm.
+            ' Feld in die Mitte ruecken. Im Vergleich das Feld der AKTIVEN Flaeche; gekoppelt
+            ' folgen die anderen ueber die Spiegelung.
             Dim target = TryCast(e, ZoomAnchorEventArgs)
-            If target IsNot Nothing AndAlso Not vm.IsCompareMode Then
-                Dispatcher.UIThread.Post(Sub() CenterOnImagePoint(target.X, target.Y), DispatcherPriority.Background)
+            If target IsNot Nothing Then
+                If vm.IsCompareMode Then
+                    Dim focusedPane = vm.FocusedComparePane
+                    Dispatcher.UIThread.Post(Sub() CenterComparePaneOnImagePoint(focusedPane, target.X, target.Y), DispatcherPriority.Background)
+                Else
+                    Dispatcher.UIThread.Post(Sub() CenterOnImagePoint(target.X, target.Y), DispatcherPriority.Background)
+                End If
                 Return
             End If
-            Dim paneNames As String()
+            Dim panes As New List(Of ScrollViewer)()
             If Not vm.IsCompareMode Then
-                paneNames = {"ImageScrollViewer"}
+                panes.Add(Me.FindControl(Of ScrollViewer)("ImageScrollViewer"))
             ElseIf vm.IsCompareViewportLinked Then
-                paneNames = {If(vm.FocusedComparePane = 1, "CompareRightScroll", "CompareLeftScroll")}
+                panes.Add(CompareScrollAt(vm.FocusedComparePane))
             Else
-                paneNames = {"CompareLeftScroll", "CompareRightScroll"}
+                panes.AddRange(VisibleCompareScrolls())
             End If
 
             Dim anchors As New List(Of (Pane As ScrollViewer, X As Double, Y As Double))()
-            For Each paneName In paneNames
-                Dim pane = Me.FindControl(Of ScrollViewer)(paneName)
+            For Each pane In panes
                 If pane Is Nothing Then Continue For
                 anchors.Add((pane,
                              CenterAnchor(pane.Offset.X, pane.Viewport.Width, pane.Extent.Width),
@@ -1572,6 +1620,25 @@ Namespace Views
         Private Sub CenterOnImagePoint(x As Double, y As Double)
             Dim image = Me.FindControl(Of Image)("MainImage")
             Dim pane = Me.FindControl(Of ScrollViewer)("ImageScrollViewer")
+            Dim content = TryCast(pane?.Content, Visual)
+            If image Is Nothing OrElse pane Is Nothing OrElse content Is Nothing Then Return
+            Dim size = image.Bounds.Size
+            Dim extent = pane.Extent
+            If size.Width <= 0 OrElse size.Height <= 0 OrElse extent.Width <= 0 OrElse extent.Height <= 0 Then Return
+            Dim mapped = image.TranslatePoint(New Point(x * size.Width, y * size.Height), content)
+            If Not mapped.HasValue Then Return
+            pane.Offset = New Vector(OffsetForAnchor(mapped.Value.X / extent.Width, pane.Viewport.Width, extent.Width),
+                                     OffsetForAnchor(mapped.Value.Y / extent.Height, pane.Viewport.Height, extent.Height))
+        End Sub
+
+        ''' <summary>Dasselbe fuer eine Flaeche des Vergleichs: die Stelle ihres Bildes in die Mitte
+        ''' ihres Sichtfensters. Im Vergleich wird nicht gedreht und nicht gespiegelt; die Stelle
+        ''' geht trotzdem ueber TranslatePoint, weil das Bild in seiner Flaeche zentriert liegt.</summary>
+        Private Sub CenterComparePaneOnImagePoint(paneIndex As Integer, x As Double, y As Double)
+            Dim views = ComparePaneViews()
+            If paneIndex < 0 OrElse paneIndex >= views.Count Then Return
+            Dim image = views(paneIndex).PaneImage
+            Dim pane = views(paneIndex).Scroll
             Dim content = TryCast(pane?.Content, Visual)
             If image Is Nothing OrElse pane Is Nothing OrElse content Is Nothing Then Return
             Dim size = image.Bounds.Size
@@ -1617,9 +1684,8 @@ Namespace Views
         Private Sub PanBy(direction As Vector)
             Dim vm = GetVm()
             If vm Is Nothing Then Return
-            Dim paneName = If(Not vm.IsCompareMode, "ImageScrollViewer",
-                              If(vm.FocusedComparePane = 1, "CompareRightScroll", "CompareLeftScroll"))
-            Dim pane = Me.FindControl(Of ScrollViewer)(paneName)
+            Dim pane = If(vm.IsCompareMode, CompareScrollAt(vm.FocusedComparePane),
+                          Me.FindControl(Of ScrollViewer)("ImageScrollViewer"))
             If pane Is Nothing Then Return
             Dim targetX = pane.Offset.X + direction.X * pane.Viewport.Width * PanStepFraction
             Dim targetY = pane.Offset.Y + direction.Y * pane.Viewport.Height * PanStepFraction
@@ -1652,12 +1718,13 @@ Namespace Views
             ' waehrend es noch laedt, entscheidet erst dieses Eintreffen, ob sie zu sehen ist.
             If e.PropertyName = NameOf(ViewerViewModel.CurrentImage) Then UpdateFullscreenImageBar()
 
-            ' Der Vergleich teilt sich denselben ZoomLevel - beide Flaechen muessen also bei jeder
-            ' Zoomaenderung und bei jedem neu geladenen Vergleichsbild neu bemessen werden.
+            ' Der Vergleich teilt sich denselben ZoomLevel - alle Flaechen muessen also bei jeder
+            ' Zoomaenderung neu bemessen werden. Ein neu geladenes Vergleichsbild meldet seine
+            ' Flaeche selbst (OnComparePaneChanged).
             If e.PropertyName = NameOf(ViewerViewModel.ZoomLevel) OrElse
                e.PropertyName = NameOf(ViewerViewModel.IsCompareMode) OrElse
-               e.PropertyName = NameOf(ViewerViewModel.CompareLeftImage) OrElse
-               e.PropertyName = NameOf(ViewerViewModel.CompareRightImage) Then
+               e.PropertyName = NameOf(ViewerViewModel.CompareFieldCount) Then
+                ApplyCompareStageLayout()
                 ApplyCompareFitMode()
             End If
 

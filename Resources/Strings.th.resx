@@ -12245,4 +12245,67 @@
   <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
     <value>แสดงภาพย่อจากแกลเลอรีทันทีในโปรแกรมดูภาพและโหมดเต็มหน้าจอจนกว่าการล้างภาพจะเสร็จ แทนพื้นที่ว่าง ภาพย่อมีขนาดเล็กกว่าภาพจริงจึงดูไม่คมชัดชั่วครู่</value>
   </data>
+  <data name="RGB_df447551" xml:space="preserve">
+    <value>RGB</value>
+  </data>
+  <data name="Anpassung_speichern_d3939482" xml:space="preserve">
+    <value>บันทึกการปรับแต่ง</value>
+  </data>
+  <data name="Die_Anpassung_enth_lt_nur_was_hier_angehakt_ist__aa9b735b" xml:space="preserve">
+    <value>การปรับแต่งมีเฉพาะสิ่งที่ติ๊กไว้ที่นี่ เมื่อนำไปใช้จะแทนที่เฉพาะแถบเลื่อนเหล่านี้ ส่วนแถบเลื่อนอื่นของภาพยังคงเดิม</value>
+  </data>
+  <data name="Alle_Regler_in_die_Anpassung_aufnehmen_e1fadf41" xml:space="preserve">
+    <value>รวมแถบเลื่อนทั้งหมดไว้ในการปรับแต่ง</value>
+  </data>
+  <data name="Alle_Haken_entfernen_66c06e2d" xml:space="preserve">
+    <value>เอาเครื่องหมายติ๊กออกทั้งหมด</value>
+  </data>
+  <data name="Regler_einzeln_w_hlen_0955bd5d" xml:space="preserve">
+    <value>เลือกแถบเลื่อนทีละรายการ</value>
+  </data>
+  <data name="Enth_lt_6b3bfaa9" xml:space="preserve">
+    <value>ประกอบด้วย:</value>
+  </data>
+  <data name="Alle_Anpassungen_a5e8d6b6" xml:space="preserve">
+    <value>การปรับแต่งทั้งหมด</value>
+  </data>
+  <data name="Keine_Anpassungen_0d4d900e" xml:space="preserve">
+    <value>ไม่มีการปรับแต่ง</value>
+  </data>
+  <data name="Die_aktuellen_Regler_als_Anpassung_speichern_mit_e97298b3" xml:space="preserve">
+    <value>บันทึกแถบเลื่อนปัจจุบันเป็นการปรับแต่ง และเลือกว่าจะมีแถบเลื่อนใดบ้าง</value>
+  </data>
+  <data name="Bild_anheften_Die_n_chsten_Bilder_werden_daneben_9ba609d9" xml:space="preserve">
+    <value>ปักหมุดภาพ ภาพถัดไปจะแสดงอยู่ข้างกันเพื่อเปรียบเทียบ</value>
+  </data>
+  <data name="Ausschnitt_aller_Bilder_koppeln_Ausgeschaltet_l__a91f6308" xml:space="preserve">
+    <value>เชื่อมส่วนที่มองเห็นของทุกภาพเข้าด้วยกัน เมื่อปิดอยู่ แต่ละภาพจะเลื่อนแยกกันได้</value>
+  </data>
+  <data name="Vergleich_mit_zwei_oder_vier_Feldern_f243d3be" xml:space="preserve">
+    <value>เปรียบเทียบด้วยสองหรือสี่ช่อง</value>
+  </data>
+  <data name="Bezugsbild_wechseln_Bei_zwei_Feldern_wird_das_re_78856c36" xml:space="preserve">
+    <value>เปลี่ยนภาพอ้างอิง เมื่อมีสองช่อง ภาพทางขวาจะกลายเป็นภาพที่ปักหมุดใหม่ เมื่อมีสี่ช่องจะเป็นภาพของช่องที่ใช้งานอยู่</value>
+  </data>
+  <data name="Kein_Bild_in_diesem_Feld_c325cb67" xml:space="preserve">
+    <value>ไม่มีภาพในช่องนี้</value>
+  </data>
+  <data name="Bei_zwei_Feldern_bl_ttert_die_rechte_Fl_che_bei__66e81d0e" xml:space="preserve">
+    <value>เมื่อมีสองช่อง ด้านขวาจะเลื่อนไป เมื่อมีสี่ช่องจะเป็นช่องที่ใช้งานอยู่ ภาพที่ปักหมุดไว้ยังอยู่ที่เดิม</value>
+  </data>
+  <data name="Ausschnitt_verschieben_gekoppelt_ziehen_die_ande_1d8abfbd" xml:space="preserve">
+    <value>ย้ายส่วนที่มองเห็น เมื่อเชื่อมกันอยู่ ด้านอื่นจะตามไปด้วย</value>
+  </data>
+  <data name="Zoomen_Ein_Wert_gilt_f_r_alle_Fl_chen_b33077fc" xml:space="preserve">
+    <value>ซูม ค่าเดียวใช้กับทุกด้าน</value>
+  </data>
+  <data name="Aktives_Feld_wechseln_mit_SHIFT_r_ckw_rts_70e7e5e2" xml:space="preserve">
+    <value>สลับช่องที่ใช้งานอยู่ กด SHIFT เพื่อย้อนกลับ</value>
+  </data>
+  <data name="Bei_vier_Feldern_mit_24_Megapixeln_belegt_der_Ve_f9e3b1bd" xml:space="preserve">
+    <value>เมื่อมีสี่ช่องที่ 24 เมกะพิกเซล การเปรียบเทียบจะใช้ประมาณ 100 MB ที่ความละเอียดครึ่งหนึ่ง และประมาณ 380 MB ที่ความละเอียดเต็ม</value>
+  </data>
+  <data name="TAB_38d4aa69" xml:space="preserve">
+    <value>TAB</value>
+  </data>
 </root>

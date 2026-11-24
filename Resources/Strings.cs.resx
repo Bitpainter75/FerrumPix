@@ -12241,4 +12241,67 @@
   <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
     <value>V prohlížeči a na celé obrazovce ihned zobrazí dlaždici z galerie, dokud není vyvolání hotové, místo prázdné plochy. Dlaždice je menší než snímek, a proto chvíli působí neostře.</value>
   </data>
+  <data name="RGB_df447551" xml:space="preserve">
+    <value>RGB</value>
+  </data>
+  <data name="Anpassung_speichern_d3939482" xml:space="preserve">
+    <value>Uložit úpravu</value>
+  </data>
+  <data name="Die_Anpassung_enth_lt_nur_was_hier_angehakt_ist__aa9b735b" xml:space="preserve">
+    <value>Úprava obsahuje jen to, co je zde zaškrtnuto. Při použití nahradí právě tyto posuvníky, všechny ostatní na obrázku zůstanou, jak jsou.</value>
+  </data>
+  <data name="Alle_Regler_in_die_Anpassung_aufnehmen_e1fadf41" xml:space="preserve">
+    <value>Zahrnout do úpravy všechny posuvníky</value>
+  </data>
+  <data name="Alle_Haken_entfernen_66c06e2d" xml:space="preserve">
+    <value>Zrušit všechna zaškrtnutí</value>
+  </data>
+  <data name="Regler_einzeln_w_hlen_0955bd5d" xml:space="preserve">
+    <value>Vybrat posuvníky jednotlivě</value>
+  </data>
+  <data name="Enth_lt_6b3bfaa9" xml:space="preserve">
+    <value>Obsahuje:</value>
+  </data>
+  <data name="Alle_Anpassungen_a5e8d6b6" xml:space="preserve">
+    <value>Všechny úpravy</value>
+  </data>
+  <data name="Keine_Anpassungen_0d4d900e" xml:space="preserve">
+    <value>Žádné úpravy</value>
+  </data>
+  <data name="Die_aktuellen_Regler_als_Anpassung_speichern_mit_e97298b3" xml:space="preserve">
+    <value>Uložit aktuální posuvníky jako úpravu s výběrem, které posuvníky obsahuje</value>
+  </data>
+  <data name="Bild_anheften_Die_n_chsten_Bilder_werden_daneben_9ba609d9" xml:space="preserve">
+    <value>Připnout obrázek. Další obrázky se zobrazí vedle něj k porovnání</value>
+  </data>
+  <data name="Ausschnitt_aller_Bilder_koppeln_Ausgeschaltet_l__a91f6308" xml:space="preserve">
+    <value>Svázat viditelný výřez všech obrázků. Při vypnutí lze každý obrázek posouvat zvlášť</value>
+  </data>
+  <data name="Vergleich_mit_zwei_oder_vier_Feldern_f243d3be" xml:space="preserve">
+    <value>Porovnání se dvěma nebo čtyřmi poli</value>
+  </data>
+  <data name="Bezugsbild_wechseln_Bei_zwei_Feldern_wird_das_re_78856c36" xml:space="preserve">
+    <value>Změnit referenční obrázek. Při dvou polích se nově připnutým stane pravý obrázek, při čtyřech obrázek aktivního pole</value>
+  </data>
+  <data name="Kein_Bild_in_diesem_Feld_c325cb67" xml:space="preserve">
+    <value>V tomto poli není žádný obrázek</value>
+  </data>
+  <data name="Bei_zwei_Feldern_bl_ttert_die_rechte_Fl_che_bei__66e81d0e" xml:space="preserve">
+    <value>Při dvou polích listuje pravá plocha, při čtyřech aktivní. Připnutý obrázek zůstává na místě</value>
+  </data>
+  <data name="Ausschnitt_verschieben_gekoppelt_ziehen_die_ande_1d8abfbd" xml:space="preserve">
+    <value>Posunout viditelný výřez; při svázání jdou ostatní plochy s ním</value>
+  </data>
+  <data name="Zoomen_Ein_Wert_gilt_f_r_alle_Fl_chen_b33077fc" xml:space="preserve">
+    <value>Přibližování. Jedna hodnota platí pro všechny plochy</value>
+  </data>
+  <data name="Aktives_Feld_wechseln_mit_SHIFT_r_ckw_rts_70e7e5e2" xml:space="preserve">
+    <value>Přepnout aktivní pole, se SHIFT zpět</value>
+  </data>
+  <data name="Bei_vier_Feldern_mit_24_Megapixeln_belegt_der_Ve_f9e3b1bd" xml:space="preserve">
+    <value>Při čtyřech polích s 24 megapixely zabere porovnání v polovičním rozlišení zhruba 100 MB, v plném zhruba 380 MB.</value>
+  </data>
+  <data name="TAB_38d4aa69" xml:space="preserve">
+    <value>TAB</value>
+  </data>
 </root>

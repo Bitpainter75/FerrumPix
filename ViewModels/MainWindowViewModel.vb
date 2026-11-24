@@ -885,23 +885,25 @@ Namespace ViewModels
             Return Await Viewer.ConfirmPendingRotationAsync(actionDescription)
         End Function
 
-        ''' <summary>Zwei Bilder im Betrachter nebeneinander vergleichen. Derselbe Weg wie beim
-        ''' normalen Oeffnen, nur mit zwei Pfaden - inklusive der Rueckfragen, die ein ungespeichertes
-        ''' Rezept oder eine offene Drehung sonst still verwerfen wuerden.</summary>
-        Public Async Sub OpenCompareInViewer(leftPath As String, rightPath As String,
+        ''' <summary>Bilder im Betrachter nebeneinander vergleichen: zwei, oder ab drei in vier
+        ''' Feldern (ViewerViewModel.OpenCompare). Derselbe Weg wie beim normalen Oeffnen, nur mit
+        ''' mehreren Eintraegen - inklusive der Rueckfragen, die ein ungespeichertes Rezept oder
+        ''' eine offene Drehung sonst still verwerfen wuerden.</summary>
+        Public Async Sub OpenCompareInViewer(entries As System.Collections.Generic.IReadOnlyList(Of String),
                                              Optional allPaths As System.Collections.Generic.List(Of String) = Nothing,
                                              Optional cacheScopeId As String = Nothing,
                                              Optional cacheScopeName As String = Nothing)
             Try
-                If String.IsNullOrWhiteSpace(leftPath) OrElse String.IsNullOrWhiteSpace(rightPath) Then Return
+                If entries Is Nothing OrElse entries.Count < 2 OrElse String.IsNullOrWhiteSpace(entries(0)) Then Return
+                Dim firstEntry = entries(0)
                 If CurrentMode = AppMode.Editor Then
                     If Not Await ConfirmEditorLeaveAsync("den Viewer öffnest") Then Return
                 End If
                 If CurrentMode = AppMode.Viewer AndAlso Viewer IsNot Nothing AndAlso
-                   Not String.Equals(Viewer.CurrentImagePath, leftPath, PathIdentity.Comparison) Then
+                   Not String.Equals(Viewer.CurrentImagePath, firstEntry, PathIdentity.Comparison) Then
                     If Not Await ConfirmViewerLeaveAsync("ein anderes Bild öffnest") Then Return
                 End If
-                Viewer.OpenCompare(leftPath, rightPath, allPaths, cacheScopeId, cacheScopeName)
+                Viewer.OpenCompare(entries, allPaths, cacheScopeId, cacheScopeName)
                 CurrentMode = AppMode.Viewer
             Catch ex As Exception
                 DiagnosticLogService.LogException("MainWindowViewModel.OpenCompareInViewer", ex)
@@ -3394,6 +3396,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsRemoveMetadata))
                 Me.RaisePropertyChanged(NameOf(DialogShowsCatalogTransfer))
                 Me.RaisePropertyChanged(NameOf(DialogShowsCompareMetadata))
+                Me.RaisePropertyChanged(NameOf(DialogShowsAdjustmentPresetSave))
                 Me.RaisePropertyChanged(NameOf(DialogShowsModelDownload))
                 Me.RaisePropertyChanged(NameOf(DialogShowsImport))
                 Me.RaisePropertyChanged(NameOf(DialogShowsBackup))
@@ -3454,6 +3457,7 @@ Namespace ViewModels
                        _dialogKind <> AppDialogKind.Shortcuts AndAlso
                        _dialogKind <> AppDialogKind.ExtensionDownload AndAlso
                        _dialogKind <> AppDialogKind.DiagnosticLog AndAlso
+                       _dialogKind <> AppDialogKind.AdjustmentPresetSave AndAlso
                        _dialogKind <> AppDialogKind.SaveAs
             End Get
         End Property
@@ -3911,6 +3915,10 @@ Namespace ViewModels
                 If _dialogKind = AppDialogKind.CatalogTransfer Then Return DialogCatalogFields <> CatalogField.None
                 If _dialogKind = AppDialogKind.RemoveMetadata Then
                     Return _dialogRemoveMetadataScope <> RemoveMetadataScope.None AndAlso EffectiveRemoveWhat <> MetadataRemovalFields.None
+                End If
+                ' Ohne Namen oder ohne einen einzigen Haken gaebe es nichts zu speichern.
+                If _dialogKind = AppDialogKind.AdjustmentPresetSave Then
+                    Return _dialogAdjustmentPresetSave IsNot Nothing AndAlso _dialogAdjustmentPresetSave.CanConfirm
                 End If
                 If _dialogKind = AppDialogKind.ModelDownload Then Return IsModelDialogPrimaryEnabled
                 If _dialogKind = AppDialogKind.Import Then Return IsDialogImportPrimaryEnabled()
@@ -4523,6 +4531,9 @@ Namespace ViewModels
                 ' Loeschknoepfe und im Fuss drei Bedienelemente. Bei 840 ueberlappten sich die
                 ' Bedienelemente (Nutzerbefund); 1100 gibt jeder Wertspalte gut 400 Punkte.
                 If DialogShowsCompareMetadata Then Return 1100
+                ' Anpassung speichern: Gruppenname, Zaehler und Haken in einer Zeile, darunter die
+                ' Regler eingerueckt.
+                If DialogShowsAdjustmentPresetSave Then Return 520
                 If DialogShowsBackupOrRestore Then Return 620
                 Return 440
             End Get
@@ -5751,6 +5762,50 @@ Namespace ViewModels
                 Return confirmed IsNot Nothing
             Finally
                 DialogMetadataCompare = Nothing
+            End Try
+        End Function
+
+        ' ---------------------------------------------------------------- Anpassung speichern
+
+        Private _dialogAdjustmentPresetSave As AdjustmentPresetSaveDialogViewModel
+
+        Public ReadOnly Property DialogShowsAdjustmentPresetSave As Boolean
+            Get
+                Return _dialogKind = AppDialogKind.AdjustmentPresetSave
+            End Get
+        End Property
+
+        ''' <summary>Der Inhalt von "Anpassung speichern"; eigener Datenkontext der Ansicht.</summary>
+        Public Property DialogAdjustmentPresetSave As AdjustmentPresetSaveDialogViewModel
+            Get
+                Return _dialogAdjustmentPresetSave
+            End Get
+            Private Set(value As AdjustmentPresetSaveDialogViewModel)
+                Me.RaiseAndSetIfChanged(_dialogAdjustmentPresetSave, value)
+            End Set
+        End Property
+
+        ''' <summary>Zeigt "Anpassung speichern" mit Name und Auswahl der Regler. True heisst
+        ''' bestaetigt; Name und Auswahl stehen dann in <paramref name="dialog"/>. Der Knopf haengt
+        ''' an dessen CanConfirm, deshalb hoert der Rahmen solange auf seine Aenderungen.</summary>
+        Public Async Function ShowAdjustmentPresetSaveAsync(dialog As AdjustmentPresetSaveDialogViewModel) As Task(Of Boolean) Implements IEditorHost.ShowAdjustmentPresetSaveAsync
+            If dialog Is Nothing Then Return False
+            Dim onChanged As System.ComponentModel.PropertyChangedEventHandler =
+                Sub(sender, e)
+                    If e.PropertyName = NameOf(AdjustmentPresetSaveDialogViewModel.CanConfirm) Then
+                        Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
+                    End If
+                End Sub
+            DialogAdjustmentPresetSave = dialog
+            AddHandler dialog.PropertyChanged, onChanged
+            Try
+                Dim confirmed = Await ShowDialogAsync(AppDialogKind.AdjustmentPresetSave, "Anpassung speichern",
+                                                      "Die Anpassung enthält nur, was hier angehakt ist. Beim Anwenden ersetzt sie genau diese Regler, alle anderen am Bild bleiben, wie sie sind.",
+                                                      "", "Speichern", "Abbrechen")
+                Return confirmed IsNot Nothing AndAlso dialog.CanConfirm
+            Finally
+                RemoveHandler dialog.PropertyChanged, onChanged
+                DialogAdjustmentPresetSave = Nothing
             End Try
         End Function
 

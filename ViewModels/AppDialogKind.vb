@@ -46,6 +46,9 @@ Namespace ViewModels
         ''' <summary>Das Ende der Protokolldatei zum Markieren und Kopieren
         ''' (MainWindowViewModelDiagnosticLog.vb).</summary>
         DiagnosticLog
+        ''' <summary>"Anpassung speichern" im Editor: Name und Auswahl der Regler, die die Vorlage
+        ''' enthaelt (AdjustmentPresetSaveDialogViewModel).</summary>
+        AdjustmentPresetSave
     End Enum
 
     ''' <summary>Wo "Metadaten entfernen" wirkt. Jede Stelle fuer sich waehlbar.</summary>

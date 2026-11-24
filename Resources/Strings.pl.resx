@@ -12241,4 +12241,67 @@
   <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
     <value>W przeglądarce i na pełnym ekranie od razu pokazuje kafelek z galerii, dopóki wywoływanie się nie zakończy, zamiast pustego obszaru. Kafelek jest mniejszy niż zdjęcie i dlatego przez chwilę wygląda nieostro.</value>
   </data>
+  <data name="RGB_df447551" xml:space="preserve">
+    <value>RGB</value>
+  </data>
+  <data name="Anpassung_speichern_d3939482" xml:space="preserve">
+    <value>Zapisz korektę</value>
+  </data>
+  <data name="Die_Anpassung_enth_lt_nur_was_hier_angehakt_ist__aa9b735b" xml:space="preserve">
+    <value>Korekta zawiera tylko to, co jest tutaj zaznaczone. Po zastosowaniu zastępuje dokładnie te suwaki, wszystkie pozostałe w obrazie zostają bez zmian.</value>
+  </data>
+  <data name="Alle_Regler_in_die_Anpassung_aufnehmen_e1fadf41" xml:space="preserve">
+    <value>Uwzględnij w korekcie wszystkie suwaki</value>
+  </data>
+  <data name="Alle_Haken_entfernen_66c06e2d" xml:space="preserve">
+    <value>Usuń wszystkie zaznaczenia</value>
+  </data>
+  <data name="Regler_einzeln_w_hlen_0955bd5d" xml:space="preserve">
+    <value>Wybierz suwaki pojedynczo</value>
+  </data>
+  <data name="Enth_lt_6b3bfaa9" xml:space="preserve">
+    <value>Zawiera:</value>
+  </data>
+  <data name="Alle_Anpassungen_a5e8d6b6" xml:space="preserve">
+    <value>Wszystkie korekty</value>
+  </data>
+  <data name="Keine_Anpassungen_0d4d900e" xml:space="preserve">
+    <value>Brak korekt</value>
+  </data>
+  <data name="Die_aktuellen_Regler_als_Anpassung_speichern_mit_e97298b3" xml:space="preserve">
+    <value>Zapisz bieżące suwaki jako korektę i wybierz, które suwaki zawiera</value>
+  </data>
+  <data name="Bild_anheften_Die_n_chsten_Bilder_werden_daneben_9ba609d9" xml:space="preserve">
+    <value>Przypnij obraz. Następne obrazy zostaną pokazane obok do porównania</value>
+  </data>
+  <data name="Ausschnitt_aller_Bilder_koppeln_Ausgeschaltet_l__a91f6308" xml:space="preserve">
+    <value>Sprzęgnij widoczny obszar wszystkich obrazów. Po wyłączeniu każdy obraz można przesuwać osobno</value>
+  </data>
+  <data name="Vergleich_mit_zwei_oder_vier_Feldern_f243d3be" xml:space="preserve">
+    <value>Porównanie z dwoma lub czterema polami</value>
+  </data>
+  <data name="Bezugsbild_wechseln_Bei_zwei_Feldern_wird_das_re_78856c36" xml:space="preserve">
+    <value>Zmień obraz odniesienia. Przy dwóch polach nowym przypiętym staje się prawy obraz, przy czterech obraz z aktywnego pola</value>
+  </data>
+  <data name="Kein_Bild_in_diesem_Feld_c325cb67" xml:space="preserve">
+    <value>Brak obrazu w tym polu</value>
+  </data>
+  <data name="Bei_zwei_Feldern_bl_ttert_die_rechte_Fl_che_bei__66e81d0e" xml:space="preserve">
+    <value>Przy dwóch polach przewija się prawy obszar, przy czterech aktywny. Przypięty obraz zostaje na miejscu</value>
+  </data>
+  <data name="Ausschnitt_verschieben_gekoppelt_ziehen_die_ande_1d8abfbd" xml:space="preserve">
+    <value>Przesuń widoczny obszar; przy sprzężeniu pozostałe obszary idą za nim</value>
+  </data>
+  <data name="Zoomen_Ein_Wert_gilt_f_r_alle_Fl_chen_b33077fc" xml:space="preserve">
+    <value>Powiększanie. Jedna wartość dotyczy wszystkich obszarów</value>
+  </data>
+  <data name="Aktives_Feld_wechseln_mit_SHIFT_r_ckw_rts_70e7e5e2" xml:space="preserve">
+    <value>Zmień aktywne pole, z SHIFT wstecz</value>
+  </data>
+  <data name="Bei_vier_Feldern_mit_24_Megapixeln_belegt_der_Ve_f9e3b1bd" xml:space="preserve">
+    <value>Przy czterech polach po 24 megapiksele porównanie zajmuje około 100 MB w połowie rozdzielczości i około 380 MB w pełnej.</value>
+  </data>
+  <data name="TAB_38d4aa69" xml:space="preserve">
+    <value>TAB</value>
+  </data>
 </root>

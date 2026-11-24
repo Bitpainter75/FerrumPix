@@ -184,11 +184,16 @@ Namespace ViewModels
             Dim shownWasPromoted = sameAs(CurrentItemPath, promotedEntry)
             _folderPaths.RemoveAll(Function(p) sameAs(p, promotedEntry))
             If _isCompareMode Then
-                If sameAs(_compareLeftPath, promotedEntry) Then _compareLeftPath = fileEntry
-                If sameAs(_compareRightPath, promotedEntry) Then _compareRightPath = fileEntry
+                _compareSet.RemoveAll(Function(p) sameAs(p, promotedEntry))
+                Dim shownTwice = False
+                For Each pane In VisibleComparePanes()
+                    If Not sameAs(pane.Path, promotedEntry) Then Continue For
+                    ' Standard und die aufgerueckte standen nebeneinander: jetzt ist es dasselbe Bild.
+                    If VisibleComparePanes().Any(Function(other) other IsNot pane AndAlso sameAs(other.Path, fileEntry)) Then shownTwice = True
+                    SetPaneEntry(pane, fileEntry)
+                Next
                 If sameAs(_pinnedPath, promotedEntry) Then _pinnedPath = fileEntry
-                If sameAs(_compareLeftPath, _compareRightPath) Then
-                    ' Beide Flaechen zeigten Standard und die aufgerueckte: jetzt ist es dasselbe Bild.
+                If shownTwice Then
                     ExitCompare(zurueckZumFokus:=False)
                     OpenImage(fileEntry, _folderPaths, _thumbCacheScopeId, _thumbCacheScopeName)
                     Return
@@ -196,10 +201,14 @@ Namespace ViewModels
                 LoadFilmstrip(reuseItems:=True)
                 SetPinnedPath(_pinnedPath)
                 ImageItem.ReloadThumbnailsFor(FilmstripItems, fileEntry)
+                ' Der Eintrag der Datei zeigt jetzt ein anderes Bild: was dort steht, laedt neu.
+                For Each pane In VisibleComparePanes()
+                    If sameAs(pane.Path, fileEntry) Then pane.SetLoadedImage(Nothing, "", False)
+                Next
                 LoadCompareMarkers()
                 LoadCompareImages()
                 ShowDataOfFocusedPane()
-                For Each n In {NameOf(CompareLeftFileName), NameOf(CompareRightFileName), NameOf(PinnedFileName), NameOf(PositionText)}
+                For Each n In {NameOf(PinnedFileName), NameOf(PositionText)}
                     Me.RaisePropertyChanged(n)
                 Next
                 Return
@@ -523,6 +532,7 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_isFocusPeakingEnabled, value)
                 AppSettingsService.Update(Sub(s) s.ViewerFocusPeaking = value)
                 RefreshFocusPeaking()
+                RefreshCompareFocusPeaking()
             End Set
         End Property
 
@@ -682,6 +692,10 @@ Namespace ViewModels
             FaceFrames.Clear()
             FocusFrames.Clear()
             Dim path = _currentImagePath
+            ' Im Vergleich ist das Einzelbild verborgen, und sein Pfad ist der der aktiven Flaeche,
+            ' sein Bild aber noch das alte. Die Fokusfelder fuehrt dort jede Flaeche selbst
+            ' (RefreshPaneFocusFrames), Gesichtsrahmen gibt es im Vergleich nicht.
+            If _isCompareMode Then Return
             If Not ShowImageMarks OrElse _currentImage Is Nothing OrElse String.IsNullOrWhiteSpace(path) Then
                 SetFocusPointStatus(FocusPointStatus.Off)
                 Return
@@ -790,6 +804,7 @@ Namespace ViewModels
                 _announceFocusPointStatus = value
                 FocusPointNotice = ""
                 RefreshImageMarkGeometry()
+                RefreshCompareFocusFrames()
             End Set
         End Property
 
@@ -882,12 +897,134 @@ Namespace ViewModels
             End Set
         End Property
 
+        ' ── Fokusfelder und Fokus-Peaking im Vergleich ────────────────────────────
+        '
+        ' Dieselben Schalter der Fussleiste wie in der Einzelansicht, aber je Flaeche: jede liest
+        ' die Lage aus der Datei hinter ihrem Eintrag und legt sie auf IHR Bild, und das Peaking
+        ' wird je Flaeche auf ihrem Bild gerechnet. Der Hinweis am Knopf nennt den Grund der
+        ' aktiven Flaeche. Gesichtsrahmen gibt es im Vergleich nicht: die Personen haengen am
+        ' Infopanel des einen gezeigten Bildes.
+
+        ''' <summary>Liest die Fokusfelder einer Flaeche und legt sie auf ihr Bild; nimmt sie weg,
+        ''' wenn der Schalter aus ist oder das Bild des Eintrags noch fehlt. Ein neuerer Aufruf
+        ''' ueberholt einen laufenden (Zaehler der Flaeche).</summary>
+        Private Sub RefreshPaneFocusFrames(pane As ComparePaneViewModel)
+            Dim token = System.Threading.Interlocked.Increment(pane.FocusToken)
+            pane.SetFocusFrames(Nothing, FocusPointStatus.Off)
+            If pane.Index = _focusedComparePane AndAlso _isCompareMode Then SetFocusPointStatus(FocusPointStatus.Off)
+            If Not _showFocusPoints OrElse Not _isCompareMode OrElse Not pane.HasCurrentImage Then Return
+            Dim entry = pane.Path
+            Dim developed = pane.IsRawDeveloped
+            Dim shown = pane.Image.PixelSize
+            Task.Run(Function()
+                         Dim geometry = ReadFaceFrameGeometry(entry, entry, developed)
+                         Dim reading = FocusPointService.ReadFile(VariantKey.FileOf(entry))
+                         Return (Geometry:=geometry, Reading:=reading)
+                     End Function).ContinueWith(
+                Sub(done)
+                    Dispatcher.UIThread.Post(
+                        Sub()
+                            If token <> pane.FocusToken OrElse Not done.IsCompletedSuccessfully Then Return
+                            Dim result = done.Result.Geometry
+                            Dim frames As List(Of FocusFrame) = Nothing
+                            Dim status = FocusPointLayout.Place(done.Result.Reading, result.Reference.Width, result.Reference.Height,
+                                                                result.Geometry, result.QuarterTurn, shown.Width, shown.Height, frames)
+                            pane.SetFocusFrames(frames, status)
+                            If pane.Index = _focusedComparePane Then ShowFocusStatusOfFocusedPane()
+                        End Sub)
+                End Sub, TaskScheduler.Default)
+        End Sub
+
+        ''' <summary>Alle sichtbaren Flaechen: nach dem Umlegen des Schalters.</summary>
+        Private Sub RefreshCompareFocusFrames()
+            If Not _isCompareMode Then Return
+            For Each pane In VisibleComparePanes()
+                RefreshPaneFocusFrames(pane)
+            Next
+        End Sub
+
+        ''' <summary>Der Hinweis am Knopf der Fokusfelder folgt im Vergleich der aktiven Flaeche;
+        ''' nach dem Einschalten von Hand steht ihr Grund einmal rechts in der Fussleiste.</summary>
+        Private Sub ShowFocusStatusOfFocusedPane()
+            If Not _isCompareMode Then Return
+            Dim status = _comparePanes(_focusedComparePane).FocusPointDisplayStatus
+            SetFocusPointStatus(status)
+            If _announceFocusPointStatus AndAlso status <> FocusPointStatus.Off Then
+                _announceFocusPointStatus = False
+                FocusPointNotice = FocusPointReason(status)
+            End If
+        End Sub
+
+        ''' <summary>Rechnet die Peaking-Ebene einer Flaeche zu ihrem Bild neu, oder nimmt sie weg.
+        ''' Kopiert wird auf dem Anzeigefaden, gerechnet im Hintergrund, wie in der Einzelansicht.</summary>
+        Private Sub RefreshPaneFocusPeaking(pane As ComparePaneViewModel)
+            Dim token = System.Threading.Interlocked.Increment(pane.PeakingToken)
+            pane.SetFocusPeakingImage(Nothing)
+            Dim source = pane.Image
+            If Not _isFocusPeakingEnabled OrElse Not _isCompareMode OrElse source Is Nothing Then Return
+            Dim copy As SkiaSharp.SKBitmap
+            Try
+                copy = ImageOrientationService.ToSkBitmap(source)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Viewer.FocusPeaking", ex)
+                Return
+            End Try
+            If copy Is Nothing Then Return
+            Dim work = Task.Run(
+                Function() As SkiaSharp.SKBitmap
+                    Using copy
+                        Return FocusPeakingService.Build(copy)
+                    End Using
+                End Function)
+            work.ContinueWith(
+                Sub(done)
+                    Dispatcher.UIThread.Post(
+                        Sub()
+                            Dim overlay = If(done.IsCompletedSuccessfully, done.Result, Nothing)
+                            Try
+                                If overlay Is Nothing OrElse token <> pane.PeakingToken OrElse Not _isFocusPeakingEnabled OrElse
+                                   Not Object.ReferenceEquals(pane.Image, source) Then Return
+                                pane.SetFocusPeakingImage(ImageOrientationService.ToAvaloniaBitmapFast(overlay))
+                            Catch ex As Exception
+                                DiagnosticLogService.LogException("Viewer.FocusPeaking", ex)
+                            Finally
+                                overlay?.Dispose()
+                            End Try
+                        End Sub)
+                End Sub, TaskScheduler.Default)
+        End Sub
+
+        Private Sub RefreshCompareFocusPeaking()
+            If Not _isCompareMode Then Return
+            For Each pane In VisibleComparePanes()
+                RefreshPaneFocusPeaking(pane)
+            Next
+        End Sub
+
+        ''' <summary>Was an einer Flaeche fehlt, nachholen: nach einem Tausch oder Nachruecken sind
+        ''' laufende Lesungen und Rechnungen verworfen (der Inhalt ist gewandert), fertige sind
+        ''' mitgewandert.</summary>
+        Private Sub CompleteComparePaneOverlays()
+            If Not _isCompareMode Then Return
+            For Each pane In VisibleComparePanes()
+                If Not pane.HasCurrentImage Then Continue For
+                If _isFocusPeakingEnabled AndAlso pane.FocusPeakingImage Is Nothing Then RefreshPaneFocusPeaking(pane)
+                If _showFocusPoints AndAlso pane.FocusPointDisplayStatus = FocusPointStatus.Off Then RefreshPaneFocusFrames(pane)
+            Next
+        End Sub
+
         ''' <summary>Die Stelle, auf die Z zoomt, wenn Fokusfelder zu sehen sind: die Mitte des
-        ''' Felds, das der Bildmitte am naechsten liegt, in Anteilen des gezeigten Bildes. Nothing
-        ''' ohne sichtbare Felder und im Vergleich (die Felder gehoeren zum Einzelbild).</summary>
+        ''' Felds, das der Bildmitte am naechsten liegt, in Anteilen des gezeigten Bildes. Im
+        ''' Vergleich das Feld der AKTIVEN Flaeche; weil der Ausschnitt gekoppelt ist, folgen die
+        ''' anderen. Nothing ohne sichtbare Felder.</summary>
         Public ReadOnly Property FocusZoomAnchor As (X As Double, Y As Double)?
             Get
-                If Not _showFocusPoints OrElse _isCompareMode Then Return Nothing
+                If Not _showFocusPoints Then Return Nothing
+                If _isCompareMode Then
+                    Dim paneFrame = FocusPointLayout.NearestToCenter(_comparePanes(_focusedComparePane).FocusFrames)
+                    If paneFrame Is Nothing Then Return Nothing
+                    Return (paneFrame.CenterX, paneFrame.CenterY)
+                End If
                 Dim frame = FocusPointLayout.NearestToCenter(FocusFrames)
                 If frame Is Nothing Then Return Nothing
                 Return (frame.CenterX, frame.CenterY)
@@ -2298,7 +2435,7 @@ Namespace ViewModels
         ''' <summary>Steht der Pfad als angeheftetes Bild im Vergleich?</summary>
         Private Function IsCompareAnchorPath(path As String) As Boolean
             Return _isCompareMode AndAlso Not String.IsNullOrEmpty(path) AndAlso
-                   String.Equals(path, _compareLeftPath, PathIdentity.Comparison)
+                   String.Equals(path, _comparePanes(0).Path, PathIdentity.Comparison)
         End Function
 
         Public ReadOnly Property PinnedFileName As String
@@ -2316,15 +2453,18 @@ Namespace ViewModels
                 SetPinnedPath("")
                 ExitCompare()
             Else
-                Dim path = If(_isCompareMode, _compareLeftPath, CurrentItemPath)
+                Dim path = If(_isCompareMode, _comparePanes(0).Path, CurrentItemPath)
                 If String.IsNullOrWhiteSpace(path) OrElse Not EntryExists(path) Then Return
-                ' Das angeheftete Bild bleibt links; rechts steht sofort der naechste Kandidat der
-                ' aktuellen Reihe. Zwei gleiche Bilder nebeneinander zeigen keinen Unterschied und
-                ' zwangen bisher erst zu einem weiteren Tastendruck. Gibt es keinen zweiten Pfad,
-                ' bleibt der bisherige sichtbare Anheft-Zustand als Rueckfall erhalten.
-                Dim nextPath = NextPathFrom(_currentIndex + 1, path)
-                If Not String.IsNullOrWhiteSpace(nextPath) AndAlso EntryExists(nextPath) Then
-                    ActivateCompare(path, nextPath)
+                ' Das angeheftete Bild bleibt in Feld 1; daneben stehen sofort die naechsten
+                ' Kandidaten der aktuellen Reihe, so viele, wie die gemerkte Feldzahl verlangt. Zwei
+                ' gleiche Bilder nebeneinander zeigen keinen Unterschied und zwangen bisher erst zu
+                ' einem weiteren Tastendruck. Gibt es keinen zweiten Eintrag, bleibt der bisherige
+                ' sichtbare Anheft-Zustand als Rueckfall erhalten.
+                Dim fields = RememberedCompareFieldCount()
+                Dim entries As New List(Of String) From {path}
+                entries.AddRange(NextCompareCandidates(_currentIndex + 1, entries, fields - 1))
+                If entries.Count >= 2 Then
+                    ActivateCompare(entries, fields, Nothing)
                     Return
                 End If
                 ' Kein zweites Bild: KEIN Vergleich mit sich selbst. Zweimal dasselbe Bild
@@ -2340,18 +2480,147 @@ Namespace ViewModels
         ' ── Vergleichsmodus ──────────────────────────────────────────────────────
 
         Private _isCompareMode As Boolean
-        Private _compareLeftImage As Bitmap
-        Private _compareRightImage As Bitmap
-        Private _compareLeftPath As String = ""
-        Private _compareRightPath As String = ""
         Private _focusedComparePane As Integer
+        Private _compareFieldCount As Integer = 2
+        Private _comparePanes As ComparePaneViewModel() = CreateComparePanes()
 
-        ''' <summary>Zwei Bilder nebeneinander mit GETEILTEM Zoom und gespiegeltem Ausschnitt.
-        ''' Die beiden Flaechen haengen an eigenen Eigenschaften (links/rechts) und NICHT an
-        ''' CurrentImage: sonst wuerde ein Fokuswechsel die Bilder vertauschen, statt nur die Daten
-        ''' im Infopanel umzuschalten. Der Filmstreifen bleibt bedienbar: ein Klick darauf setzt die
-        ''' RECHTE Flaeche, so haelt man links eine Referenz fest und blaettert rechts durch die
-        ''' Kandidaten.</summary>
+        ''' Die Auswahl, mit der der Vergleich geoeffnet wurde und durch die geblaettert wird. Leer
+        ''' heisst: durch die ganze Reihe des Betrachters.
+        Private ReadOnly _compareSet As New List(Of String)()
+
+        Private Function CreateComparePanes() As ComparePaneViewModel()
+            Return {New ComparePaneViewModel(Me, 0), New ComparePaneViewModel(Me, 1),
+                    New ComparePaneViewModel(Me, 2), New ComparePaneViewModel(Me, 3)}
+        End Function
+
+        ''' <summary>Die vier Flaechen des Vergleichs. Sichtbar sind die ersten zwei oder alle vier
+        ''' (<see cref="CompareFieldCount"/>); Flaeche 0 ist das angeheftete Bezugsbild.</summary>
+        Public ReadOnly Property ComparePanes As IReadOnlyList(Of ComparePaneViewModel)
+            Get
+                Return _comparePanes
+            End Get
+        End Property
+
+        ''' <summary>Die Flaechen, die zur Buehne gehoeren, in ihrer Reihenfolge.</summary>
+        Private Function VisibleComparePanes() As IEnumerable(Of ComparePaneViewModel)
+            Return _comparePanes.Take(_compareFieldCount)
+        End Function
+
+        ''' <summary>Wie viele Felder der Vergleich zeigt: 2 nebeneinander oder 4 als 2 mal 2.</summary>
+        Public ReadOnly Property CompareFieldCount As Integer
+            Get
+                Return _compareFieldCount
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCompareFourFields As Boolean
+            Get
+                Return _compareFieldCount = 4
+            End Get
+        End Property
+
+        ''' <summary>Laeuft der Vergleich mit zwei bzw. mit vier Feldern? Fuer das Symbol des
+        ''' Umschalters und die Ziffer an der Stecknadel.</summary>
+        Public ReadOnly Property IsCompareWithTwoFields As Boolean
+            Get
+                Return _isCompareMode AndAlso _compareFieldCount = 2
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCompareWithFourFields As Boolean
+            Get
+                Return _isCompareMode AndAlso _compareFieldCount = 4
+            End Get
+        End Property
+
+        ''' <summary>Die Ziffer an der Stecknadel, solange der Vergleich laeuft, sonst leer.</summary>
+        Public ReadOnly Property CompareFieldCountBadge As String
+            Get
+                Return If(_isCompareMode, _compareFieldCount.ToString(Globalization.CultureInfo.InvariantCulture), "")
+            End Get
+        End Property
+
+        ''' <summary>Die gemerkte Feldzahl (AppSettings.CompareFieldCount), nur 2 oder 4. Sie gilt
+        ''' beim Anheften; beim Oeffnen aus der Galerie bestimmt die Zahl der gewaehlten Bilder.</summary>
+        Private Shared Function RememberedCompareFieldCount() As Integer
+            Return If(AppSettingsService.Load().CompareFieldCount = 4, 4, 2)
+        End Function
+
+        Private Sub RaiseCompareFieldCountChanged()
+            For Each n In {NameOf(CompareFieldCount), NameOf(IsCompareFourFields),
+                           NameOf(IsCompareWithTwoFields), NameOf(IsCompareWithFourFields),
+                           NameOf(CompareFieldCountBadge)}
+                Me.RaisePropertyChanged(n)
+            Next
+        End Sub
+
+        ''' <summary>Sichtbarkeit, Fokus und Feldzahl auf die Flaechen uebertragen.</summary>
+        Private Sub SyncComparePaneState()
+            For Each pane In _comparePanes
+                pane.IsVisible = _isCompareMode AndAlso pane.Index < _compareFieldCount
+                pane.IsFocused = _isCompareMode AndAlso pane.Index = _focusedComparePane
+            Next
+        End Sub
+
+        ''' <summary>Einen Eintrag in eine Flaeche setzen: Name, Kachel aus dem Filmstreifen fuer
+        ''' die Ladezeit. Das Bild selbst laedt <see cref="LoadCompareImages"/>.</summary>
+        Private Sub SetPaneEntry(pane As ComparePaneViewModel, entry As String)
+            entry = If(entry, "")
+            pane.FocusToken += 1
+            pane.SetEntry(entry, EntryName(entry))
+            Dim tile As Bitmap = Nothing
+            If entry.Length > 0 Then
+                tile = FilmstripItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
+                           String.Equals(i.ItemPath, entry, PathIdentity.Comparison))?.Thumbnail
+            End If
+            pane.SetTile(tile)
+            pane.SetFocusFrames(Nothing, FocusPointStatus.Off)
+        End Sub
+
+        ''' <summary>Darf dieser Eintrag in ein Feld des Vergleichs? Kein Video, und wenn mit einer
+        ''' Auswahl geoeffnet wurde, nur aus ihr.</summary>
+        Private Function IsCompareCandidate(entry As String) As Boolean
+            If String.IsNullOrEmpty(entry) Then Return False
+            If VideoPreviewService.IsSupportedVideo(VariantKey.FileOf(entry)) Then Return False
+            If _compareSet.Count > 0 AndAlso
+               Not _compareSet.Any(Function(p) String.Equals(p, entry, PathIdentity.Comparison)) Then Return False
+            Return True
+        End Function
+
+        ''' <summary>Steht der Eintrag schon in einem sichtbaren Feld, ausser in
+        ''' <paramref name="exceptPane"/>? Verglichen wird der EINTRAG, nicht die Datei: zwei
+        ''' Varianten derselben RAW duerfen nebeneinander stehen.</summary>
+        Private Function IsShownInOtherPane(entry As String, exceptPane As Integer) As Boolean
+            Return VisibleComparePanes().Any(Function(p) p.Index <> exceptPane AndAlso
+                                                         String.Equals(p.Path, entry, PathIdentity.Comparison))
+        End Function
+
+        ''' <summary>Die naechsten Eintraege der Reihe ab <paramref name="start"/>, die in den
+        ''' Vergleich duerfen und noch nicht vergeben sind, hoechstens <paramref name="wanted"/>.
+        ''' Am Ende der Reihe geht es vorne weiter.</summary>
+        Private Function NextCompareCandidates(start As Integer, taken As IEnumerable(Of String), wanted As Integer) As List(Of String)
+            Dim result As New List(Of String)()
+            Dim count = _folderPaths.Count
+            If count = 0 OrElse wanted <= 0 Then Return result
+            Dim first = Math.Max(0, Math.Min(start, count - 1))
+            For i = 0 To count - 1
+                Dim entry = _folderPaths((first + i) Mod count)
+                If Not IsCompareCandidate(entry) Then Continue For
+                If taken.Any(Function(p) String.Equals(p, entry, PathIdentity.Comparison)) OrElse
+                   result.Any(Function(p) String.Equals(p, entry, PathIdentity.Comparison)) Then Continue For
+                If Not EntryExists(entry) Then Continue For
+                result.Add(entry)
+                If result.Count = wanted Then Exit For
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Zwei oder vier Bilder nebeneinander mit GETEILTEM Zoom und gespiegeltem
+        ''' Ausschnitt. Die Flaechen haengen an eigenen Objekten (<see cref="ComparePanes"/>) und
+        ''' NICHT an CurrentImage: sonst wuerde ein Fokuswechsel die Bilder vertauschen, statt nur
+        ''' die Daten im Infopanel umzuschalten. Der Filmstreifen bleibt bedienbar: ein Klick
+        ''' darauf setzt das Feld, das blaettert, so haelt man in Feld 1 einen Bezug fest und
+        ''' blaettert daneben durch die Kandidaten.</summary>
         Public Property IsCompareMode As Boolean
             Get
                 Return _isCompareMode
@@ -2360,6 +2629,8 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_isCompareMode, value)
                 Me.RaisePropertyChanged(NameOf(IsSingleImageMode))
                 Me.RaisePropertyChanged(NameOf(IsSingleImageVisible))
+                RaiseCompareFieldCountChanged()
+                SyncComparePaneState()
             End Set
         End Property
 
@@ -2379,37 +2650,31 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public Property CompareLeftImage As Bitmap
+        ' Die Namen mit Left und Right sind WEITERLEITUNGEN auf Flaeche 0 und 1 aus der Zeit, als
+        ' der Vergleich genau zwei Flaechen hatte. Die Oberflaeche haengt an ComparePanes; die
+        ' alten Namen bleiben, solange Pruefungen sie lesen.
+
+        Public ReadOnly Property CompareLeftImage As Bitmap
             Get
-                Return _compareLeftImage
+                Return _comparePanes(0).Image
             End Get
-            Private Set(value As Bitmap)
-                Dim alt = _compareLeftImage
-                Me.RaiseAndSetIfChanged(_compareLeftImage, value)
-                If alt IsNot Nothing AndAlso Not ReferenceEquals(alt, value) Then alt.Dispose()
-            End Set
         End Property
 
-        Public Property CompareRightImage As Bitmap
+        Public ReadOnly Property CompareRightImage As Bitmap
             Get
-                Return _compareRightImage
+                Return _comparePanes(1).Image
             End Get
-            Private Set(value As Bitmap)
-                Dim alt = _compareRightImage
-                Me.RaiseAndSetIfChanged(_compareRightImage, value)
-                If alt IsNot Nothing AndAlso Not ReferenceEquals(alt, value) Then alt.Dispose()
-            End Set
         End Property
 
         Public ReadOnly Property CompareLeftFileName As String
             Get
-                Return EntryName(_compareLeftPath)
+                Return _comparePanes(0).FileName
             End Get
         End Property
 
         Public ReadOnly Property CompareRightFileName As String
             Get
-                Return EntryName(_compareRightPath)
+                Return _comparePanes(1).FileName
             End Get
         End Property
 
@@ -2434,21 +2699,72 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Welche Flaeche den Fokus hat (0 = links, 1 = rechts). Der Rahmen haengt daran,
-        ''' und das Infopanel zeigt die Daten GENAU dieser Flaeche.</summary>
+        ''' <summary>Welche Flaeche den Fokus hat (0 bis 3, 0 ist das Bezugsbild). Der Rahmen haengt
+        ''' daran, das Infopanel zeigt die Daten GENAU dieser Flaeche, und bei vier Feldern ist sie
+        ''' die, die blaettert. Eine leere oder nicht sichtbare Flaeche bekommt den Fokus nicht.</summary>
         Public Property FocusedComparePane As Integer
             Get
                 Return _focusedComparePane
             End Get
             Set(value As Integer)
-                Dim v = If(value = 1, 1, 0)
-                If _focusedComparePane = v Then Return
-                Me.RaiseAndSetIfChanged(_focusedComparePane, v)
-                Me.RaisePropertyChanged(NameOf(IsCompareLeftFocused))
-                Me.RaisePropertyChanged(NameOf(IsCompareRightFocused))
+                If value < 0 OrElse value >= _compareFieldCount Then Return
+                If _comparePanes(value).IsEmpty Then Return
+                If _focusedComparePane = value Then Return
+                Me.RaiseAndSetIfChanged(_focusedComparePane, value)
+                AfterComparePaneFocusChanged()
                 ShowDataOfFocusedPane()
             End Set
         End Property
+
+        ''' <summary>TAB: das naechste belegte Feld wird das aktive, rueckwaerts das vorige; am Ende
+        ''' geht es vorne weiter. Leere Felder werden uebergangen.</summary>
+        Public Sub FocusNextComparePane(Optional backward As Boolean = False)
+            If Not _isCompareMode Then Return
+            Dim stepBy = If(backward, -1, 1)
+            Dim candidate = _focusedComparePane
+            For i = 1 To _compareFieldCount - 1
+                candidate = ((candidate + stepBy) Mod _compareFieldCount + _compareFieldCount) Mod _compareFieldCount
+                If _comparePanes(candidate).HasEntry Then
+                    FocusedComparePane = candidate
+                    Return
+                End If
+            Next
+        End Sub
+
+        ''' <summary>Der Fokus steht auf einer anderen Flaeche: Rahmen, Tauschen und, bei vier
+        ''' Feldern, die Stelle im Filmstreifen ziehen mit (dort blaettert die aktive Flaeche).</summary>
+        Private Sub AfterComparePaneFocusChanged()
+            SyncComparePaneState()
+            Me.RaisePropertyChanged(NameOf(IsCompareLeftFocused))
+            Me.RaisePropertyChanged(NameOf(IsCompareRightFocused))
+            Me.RaisePropertyChanged(NameOf(CanSwapComparePanes))
+            SyncIndexToBrowsePane()
+            ShowFocusStatusOfFocusedPane()
+        End Sub
+
+        ''' <summary>Die Flaeche, in die das Blaettern das naechste Bild setzt: bei zwei Feldern
+        ''' immer die rechte, bei vier die aktive. -1, wenn die aktive das Bezugsbild ist: Feld 1
+        ''' blaettert nicht.</summary>
+        Private Function BrowsePaneIndex() As Integer
+            If _compareFieldCount = 2 Then Return 1
+            Return If(_focusedComparePane > 0, _focusedComparePane, -1)
+        End Function
+
+        ''' <summary>Die Stelle in der Reihe (Zaehler, Filmstreifen) folgt dem Bild der Flaeche, die
+        ''' blaettert. Von dort aus rechnet der naechste Tastendruck weiter.</summary>
+        Private Sub SyncIndexToBrowsePane()
+            If Not _isCompareMode Then Return
+            Dim browse = BrowsePaneIndex()
+            If browse < 0 Then Return
+            Dim entry = _comparePanes(browse).Path
+            If entry.Length = 0 Then Return
+            Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, entry, PathIdentity.Comparison))
+            If idx < 0 OrElse idx = _currentIndex Then Return
+            _currentIndex = idx
+            Me.RaisePropertyChanged(NameOf(PositionText))
+            Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
+            MarkCurrentFilmstripItem()
+        End Sub
 
         Public ReadOnly Property IsCompareLeftFocused As Boolean
             Get
@@ -2466,7 +2782,7 @@ Namespace ViewModels
         ''' Flaechen selbst anzufassen. BeginInfoPanelSwitch ist dafuer die einzige Stelle; wer hier
         ''' stattdessen das Bild neu laedt, vertauscht die Flaechen.</summary>
         Private Sub ShowDataOfFocusedPane()
-            Dim path = If(_focusedComparePane = 1, _compareRightPath, _compareLeftPath)
+            Dim path = _comparePanes(_focusedComparePane).Path
             If String.IsNullOrEmpty(path) Then Return
             SetCurrentEntry(path)
             BeginInfoPanelSwitch(_currentImagePath)
@@ -2583,61 +2899,179 @@ Namespace ViewModels
         Public Sub OpenComparePaneInEditor(pane As Integer)
             If Not _isCompareMode Then Return
             FocusedComparePane = pane
-            Dim path = If(_focusedComparePane = 1, _compareRightPath, _compareLeftPath)
+            If _focusedComparePane <> pane Then Return
+            Dim path = _comparePanes(_focusedComparePane).Path
             If String.IsNullOrWhiteSpace(path) OrElse Not EntryExists(path) Then Return
             If Not CanEdit Then Return
             EditCommand.Execute(Nothing)
         End Sub
 
-        ''' <summary>Zwei Bilder zum Vergleich oeffnen. Das LINKE gilt als das aktuelle - Ordner-
-        ''' kontext und Infopanel bauen darauf auf wie beim normalen Oeffnen.</summary>
-        Public Sub OpenCompare(leftPath As String, rightPath As String,
+        ''' <summary>Bilder zum Vergleich oeffnen, aus der Galerie. Das ERSTE gilt als das aktuelle
+        ''' und als Bezugsbild; Ordnerkontext und Infopanel bauen darauf auf wie beim normalen
+        ''' Oeffnen. Die Zahl der Bilder bestimmt die Feldzahl, ohne die gemerkte Einstellung zu
+        ''' aendern: zwei Bilder stehen nebeneinander, ab drei sind es vier Felder (bei drei
+        ''' bleibt das vierte leer). Bei mehr als vier wird durch die Auswahl geblaettert, sonst
+        ''' durch die ganze Reihe. Videos und Eintraege, die es nicht gibt, fallen heraus.</summary>
+        Public Sub OpenCompare(entries As IReadOnlyList(Of String),
                                Optional allPaths As List(Of String) = Nothing,
                                Optional cacheScopeId As String = Nothing,
                                Optional cacheScopeName As String = Nothing)
-            If String.IsNullOrWhiteSpace(leftPath) OrElse String.IsNullOrWhiteSpace(rightPath) Then Return
-            If Not EntryExists(leftPath) OrElse Not EntryExists(rightPath) Then Return
+            If entries Is Nothing Then Return
+            Dim usable = entries.
+                Where(Function(p) Not String.IsNullOrWhiteSpace(p) AndAlso
+                                  Not VideoPreviewService.IsSupportedVideo(VariantKey.FileOf(p))).
+                Distinct(PathIdentity.Comparer).
+                Where(Function(p) EntryExists(p)).
+                ToList()
+            If usable.Count < 2 Then Return
 
-            OpenImage(leftPath, allPaths, cacheScopeId, cacheScopeName)
-            ActivateCompare(leftPath, rightPath)
+            OpenImage(usable(0), allPaths, cacheScopeId, cacheScopeName)
+            Dim fields = If(usable.Count > 2, 4, 2)
+            ActivateCompare(usable.Take(fields).ToList(), fields, If(usable.Count > 4, usable, Nothing))
         End Sub
 
-        ''' <summary>Den Vergleich einschalten, ohne das Bild neu zu oeffnen. Das linke Bild gilt dabei
-        ''' als angeheftet - egal ob der Vergleich ueber den Knopf oder ueber die Galerie begann. So
-        ''' ist der Knopf der EINE sichtbare Zustand fuer "Vergleich laeuft", und Loesen fuehrt in
-        ''' beiden Faellen zurueck zur Einzelansicht.</summary>
-        Private Sub ActivateCompare(leftPath As String, rightPath As String)
-            _compareLeftPath = leftPath
-            _compareRightPath = rightPath
+        ''' <summary>Den Vergleich einschalten, ohne das Bild neu zu oeffnen. Der erste Eintrag gilt
+        ''' dabei als angeheftet, gleich ob der Vergleich ueber den Knopf oder ueber die Galerie
+        ''' begann. So ist der Knopf der EINE sichtbare Zustand fuer "Vergleich laeuft", und Loesen
+        ''' fuehrt in beiden Faellen zurueck zur Einzelansicht.</summary>
+        ''' <param name="selection">Die Auswahl, durch die geblaettert wird; Nothing fuer die ganze
+        ''' Reihe.</param>
+        Private Sub ActivateCompare(entries As IReadOnlyList(Of String), fieldCount As Integer,
+                                    selection As IReadOnlyList(Of String))
+            _compareSet.Clear()
+            If selection IsNot Nothing Then _compareSet.AddRange(selection)
+            _compareFieldCount = If(fieldCount = 4, 4, 2)
+            For Each pane In _comparePanes
+                Dim entry = If(pane.Index < _compareFieldCount AndAlso pane.Index < entries.Count, entries(pane.Index), "")
+                If entry.Length = 0 Then
+                    pane.Clear()
+                Else
+                    SetPaneEntry(pane, entry)
+                End If
+            Next
             _focusedComparePane = 0
-            SetPinnedPath(leftPath)
+            SetPinnedPath(entries(0))
             IsCompareMode = True
+            SyncComparePaneState()
+            RaiseCompareFieldCountChanged()
             LoadCompareMarkers()
-            For Each n In {NameOf(CompareLeftFileName), NameOf(CompareRightFileName),
-                           NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
+            For Each n In {NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
                            NameOf(IsImagePinned), NameOf(PinnedFileName),
                            NameOf(CanDeleteCurrent), NameOf(CanSwapComparePanes),
                            NameOf(HasNoMedia)}
                 Me.RaisePropertyChanged(n)
             Next
+            SyncIndexToBrowsePane()
             LoadCompareImages()
         End Sub
+
+        ''' <summary>Zwischen zwei und vier Feldern umschalten; die Wahl wird gemerkt
+        ''' (AppSettings.CompareFieldCount). Feld 1 und das aktive Bild bleiben stehen: von vier
+        ''' auf zwei rueckt das aktive Bild neben das Bezugsbild, von zwei auf vier kommen die
+        ''' naechsten Bilder der Reihe in die neuen Felder. Geladen wird nur, was neu dasteht.</summary>
+        Public Sub ToggleCompareFieldCount()
+            If Not _isCompareMode Then Return
+            Dim target = If(_compareFieldCount = 4, 2, 4)
+            _compareLoadCounter += 1
+            If target = 2 Then
+                ' Das aktive Bild wandert samt seinem geladenen Bild in Feld 2.
+                If _focusedComparePane > 1 Then
+                    _comparePanes(1).SwapContentWith(_comparePanes(_focusedComparePane))
+                    _focusedComparePane = 1
+                ElseIf _comparePanes(1).IsEmpty Then
+                    Dim other = _comparePanes.Skip(2).FirstOrDefault(Function(p) p.HasEntry)
+                    If other IsNot Nothing Then _comparePanes(1).SwapContentWith(other)
+                End If
+                _comparePanes(2).Clear()
+                _comparePanes(3).Clear()
+                _compareFieldCount = 2
+            Else
+                _compareFieldCount = 4
+                Dim taken = _comparePanes.Where(Function(p) p.HasEntry).Select(Function(p) p.Path).ToList()
+                Dim after = _folderPaths.FindIndex(Function(p) String.Equals(p, _comparePanes(1).Path, PathIdentity.Comparison))
+                Dim more = NextCompareCandidates(after + 1, taken, 2)
+                For i = 0 To more.Count - 1
+                    SetPaneEntry(_comparePanes(2 + i), more(i))
+                Next
+            End If
+            AppSettingsService.Update(Sub(s) s.CompareFieldCount = target)
+            SyncComparePaneState()
+            RaiseCompareFieldCountChanged()
+            LoadCompareMarkers()
+            AfterComparePaneFocusChanged()
+            ShowDataOfFocusedPane()
+            If _isFitToWindow Then UpdateFitZoom()
+            LoadCompareImages()
+        End Sub
+
+        Private _toggleCompareFieldCountCommand As ICommand
+
+        Public ReadOnly Property ToggleCompareFieldCountCommand As ICommand
+            Get
+                If _toggleCompareFieldCountCommand Is Nothing Then
+                    _toggleCompareFieldCountCommand = ReactiveCommand.Create(Sub() ToggleCompareFieldCount())
+                End If
+                Return _toggleCompareFieldCountCommand
+            End Get
+        End Property
 
         ' ── Marken auf den Vergleichsflaechen ───────────────────────────────────
         '
         ' Wie auf der Galerie-Kachel: Sterne, Herz, Anpassen und Loeschen liegen AUF dem Bild, zu
         ' dem sie gehoeren. Das ist auch der Grund, warum sie hier ueberhaupt sind - der Knopf in
-        ' der Werkzeugleiste kann im Vergleich nicht sagen, welches der beiden Bilder er meint, und
+        ' der Werkzeugleiste kann im Vergleich nicht sagen, welches der Bilder er meint, und
         ' bei einer nicht umkehrbaren Aktion ist das zu wenig.
+        '
+        ' Die Werte fuehrt jede Flaeche selbst (ComparePaneViewModel); die acht Namen hier leiten
+        ' fuer die alten Eigenschaften mit Left und Right auf Flaeche 0 und 1 weiter.
 
-        Private _compareLeftRating As Integer
-        Private _compareRightRating As Integer
-        Private _compareLeftFavorite As Boolean
-        Private _compareRightFavorite As Boolean
-        Private _compareLeftColorLabel As String = ""
-        Private _compareRightColorLabel As String = ""
-        Private _compareLeftPick As Integer
-        Private _compareRightPick As Integer
+        Private ReadOnly Property _compareLeftRating As Integer
+            Get
+                Return _comparePanes(0).Rating
+            End Get
+        End Property
+
+        Private ReadOnly Property _compareRightRating As Integer
+            Get
+                Return _comparePanes(1).Rating
+            End Get
+        End Property
+
+        Private ReadOnly Property _compareLeftFavorite As Boolean
+            Get
+                Return _comparePanes(0).IsFavorite
+            End Get
+        End Property
+
+        Private ReadOnly Property _compareRightFavorite As Boolean
+            Get
+                Return _comparePanes(1).IsFavorite
+            End Get
+        End Property
+
+        Private ReadOnly Property _compareLeftColorLabel As String
+            Get
+                Return _comparePanes(0).ColorLabel
+            End Get
+        End Property
+
+        Private ReadOnly Property _compareRightColorLabel As String
+            Get
+                Return _comparePanes(1).ColorLabel
+            End Get
+        End Property
+
+        Private ReadOnly Property _compareLeftPick As Integer
+            Get
+                Return _comparePanes(0).PickState
+            End Get
+        End Property
+
+        Private ReadOnly Property _compareRightPick As Integer
+            Get
+                Return _comparePanes(1).PickState
+            End Get
+        End Property
 
         ''' <summary>Behalten und Verwerfen der beiden Vergleichsflaechen, wie neben dem Herz in der
         ''' Info-Leiste.</summary>
@@ -2806,36 +3240,22 @@ Namespace ViewModels
         ''' die einen der beiden Pfade aendert, ruft das - sonst zeigen die Marken die Werte des
         ''' vorherigen Bildes.</summary>
         Private Sub LoadCompareMarkers()
-            _compareLeftRating = If(String.IsNullOrEmpty(_compareLeftPath), 0, LibraryService.Instance.GetRating(_compareLeftPath))
-            _compareRightRating = If(String.IsNullOrEmpty(_compareRightPath), 0, LibraryService.Instance.GetRating(_compareRightPath))
-            _compareLeftFavorite = Not String.IsNullOrEmpty(_compareLeftPath) AndAlso LibraryService.Instance.GetFavorite(_compareLeftPath)
-            _compareRightFavorite = Not String.IsNullOrEmpty(_compareRightPath) AndAlso LibraryService.Instance.GetFavorite(_compareRightPath)
-            _compareLeftColorLabel = If(String.IsNullOrEmpty(_compareLeftPath), "", LibraryService.Instance.GetColorLabel(_compareLeftPath))
-            _compareRightColorLabel = If(String.IsNullOrEmpty(_compareRightPath), "", LibraryService.Instance.GetColorLabel(_compareRightPath))
-            _compareLeftPick = If(String.IsNullOrEmpty(_compareLeftPath), 0, LibraryService.Instance.GetPickState(_compareLeftPath))
-            _compareRightPick = If(String.IsNullOrEmpty(_compareRightPath), 0, LibraryService.Instance.GetPickState(_compareRightPath))
-            For Each n In {NameOf(CompareLeftRating), NameOf(CompareRightRating),
-                           NameOf(IsCompareLeftPicked), NameOf(IsCompareLeftRejected),
-                           NameOf(IsCompareRightPicked), NameOf(IsCompareRightRejected),
-                           NameOf(CompareLeftIsFavorite), NameOf(CompareRightIsFavorite),
-                           NameOf(CompareLeftColorLabel),
-                           NameOf(IsCompareLeftColorLabelOrange), NameOf(IsCompareLeftColorLabelRed),
-                           NameOf(IsCompareLeftColorLabelPink), NameOf(IsCompareLeftColorLabelPurple),
-                           NameOf(IsCompareLeftColorLabelBlue), NameOf(IsCompareLeftColorLabelCyan),
-                           NameOf(IsCompareLeftColorLabelTeal), NameOf(IsCompareLeftColorLabelGreen),
-                           NameOf(IsCompareLeftColorLabelYellow),
-                           NameOf(CompareRightColorLabel),
-                           NameOf(IsCompareRightColorLabelOrange), NameOf(IsCompareRightColorLabelRed),
-                           NameOf(IsCompareRightColorLabelPink), NameOf(IsCompareRightColorLabelPurple),
-                           NameOf(IsCompareRightColorLabelBlue), NameOf(IsCompareRightColorLabelCyan),
-                           NameOf(IsCompareRightColorLabelTeal), NameOf(IsCompareRightColorLabelGreen),
-                           NameOf(IsCompareRightColorLabelYellow)}
-                Me.RaisePropertyChanged(n)
+            Dim library = LibraryService.Instance
+            For Each pane In _comparePanes
+                Dim entry = pane.Path
+                If entry.Length = 0 Then
+                    pane.SetMarkers(0, False, "", 0)
+                Else
+                    pane.SetMarkers(library.GetRating(entry), library.GetFavorite(entry),
+                                    library.GetColorLabel(entry), library.GetPickState(entry))
+                End If
             Next
         End Sub
 
+        ''' <summary>Der Eintrag einer Flaeche; leer fuer eine Stelle ausserhalb der Buehne.</summary>
         Private Function PathOfPane(pane As Integer) As String
-            Return If(pane = 1, _compareRightPath, _compareLeftPath)
+            If pane < 0 OrElse pane >= _compareFieldCount Then Return ""
+            Return _comparePanes(pane).Path
         End Function
 
         ''' <summary>Sterne setzen. Derselbe Stern nochmal loescht die Bewertung - genauso wie auf
@@ -2843,7 +3263,7 @@ Namespace ViewModels
         Public Sub SetCompareRating(pane As Integer, sterne As Integer)
             Dim path = PathOfPane(pane)
             If String.IsNullOrWhiteSpace(path) OrElse Not EntryExists(path) Then Return
-            Dim bisher = If(pane = 1, _compareRightRating, _compareLeftRating)
+            Dim bisher = _comparePanes(pane).Rating
             Dim newValue = If(bisher = sterne, 0, Math.Max(0, Math.Min(5, sterne)))
             For Each target In WithGalleryPartners(path)
                 LibraryService.Instance.SetRating(target, newValue)
@@ -2858,7 +3278,7 @@ Namespace ViewModels
         Public Sub ToggleComparePickState(pane As Integer, state As Integer)
             Dim path = PathOfPane(pane)
             If String.IsNullOrWhiteSpace(path) OrElse Not EntryExists(path) Then Return
-            Dim bisher = If(pane = 1, _compareRightPick, _compareLeftPick)
+            Dim bisher = _comparePanes(pane).PickState
             LibraryService.Instance.SetPickStateForMany(WithGalleryPartners(path), If(bisher = state, 0, state), syncToXmp:=True)
             LoadCompareMarkers()
             If pane = _focusedComparePane Then ApplyCatalogAttributes(path)
@@ -2867,7 +3287,7 @@ Namespace ViewModels
         Public Sub ToggleCompareFavorite(pane As Integer)
             Dim path = PathOfPane(pane)
             If String.IsNullOrWhiteSpace(path) OrElse Not EntryExists(path) Then Return
-            Dim bisher = If(pane = 1, _compareRightFavorite, _compareLeftFavorite)
+            Dim bisher = _comparePanes(pane).IsFavorite
             For Each target In WithGalleryPartners(path)
                 LibraryService.Instance.SetFavorite(target, Not bisher)
             Next
@@ -2875,26 +3295,24 @@ Namespace ViewModels
             If pane = _focusedComparePane Then ApplyCatalogAttributes(path)
         End Sub
 
-        ''' <summary>Etikett des rechten Vergleichsbildes setzen; die bereits gewaehlte Farbe
-        ''' entfernt es wieder, genau wie im Infopanel.</summary>
-        Public Sub SetCompareRightColorLabel(hex As String)
-            Dim path = _compareRightPath
+        ''' <summary>Farbetikett einer Flaeche setzen; die bereits gewaehlte Farbe entfernt es
+        ''' wieder, genau wie im Infopanel.</summary>
+        Public Sub SetCompareColorLabel(pane As Integer, hex As String)
+            Dim path = PathOfPane(pane)
             If String.IsNullOrWhiteSpace(path) OrElse Not EntryExists(path) Then Return
             Dim wanted = If(hex, "")
-            Dim value = If(String.Equals(_compareRightColorLabel, wanted, StringComparison.OrdinalIgnoreCase), "", wanted)
+            Dim value = If(String.Equals(_comparePanes(pane).ColorLabel, wanted, StringComparison.OrdinalIgnoreCase), "", wanted)
             LibraryService.Instance.SetColorLabelForMany(WithGalleryPartners(path), value, syncToXmp:=True)
             LoadCompareMarkers()
-            If _focusedComparePane = 1 Then ApplyCatalogAttributes(path)
+            If pane = _focusedComparePane Then ApplyCatalogAttributes(path)
+        End Sub
+
+        Public Sub SetCompareRightColorLabel(hex As String)
+            SetCompareColorLabel(1, hex)
         End Sub
 
         Public Sub SetCompareLeftColorLabel(hex As String)
-            Dim path = _compareLeftPath
-            If String.IsNullOrWhiteSpace(path) OrElse Not EntryExists(path) Then Return
-            Dim wanted = If(hex, "")
-            Dim value = If(String.Equals(_compareLeftColorLabel, wanted, StringComparison.OrdinalIgnoreCase), "", wanted)
-            LibraryService.Instance.SetColorLabelForMany(WithGalleryPartners(path), value, syncToXmp:=True)
-            LoadCompareMarkers()
-            If _focusedComparePane = 0 Then ApplyCatalogAttributes(path)
+            SetCompareColorLabel(0, hex)
         End Sub
 
         ''' <summary>Eine Flaeche loeschen. Danach rueckt nach: bei der RECHTEN kommt das naechste
@@ -2919,11 +3337,8 @@ Namespace ViewModels
             ' Mit einer Datei gehen auch die Eintraege ihrer zusaetzlichen Varianten.
             _folderPaths.RemoveAll(Function(p) String.Equals(p, geloescht, PathIdentity.Comparison) OrElse Not EntryExists(p) AndAlso
                                                String.Equals(VariantKey.FileOf(p), VariantKey.FileOf(geloescht), PathIdentity.Comparison))
+            _compareSet.RemoveAll(Function(p) Not _folderPaths.Any(Function(f) String.Equals(f, p, PathIdentity.Comparison)))
             LoadFilmstrip(reuseItems:=True)
-
-            ' Beide Flaechen zeigten dasselbe Bild (direkt nach dem Anheften) - dann ist nach dem
-            ' Loeschen nichts mehr zu vergleichen.
-            Dim beideGleich = String.Equals(_compareLeftPath, _compareRightPath, PathIdentity.Comparison)
 
             If _folderPaths.Count = 0 Then
                 ExitCompare(zurueckZumFokus:=False)
@@ -2935,56 +3350,69 @@ Namespace ViewModels
                 Return
             End If
 
-            If beideGleich Then
-                ' Angeheftet, aber noch nicht weitergeblaettert: beide Flaechen zeigten dieselbe
-                ' Datei. Mit ihr faellt das Bezugsbild weg, also gibt es nichts mehr zu vergleichen.
-                ' Frueher blieb der geloeschte Pfad links stehen und die Flaeche zeigte eine Datei,
-                ' die es nicht mehr gibt.
-                Dim weiter = NextPathFrom(stelle, "")
-                ExitCompare(zurueckZumFokus:=False)
-                Dim wIdx = _folderPaths.FindIndex(Function(p) String.Equals(p, weiter, PathIdentity.Comparison))
-                If wIdx >= 0 Then LoadPathAt(wIdx)
-                Return
-            End If
-
+            ' Der Inhalt der geloeschten Flaeche faellt weg, die anderen bleiben stehen, wo sie
+            ' sind. War es das Bezugsbild, wandert das Bild aus Feld 2 SAMT seinem schon geladenen
+            ' Bild in Feld 1 und ist das neue angeheftete (ein zweiter Decode fuer ein Bild, das
+            ' schon da ist, waere bei RAW Sekunden); frei ist dann Feld 2.
+            _compareLoadCounter += 1
+            _comparePanes(pane).Clear()
+            Dim hole = _comparePanes(pane)
             If pane = 0 Then
-                ' Die rechte Bitmap wandert MIT nach links, sie ist bereits geladen - ein zweiter
-                ' Decode fuer ein Bild, das schon da ist, waere bei RAW Sekunden.
-                _compareLeftPath = _compareRightPath
-                Dim wegwerfen = CompareLeftImage
-                SetCompareBitmaps(CompareRightImage, Nothing)
-                ReleaseCompareBitmap(wegwerfen)
-                SetPinnedPath(_compareLeftPath)
-                _vergleichLadeZaehler += 1
+                Dim successor = VisibleComparePanes().Skip(1).FirstOrDefault(Function(p) p.HasEntry)
+                If successor IsNot Nothing Then
+                    _comparePanes(0).SwapContentWith(successor)
+                    hole = successor
+                End If
             End If
+            ' Flaechen, die einen inzwischen geloeschten Eintrag zeigen (die Varianten der Datei).
+            For Each shown In VisibleComparePanes().Where(Function(p) p.HasEntry AndAlso
+                         Not _folderPaths.Any(Function(f) String.Equals(f, p.Path, PathIdentity.Comparison))).ToList()
+                shown.Clear()
+            Next
 
-            ' Das Bild, das jetzt LINKS steht, darf nicht als "das naechste" rechts landen - beim
-            ' Loeschen der linken Flaeche ist die rechte gerade dorthin gewandert und stuende sonst
-            ' auf beiden Seiten.
-            Dim naechster = NextPathFrom(stelle, _compareLeftPath)
-            If String.IsNullOrEmpty(naechster) Then
+            ' In die frei gewordene Stelle kommt das Bild, das jetzt an der Stelle des geloeschten
+            ' steht. Nie eines, das schon in einem anderen Feld zu sehen ist. Gibt es keines mehr,
+            ' ruecken die belegten Flaechen auf, und die leere steht hinten.
+            Dim taken = VisibleComparePanes().Where(Function(p) p.HasEntry).Select(Function(p) p.Path).ToList()
+            Dim nextEntry = NextCompareCandidates(stelle, taken, 1).FirstOrDefault()
+            If nextEntry IsNot Nothing Then SetPaneEntry(hole, nextEntry)
+            CompactComparePanes()
+
+            Dim remaining = VisibleComparePanes().Where(Function(p) p.HasEntry).ToList()
+            If remaining.Count < 2 Then
                 ' Nur noch EIN Bild uebrig - ein Vergleich mit sich selbst hat keinen Sinn.
-                Dim bleibt = If(String.IsNullOrEmpty(_compareLeftPath), naechster, _compareLeftPath)
+                Dim bleibt = If(remaining.Count = 1, remaining(0).Path, NextPathFrom(stelle, ""))
                 ExitCompare(zurueckZumFokus:=False)
                 Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, bleibt, PathIdentity.Comparison))
                 If idx >= 0 Then LoadPathAt(idx)
                 Return
             End If
 
-            _compareRightPath = naechster
-            _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, naechster, PathIdentity.Comparison))
-            _focusedComparePane = 0
-            LoadCompareImages(nurRechts:=True)
+            SetPinnedPath(_comparePanes(0).Path)
+            ' Bei zwei Feldern steht der Fokus danach auf dem Bezugsbild, wie bisher. Bei vier
+            ' bleibt er auf der Stelle, an der geloescht wurde, damit eine Serie in einem Zug
+            ' durchgesehen werden kann; ist sie leer geblieben, geht er auf das Bezugsbild.
+            _focusedComparePane = If(_compareFieldCount = 4 AndAlso pane > 0 AndAlso _comparePanes(pane).HasEntry, pane, 0)
             LoadCompareMarkers()
+            AfterComparePaneFocusChanged()
+            LoadCompareImages()
             ShowDataOfFocusedPane()
-            For Each n In {NameOf(CompareLeftFileName), NameOf(CompareRightFileName),
-                           NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
-                           NameOf(IsImagePinned), NameOf(PinnedFileName),
-                           NameOf(CanSwapComparePanes), NameOf(PositionText),
-                           NameOf(CurrentFilmstripIndex)}
+            For Each n In {NameOf(IsImagePinned), NameOf(PinnedFileName),
+                           NameOf(PositionText), NameOf(CurrentFilmstripIndex)}
                 Me.RaisePropertyChanged(n)
             Next
             MarkCurrentFilmstripItem()
+        End Sub
+
+        ''' <summary>Leere Stellen ans Ende: die belegten Flaechen ruecken in ihrer Reihenfolge
+        ''' auf. Feld 1 ist danach wieder belegt, solange es ueberhaupt ein Bild gibt.</summary>
+        Private Sub CompactComparePanes()
+            For i = 0 To _compareFieldCount - 2
+                If _comparePanes(i).HasEntry Then Continue For
+                Dim later = VisibleComparePanes().Skip(i + 1).FirstOrDefault(Function(p) p.HasEntry)
+                If later Is Nothing Then Exit For
+                _comparePanes(i).SwapContentWith(later)
+            Next
         End Sub
 
         ''' <summary>Das Bild, das nach dem Loeschen an dieser Stelle steht. Ist die Liste dort zu
@@ -3000,91 +3428,82 @@ Namespace ViewModels
             Return ""
         End Function
 
-        ''' <summary>Beide Vergleichs-Bitmaps setzen, OHNE eines freizugeben.
-        '''
-        ''' Die Setter geben das abgeloeste Bild frei - richtig, solange ein Bild wirklich ersetzt
-        ''' wird. Beim Tauschen und beim Nachruecken wandert es dagegen nur auf die ANDERE SEITE,
-        ''' und dann zieht der Setter ihm den Boden weg: der erste Zuweisung gibt das Bitmap frei,
-        ''' das die zweite gerade hinlegen will. Die Anzeige liest danach dessen Groesse und der
-        ''' Prozess faellt. Deshalb hier direkt auf die Felder und die Meldung von Hand - und wer
-        ''' wirklich etwas wegwerfen will, tut das ausdruecklich ueber
-        ''' <see cref="GibVergleichsBitmapFrei"/>.</summary>
-        Private Sub SetCompareBitmaps(left As Bitmap, right As Bitmap)
-            _compareLeftImage = left
-            _compareRightImage = right
-            Me.RaisePropertyChanged(NameOf(CompareLeftImage))
-            Me.RaisePropertyChanged(NameOf(CompareRightImage))
-        End Sub
+        ''' <summary>Die Flaeche, mit der das Bezugsbild tauscht: bei zwei Feldern die rechte, bei
+        ''' vier die aktive. -1, wenn die aktive das Bezugsbild selbst ist.</summary>
+        Private Function SwapPartnerIndex() As Integer
+            If _compareFieldCount = 2 Then Return 1
+            Return If(_focusedComparePane > 0, _focusedComparePane, -1)
+        End Function
 
-        ''' <summary>Ein abgelegtes Vergleichsbild freigeben - erst NACH der Benachrichtigung, damit
-        ''' kein laufender Layoutdurchlauf mehr darauf zugreift (dieselbe Regel wie bei den
-        ''' Vorschaubildern).</summary>
-        Private Shared Sub ReleaseCompareBitmap(bmp As Bitmap)
-            If bmp Is Nothing Then Return
-            Dispatcher.UIThread.Post(Sub() bmp.Dispose(), DispatcherPriority.Background)
-        End Sub
-
-        ''' <summary>Tauschbar, sobald zwei VERSCHIEDENE Bilder anliegen. Direkt nach dem Anheften
-        ''' steht auf beiden Seiten dasselbe; ein Tausch waere dort ein Knopf, der nichts tut.</summary>
+        ''' <summary>Tauschbar, sobald im Bezugsfeld und im Tauschfeld zwei VERSCHIEDENE Bilder
+        ''' stehen. Bei vier Feldern ist das Tauschfeld das aktive; ist das Bezugsbild selbst
+        ''' aktiv, gibt es nichts zu tauschen.</summary>
         Public ReadOnly Property CanSwapComparePanes As Boolean
             Get
-                Return _isCompareMode AndAlso
-                       Not String.IsNullOrEmpty(_compareLeftPath) AndAlso
-                       Not String.IsNullOrEmpty(_compareRightPath) AndAlso
-                       Not String.Equals(_compareLeftPath, _compareRightPath, PathIdentity.Comparison)
+                If Not _isCompareMode Then Return False
+                Dim partner = SwapPartnerIndex()
+                If partner < 0 Then Return False
+                Dim anchor = _comparePanes(0).Path, other = _comparePanes(partner).Path
+                Return anchor.Length > 0 AndAlso other.Length > 0 AndAlso
+                       Not String.Equals(anchor, other, PathIdentity.Comparison)
             End Get
         End Property
 
-        ''' <summary>Seiten tauschen: das rechte Bild wird das neue angeheftete und wandert nach
-        ''' links, das bisher angeheftete nach rechts. Der Weg, wenn man beim Blaettern ein besseres
-        ''' Bezugsbild findet.
+        ''' <summary>Das Bezugsbild wechseln: bei zwei Feldern wird das rechte Bild das neue
+        ''' angeheftete und wandert nach links, bei vier das Bild des aktiven Felds in Feld 1; das
+        ''' bisher angeheftete kommt an dessen Stelle. Der Weg, wenn man beim Blaettern ein
+        ''' besseres Bezugsbild findet.
         '''
-        ''' Die Bitmaps wandern MIT, es wird nichts neu geladen - bei zwei entwickelten RAWs waeren
+        ''' Die Bilder wandern MIT, es wird nichts neu geladen - bei zwei entwickelten RAWs waeren
         ''' das sonst zwei volle Decodes fuer einen Tausch. Der Ladezaehler muss trotzdem hoch:
         ''' laeuft gerade ein Ladevorgang, faellt sein Ergebnis sonst in die inzwischen getauschte
-        ''' Flaeche.</summary>
+        ''' Flaeche. Was dabei noch fehlte, laedt danach neu.</summary>
         Public Sub SwapComparePanes()
             If Not CanSwapComparePanes Then Return
-            Dim alterLinker = _compareLeftPath
-            _compareLeftPath = _compareRightPath
-            _compareRightPath = alterLinker
+            Dim partner = SwapPartnerIndex()
+            _compareLoadCounter += 1
+            _comparePanes(0).SwapContentWith(_comparePanes(partner))
 
-            SetCompareBitmaps(CompareRightImage, CompareLeftImage)
-
-            _vergleichLadeZaehler += 1
-            SetPinnedPath(_compareLeftPath)
+            SetPinnedPath(_comparePanes(0).Path)
             _focusedComparePane = 0
             LoadCompareMarkers()
-
-            ' Das Weiterblaettern haengt am Index der RECHTEN Flaeche - er muss dem getauschten
-            ' Bild folgen, sonst springt der naechste Tastendruck an eine fremde Stelle im Ordner.
-            Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, _compareRightPath, PathIdentity.Comparison))
-            If idx >= 0 Then _currentIndex = idx
+            ' Das Weiterblaettern haengt bei zwei Feldern am Index der RECHTEN Flaeche - er muss
+            ' dem getauschten Bild folgen, sonst springt der naechste Tastendruck an eine fremde
+            ' Stelle im Ordner.
+            AfterComparePaneFocusChanged()
 
             ShowDataOfFocusedPane()
-            For Each n In {NameOf(CompareLeftFileName), NameOf(CompareRightFileName),
-                           NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
-                           NameOf(IsImagePinned), NameOf(PinnedFileName),
-                           NameOf(CanSwapComparePanes), NameOf(PositionText),
-                           NameOf(CurrentFilmstripIndex)}
+            For Each n In {NameOf(IsImagePinned), NameOf(PinnedFileName),
+                           NameOf(PositionText), NameOf(CurrentFilmstripIndex)}
                 Me.RaisePropertyChanged(n)
             Next
             MarkCurrentFilmstripItem()
+            LoadCompareImages()
         End Sub
 
-        ''' <summary>Die rechte Flaeche auf ein anderes Bild setzen - der Weg des Filmstreifens.
-        ''' Die linke bleibt stehen, damit sie als Bezug taugt.</summary>
+        ''' <summary>Die rechte Flaeche auf ein anderes Bild setzen. Die linke bleibt stehen, damit
+        ''' sie als Bezug taugt.</summary>
         Public Sub SetCompareRight(path As String)
+            SetComparePane(1, path)
+        End Sub
+
+        ''' <summary>Eine Flaeche auf ein anderes Bild setzen: der Weg des Blaetterns und des
+        ''' Filmstreifens. Alle anderen Flaechen bleiben stehen, und geladen wird nur dieses eine
+        ''' Bild. Ein Bild, das schon in einem anderen Feld steht, wird nicht gesetzt.</summary>
+        Public Sub SetComparePane(pane As Integer, path As String)
             If Not _isCompareMode OrElse String.IsNullOrWhiteSpace(path) Then Return
+            If pane < 0 OrElse pane >= _compareFieldCount Then Return
             If Not EntryExists(path) Then Return
-            If String.Equals(path, _compareRightPath, PathIdentity.Comparison) Then Return
-            _compareRightPath = path
-            Me.RaisePropertyChanged(NameOf(CompareRightFileName))
+            Dim target = _comparePanes(pane)
+            If String.Equals(path, target.Path, PathIdentity.Comparison) Then Return
+            If IsShownInOtherPane(path, pane) Then Return
+            SetPaneEntry(target, path)
+            If pane = 0 Then SetPinnedPath(path)
             Me.RaisePropertyChanged(NameOf(CanSwapComparePanes))
             LoadCompareMarkers()
-            LoadCompareImages(nurRechts:=True)
-            ' Steht der Fokus rechts, muss auch das Infopanel mit.
-            If _focusedComparePane = 1 Then ShowDataOfFocusedPane()
+            LoadCompareImages()
+            ' Steht der Fokus auf dieser Flaeche, muss auch das Infopanel mit.
+            If _focusedComparePane = pane Then ShowDataOfFocusedPane()
         End Sub
 
         ''' <summary>Vergleich beenden. Standardmaessig springt die Einzelansicht auf das Bild, das
@@ -3092,12 +3511,15 @@ Namespace ViewModels
         ''' Oeffnen eines anderen Bildes entfaellt das, sonst laedt der Betrachter zwei nacheinander.</summary>
         Public Sub ExitCompare(Optional zurueckZumFokus As Boolean = True)
             If Not _isCompareMode Then Return
-            Dim focusPath = If(_focusedComparePane = 1, _compareRightPath, _compareLeftPath)
+            Dim focusPath = _comparePanes(_focusedComparePane).Path
+            _compareLoadCounter += 1
             IsCompareMode = False
-            CompareLeftImage = Nothing
-            CompareRightImage = Nothing
-            _compareRightPath = ""
+            For Each pane In _comparePanes
+                pane.Clear()
+            Next
+            _compareSet.Clear()
             _focusedComparePane = 0
+            SyncComparePaneState()
             ' Die Heftung MUSS hier mit fallen: sie ist derselbe Zustand wie der Vergleich, nur
             ' sichtbar gemacht. Blieb sie stehen, sprang der naechste Bildwechsel unvermittelt
             ' zurueck in den Vergleich - und zwar mit dem Ordner des alten angehefteten Bildes,
@@ -3114,42 +3536,54 @@ Namespace ViewModels
             If idx >= 0 Then LoadPathAt(idx)
         End Sub
 
-        ''' <summary>Zaehler gegen ueberholende Ladevorgaenge: blaettert man schnell, laufen mehrere
-        ''' Decodes gleichzeitig, und ein langsamer frueherer wuerde sonst das neuere Bild
-        ''' ueberschreiben.</summary>
-        Private _vergleichLadeZaehler As Integer
+        ''' <summary>Zaehler gegen ueberholte Ladevorgaenge: jede Aenderung an dem, was in den
+        ''' Flaechen steht, zaehlt ihn hoch. Ein Auftrag, der danach noch wartet oder rechnet, gibt
+        ''' auf, und sein Ergebnis wird verworfen.</summary>
+        Private _compareLoadCounter As Integer
 
-        ''' <summary>Die Vergleichsbilder laden. <paramref name="nurRechts"/> beim Weiterblaettern:
-        ''' das linke ist die festgehaltene Referenz und aendert sich dabei NICHT - es mitzuladen
-        ''' hiess, bei jedem Tastendruck ein RAW ein zweites Mal zu entwickeln.</summary>
-        Private Async Sub LoadCompareImages(Optional nurRechts As Boolean = False)
-            _vergleichLadeZaehler += 1
-            Dim token = _vergleichLadeZaehler
-            Dim left = _compareLeftPath, right = _compareRightPath
+        ''' <summary>Laedt, was in den sichtbaren Flaechen noch fehlt: das aktive Feld zuerst, dann
+        ''' die uebrigen der Reihe nach, NIE zwei zugleich. Eine Flaeche, deren Bild schon dasteht
+        ''' (das Bezugsbild beim Blaettern, ein gewandertes Bild nach Tauschen oder Loeschen), wird
+        ''' nicht noch einmal geladen: bei einer RAW waere das je Tastendruck ein zweiter Decode.
+        '''
+        ''' Eine RAW wird im Vergleich immer entwickelt und geht dafuer durch das Tor, durch das
+        ''' jeder Decode der Anwendung geht (DecodeGate). Ueberholt ein neuerer Auftrag diesen,
+        ''' bricht auch der laufende LibRaw-Lauf ab (RawDecodeService.RunWhileWanted), statt das
+        ''' naechste Bild warten zu lassen. Alles andere ist schnell genug und soll nicht hinter
+        ''' Hintergrundarbeit an diesem Tor warten.</summary>
+        Private Async Sub LoadCompareImages()
+            Dim token = System.Threading.Interlocked.Increment(_compareLoadCounter)
             ' Bei jedem Laden neu gelesen, damit ein umgelegter Schalter beim naechsten Bild wirkt.
             Dim reduced = Not AppSettingsService.Load().CompareRawFullResolution
             Try
-                ' "nurRechts" heisst: das festgehaltene linke Bild NICHT neu laden - es ist die
-                ' Referenz und ein zweiter Decode waere bei RAW Sekunden. Es heisst aber nicht
-                ' "ohne linkes Bild weitermachen": blaettert man direkt nach dem Anheften weiter,
-                ' ueberholt diese Anforderung den noch laufenden ersten Ladevorgang, dessen Ergebnis
-                ' dann verworfen wird - die linke Flaeche blieb dauerhaft leer.
-                If Not nurRechts OrElse _compareLeftImage Is Nothing Then
-                    Dim a = Await Task.Run(Function() DecodeViewerBitmap(left, alwaysDevelop:=True, reducedRawDecode:=reduced))
-                    If Not _isCompareMode OrElse token <> _vergleichLadeZaehler Then
-                        a?.Dispose()
+                Dim order = VisibleComparePanes().OrderBy(Function(p) If(p.Index = _focusedComparePane, 0, 1)).ToList()
+                For Each pane In order
+                    Dim entry = pane.Path
+                    If entry.Length = 0 OrElse pane.HasCurrentImage Then Continue For
+                    Dim loaded As (Bitmap As Bitmap, RawDeveloped As Boolean)
+                    If Not RawPreviewService.IsSupportedRaw(VariantKey.FileOf(entry)) Then
+                        loaded = Await Task.Run(Function() DecodeViewerBitmapWithState(entry, alwaysDevelop:=True, reducedRawDecode:=reduced))
+                    Else
+                        loaded = Await Task.Run(
+                            Function() DecodeGate.Run(
+                                Function() As (Bitmap As Bitmap, RawDeveloped As Boolean)
+                                    If token <> System.Threading.Volatile.Read(_compareLoadCounter) Then Return (Nothing, False)
+                                    Return RawDecodeService.RunWhileWanted(
+                                        Function() token = System.Threading.Volatile.Read(_compareLoadCounter),
+                                        Function() DecodeViewerBitmapWithState(entry, alwaysDevelop:=True, reducedRawDecode:=reduced))
+                                End Function))
+                    End If
+                    If Not _isCompareMode OrElse token <> _compareLoadCounter Then
+                        loaded.Bitmap?.Dispose()
                         Return
                     End If
-                    CompareLeftImage = a
+                    pane.SetLoadedImage(loaded.Bitmap, entry, loaded.RawDeveloped)
+                    If loaded.Bitmap Is Nothing Then pane.MarkLoadFailed()
+                    RefreshPaneFocusPeaking(pane)
+                    RefreshPaneFocusFrames(pane)
                     If _isFitToWindow Then UpdateFitZoom()
-                End If
-                Dim b = Await Task.Run(Function() DecodeViewerBitmap(right, alwaysDevelop:=True, reducedRawDecode:=reduced))
-                If Not _isCompareMode OrElse token <> _vergleichLadeZaehler Then
-                    b?.Dispose()
-                    Return
-                End If
-                CompareRightImage = b
-                If _isFitToWindow AndAlso CompareLeftImage Is Nothing Then UpdateFitZoom()
+                Next
+                CompleteComparePaneOverlays()
             Catch ex As Exception
                 DiagnosticLogService.LogException("Viewer.Vergleich", ex)
             End Try
@@ -5018,25 +5452,31 @@ Namespace ViewModels
 
         Private Sub LoadPathAt(idx As Integer)
             If idx < 0 OrElse idx >= _folderPaths.Count Then Return
-            ' Im Vergleich blaettert JEDE Navigation die rechte Flaeche weiter - Pfeiltasten, Mausrad
+            ' Im Vergleich setzt JEDE Navigation das naechste Bild in EIN Feld - Pfeiltasten, Mausrad
             ' und Filmstreifen laufen alle hier durch. Ohne diese Weiche wechselte nur das versteckte
-            ' Einzelbild samt Infopanel, waehrend die beiden sichtbaren Flaechen stehen blieben.
-            ' Angeheftet, aber noch kein Vergleich: das naechste Bild oeffnet ihn - angeheftet links,
-            ' neu rechts. Dasselbe Bild nochmal anzusteuern tut nichts.
+            ' Einzelbild samt Infopanel, waehrend die sichtbaren Flaechen stehen blieben.
+            ' Angeheftet, aber noch kein Vergleich: das naechste Bild oeffnet ihn - angeheftet in
+            ' Feld 1, neu daneben. Dasselbe Bild nochmal anzusteuern tut nichts, und ein Video
+            ' oeffnet keinen Vergleich.
             If Not _isCompareMode AndAlso IsImagePinned AndAlso
-               Not String.Equals(_folderPaths(idx), _pinnedPath, PathIdentity.Comparison) Then
-                OpenCompare(_pinnedPath, _folderPaths(idx))
+               Not String.Equals(_folderPaths(idx), _pinnedPath, PathIdentity.Comparison) AndAlso
+               Not VideoPreviewService.IsSupportedVideo(VariantKey.FileOf(_folderPaths(idx))) Then
+                OpenCompareFromPin(_folderPaths(idx))
                 Return
             End If
             If _isCompareMode Then
-                ' Das angeheftete Bild kommt nie auf die rechte Seite: es stuende neben sich selbst.
-                ' Blaettern geht in derselben Richtung daran vorbei; gibt es kein anderes Bild,
-                ' bleibt alles stehen.
-                If IsCompareAnchorPath(_folderPaths(idx)) Then
-                    idx = SkipCompareAnchor(idx)
+                ' Bei zwei Feldern blaettert die rechte Flaeche, bei vier die aktive; ist das
+                ' Bezugsbild aktiv, bleibt alles stehen (Feld 1 blaettert nicht).
+                Dim browse = BrowsePaneIndex()
+                If browse < 0 Then Return
+                ' Ein Bild kommt nie neben sich selbst, und Videos und Bilder ausserhalb der
+                ' Auswahl bleiben aussen vor: Blaettern geht in derselben Richtung daran vorbei;
+                ' gibt es kein anderes Bild, bleibt alles stehen.
+                If Not IsBrowseTarget(_folderPaths(idx), browse) Then
+                    idx = SkipToBrowseTarget(idx, browse)
                     If idx < 0 Then Return
                 End If
-                SetCompareRight(_folderPaths(idx))
+                SetComparePane(browse, _folderPaths(idx))
                 _currentIndex = idx
                 Me.RaisePropertyChanged(NameOf(PositionText))
                 Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
@@ -5090,10 +5530,30 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanEdit))
         End Sub
 
-        ''' <summary>Der naechste Index in Blaetterrichtung, der nicht das angeheftete Bild ist; -1,
-        ''' wenn es keinen gibt. Die Richtung kommt aus dem kuerzeren Weg vom aktuellen Bild her,
-        ''' weil der Filmstreifen ringsum laeuft.</summary>
-        Private Function SkipCompareAnchor(idx As Integer) As Integer
+        ''' <summary>Angeheftet, aber noch kein Vergleich: das angesteuerte Bild oeffnet ihn, mit der
+        ''' gemerkten Feldzahl. Bei vier Feldern kommen die naechsten Bilder der Reihe dazu.</summary>
+        Private Sub OpenCompareFromPin(target As String)
+            Dim pinned = _pinnedPath
+            If String.IsNullOrWhiteSpace(pinned) OrElse String.IsNullOrWhiteSpace(target) Then Return
+            If Not EntryExists(pinned) OrElse Not EntryExists(target) Then Return
+            OpenImage(pinned)
+            Dim fields = RememberedCompareFieldCount()
+            Dim entries As New List(Of String) From {pinned, target}
+            Dim after = _folderPaths.FindIndex(Function(p) String.Equals(p, target, PathIdentity.Comparison))
+            entries.AddRange(NextCompareCandidates(after + 1, entries, fields - 2))
+            ActivateCompare(entries, fields, Nothing)
+        End Sub
+
+        ''' <summary>Darf dieser Eintrag beim Blaettern in die Flaeche <paramref name="pane"/>? Ein
+        ''' Bild des Vergleichs (kein Video, in der Auswahl), das in keinem anderen Feld steht.</summary>
+        Private Function IsBrowseTarget(entry As String, pane As Integer) As Boolean
+            Return IsCompareCandidate(entry) AndAlso Not IsShownInOtherPane(entry, pane)
+        End Function
+
+        ''' <summary>Der naechste Index in Blaetterrichtung, der in die Flaeche darf; -1, wenn es
+        ''' keinen gibt. Die Richtung kommt aus dem kuerzeren Weg vom aktuellen Bild her, weil der
+        ''' Filmstreifen ringsum laeuft; am Ende der Reihe geht es vorne weiter.</summary>
+        Private Function SkipToBrowseTarget(idx As Integer, pane As Integer) As Integer
             Dim count = _folderPaths.Count
             If count < 2 Then Return -1
             Dim forward = ((idx - _currentIndex) Mod count + count) Mod count
@@ -5101,9 +5561,18 @@ Namespace ViewModels
             Dim candidate = idx
             For i = 1 To count - 1
                 candidate = ((candidate + direction) Mod count + count) Mod count
-                If Not IsCompareAnchorPath(_folderPaths(candidate)) Then Return candidate
+                If IsBrowseTarget(_folderPaths(candidate), pane) Then Return candidate
             Next
             Return -1
+        End Function
+
+        ''' <summary>Im Vergleich: laesst sich dieser Eintrag ansteuern? Nein, wenn das Bezugsbild
+        ''' aktiv ist (Feld 1 blaettert nicht) oder der Eintrag nicht in das Feld darf, das
+        ''' blaettert.</summary>
+        Private Function IsBlockedInCompare(entry As String) As Boolean
+            If Not _isCompareMode Then Return False
+            Dim browse = BrowsePaneIndex()
+            Return browse < 0 OrElse Not IsBrowseTarget(entry, browse)
         End Function
 
         ''' <summary>POS1 und ENDE: zum ersten bzw. letzten Bild des Ordners, in Betrachter und
@@ -5116,7 +5585,7 @@ Namespace ViewModels
                 If count = 0 Then Return
                 Dim direction = If(toLast, -1, 1)
                 Dim idx = If(toLast, count - 1, 0)
-                While idx >= 0 AndAlso idx < count AndAlso IsCompareAnchorPath(_folderPaths(idx))
+                While idx >= 0 AndAlso idx < count AndAlso IsBlockedInCompare(_folderPaths(idx))
                     idx += direction
                 End While
                 If idx < 0 OrElse idx >= count OrElse idx = _currentIndex Then Return
@@ -5130,8 +5599,10 @@ Namespace ViewModels
             Try
                 If item Is Nothing Then Return
                 ' Ein Klick auf das angeheftete Bild im Filmstreifen tut nichts: es ist gedimmt, weil
-                ' es im Vergleich nicht rechts neben sich selbst stehen kann.
-                If IsCompareAnchorPath(item.ItemPath) Then Return
+                ' es im Vergleich nicht neben sich selbst stehen kann. Dasselbe gilt fuer ein Bild,
+                ' das schon in einem anderen Feld steht, fuer ein Video und solange das Bezugsbild
+                ' aktiv ist.
+                If IsCompareAnchorPath(item.ItemPath) OrElse IsBlockedInCompare(item.ItemPath) Then Return
                 Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, item.ItemPath, PathIdentity.Comparison))
                 If idx >= 0 Then Await CommitNavigateAsync(idx)
             Catch ex As Exception
@@ -5836,7 +6307,9 @@ Namespace ViewModels
             ' Einzelbild die kleine eingebettete Vorschau. Mit deren Groesse gerechnet fiel das
             ' Einpassen um den Faktor zwischen beiden daneben.
             If _isCompareMode Then
-                Dim source = If(CompareLeftImage, CompareRightImage)
+                ' Das Bild des aktiven Felds; solange es noch laedt, das erste, das schon da ist.
+                Dim source = If(_comparePanes(_focusedComparePane).Image,
+                                VisibleComparePanes().Select(Function(p) p.Image).FirstOrDefault(Function(b) b IsNot Nothing))
                 If source Is Nothing OrElse _compareViewportWidth <= 0 OrElse _compareViewportHeight <= 0 Then Return 1.0
                 Return FitFactor(source.Size.Width, source.Size.Height,
                                        _compareViewportWidth, _compareViewportHeight)

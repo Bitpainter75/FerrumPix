@@ -12245,4 +12245,67 @@
   <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
     <value>현상이 끝날 때까지 빈 영역 대신 갤러리의 타일을 뷰어와 전체 화면에 바로 표시합니다. 타일은 사진보다 작아서 잠시 흐릿하게 보입니다.</value>
   </data>
+  <data name="RGB_df447551" xml:space="preserve">
+    <value>RGB</value>
+  </data>
+  <data name="Anpassung_speichern_d3939482" xml:space="preserve">
+    <value>조정 저장</value>
+  </data>
+  <data name="Die_Anpassung_enth_lt_nur_was_hier_angehakt_ist__aa9b735b" xml:space="preserve">
+    <value>조정에는 여기서 체크한 항목만 들어갑니다. 적용하면 바로 그 슬라이더만 대체하고, 이미지의 나머지는 그대로 남습니다.</value>
+  </data>
+  <data name="Alle_Regler_in_die_Anpassung_aufnehmen_e1fadf41" xml:space="preserve">
+    <value>모든 슬라이더를 조정에 포함</value>
+  </data>
+  <data name="Alle_Haken_entfernen_66c06e2d" xml:space="preserve">
+    <value>모든 체크 해제</value>
+  </data>
+  <data name="Regler_einzeln_w_hlen_0955bd5d" xml:space="preserve">
+    <value>슬라이더를 하나씩 선택</value>
+  </data>
+  <data name="Enth_lt_6b3bfaa9" xml:space="preserve">
+    <value>포함:</value>
+  </data>
+  <data name="Alle_Anpassungen_a5e8d6b6" xml:space="preserve">
+    <value>모든 조정</value>
+  </data>
+  <data name="Keine_Anpassungen_0d4d900e" xml:space="preserve">
+    <value>조정 없음</value>
+  </data>
+  <data name="Die_aktuellen_Regler_als_Anpassung_speichern_mit_e97298b3" xml:space="preserve">
+    <value>지금의 슬라이더를 조정으로 저장하고 포함할 슬라이더를 고릅니다</value>
+  </data>
+  <data name="Bild_anheften_Die_n_chsten_Bilder_werden_daneben_9ba609d9" xml:space="preserve">
+    <value>이미지를 고정합니다. 다음 이미지들이 비교를 위해 그 옆에 나타납니다</value>
+  </data>
+  <data name="Ausschnitt_aller_Bilder_koppeln_Ausgeschaltet_l__a91f6308" xml:space="preserve">
+    <value>모든 사진의 보이는 부분을 묶습니다. 꺼두면 사진마다 따로 움직일 수 있습니다</value>
+  </data>
+  <data name="Vergleich_mit_zwei_oder_vier_Feldern_f243d3be" xml:space="preserve">
+    <value>두 칸 또는 네 칸으로 비교</value>
+  </data>
+  <data name="Bezugsbild_wechseln_Bei_zwei_Feldern_wird_das_re_78856c36" xml:space="preserve">
+    <value>기준 사진을 바꿉니다. 두 칸일 때는 오른쪽 사진이, 네 칸일 때는 활성 칸의 사진이 새로 고정된 사진이 됩니다</value>
+  </data>
+  <data name="Kein_Bild_in_diesem_Feld_c325cb67" xml:space="preserve">
+    <value>이 칸에는 사진이 없습니다</value>
+  </data>
+  <data name="Bei_zwei_Feldern_bl_ttert_die_rechte_Fl_che_bei__66e81d0e" xml:space="preserve">
+    <value>두 칸일 때는 오른쪽이, 네 칸일 때는 활성 칸이 넘어갑니다. 고정한 사진은 그대로 남습니다</value>
+  </data>
+  <data name="Ausschnitt_verschieben_gekoppelt_ziehen_die_ande_1d8abfbd" xml:space="preserve">
+    <value>보이는 부분을 옮깁니다. 묶여 있으면 다른 칸도 따라옵니다</value>
+  </data>
+  <data name="Zoomen_Ein_Wert_gilt_f_r_alle_Fl_chen_b33077fc" xml:space="preserve">
+    <value>확대. 하나의 값이 모든 칸에 적용됩니다</value>
+  </data>
+  <data name="Aktives_Feld_wechseln_mit_SHIFT_r_ckw_rts_70e7e5e2" xml:space="preserve">
+    <value>활성 칸을 바꿉니다. SHIFT를 누르면 반대 방향으로 바뀝니다</value>
+  </data>
+  <data name="Bei_vier_Feldern_mit_24_Megapixeln_belegt_der_Ve_f9e3b1bd" xml:space="preserve">
+    <value>24메가픽셀 사진 네 칸을 비교하면 절반 해상도에서 약 100MB, 전체 해상도에서 약 380MB를 사용합니다.</value>
+  </data>
+  <data name="TAB_38d4aa69" xml:space="preserve">
+    <value>TAB</value>
+  </data>
 </root>
