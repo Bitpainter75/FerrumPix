@@ -71,6 +71,9 @@ Namespace Services
         ''' <summary>Wirft das Licht Schatten hinter Gegenstaende, die zwischen ihm und einer Flaeche
         ''' stehen? Braucht die Tiefe.</summary>
         Public Property CastShadows As Boolean = False
+        ''' <summary>Wie weich der Rand des geworfenen Schattens ist, 0 bis 100: bei 0 scharf, darueber
+        ''' laeuft er zunehmend weich aus. Kommt zur Weiche des Lichts hinzu.</summary>
+        Public Property ShadowSoftness As Double = 40
 
         Public Function Clone() As LightSource
             Return DirectCast(MemberwiseClone(), LightSource)
@@ -81,7 +84,7 @@ Namespace Services
             Return String.Join(",", New Object() {
                 Enabled, Kind, XPercent, YPercent, RadiusPercent, Intensity, AngleDegrees, ConeDegrees,
                 AspectPercent, Softness, Falloff, UseTemperature, TemperatureKelvin, Color, BlendMode, Glow,
-                RayCount, RayContrast, UseDepth, DepthReach, HeightPercent, Shading, CastShadows, Id
+                RayCount, RayContrast, UseDepth, DepthReach, HeightPercent, Shading, CastShadows, ShadowSoftness, Id
             }.Select(Function(v) Convert.ToString(v, CultureInfo.InvariantCulture)))
         End Function
     End Class

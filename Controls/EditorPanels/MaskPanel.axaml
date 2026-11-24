@@ -262,8 +262,10 @@
                 </StackPanel>
             </Button>
 
-            <!-- Tiefen-Zweig. Es gibt hier keinen Klick: das Modell liest das ganze Bild, und die
-                 Regler schneiden aus der Tiefenkarte einen Bereich heraus. -->
+            <!-- Tiefen-Zweig. Ein Klick ins Bild bedeutet hier von sich aus nichts: das Modell liest
+                 das ganze Bild, und die Regler schneiden aus der Tiefenkarte einen Bereich heraus.
+                 Nur mit eingeschalteter Pipette legt ein Klick "Von" und "Bis" um die Tiefe der
+                 angeklickten Stelle. -->
             <StackPanel Spacing="8" IsVisible="{Binding IsMaskDepthMode}">
                 <TextBlock Text="Wählt alles, was in einem Entfernungsbereich liegt. 100 ist am nächsten, 0 am weitesten weg."
                            TextWrapping="Wrap"
@@ -274,6 +276,22 @@
                            IsVisible="{Binding IsDepthMaskRunning}"
                            Foreground="{DynamicResource FP.Text.Muted}"
                            FontSize="{DynamicResource FP.Font.Caption}" />
+                <!-- Ein ganzer Knopf mit Rahmen, Symbol und Text: als rahmenloses Symbol am Rand
+                     der Zeile wurde die Pipette uebersehen. -->
+                <Button Classes="ghost"
+                        Classes.active="{Binding IsMaskDepthPickActive}"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="8,5"
+                        Command="{Binding PickMaskDepthCommand}"
+                        ToolTip.Tip="Pipette: auf das Motiv im Bild klicken, dessen Entfernung gewählt werden soll. ESC bricht ab">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eyedropper.svg"
+                            Width="16" Height="16" VerticalAlignment="Center" />
+                        <TextBlock Text="Bereich per Klick aufs Motiv"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                   TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </Button>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
                       ToolTip.Tip="Der ferne Rand des gewählten Bereichs">
                     <TextBlock Text="Von" Foreground="{DynamicResource FP.Text.Secondary}"

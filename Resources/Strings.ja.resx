@@ -5034,9 +5034,6 @@
   <data name="Wie_stark_Lichtpunkte_als_leuchtende_Scheiben_er_3766ef3a" xml:space="preserve">
     <value>光の点が、ぼやけた染みにならずに輝く円として残る度合いです</value>
   </data>
-  <data name="Die_Form_der_Blende_rund_oder_als_Vieleck_mit_so_aa574f45" xml:space="preserve">
-    <value>絞りの形です。円形にするか、指定した枚数の羽根による多角形にします</value>
-  </data>
   <data name="Objekt_entfernen_fcbc0578" xml:space="preserve">
     <value>オブジェクトを消去</value>
   </data>
@@ -12195,5 +12192,26 @@
   </data>
   <data name="Dokumentation_0401e23e" xml:space="preserve">
     <value>ドキュメント</value>
+  </data>
+  <data name="Schattenkante_73103a0e" xml:space="preserve">
+    <value>影の縁</value>
+  </data>
+  <data name="Wie_weich_der_Rand_des_Schattens_ausl_uft_bei_0__6d133ad8" xml:space="preserve">
+    <value>影の縁がどれだけ柔らかく消えるか。0 でくっきり、右へ動かすほど柔らかくなります。</value>
+  </data>
+  <data name="Sch_rfe_per_Klick_aufs_Motiv_32e59472" xml:space="preserve">
+    <value>被写体をクリックしてピントを設定</value>
+  </data>
+  <data name="Pipette_auf_das_Motiv_im_Bild_klicken_das_scharf_90a92d76" xml:space="preserve">
+    <value>スポイト：シャープに残したい被写体を画像内でクリックします。ESC でキャンセル</value>
+  </data>
+  <data name="Bereich_per_Klick_aufs_Motiv_750784e0" xml:space="preserve">
+    <value>被写体をクリックして範囲を設定</value>
+  </data>
+  <data name="Pipette_auf_das_Motiv_im_Bild_klicken_dessen_Ent_d8ba8c89" xml:space="preserve">
+    <value>スポイト：距離を選択したい被写体を画像内でクリックします。ESC でキャンセル</value>
+  </data>
+  <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
+    <value>クリックした深度の周囲にシャープな範囲を設定しました</value>
   </data>
 </root>

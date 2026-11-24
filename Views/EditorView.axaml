@@ -1288,29 +1288,29 @@
                              uebernaehme (UpdatePickColorBadge, PickColorReadout). -->
                         <icons:PickColorReadout x:Name="PickColorBadge" />
                     </Canvas>
-                    <!-- LIVE-VORSCHAU rechnet. Bewusst zurueckhaltend und OHNE Sperre: sie
+                    <!-- LIVE-VORSCHAU rechnet (Tiefen-Unschaerfe, Nebel nach Tiefe). OHNE Sperre: sie
                          entsteht ja gerade deshalb, weil man am Regler zieht. Ohne diesen Hinweis
                          wartet man vor einem Bild, das sich scheinbar nicht ruehrt - besonders
                          nachdem die Tiefenkarte einmal berechnet ist und der langsame Teil danach
-                         gar nicht mehr auffaellt. -->
+                         gar nicht mehr auffaellt. Sieht aus und steht wie die Anzeige fuer Preset,
+                         LUT und Filter darunter: als kleines Schild in der Ecke war es eine zweite
+                         Warteanzeige, die es sonst nirgends gab. -->
                     <Border Grid.Row="1" Grid.Column="1"
                             IsVisible="{Binding ShowsPreviewBusy}"
                             IsHitTestVisible="False"
-                            HorizontalAlignment="Right" VerticalAlignment="Top"
-                            Margin="0,10,10,0"
                             Background="{DynamicResource FP.Bg.Elevated}"
-                            BorderBrush="{DynamicResource FP.Border.Normal}"
+                            BorderBrush="{DynamicResource FP.Border.Strong}"
                             BorderThickness="1"
-                            CornerRadius="6"
-                            Padding="10,6"
-                            Opacity="0.9">
-                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <ProgressBar IsIndeterminate="True" Width="60" Height="3"
+                            CornerRadius="8"
+                            Padding="18,12"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <ProgressBar IsIndeterminate="True" Width="120" Height="4"
                                          VerticalAlignment="Center" />
-                            <TextBlock Text="Vorschau"
+                            <TextBlock Text="Vorschau wird berechnet…"
                                        VerticalAlignment="Center"
-                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                       FontSize="{DynamicResource FP.Font.Small}" />
+                                       FontSize="{DynamicResource FP.Font.Body}" />
                         </StackPanel>
                     </Border>
                     <!-- PRESET, LUT ODER FILTER wird gerechnet. Sieht aus wie die Warte-Anzeige darunter,

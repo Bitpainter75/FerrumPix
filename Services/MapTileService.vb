@@ -202,8 +202,14 @@ Namespace Services
                 ' Pruefung auf Ablauf fiele aus. Ebenso ein AUFGEGEBENER: auf den wartet niemand mehr,
                 ' und er endet gleich mit einem Abbruch.
                 If entry IsNot created AndAlso entry.IsValueCreated AndAlso
-                   (entry.Value.Task.IsCompleted OrElse entry.Value.IsAbandoned) AndAlso
-                   _inFlight.TryUpdate(key, created, entry) Then
+                   (entry.Value.Task.IsCompleted OrElse entry.Value.IsAbandoned) Then
+                    ' Gelingt das Ersetzen nicht, ist der fertige Eintrag inzwischen entfernt (sein
+                    ' Aufraeumen lief zwischen Nachsehen und Ersetzen) oder von einem anderen
+                    ' Aufrufer ersetzt worden. Dann von vorn: mit dem alten weiterzugehen hiesse,
+                    ' sein Ergebnis zu teilen, und die Pruefung auf Ablauf fiele aus. Gemessen an
+                    ' zwei Abrufen direkt nacheinander: in 16 von 4000 Faellen kam so keine
+                    ' Nachfrage zustande.
+                    If Not _inFlight.TryUpdate(key, created, entry) Then Continue Do
                     entry = created
                 End If
                 Dim load = entry.Value

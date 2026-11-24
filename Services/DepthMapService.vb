@@ -201,7 +201,14 @@ Namespace Services
         ''' die Kante auf die Farbkante, laesst aber auf einer Strecke vom Filterradius eine Schulter
         ''' der weichen Modellkarte stehen (an einer Stufe 0 auf 255 bis zu 67 direkt vor der
         ''' Kante); der zweite nimmt das Ergebnis des ersten als Karte und baut sie weitgehend ab.
-        ''' Die Statistik der Farbe wird dafuer nicht neu gerechnet.</summary>
+        ''' Die Statistik der Farbe wird dafuer nicht neu gerechnet.
+        '''
+        ''' Nachgemessen an Fotos mit dem heutigen Modell (802 Kanten, Bildpunkte bei laengerer
+        ''' Seite 1600): mit nur einem Durchgang ist der steile Kern der Kante breiter (beim Radius
+        ''' 1 sind es 3,7 statt 3,2 Punkte, beim Radius 2 sind es 3,2 statt 2,7). Ein dritter bringt
+        ''' nichts mehr: jeder Durchgang mittelt noch einmal ueber den Radius, die Schulter hinter
+        ''' der Kante wird damit wieder breiter (beim Radius 1,5 sind es 6,4 statt 5,7 Punkte), und
+        ''' er kostet gut ein Drittel mehr Zeit.</summary>
         Private Const AlignPasses As Integer = 2
 
         ''' <summary>Zieht die Tiefenkarte des Modells (<paramref name="small"/>) auf die
@@ -226,11 +233,39 @@ Namespace Services
         ''' Punkt des Modells zaehlt ein Punkt DIESER Karte (ihre laengere Seite), nicht eine feste
         ''' Zahl: mit einem Radius aus einer groeberen Karte gerechnet machte der Filter die feinere
         ''' Karte an einem Drittel der gemessenen Kanten breiter, als sie hereinkam.
+        '''
+        ''' ANDERTHALB Punkte des Modells, nicht mehr drei. Der Filter mittelt seine Koeffizienten
+        ''' ueber das Fenster, und was die Farbe an einer Kante nicht ganz erklaert, verteilt er
+        ''' damit auf den doppelten Radius beiderseits: hinter jeder Objektkante stand eine flache
+        ''' Schulter, die es in der Karte des Modells gar nicht gibt. Gemessen an 16 Fotos und 802
+        ''' Kanten (Bildpunkte bei laengerer Seite 1600, Strecke hinter der Kante, auf der die Karte
+        ''' mehr als 3 Prozent der Stufe ueber dem Hintergrund liegt, Median und 75. Perzentil):
+        ''' Karte des Modells bilinear 2,7 und 4,1, nach dem Filter mit Radius 3 aber 12,2 und 18,1,
+        ''' mit Radius 1,5 noch 5,7 und 9,3. Im Nebel nach Tiefe war das ein Hof um jedes Motiv
+        ''' (Dichte 50, Breite im Median 14 Punkte, jetzt 7). Der Radius 3 stammte aus der Zeit der
+        ''' groeberen Karte, deren Umrisse ueber rund vier Punkte liefen; die heutige braucht fuer 10
+        ''' bis 90 Prozent einer Stufe 1,2 ihrer Punkte. Die Karte nimmt dabei in flachen Stuecken
+        ''' weniger Bildtextur an (0,009 statt 0,021 Stufen je Bildpunkt), duenne Teile stehen wie
+        ''' vorher (Ueberstand 32 statt 31 Stufen, in der Karte des Modells 45), und die Kante wird
+        ''' im Ganzen nicht breiter: 10 bis 90 Prozent in 4,2 statt 4,8 Punkten, der steile Kern in
+        ''' 2,8 statt 2,6 (75. Perzentil 4,8 statt 5,3), Abstand zur Farbkante im 75. Perzentil 0,6
+        ''' statt 0,5. Gegen gemessene Tiefe (zehn Innenraeume mit Referenz) liegt die Karte 3 bis 6
+        ''' Punkte hinter den Kanten 13 statt 15 Prozent der Stufe zu nah.
+        '''
+        ''' Radius 1 nimmt die Schulter noch weiter weg (4,1 und 7,0) und ist NICHT gewaehlt: der
+        ''' Kern der Kante wird breiter (3,2), an jeder zehnten Kante liegt die Stufe um mehr als
+        ''' einen Punkt weiter von der Farbkante, und was der Filter aus der Farbe feiner zeichnet
+        ''' als das Modell (Himmelsluecken im Laub, die Form eines Hakens am Seil), geht verloren.
+        ''' Grenze beider: wo das Modell selbst weicher ist als etwa zwei seiner Punkte (unscharfer
+        ''' Hintergrund), bleibt mehr von seiner Rampe stehen als mit Radius 3; an einer kuenstlichen
+        ''' Stufe, mit einem Kasten von 2 Punkten Radius verwischt, sind es 4 Bildpunkte Uebergang
+        ''' statt 1.
+        '''
         ''' <paramref name="epsilon"/> ist die Varianz der Farbe (Kanaele 0 bis 1), unter der eine
         ''' Farbschwankung nicht mehr als Kante gilt.</summary>
         ''' <returns>Alpha8 in Bildgroesse, Nothing bei einem Farbformat ausser BGRA und RGBA.</returns>
         Friend Shared Function AlignToImage(image As SKBitmap, small As SKBitmap,
-                                            Optional radiusModelPixels As Double = 3.0,
+                                            Optional radiusModelPixels As Double = 1.5,
                                             Optional epsilon As Double = 0.001,
                                             Optional cancel As CancellationToken = Nothing) As SKBitmap
             If image Is Nothing OrElse small Is Nothing Then Return Nothing
@@ -277,6 +312,13 @@ Namespace Services
                     Next
                 Next
             End Using
+            cancel.ThrowIfCancellationRequested()
+
+            ' GRENZEN AUS DER KARTE DES MODELLS: kleinster und groesster Wert im Umkreis des
+            ' doppelten Radius, so weit reicht der Filter. Das Ergebnis wird beim Anwenden darauf
+            ' geklemmt (siehe dort).
+            Dim lowest = BoxExtreme(p, lw, lh, 2 * radius, False)
+            Dim highest = BoxExtreme(p, lw, lh, 2 * radius, True)
             cancel.ThrowIfCancellationRequested()
 
             Dim Product = Function(u As Single(), v As Single()) As Single()
@@ -327,6 +369,17 @@ Namespace Services
                 cancel.ThrowIfCancellationRequested()
 
                 ' Je Punkt das lineare Modell: (Kovarianz der Farbe + epsilon) a = Kovarianz Farbe/Karte.
+                '
+                ' EPSILON BLEIBT FEST, auch wenn es an einer Kante die Steigung zurueckhaelt und der
+                ' Teil der Stufe, den die Farbe deshalb nicht traegt, als Schulter im Versatz b
+                ' landet. Ein epsilon, das mit der Streuung der Farbe im Fenster faellt
+                ' (eps * eps / (Streuung + eps)), nahm davon im Median noch etwas weg (beim Radius 1
+                ' Schulter 3,8 statt 4,1 Bildpunkte bei laengerer Seite 1600), setzte aber an Kanten zwischen
+                ' zwei unbunten Flaechen (dunkle Jacke vor weissem Hemd) ganze Fenster auf Schwarz
+                ' oder Weiss, bis 246 Stufen neben dem richtigen Wert: dort liegen alle drei
+                ' Kanaele auf einer Geraden, die Matrix hat nur eine tragende Richtung, und in den
+                ' beiden anderen haelt allein epsilon die Loesung fest. Im Median der Kanten sah man
+                ' das nicht, nur am Bild.
                 Dim aR(n - 1), aG(n - 1), aB(n - 1), b(n - 1) As Single
                 Parallel.For(0, lh, Sub(y)
                                         For x = 0 To lw - 1
@@ -404,6 +457,23 @@ Namespace Services
                                                Bilinear(maG, i00, i01, i10, i11, wx, wy) * row(o + gi) * unit +
                                                Bilinear(maB, i00, i01, i10, i11, wx, wy) * row(o + bi) * unit +
                                                Bilinear(mOffset, i00, i01, i10, i11, wx, wy)
+                                       ' KLEMMEN auf das, was das Modell in der Umgebung hergibt.
+                                       ' q = a . I + b gilt fuer die Farben, aus denen es gelernt
+                                       ' ist; ein Bildpunkt, dessen Farbe darueber hinausgeht (ein
+                                       ' Glanzlicht am Haar, eine helle Falte, der Rand eines
+                                       ' Ohrs), wird sonst ueber die Tiefe des Motivs hinaus
+                                       ' verlaengert und liegt naeher als die Flaeche daneben.
+                                       ' Ein scharfes Band um die Tiefe des Motivs schloss genau
+                                       ' diese Raender aus. Gemessen an 16 Fotos, am Umriss: mit
+                                       ' Radius 3 lagen 1,45 Prozent der Punkte mehr als 4 Stufen
+                                       ' ueber dem Groessten der Modellkarte ringsum (bis rund 20
+                                       ' Stufen), mit Radius 1,5 noch 0,30 Prozent, geklemmt
+                                       ' keiner. Kante, Schulter und duenne Teile bleiben dabei,
+                                       ' wie sie sind.
+                                       Dim floorValue = Bilinear(lowest, i00, i01, i10, i11, wx, wy)
+                                       Dim ceilingValue = Bilinear(highest, i00, i01, i10, i11, wx, wy)
+                                       If q < floorValue Then q = floorValue
+                                       If q > ceilingValue Then q = ceilingValue
                                        line(x) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(q * 255.0F)))))
                                    Next
                                    Marshal.Copy(line, 0, IntPtr.Add(target, y * outStride), w)
@@ -476,6 +546,36 @@ Namespace Services
             Dim top = c(i00) + (c(i01) - c(i00)) * wx
             Dim bottom = c(i10) + (c(i11) - c(i10)) * wx
             Return top + (bottom - top) * wy
+        End Function
+
+        ''' <summary>Kleinster oder groesster Wert im Quadrat mit Radius <paramref name="radius"/> um
+        ''' jeden Punkt, getrennt nach Zeilen und Spalten. Am Rand zaehlt nur, was im Bild liegt.</summary>
+        Private Shared Function BoxExtreme(values As Single(), width As Integer, height As Integer,
+                                           radius As Integer, largest As Boolean) As Single()
+            Dim rows(values.Length - 1) As Single
+            Parallel.For(0, height, Sub(y)
+                                        Dim start = y * width
+                                        For x = 0 To width - 1
+                                            Dim extreme = values(start + x)
+                                            For k = Math.Max(0, x - radius) To Math.Min(width - 1, x + radius)
+                                                Dim v = values(start + k)
+                                                If If(largest, v > extreme, v < extreme) Then extreme = v
+                                            Next
+                                            rows(start + x) = extreme
+                                        Next
+                                    End Sub)
+            Dim result(values.Length - 1) As Single
+            Parallel.For(0, height, Sub(y)
+                                        For x = 0 To width - 1
+                                            Dim extreme = rows(y * width + x)
+                                            For k = Math.Max(0, y - radius) To Math.Min(height - 1, y + radius)
+                                                Dim v = rows(k * width + x)
+                                                If If(largest, v > extreme, v < extreme) Then extreme = v
+                                            Next
+                                            result(y * width + x) = extreme
+                                        Next
+                                    End Sub)
+            Return result
         End Function
 
         ''' <summary>Mittelwert ueber das Quadrat mit Radius <paramref name="radius"/> um jeden Punkt,
@@ -632,11 +732,20 @@ Namespace Services
         End Function
 
         ''' <summary>Wie die öffentliche Berechnung: auch der teure Scheiben-Blur steigt an
-        ''' Zeilengrenzen aus. Ein Abbruch darf nie eine halbe Fassung ins Arbeitsbild schreiben.</summary>
+        ''' Zeilengrenzen aus. Ein Abbruch darf nie eine halbe Fassung ins Arbeitsbild schreiben.
+        '''
+        ''' <paramref name="weight"/> (Alpha8 in Bildgroesse, 255 zaehlt voll, 0 gar nicht) nimmt
+        ''' Bildpunkte aus der Mittelung heraus: gemittelt wird dann nur ueber das, was zaehlt,
+        ''' geteilt durch die Summe der Gewichte. Die Tiefen-Unschaerfe gibt damit das scharfe Motiv
+        ''' nicht in den verwischten Hintergrund: ohne das stand seine Farbe als Hof um es herum,
+        ''' eine gelbe Jacke etwa als gelber Schleier im Himmel daneben. Wo fast nichts zaehlt
+        ''' (mitten im Motiv), bleibt der Bildpunkt selbst stehen; die Stufenmaske blendet ihn dort
+        ''' ohnehin nicht ein.</summary>
         Private Shared Function BlurWithDisc(source As SKBitmap, radius As Double,
                                               corners As Integer, highlightsPct As Double,
                                               cancel As CancellationToken,
-                                              Optional sourceImage As SKImage = Nothing) As SKBitmap
+                                              Optional sourceImage As SKImage = Nothing,
+                                              Optional weight As SKBitmap = Nothing) As SKBitmap
             If source Is Nothing OrElse radius < 0.5 Then Return Nothing
             cancel.ThrowIfCancellationRequested()
             Dim scale = 1.0
@@ -690,8 +799,27 @@ Namespace Services
                 ' Praefixsummen JE ZEILE und je Kanal, auf den angehobenen Werten. Eine Zeile hat
                 ' aw+1 Eintraege, damit die Spanne a bis b als P(b+1) minus P(a) herauskommt.
                 Dim width1 = aw + 1
-                Dim sums As Single()() = New Single(2)() {}
-                For k = 0 To 2
+                ' Die Gewichte in der Groesse der Rechenstufe, 0 bis 1; Nothing ohne Gewichte.
+                Dim weights As Single() = Nothing
+                If weight IsNot Nothing Then
+                    Using smallWeight = New SKBitmap(New SKImageInfo(aw, ah, SKColorType.Alpha8, SKAlphaType.Premul))
+                        If ImageProcessor.ScalePixelsFast(weight, smallWeight, sampling) Then
+                            Dim wStride As Integer
+                            Dim wBytes = ImageProcessor.TryReadAlpha8(smallWeight, wStride)
+                            If wBytes IsNot Nothing Then
+                                weights = New Single(aw * ah - 1) {}
+                                For y = 0 To ah - 1
+                                    For x = 0 To aw - 1
+                                        weights(y * aw + x) = wBytes(y * wStride + x) / 255.0F
+                                    Next
+                                Next
+                            End If
+                        End If
+                    End Using
+                End If
+                Dim weighted = weights IsNot Nothing
+                Dim sums As Single()() = New Single(If(weighted, 3, 2))() {}
+                For k = 0 To sums.Length - 1
                     sums(k) = New Single(ah * width1 - 1) {}
                 Next
                 ' EINMAL AUSLESEN statt je Bildpunkt: SKBitmap.GetPixel ist ein Aufruf in die
@@ -711,11 +839,18 @@ Namespace Services
                     Sub(y As Integer)
                         Dim row = y * width1
                         Dim sRow = y * sStride
-                        Dim pass0 As Single = 0, pass1 As Single = 0, pass2 As Single = 0
+                        Dim pass0 As Single = 0, pass1 As Single = 0, pass2 As Single = 0, pass3 As Single = 0
                         For x = 0 To aw - 1
                             Dim o = sRow + x * 4
                             ' Bgra8888: Blau, Gruen, Rot, Alpha.
-                            pass0 += high(sBuf(o + 2)) : pass1 += high(sBuf(o + 1)) : pass2 += high(sBuf(o))
+                            If weighted Then
+                                Dim g = weights(y * aw + x)
+                                pass0 += high(sBuf(o + 2)) * g : pass1 += high(sBuf(o + 1)) * g : pass2 += high(sBuf(o)) * g
+                                pass3 += g
+                                sums(3)(row + x + 1) = pass3
+                            Else
+                                pass0 += high(sBuf(o + 2)) : pass1 += high(sBuf(o + 1)) : pass2 += high(sBuf(o))
+                            End If
                             sums(0)(row + x + 1) = pass0
                             sums(1)(row + x + 1) = pass1
                             sums(2)(row + x + 1) = pass2
@@ -738,7 +873,7 @@ Namespace Services
                         Sub(y As Integer)
                         Dim bRow = y * bStride
                         For x = 0 To aw - 1
-                            Dim s0 As Single = 0, s1 As Single = 0, s2 As Single = 0
+                            Dim s0 As Single = 0, s1 As Single = 0, s2 As Single = 0, s3 As Single = 0
                             For row = 0 To r * 2
                                 If xTo(row) < xFrom(row) Then Continue For
                                 Dim qy = y + row - r
@@ -761,6 +896,7 @@ Namespace Services
                                     s0 += (sums(0)(basis + 1) - sums(0)(basis)) * n
                                     s1 += (sums(1)(basis + 1) - sums(1)(basis)) * n
                                     s2 += (sums(2)(basis + 1) - sums(2)(basis)) * n
+                                    If weighted Then s3 += (sums(3)(basis + 1) - sums(3)(basis)) * n
                                     Continue For
                                 End If
                                 If a > aw - 1 Then
@@ -768,6 +904,7 @@ Namespace Services
                                     s0 += (sums(0)(basis + aw) - sums(0)(basis + aw - 1)) * n
                                     s1 += (sums(1)(basis + aw) - sums(1)(basis + aw - 1)) * n
                                     s2 += (sums(2)(basis + aw) - sums(2)(basis + aw - 1)) * n
+                                    If weighted Then s3 += (sums(3)(basis + aw) - sums(3)(basis + aw - 1)) * n
                                     Continue For
                                 End If
                                 ' Ausserhalb der Zeile wird der Randwert fortgesetzt: der fehlende
@@ -784,19 +921,35 @@ Namespace Services
                                 s0 += sums(0)(basis + b + 1) - sums(0)(basis + a)
                                 s1 += sums(1)(basis + b + 1) - sums(1)(basis + a)
                                 s2 += sums(2)(basis + b + 1) - sums(2)(basis + a)
+                                If weighted Then s3 += sums(3)(basis + b + 1) - sums(3)(basis + a)
                                 If leftExtra > 0 Then
                                     s0 += (sums(0)(basis + 1) - sums(0)(basis)) * leftExtra
                                     s1 += (sums(1)(basis + 1) - sums(1)(basis)) * leftExtra
                                     s2 += (sums(2)(basis + 1) - sums(2)(basis)) * leftExtra
+                                    If weighted Then s3 += (sums(3)(basis + 1) - sums(3)(basis)) * leftExtra
                                 End If
                                 If rightExtra > 0 Then
                                     s0 += (sums(0)(basis + aw) - sums(0)(basis + aw - 1)) * rightExtra
                                     s1 += (sums(1)(basis + aw) - sums(1)(basis + aw - 1)) * rightExtra
                                     s2 += (sums(2)(basis + aw) - sums(2)(basis + aw - 1)) * rightExtra
+                                    If weighted Then s3 += (sums(3)(basis + aw) - sums(3)(basis + aw - 1)) * rightExtra
                                 End If
                             Next
                             ' Bgra8888: Blau, Gruen, Rot, Alpha.
                             Dim o = bRow + x * 4
+                            If weighted Then
+                                If s3 >= 0.5F Then
+                                    Dim share = 1.0F / s3
+                                    bBuf(o) = BackFromLightByThresholds(s2 * share, backThresholds)
+                                    bBuf(o + 1) = BackFromLightByThresholds(s1 * share, backThresholds)
+                                    bBuf(o + 2) = BackFromLightByThresholds(s0 * share, backThresholds)
+                                Else
+                                    Dim q = y * sStride + x * 4
+                                    bBuf(o) = sBuf(q) : bBuf(o + 1) = sBuf(q + 1) : bBuf(o + 2) = sBuf(q + 2)
+                                End If
+                                bBuf(o + 3) = 255
+                                Continue For
+                            End If
                             bBuf(o) = BackFromLightByThresholds(s2 * divisor, backThresholds)
                             bBuf(o + 1) = BackFromLightByThresholds(s1 * divisor, backThresholds)
                             bBuf(o + 2) = BackFromLightByThresholds(s0 * divisor, backThresholds)
@@ -943,6 +1096,7 @@ Namespace Services
             ' Die Tiefenkarte auf Bildgroesse bringen, falls sie kleiner ist.
             Dim map = depth
             Dim ownMap As SKBitmap = Nothing
+            Dim blurWeight As SKBitmap = Nothing
             Try
                 If depth.Width <> source.Width OrElse depth.Height <> source.Height Then
                     ownMap = New SKBitmap(New SKImageInfo(source.Width, source.Height,
@@ -955,6 +1109,32 @@ Namespace Services
                 ' eine Scheibe hat einen klaren Rand, und zwei Scheiben verschiedener Groesse
                 ' nebeneinander sieht man. Deshalb mehr Stufen als bei der ersten Fassung.
                 Const Steps As Integer = 8
+                ' Was beim Verwischen mitzaehlt: alles ausserhalb des scharfen Bandes, schon eine
+                ' Stufe daneben voll. Das scharfe Motiv bleibt so aus dem verwischten Hintergrund
+                ' heraus (siehe BlurWithDisc).
+                blurWeight = New SKBitmap(New SKImageInfo(source.Width, source.Height, SKColorType.Alpha8, SKAlphaType.Premul))
+                Dim weightReady = False
+                Dim mapStride As Integer
+                Dim mapBytes = ImageProcessor.TryReadAlpha8(map, mapStride)
+                If mapBytes IsNot Nothing Then
+                    Dim weightTable(255) As Byte
+                    For value = 0 To 255
+                        Dim t = value / 255.0 * 100.0
+                        Dim outside = If(t < from, from - t, If(t > bis, t - bis, 0.0))
+                        weightTable(value) = CByte(Math.Round(Math.Min(1.0, outside / uebergang * Steps) * 255.0))
+                    Next
+                    Dim weightStride = blurWeight.RowBytes
+                    Dim weightBytes(weightStride * source.Height - 1) As Byte
+                    Dim rowWidth = source.Width
+                    Parallel.For(0, source.Height,
+                        Sub(y)
+                            For x = 0 To rowWidth - 1
+                                weightBytes(y * weightStride + x) = weightTable(mapBytes(y * mapStride + x))
+                            Next
+                        End Sub)
+                    Marshal.Copy(weightBytes, 0, blurWeight.GetPixels(), weightBytes.Length)
+                    weightReady = True
+                End If
                 Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
                 ' EIN Bild der Quelle fuer alle Stufen: Skia merkt sich seine Mipmaps, und jede Stufe
                 ' verkleinert daraus (ScaleIntoFromImage).
@@ -971,7 +1151,8 @@ Namespace Services
                         Using mask = StepMask(map, from, bis, uebergang, share, 1.0 / Steps, cancel)
                             If mask Is Nothing Then Continue For
                             Using blurred = BlurWithDisc(source, maxRadius * share,
-                                                                  cornerCount, highlightsPct, cancel, sourceImage)
+                                                                  cornerCount, highlightsPct, cancel, sourceImage,
+                                                                  If(weightReady, blurWeight, Nothing))
                                 If blurred Is Nothing Then Continue For
                                 ' Die verwischte Fassung mit der Stufenmaske daruebermischen, in
                                 ' parallelen Baendern: je Band eine eigene Zeichenflaeche ueber dem
@@ -1000,6 +1181,9 @@ Namespace Services
                 End Using
                 Return result
             Finally
+                ' Auch nach einem Abbruch: die Vorschau bricht bei jedem Reglerzug ab, und das
+                ' Gewicht ist ein Bild in voller Groesse.
+                blurWeight?.Dispose()
                 ownMap?.Dispose()
             End Try
         End Function
@@ -1022,12 +1206,23 @@ Namespace Services
         ''' Das Tiefenmodell liefert umgekehrte Entfernung (Disparitaet). Auf ihr draengen sich die
         ''' fernen Bereiche bei 0, die nahen nehmen den groessten Teil der Skala ein. Ein Nebel, der
         ''' auf diesen Werten ansteigt, waere vorn zu breit und hinten zu schmal verteilt. Daher
-        ''' D(i) = 1 / ((R - 1) i + 1). Gezaehlt wird ab der KAMERA, nicht ab dem naechsten Punkt:
-        ''' auch zwischen Kamera und Motiv liegt Nebel, und so bekommt der naechste Punkt den Anteil,
-        ''' der seiner Entfernung entspricht.</summary>
+        ''' D(i) = 1 / ((R - 1) i + 1), gezaehlt ab der Kamera.</summary>
         Friend Shared Function FogDistance(depthByte As Integer) As Double
             Dim i = Math.Max(0, Math.Min(255, depthByte)) / 255.0
             Return 1.0 / ((FogDistanceRatio - 1.0) * i + 1.0)
+        End Function
+
+        ''' <summary>Die Strecke, auf der der Nebel zaehlt: die Entfernung aus
+        ''' <see cref="FogDistance"/>, gezaehlt ab dem NAECHSTEN Punkt der Karte statt ab der
+        ''' Kamera, 0 dort und 1 am fernsten Punkt.
+        '''
+        ''' Ab der Kamera gezaehlt bekam schon der naechste Punkt ein Zehntel der optischen Laenge
+        ''' des fernsten, bei voller Dichte gut vierzig Prozent Nebelfarbe, und zwar auch mit dem
+        ''' Regler Vordergrund auf 0. Wie viel Nebel vor dem Motiv liegt, stellt allein dieser Regler
+        ''' ein (<c>foregroundPct</c> in <see cref="DepthFog"/>); bei 0 bleibt der naechste Punkt klar.</summary>
+        Friend Shared Function FogDistanceFromNearest(depthByte As Integer) As Double
+            Dim nearest = 1.0 / FogDistanceRatio
+            Return Math.Max(0.0, (FogDistance(depthByte) - nearest) / (1.0 - nearest))
         End Function
 
         ''' <summary>Optische Laenge von 0 bis 1 ueber die Strecke <paramref name="x"/> (0 am Beginn, 1
@@ -1058,12 +1253,12 @@ Namespace Services
         '''
         ''' Gerechnet wird wie ein gleichmaessiges Medium: der Durchlass faellt mit der optischen
         ''' Laenge exponentiell (Beer-Lambert), Anteil der Nebelfarbe f = 1 - (1 - Dichte)^L. Die
-        ''' optische Laenge L waechst mit der ENTFERNUNG (<see cref="FogDistance"/>), nicht mit dem
-        ''' Wert der Tiefenkarte, und zwar ab <paramref name="nearPct"/> bis
+        ''' optische Laenge L waechst mit der ENTFERNUNG (<see cref="FogDistanceFromNearest"/>), nicht
+        ''' mit dem Wert der Tiefenkarte, und zwar ab <paramref name="nearPct"/> bis
         ''' <paramref name="farPct"/>; dort liegt die volle <paramref name="densityPct"/>, ferner
-        ''' bleibt sie. Beide Grenzen zaehlen gleichmaessig ueber die Entfernung, 100 an der Kamera,
-        ''' 0 am fernsten Punkt. Mit Beginn 100 bekommt also schon der naechste Punkt etwas Nebel,
-        ''' bei der vorgegebenen Annahme ein Zehntel der optischen Laenge des fernsten.
+        ''' bleibt sie. Beide Grenzen zaehlen gleichmaessig ueber die Entfernung, 100 am naechsten
+        ''' Punkt der Karte, 0 am fernsten. Mit Beginn 100 setzt der Nebel also gleich hinter dem
+        ''' naechsten Punkt ein, der selbst klar bleibt.
         '''
         ''' Gemischt wird auf den vormultiplizierten Bytes, die Nebelfarbe wird dafuer mit dem Alpha
         ''' des Punktes multipliziert. Ein durchsichtiger Punkt bleibt so durchsichtig.
@@ -1093,7 +1288,7 @@ Namespace Services
             Dim near = Math.Max(0.0, Math.Min(100.0, Math.Max(nearPct, farPct)))
             Dim far = Math.Max(0.0, Math.Min(100.0, Math.Min(nearPct, farPct)))
             Dim foreground = Math.Max(0.0, Math.Min(100.0, foregroundPct)) / 100.0
-            ' Grenzen als Entfernung: 0 an der Kamera, 1 am fernsten Punkt.
+            ' Grenzen als Entfernung: 0 am naechsten Punkt der Karte, 1 am fernsten.
             Dim startShare = (100.0 - near) / 100.0
             Dim fullShare = (100.0 - far) / 100.0
             Dim onsetShare = If(fullShare - startShare < 0.0001, 0.0, FogOnsetDistance / (fullShare - startShare))
@@ -1101,10 +1296,11 @@ Namespace Services
             ' den fernsten Punkt bis auf ein Tausendstel in der Nebelfarbe stehen.
             Dim transmissionBase = 1.0 - Math.Min(density, 0.999)
 
-            ' Wie bei den Masken: der Anteil haengt nur am Tiefenbyte.
+            ' Wie bei den Masken: der Anteil haengt nur am Tiefenbyte. Die Strecke zaehlt ab dem
+            ' naechsten Punkt der Karte (0 dort, 1 am fernsten), siehe FogDistanceFromNearest.
             Dim table(255) As Single
             For value = 0 To 255
-                Dim d = FogDistance(value)
+                Dim d = FogDistanceFromNearest(value)
                 Dim length As Double
                 If d <= startShare Then
                     length = 0.0
@@ -1209,6 +1405,194 @@ Namespace Services
             End If
             Runtime.InteropServices.Marshal.Copy(buffer, 0, output.GetPixels(), buffer.Length)
             Return output
+        End Function
+
+        ' ── Der Tiefenbereich um eine angeklickte Stelle ────────────────────────
+        '
+        ' Die Grenzen von Tiefen-Unschaerfe und Maske nach Tiefe sind ab Werk auf "das Motiv ist
+        ' das Naechste" gestellt. Steht echter Vordergrund davor (Boden, Aeste, Wasser), liegt das
+        ' Motiv in der Mitte der Karte, und die festen Grenzen greifen daneben. Ein Klick auf das
+        ' Motiv liest dessen Tiefe und legt das Band darum.
+
+        ''' <summary>Seite des inneren Feldes, aus dem die Tiefe der Stelle selbst kommt, als Anteil
+        ''' der kuerzeren Bildkante.</summary>
+        Private Const PickCenterShare As Double = 0.01
+
+        ''' <summary>Seite des aeusseren Feldes, aus dem die Staffelung des Motivs in sich kommt.</summary>
+        Private Const PickSpreadShare As Double = 0.04
+
+        ''' <summary>Was das Band ueber die gemessene Staffelung hinausreicht, in Reglereinheiten.</summary>
+        Private Const PickMargin As Double = 3.0
+
+        ''' <summary>Schmalstes Band je Seite der angeklickten Tiefe, in Reglereinheiten.</summary>
+        Friend Const PickMinHalfWidth As Double = 8.0
+
+        ''' <summary>Breitestes Band je Seite der angeklickten Tiefe, in Reglereinheiten.</summary>
+        Friend Const PickMaxHalfWidth As Double = 20.0
+
+        ''' <summary>Der Tiefenbereich um eine Stelle der Karte, in Reglereinheiten (0 = am
+        ''' weitesten weg, 100 = am naechsten). Die Stelle in Anteilen 0 bis 1 von Breite und Hoehe.
+        ''' Nothing ohne Karte.
+        '''
+        ''' <para>DIE MITTE ist der Median eines kleinen Feldes um den Klick, kein einzelner
+        ''' Bildpunkt: ein Ausreisser oder der weiche Saum einer Kante bestimmte sonst den Wert.</para>
+        '''
+        ''' <para>DIE BREITE kommt aus der Staffelung des Motivs und nicht aus einer festen Zahl.
+        ''' Beide Kennlinien sind innerhalb der Grenzen flach und fallen gleich dahinter ab
+        ''' (<see cref="MaskFromDepth"/> ueber die weiche Kante, <see cref="StepMask"/> ueber den
+        ''' Uebergang): was vom Motiv ausserhalb des Bandes liegt, ist schon teilweise abgewaehlt
+        ''' bzw. angewischt. Ein Koerper, der schraeg zur Kamera steht, reicht aber ueber mehr
+        ''' Tiefe als eine Wand. Deshalb das 10. und das 90. Perzentil eines groesseren Feldes,
+        ''' dazu ein kleiner Rand. Perzentile statt kleinstem und groesstem Wert, damit ein Stueck
+        ''' Hintergrund am Feldrand das Band nicht aufzieht.</para>
+        '''
+        ''' <para>ZWEI SCHRANKEN je Seite: mindestens <see cref="PickMinHalfWidth"/>, weil eine
+        ''' glatte Flaeche im Feld sonst ein Band ergaebe, das schmaler ist als die Stufen der Karte
+        ''' am selben Gegenstand; hoechstens <see cref="PickMaxHalfWidth"/>, weil ein Feld, das
+        ''' ueber eine Kante ragt (ein Ast, ein Arm), sonst den Hintergrund dahinter mitnaehme. Die
+        ''' Mitte bleibt in jedem Fall die angeklickte Stelle.</para></summary>
+        Public Shared Function RangeAroundPoint(depth As SKBitmap,
+                                                xFraction As Double, yFraction As Double) As (Low As Double, High As Double)?
+            If depth Is Nothing OrElse depth.Width <= 0 OrElse depth.Height <= 0 Then Return Nothing
+            If Double.IsNaN(xFraction) OrElse Double.IsNaN(yFraction) Then Return Nothing
+            Dim w = depth.Width, h = depth.Height
+            Dim px = Math.Max(0, Math.Min(w - 1, CInt(Math.Floor(xFraction * w))))
+            Dim py = Math.Max(0, Math.Min(h - 1, CInt(Math.Floor(yFraction * h))))
+            Dim shorter = Math.Min(w, h)
+            Dim centerRadius = Math.Max(1, CInt(Math.Round(shorter * PickCenterShare / 2.0)))
+            Dim spreadRadius = Math.Max(centerRadius + 1, CInt(Math.Round(shorter * PickSpreadShare / 2.0)))
+
+            Dim pixels = If(depth.ColorType = SKColorType.Alpha8, depth.GetPixels(), IntPtr.Zero)
+            Dim stride = depth.RowBytes
+            Dim centerCounts(255) As Integer
+            Dim spreadCounts(255) As Integer
+            Dim centerTotal = 0, spreadTotal = 0
+            For y = Math.Max(0, py - spreadRadius) To Math.Min(h - 1, py + spreadRadius)
+                For x = Math.Max(0, px - spreadRadius) To Math.Min(w - 1, px + spreadRadius)
+                    Dim value As Integer = If(pixels <> IntPtr.Zero,
+                                              Marshal.ReadByte(pixels, y * stride + x),
+                                              depth.GetPixel(x, y).Alpha)
+                    spreadCounts(value) += 1
+                    spreadTotal += 1
+                    If Math.Abs(x - px) <= centerRadius AndAlso Math.Abs(y - py) <= centerRadius Then
+                        centerCounts(value) += 1
+                        centerTotal += 1
+                    End If
+                Next
+            Next
+            If centerTotal = 0 OrElse spreadTotal = 0 Then Return Nothing
+
+            Dim center = HistogramPercentile(centerCounts, centerTotal, 0.5) / 255.0 * 100.0
+            Dim low = HistogramPercentile(spreadCounts, spreadTotal, 0.1) / 255.0 * 100.0
+            Dim high = HistogramPercentile(spreadCounts, spreadTotal, 0.9) / 255.0 * 100.0
+            Dim below = Math.Max(PickMinHalfWidth, Math.Min(PickMaxHalfWidth, center - low + PickMargin))
+            Dim above = Math.Max(PickMinHalfWidth, Math.Min(PickMaxHalfWidth, high - center + PickMargin))
+            ' Nach aussen auf ganze Reglerschritte: die Regler zeigen ganze Zahlen, und das Band
+            ' soll die gemessene Tiefe auch nach dem Runden enthalten.
+            Dim fromValue = Math.Max(0.0, Math.Floor(center - below))
+            Dim toValue = Math.Min(100.0, Math.Ceiling(center + above))
+            Return (fromValue, toValue)
+        End Function
+
+        ''' <summary>Der scharfe Bereich der Tiefen-Unschaerfe um eine angeklickte Stelle: vom Motiv
+        ''' an nach vorn alles (obere Grenze 100), und die untere Grenze nicht knapp unter dem Motiv,
+        ''' sondern in der LUECKE zwischen ihm und dem, was dahinter liegt.
+        '''
+        ''' <see cref="RangeAroundPoint"/> legt ein enges Band um die Stelle; das passt fuer eine
+        ''' Maske, die eine Entfernung waehlt. Fuer die Unschaerfe war es zu eng (Befund an einem
+        ''' Portraet vor Bergen): die Karte zeichnet ein Motiv nicht als eine Flaeche gleicher
+        ''' Tiefe, eine Ohrmuschel und die abgewandte Wange lagen ein gutes Stueck tiefer als die
+        ''' angeklickte Brust, Haare und helle Raender naeher. Was aus dem Band fiel, wurde mit
+        ''' verwischt, und das Motiv sah am Umriss angefressen aus. Hinter einem Motiv liegt in der
+        ''' Karte aber meist erst einmal nichts: die Tiefen zwischen ihm und dem Hintergrund kommen
+        ''' nur an Kanten vor. Die untere Grenze wandert deshalb bis in die Mitte dieser Luecke,
+        ''' hoechstens <see cref="FocusMaxDrop"/> unter das enge Band; ohne Luecke (ein Boden, der
+        ''' stetig zuruecklaeuft) bleibt sie, wo das enge Band sie hinlegt.</summary>
+        Public Shared Function FocusRangeAroundPoint(depth As SKBitmap,
+                                                     xFraction As Double, yFraction As Double) As (Low As Double, High As Double)?
+            Dim narrow = RangeAroundPoint(depth, xFraction, yFraction)
+            If Not narrow.HasValue Then Return Nothing
+            Dim stride As Integer
+            Dim bytes = ImageProcessor.TryReadAlpha8(depth, stride)
+            If bytes Is Nothing Then Return (narrow.Value.Low, 100.0)
+            Dim w = depth.Width, h = depth.Height
+            Dim counts(255) As Long
+            ' Die Verteilung um die Stelle herum, nicht ueber das ganze Bild: ein Boden, der von
+            ' vorn bis zum Horizont laeuft, belegt jede Tiefe und schloesse die Luecke, die hinter
+            ' Kopf und Schultern offen ist. Jede zweite Stelle genuegt.
+            Dim px = Math.Max(0, Math.Min(w - 1, CInt(Math.Floor(xFraction * w))))
+            Dim py = Math.Max(0, Math.Min(h - 1, CInt(Math.Floor(yFraction * h))))
+            Dim reach = Math.Max(4, CInt(Math.Round(Math.Min(w, h) * FocusWindowShare / 2.0)))
+            Dim total As Long = 0
+            For y = Math.Max(0, py - reach) To Math.Min(h - 1, py + reach) Step 2
+                For x = Math.Max(0, px - reach) To Math.Min(w - 1, px + reach) Step 2
+                    counts(bytes(y * stride + x)) += 1
+                    total += 1
+                Next
+            Next
+            ' Geglaettet ueber fuenf Stufen, und "leer" heisst: deutlich weniger als bei
+            ' gleichmaessiger Verteilung (dort laege je Stufe 1/256 der Punkte).
+            Dim smooth(255) As Double
+            For level = 0 To 255
+                Dim acc As Long = 0, n = 0
+                For k = Math.Max(0, level - 2) To Math.Min(255, level + 2)
+                    acc += counts(k) : n += 1
+                Next
+                smooth(level) = acc / CDbl(n)
+            Next
+            Dim emptyBelow = total / 256.0 * FocusGapShare
+            Dim start = CInt(Math.Round(narrow.Value.Low / 100.0 * 255.0))
+            Dim floorByte = Math.Max(0, CInt(Math.Round((narrow.Value.Low - FocusMaxDrop) / 100.0 * 255.0)))
+            ' Vom engen Band abwaerts die BREITESTE Luecke, die noch in Reichweite beginnt, nicht
+            ' die erste: zwischen der angeklickten Flaeche und einem tieferen Teil desselben
+            ' Motivs (eine Ohrmuschel) liegt oft schon eine schmale, und wer dort anhielte, liesse
+            ' genau diesen Teil draussen. Die Luecke zum Hintergrund ist die breite.
+            Dim bestTop = -1, bestBottom = -1
+            Dim i = start
+            While i > 0
+                If smooth(i) >= emptyBelow Then
+                    i -= 1
+                    Continue While
+                End If
+                Dim top = i
+                While i > 0 AndAlso smooth(i) < emptyBelow
+                    i -= 1
+                End While
+                If top <= floorByte Then Exit While
+                If top - i >= FocusMinGap AndAlso top - i > bestTop - bestBottom Then
+                    bestTop = top : bestBottom = i
+                End If
+            End While
+            Dim low = narrow.Value.Low
+            If bestTop >= 0 Then
+                Dim middle = Math.Max(floorByte, (bestTop + bestBottom) \ 2)
+                low = Math.Min(low, Math.Floor(middle / 255.0 * 100.0))
+            End If
+            Return (Math.Max(0.0, low), 100.0)
+        End Function
+
+        ''' <summary>Um so viel darf die untere Grenze der Unschaerfe hoechstens unter das enge
+        ''' Band wandern, in Reglereinheiten.</summary>
+        Private Const FocusMaxDrop As Double = 40.0
+        ''' <summary>Kantenlaenge des Feldes um die Stelle, in dem die Luecke gesucht wird, als
+        ''' Anteil der kuerzeren Bildkante.</summary>
+        Private Const FocusWindowShare As Double = 0.25
+        ''' <summary>Eine Stufe der Karte gilt als leer, wenn auf ihr weniger als dieser Anteil
+        ''' dessen liegt, was bei gleichmaessiger Verteilung auf jeder Stufe laege.</summary>
+        Private Const FocusGapShare As Double = 0.25
+        ''' <summary>So viele Stufen der Karte muss eine Luecke mindestens breit sein.</summary>
+        Private Const FocusMinGap As Integer = 12
+
+        ''' <summary>Der kleinste Wert, bis zu dem der Anteil <paramref name="share"/> der gezaehlten
+        ''' Punkte liegt.</summary>
+        Private Shared Function HistogramPercentile(counts As Integer(), total As Integer, share As Double) As Integer
+            Dim wanted = Math.Max(1.0, total * share)
+            Dim seen = 0
+            For value = 0 To counts.Length - 1
+                seen += counts(value)
+                If seen >= wanted Then Return value
+            Next
+            Return counts.Length - 1
         End Function
 
     End Class

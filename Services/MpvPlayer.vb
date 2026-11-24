@@ -82,6 +82,10 @@ Namespace Services
         ' Befehlsfaden.
         Private _loadsAwaitingStart As Integer = 0
         Private _lastLoadTimestamp As Long = 0
+        ' Kennung des Eintrags, dessen Beginn mpv zuletzt gemeldet hat (nur der Ereignisfaden).
+        ' Nach einem neuen Spieler beginnen die Kennungen wieder bei eins; dann zaehlt der erste
+        ' Beginn einfach als einer.
+        Private _lastStartedEntry As Long = 0
         ' Laenger wartet niemand auf den Beginn: bleibt "start-file" aus, sollen die Meldungen
         ' nicht fuer immer verschwinden.
         Private Const AwaitStartSeconds As Double = 2.0
@@ -764,7 +768,23 @@ Namespace Services
                     Case MpvInterop.MpvEventId.StartFile
                         loggedMessages = 0
                         ' Der neue Film beginnt: ab hier gehoeren die Meldungen ihm.
-                        If Interlocked.Decrement(_loadsAwaitingStart) < 0 Then Volatile.Write(_loadsAwaitingStart, 0)
+                        '
+                        ' Abgezogen wird, was seit dem zuletzt begonnenen Eintrag an Eintraegen
+                        ' dazugekommen ist, nicht immer eins. Ersetzt ein zweiter Ladeauftrag den
+                        ' ersten, bevor mpv ihn begonnen hat, meldet mpv nur den Beginn des zweiten;
+                        ' mit einem Abzug je Meldung blieb der Zaehler dann stehen, und Zeit und
+                        ' Laufzeit des laufenden Films gingen bis zum Ablauf der Wartezeit nicht
+                        ' hinaus. Die Kennung des Eintrags steht im Ereignis selbst und waechst mit
+                        ' jedem Ladeauftrag um eins; gelesen wird sie hier ohne Abfrage an mpv.
+                        Dim begun = 1L
+                        If ev.Data <> IntPtr.Zero Then
+                            Dim entry = Marshal.ReadInt64(ev.Data)
+                            If entry > 0 Then
+                                If entry > _lastStartedEntry Then begun = Math.Min(1000L, entry - _lastStartedEntry)
+                                _lastStartedEntry = entry
+                            End If
+                        End If
+                        If Interlocked.Add(_loadsAwaitingStart, -CInt(begun)) < 0 Then Volatile.Write(_loadsAwaitingStart, 0)
                     Case MpvInterop.MpvEventId.LogMessage
                         ' Je Datei eine begrenzte Zahl: eine Datei, die bei jedem Bild warnt, soll
                         ' das Protokoll nicht fuellen. Die ersten Meldungen sind die, die den

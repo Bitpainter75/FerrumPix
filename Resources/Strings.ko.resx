@@ -5034,9 +5034,6 @@
   <data name="Wie_stark_Lichtpunkte_als_leuchtende_Scheiben_er_3766ef3a" xml:space="preserve">
     <value>빛점이 흐릿한 얼룩으로 뭉개지지 않고 얼마나 빛나는 원반으로 남을지 정합니다</value>
   </data>
-  <data name="Die_Form_der_Blende_rund_oder_als_Vieleck_mit_so_aa574f45" xml:space="preserve">
-    <value>조리개의 모양: 원 또는 이만큼의 날을 가진 다각형</value>
-  </data>
   <data name="Objekt_entfernen_fcbc0578" xml:space="preserve">
     <value>개체 지우기</value>
   </data>
@@ -12199,5 +12196,26 @@
   </data>
   <data name="Dokumentation_0401e23e" xml:space="preserve">
     <value>문서</value>
+  </data>
+  <data name="Schattenkante_73103a0e" xml:space="preserve">
+    <value>그림자 가장자리</value>
+  </data>
+  <data name="Wie_weich_der_Rand_des_Schattens_ausl_uft_bei_0__6d133ad8" xml:space="preserve">
+    <value>그림자 가장자리가 얼마나 부드럽게 사라지는지: 0에서는 선명하고 오른쪽으로 갈수록 부드러워집니다.</value>
+  </data>
+  <data name="Sch_rfe_per_Klick_aufs_Motiv_32e59472" xml:space="preserve">
+    <value>피사체를 클릭하여 선명도 설정</value>
+  </data>
+  <data name="Pipette_auf_das_Motiv_im_Bild_klicken_das_scharf_90a92d76" xml:space="preserve">
+    <value>스포이트: 선명하게 유지할 피사체를 이미지에서 클릭하세요. ESC 로 취소</value>
+  </data>
+  <data name="Bereich_per_Klick_aufs_Motiv_750784e0" xml:space="preserve">
+    <value>피사체를 클릭하여 범위 설정</value>
+  </data>
+  <data name="Pipette_auf_das_Motiv_im_Bild_klicken_dessen_Ent_d8ba8c89" xml:space="preserve">
+    <value>스포이트: 거리를 선택할 피사체를 이미지에서 클릭하세요. ESC 로 취소</value>
+  </data>
+  <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
+    <value>클릭한 깊이 주변으로 선명한 범위를 설정했습니다</value>
   </data>
 </root>

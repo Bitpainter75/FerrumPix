@@ -5036,9 +5036,6 @@
   <data name="Wie_stark_Lichtpunkte_als_leuchtende_Scheiben_er_3766ef3a" xml:space="preserve">
     <value>Wie stark Lichtpunkte als leuchtende Scheiben erhalten bleiben, statt sich zu einem matten Fleck zu mitteln</value>
   </data>
-  <data name="Die_Form_der_Blende_rund_oder_als_Vieleck_mit_so_aa574f45" xml:space="preserve">
-    <value>Die Form der Blende: rund oder als Vieleck mit so vielen Lamellen</value>
-  </data>
   <data name="Objekt_entfernen_fcbc0578" xml:space="preserve">
     <value>Objekt entfernen</value>
   </data>
@@ -12173,5 +12170,26 @@
   </data>
   <data name="Dokumentation_0401e23e" xml:space="preserve">
     <value>Dokumentation</value>
+  </data>
+  <data name="Schattenkante_73103a0e" xml:space="preserve">
+    <value>Schattenkante</value>
+  </data>
+  <data name="Wie_weich_der_Rand_des_Schattens_ausl_uft_bei_0__6d133ad8" xml:space="preserve">
+    <value>Wie weich der Rand des Schattens ausläuft: bei 0 scharf, weiter rechts zunehmend weich.</value>
+  </data>
+  <data name="Sch_rfe_per_Klick_aufs_Motiv_32e59472" xml:space="preserve">
+    <value>Schärfe per Klick aufs Motiv</value>
+  </data>
+  <data name="Pipette_auf_das_Motiv_im_Bild_klicken_das_scharf_90a92d76" xml:space="preserve">
+    <value>Pipette: auf das Motiv im Bild klicken, das scharf bleiben soll. ESC bricht ab</value>
+  </data>
+  <data name="Bereich_per_Klick_aufs_Motiv_750784e0" xml:space="preserve">
+    <value>Bereich per Klick aufs Motiv</value>
+  </data>
+  <data name="Pipette_auf_das_Motiv_im_Bild_klicken_dessen_Ent_d8ba8c89" xml:space="preserve">
+    <value>Pipette: auf das Motiv im Bild klicken, dessen Entfernung gewählt werden soll. ESC bricht ab</value>
+  </data>
+  <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
+    <value>Scharfer Bereich auf die angeklickte Tiefe gelegt</value>
   </data>
 </root>

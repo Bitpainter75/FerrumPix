@@ -5034,9 +5034,6 @@
   <data name="Wie_stark_Lichtpunkte_als_leuchtende_Scheiben_er_3766ef3a" xml:space="preserve">
     <value>Jak silně se světelné body zachovají jako svítící kotoučky místo toho, aby se zprůměrovaly do matné skvrny</value>
   </data>
-  <data name="Die_Form_der_Blende_rund_oder_als_Vieleck_mit_so_aa574f45" xml:space="preserve">
-    <value>Tvar clony: kulatý, nebo mnohoúhelník s tímto počtem lamel</value>
-  </data>
   <data name="Objekt_entfernen_fcbc0578" xml:space="preserve">
     <value>Odstranit objekt</value>
   </data>
@@ -12195,5 +12192,26 @@
   </data>
   <data name="Dokumentation_0401e23e" xml:space="preserve">
     <value>Dokumentace</value>
+  </data>
+  <data name="Schattenkante_73103a0e" xml:space="preserve">
+    <value>Okraj stínu</value>
+  </data>
+  <data name="Wie_weich_der_Rand_des_Schattens_ausl_uft_bei_0__6d133ad8" xml:space="preserve">
+    <value>Jak měkce se okraj stínu vytrácí: při 0 ostrý, dále vpravo stále měkčí.</value>
+  </data>
+  <data name="Sch_rfe_per_Klick_aufs_Motiv_32e59472" xml:space="preserve">
+    <value>Ostrost kliknutím na motiv</value>
+  </data>
+  <data name="Pipette_auf_das_Motiv_im_Bild_klicken_das_scharf_90a92d76" xml:space="preserve">
+    <value>Pipeta: klikněte v obrázku na motiv, který má zůstat ostrý. ESC ruší</value>
+  </data>
+  <data name="Bereich_per_Klick_aufs_Motiv_750784e0" xml:space="preserve">
+    <value>Rozsah kliknutím na motiv</value>
+  </data>
+  <data name="Pipette_auf_das_Motiv_im_Bild_klicken_dessen_Ent_d8ba8c89" xml:space="preserve">
+    <value>Pipeta: klikněte v obrázku na motiv, jehož vzdálenost se má vybrat. ESC ruší</value>
+  </data>
+  <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
+    <value>Ostrý rozsah nastaven kolem hloubky v místě kliknutí</value>
   </data>
 </root>

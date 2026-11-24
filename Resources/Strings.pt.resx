@@ -5035,9 +5035,6 @@
   <data name="Wie_stark_Lichtpunkte_als_leuchtende_Scheiben_er_3766ef3a" xml:space="preserve">
     <value>Quanto os pontos de luz permanecem discos brilhantes em vez de se dissolverem numa mancha baça</value>
   </data>
-  <data name="Die_Form_der_Blende_rund_oder_als_Vieleck_mit_so_aa574f45" xml:space="preserve">
-    <value>A forma do diafragma: redonda ou um polígono com este número de lâminas</value>
-  </data>
   <data name="Objekt_entfernen_fcbc0578" xml:space="preserve">
     <value>Remover objeto</value>
   </data>
@@ -12154,5 +12151,26 @@
   </data>
   <data name="Dokumentation_0401e23e" xml:space="preserve">
     <value>Documentação</value>
+  </data>
+  <data name="Schattenkante_73103a0e" xml:space="preserve">
+    <value>Borda da sombra</value>
+  </data>
+  <data name="Wie_weich_der_Rand_des_Schattens_ausl_uft_bei_0__6d133ad8" xml:space="preserve">
+    <value>Quão suavemente a borda da sombra se esbate: nítida em 0, cada vez mais suave para a direita.</value>
+  </data>
+  <data name="Sch_rfe_per_Klick_aufs_Motiv_32e59472" xml:space="preserve">
+    <value>Nitidez com um clique no motivo</value>
+  </data>
+  <data name="Pipette_auf_das_Motiv_im_Bild_klicken_das_scharf_90a92d76" xml:space="preserve">
+    <value>Conta-gotas: clique na imagem no motivo que deve ficar nítido. ESC cancela</value>
+  </data>
+  <data name="Bereich_per_Klick_aufs_Motiv_750784e0" xml:space="preserve">
+    <value>Intervalo com um clique no motivo</value>
+  </data>
+  <data name="Pipette_auf_das_Motiv_im_Bild_klicken_dessen_Ent_d8ba8c89" xml:space="preserve">
+    <value>Conta-gotas: clique na imagem no motivo cuja distância deve ser selecionada. ESC cancela</value>
+  </data>
+  <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
+    <value>Zona nítida colocada em torno da profundidade clicada</value>
   </data>
 </root>

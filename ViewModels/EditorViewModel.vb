@@ -5855,6 +5855,8 @@ Namespace ViewModels
                     Me.RaisePropertyChanged(NameOf(AreAdjustmentsInteractive))
                     ' Das Linienziehen gehoert zum Transformieren und endet mit ihm.
                     IsStraightenLineActive = False
+                    ' Die Tiefen-Pipette gehoert zum Panel des Werkzeugs und endet mit ihm.
+                    CancelDepthPick()
                     ' Das Messbild der Bereichsmaske (rund 100 MB bei 24 MP) gehoert zum Maskenwerkzeug.
                     ReleaseRangeSampleImage()
                 End If
@@ -6363,6 +6365,9 @@ Namespace ViewModels
                 Dim normalized = If(String.IsNullOrWhiteSpace(value), "Brush", value.Trim())
                 If String.Equals(_maskMode, normalized, StringComparison.Ordinal) Then Return
                 InvalidatePendingRangeMask()
+                ' Die Pipette der Maske nach Tiefe steht nur im Tiefen-Zweig des Panels. Abgebrochen
+                ' wird auch ein Klick, der schon angenommen ist und noch auf die Karte wartet.
+                CancelDepthPick()
                 _maskMode = normalized
                 If Not String.Equals(normalized, "Farbe", StringComparison.Ordinal) AndAlso
                    Not String.Equals(normalized, "Luminanz", StringComparison.Ordinal) AndAlso
@@ -14182,6 +14187,8 @@ Namespace ViewModels
                                     Optional previewSampler As Func(Of Double, Double, Avalonia.Media.Color?) = Nothing,
                                     Optional takesAlpha As Boolean = False)
             ResetColorPickReadoutState()
+            ' Eine neue Aufnahme loest eine wartende Tiefen-Pipette ab; ihr Knopf geht aus.
+            ClearDepthPickTarget()
             _pendingColorPickCallback = onPicked
             _colorPickSampleRadius = Math.Max(0, sampleRadius)
             _colorPickPreviewSampler = previewSampler
@@ -14218,6 +14225,8 @@ Namespace ViewModels
         Public Function ResolveColorPickReadout(displayed As Avalonia.Media.Color?,
                                                 xFraction As Double, yFraction As Double) As Avalonia.Media.Color?
             If Not displayed.HasValue OrElse Not _isPickingColorFromImage Then Return Nothing
+            ' Die Tiefen-Pipette uebernimmt keine Farbe; ein Farbwert an ihr sagte etwas Falsches.
+            If _depthPickTarget <> "" Then Return Nothing
             Dim result = displayed.Value
             Dim sampled As Avalonia.Media.Color? = Nothing
             If _colorPickPreviewSampler IsNot Nothing Then sampled = _colorPickPreviewSampler(xFraction, yFraction)
@@ -14287,6 +14296,7 @@ Namespace ViewModels
             _pendingColorPickCallback = Nothing
             _colorPickSampleRadius = 0
             ResetColorPickReadoutState()
+            ClearDepthPickTarget()
             ColorPickPreview = Nothing
             IsPickingColorFromImage = False
             callback?.Invoke(color, xPercent, yPercent)
@@ -14331,6 +14341,7 @@ Namespace ViewModels
             _pendingColorPickCallback = Nothing
             _colorPickSampleRadius = 0
             ResetColorPickReadoutState()
+            ClearDepthPickTarget()
             ColorPickPreview = Nothing
             IsPickingColorFromImage = False
             EndNegativePickSuppression()
@@ -18886,7 +18897,6 @@ Namespace ViewModels
         ''' (MenuSite.EditorFilmstripOther): sie oeffnen bzw. als Ebene in die Mitte setzen.</summary>
         Public ReadOnly Property OpenContextItemCommand As ICommand
         Public ReadOnly Property InsertContextItemAsLayerCommand As ICommand
-        Public ReadOnly Property SetBokehApertureCommand As ICommand
         Public ReadOnly Property SetSubjectGrainCommand As ICommand
         Public ReadOnly Property SetWarpModeCommand As ICommand
         Public ReadOnly Property ConvertKindCommand As ICommand
@@ -19438,11 +19448,6 @@ Namespace ViewModels
                     If item Is Nothing OrElse item.IsRemoteAsset OrElse Not CanInsertAsLayer(item.FilePath) Then Return
                     Await InsertFileAsLayerAtAsync(item.FilePath, 50.0, 50.0)
                 End Function)
-            SetBokehApertureCommand = ReactiveCommand.Create(Of String)(
-                Sub(wert)
-                    Dim n As Integer
-                    If Integer.TryParse(wert, n) Then BokehAperture = n
-                End Sub)
             ' Die drei haeufigsten Faelle als eigene Knoepfe - Schwarz, Weiss und wieder
             ' durchsichtig. Der Farbwaehler daneben bleibt fuer alles andere.
             SetDocumentBackgroundCommand = ReactiveCommand.Create(Of String)(
@@ -28281,6 +28286,7 @@ Namespace ViewModels
             _pendingColorPickCallback = Nothing
             _colorPickSampleRadius = 0
             ResetColorPickReadoutState()
+            ClearDepthPickTarget()
             ' Die Pipette wird hier abgebrochen - ihre Nebenwirkung auf die Vorschau muss mit weg.
             ' Blieb die Unterdrueckung stehen, zeigte das naechste Bild seine Filmumkehr nicht an,
             ' sobald sie dort eingeschaltet wird: der Regler stuende auf an, das Bild bliebe negativ.

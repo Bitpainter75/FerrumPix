@@ -5036,9 +5036,6 @@
   <data name="Wie_stark_Lichtpunkte_als_leuchtende_Scheiben_er_3766ef3a" xml:space="preserve">
     <value>Quanto i punti luminosi restano dischi luminosi invece di fondersi in una macchia opaca</value>
   </data>
-  <data name="Die_Form_der_Blende_rund_oder_als_Vieleck_mit_so_aa574f45" xml:space="preserve">
-    <value>La forma del diaframma: rotonda o un poligono con questo numero di lamelle</value>
-  </data>
   <data name="Objekt_entfernen_fcbc0578" xml:space="preserve">
     <value>Rimuovi oggetto</value>
   </data>
@@ -12155,5 +12152,26 @@
   </data>
   <data name="Dokumentation_0401e23e" xml:space="preserve">
     <value>Documentazione</value>
+  </data>
+  <data name="Schattenkante_73103a0e" xml:space="preserve">
+    <value>Bordo dell'ombra</value>
+  </data>
+  <data name="Wie_weich_der_Rand_des_Schattens_ausl_uft_bei_0__6d133ad8" xml:space="preserve">
+    <value>Quanto morbidamente sfuma il bordo dell'ombra: netto a 0, sempre più morbido verso destra.</value>
+  </data>
+  <data name="Sch_rfe_per_Klick_aufs_Motiv_32e59472" xml:space="preserve">
+    <value>Nitidezza con un clic sul soggetto</value>
+  </data>
+  <data name="Pipette_auf_das_Motiv_im_Bild_klicken_das_scharf_90a92d76" xml:space="preserve">
+    <value>Contagocce: fai clic nell'immagine sul soggetto che deve restare nitido. ESC annulla</value>
+  </data>
+  <data name="Bereich_per_Klick_aufs_Motiv_750784e0" xml:space="preserve">
+    <value>Intervallo con un clic sul soggetto</value>
+  </data>
+  <data name="Pipette_auf_das_Motiv_im_Bild_klicken_dessen_Ent_d8ba8c89" xml:space="preserve">
+    <value>Contagocce: fai clic nell'immagine sul soggetto di cui selezionare la distanza. ESC annulla</value>
+  </data>
+  <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
+    <value>Zona nitida posta attorno alla profondità scelta</value>
   </data>
 </root>

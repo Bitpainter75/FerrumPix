@@ -5036,9 +5036,6 @@
   <data name="Wie_stark_Lichtpunkte_als_leuchtende_Scheiben_er_3766ef3a" xml:space="preserve">
     <value>Dans quelle mesure les points lumineux restent des disques brillants au lieu de se fondre en une tache terne</value>
   </data>
-  <data name="Die_Form_der_Blende_rund_oder_als_Vieleck_mit_so_aa574f45" xml:space="preserve">
-    <value>La forme du diaphragme: ronde ou un polygone avec autant de lamelles</value>
-  </data>
   <data name="Objekt_entfernen_fcbc0578" xml:space="preserve">
     <value>Supprimer un objet</value>
   </data>
@@ -12155,5 +12152,26 @@
   </data>
   <data name="Dokumentation_0401e23e" xml:space="preserve">
     <value>Documentation</value>
+  </data>
+  <data name="Schattenkante_73103a0e" xml:space="preserve">
+    <value>Bord de l'ombre</value>
+  </data>
+  <data name="Wie_weich_der_Rand_des_Schattens_ausl_uft_bei_0__6d133ad8" xml:space="preserve">
+    <value>Douceur avec laquelle le bord de l'ombre s'estompe : net à 0, de plus en plus doux vers la droite.</value>
+  </data>
+  <data name="Sch_rfe_per_Klick_aufs_Motiv_32e59472" xml:space="preserve">
+    <value>Netteté par un clic sur le sujet</value>
+  </data>
+  <data name="Pipette_auf_das_Motiv_im_Bild_klicken_das_scharf_90a92d76" xml:space="preserve">
+    <value>Pipette : cliquez dans l'image sur le sujet qui doit rester net. ESC annule</value>
+  </data>
+  <data name="Bereich_per_Klick_aufs_Motiv_750784e0" xml:space="preserve">
+    <value>Plage par un clic sur le sujet</value>
+  </data>
+  <data name="Pipette_auf_das_Motiv_im_Bild_klicken_dessen_Ent_d8ba8c89" xml:space="preserve">
+    <value>Pipette : cliquez dans l'image sur le sujet dont la distance doit être sélectionnée. ESC annule</value>
+  </data>
+  <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
+    <value>Zone nette placée autour de la profondeur cliquée</value>
   </data>
 </root>

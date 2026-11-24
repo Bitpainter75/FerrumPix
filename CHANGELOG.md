@@ -17,7 +17,23 @@
   where the old one often saw a flat surface. The model file is new: the settings offer it as an
   update, and the depth tools need it.
 
+- Depth blur and the depth mask have an eyedropper: click the subject in the picture and the sharp
+  range or the selected distance is placed around it. The choice of an aperture shape for the depth
+  blur is gone, the blur is always round.
+
 ### Fixes
+
+- Lighting with depth looks cleaner: the relief no longer draws a dark rim around every object or
+  contour lines across flat surfaces, light and shadow end at the outline of an object instead of
+  a few pixels beside it, and cast shadows keep the shape of what throws them. A new slider sets
+  how softly the edge of a cast shadow fades.
+
+- Depth blur no longer lets the colour of the sharp subject bleed into the blurred background
+  around it.
+
+- Depth fog leaves the nearest part of the picture clear when the foreground slider is at zero.
+
+- Depth fog, depth blur and the depth mask leave a narrower fringe around objects.
 
 - The white balance picker ignores points where a colour channel is blown out, so a click near
   bright highlights no longer pulls the result towards the colour of the clipped channel.

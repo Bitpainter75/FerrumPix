@@ -42,6 +42,28 @@
                  an dem die Antwort steht. -->
             <StackPanel Spacing="2" Margin="0,8,0,0" IsEnabled="{Binding CanRequestModels}"
                         ToolTip.Tip="{Binding BokehHint}" ToolTip.ShowOnDisabled="True">
+                <!-- Die Pipette legt "Scharf von" und "Scharf bis" um die Tiefe der angeklickten
+                     Stelle: die Vorgaben setzen voraus, dass das Motiv das Naechste im Bild ist.
+                     Spaltenteilung wie die Reglerzeilen, der Knopf in der Spalte der Zahlenfelder.
+                     "group-action" ist Pflicht, sonst blendet die Stilregel der Anpassungsgruppe
+                     den Symbolknopf aus. Eingeschaltet traegt er "active", bis geklickt oder
+                     abgebrochen ist. -->
+                <!-- Ein ganzer Knopf mit Rahmen, Symbol und Text: als rahmenloses Symbol am Rand
+                     der Zeile wurde die Pipette uebersehen. -->
+                <Button Classes="ghost"
+                        Classes.active="{Binding IsBokehDepthPickActive}"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="8,5"
+                        Command="{Binding PickBokehDepthCommand}"
+                        ToolTip.Tip="Pipette: auf das Motiv im Bild klicken, das scharf bleiben soll. ESC bricht ab">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eyedropper.svg"
+                            Width="16" Height="16" VerticalAlignment="Center" />
+                        <TextBlock Text="Schärfe per Klick aufs Motiv"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                   TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </Button>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
                       ToolTip.Tip="Untere Grenze des scharfen Bereichs. 0 ist am weitesten weg">
                     <TextBlock Text="Scharf von" Foreground="{DynamicResource FP.Text.Secondary}"
@@ -86,39 +108,6 @@
                                        DefaultValue="60" Value="{Binding BokehHighlights}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding BokehHighlights, Mode=TwoWay}" Minimum="0" Maximum="100" />
-                </Grid>
-                <!-- Die Form der Blende bestimmt, wie ein Lichtpunkt im unscharfen Bereich aussieht.
-                     Als Knopfreihe statt Regler, weil es zwischen Rund und Dreieck nichts gibt. -->
-                <Grid ColumnDefinitions="92,*" VerticalAlignment="Center" Margin="0,6,0,0"
-                      ToolTip.Tip="Die Form der Blende: rund oder als Vieleck mit so vielen Lamellen">
-                    <TextBlock Text="Blende" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <Grid Grid.Column="1" ColumnDefinitions="*,*,*,*" ColumnSpacing="6" Margin="6,0,0,0">
-                        <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="6,4"
-                                Command="{Binding SetBokehApertureCommand}" CommandParameter="0"
-                                Classes.active="{Binding IsApertureRound}">
-                            <TextBlock Text="Rund" FontSize="{DynamicResource FP.Font.Small}"
-                                       HorizontalAlignment="Center"/>
-                        </Button>
-                        <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="6,4"
-                                Command="{Binding SetBokehApertureCommand}" CommandParameter="5"
-                                Classes.active="{Binding IsApertureFive}">
-                            <TextBlock Text="5" FontSize="{DynamicResource FP.Font.Small}"
-                                       HorizontalAlignment="Center"/>
-                        </Button>
-                        <Button Grid.Column="2" Classes="ghost" HorizontalAlignment="Stretch" Padding="6,4"
-                                Command="{Binding SetBokehApertureCommand}" CommandParameter="6"
-                                Classes.active="{Binding IsApertureSix}">
-                            <TextBlock Text="6" FontSize="{DynamicResource FP.Font.Small}"
-                                       HorizontalAlignment="Center"/>
-                        </Button>
-                        <Button Grid.Column="3" Classes="ghost" HorizontalAlignment="Stretch" Padding="6,4"
-                                Command="{Binding SetBokehApertureCommand}" CommandParameter="7"
-                                Classes.active="{Binding IsApertureSeven}">
-                            <TextBlock Text="7" FontSize="{DynamicResource FP.Font.Small}"
-                                       HorizontalAlignment="Center"/>
-                        </Button>
-                    </Grid>
                 </Grid>
                 <TextBlock Text="Wird beim Anwenden in die Pixel gerechnet, wie eine Retusche. Die Tiefe wird einmal je Bild ermittelt."
                            Foreground="{DynamicResource FP.Text.Muted}"

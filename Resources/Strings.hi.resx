@@ -5034,9 +5034,6 @@
   <data name="Wie_stark_Lichtpunkte_als_leuchtende_Scheiben_er_3766ef3a" xml:space="preserve">
     <value>रोशनी के बिंदु धुँधले धब्बे में औसत होने के बजाय कितने चमकते चक्र बने रहते हैं</value>
   </data>
-  <data name="Die_Form_der_Blende_rund_oder_als_Vieleck_mit_so_aa574f45" xml:space="preserve">
-    <value>एपर्चर की आकृति: गोल या इतनी पंखुड़ियों वाला बहुभुज</value>
-  </data>
   <data name="Objekt_entfernen_fcbc0578" xml:space="preserve">
     <value>वस्तु हटाएँ</value>
   </data>
@@ -12199,5 +12196,26 @@
   </data>
   <data name="Dokumentation_0401e23e" xml:space="preserve">
     <value>दस्तावेज़</value>
+  </data>
+  <data name="Schattenkante_73103a0e" xml:space="preserve">
+    <value>छाया का किनारा</value>
+  </data>
+  <data name="Wie_weich_der_Rand_des_Schattens_ausl_uft_bei_0__6d133ad8" xml:space="preserve">
+    <value>छाया का किनारा कितनी कोमलता से घुलता है: 0 पर तीखा, दाईं ओर बढ़ने पर और कोमल।</value>
+  </data>
+  <data name="Sch_rfe_per_Klick_aufs_Motiv_32e59472" xml:space="preserve">
+    <value>विषय पर क्लिक करके शार्पनेस</value>
+  </data>
+  <data name="Pipette_auf_das_Motiv_im_Bild_klicken_das_scharf_90a92d76" xml:space="preserve">
+    <value>आईड्रॉपर: चित्र में उस विषय पर क्लिक करें जिसे शार्प रहना है। ESC रद्द करता है</value>
+  </data>
+  <data name="Bereich_per_Klick_aufs_Motiv_750784e0" xml:space="preserve">
+    <value>विषय पर क्लिक करके सीमा</value>
+  </data>
+  <data name="Pipette_auf_das_Motiv_im_Bild_klicken_dessen_Ent_d8ba8c89" xml:space="preserve">
+    <value>आईड्रॉपर: चित्र में उस विषय पर क्लिक करें जिसकी दूरी चुननी है। ESC रद्द करता है</value>
+  </data>
+  <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
+    <value>शार्प सीमा क्लिक की गई गहराई के आसपास रखी गई</value>
   </data>
 </root>

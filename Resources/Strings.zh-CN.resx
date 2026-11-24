@@ -5052,9 +5052,6 @@
   <data name="Wie_stark_Lichtpunkte_als_leuchtende_Scheiben_er_3766ef3a" xml:space="preserve">
     <value>光点在多大程度上保持为明亮的光斑，而不是被平均成一块暗淡的斑</value>
   </data>
-  <data name="Die_Form_der_Blende_rund_oder_als_Vieleck_mit_so_aa574f45" xml:space="preserve">
-    <value>光圈的形状：圆形，或具有相应叶片数的多边形</value>
-  </data>
   <data name="Objekt_entfernen_fcbc0578" xml:space="preserve">
     <value>移除对象</value>
   </data>
@@ -12153,5 +12150,26 @@
   </data>
   <data name="Dokumentation_0401e23e" xml:space="preserve">
     <value>文档</value>
+  </data>
+  <data name="Schattenkante_73103a0e" xml:space="preserve">
+    <value>阴影边缘</value>
+  </data>
+  <data name="Wie_weich_der_Rand_des_Schattens_ausl_uft_bei_0__6d133ad8" xml:space="preserve">
+    <value>阴影边缘淡出的柔和程度：为 0 时锐利，越向右越柔和。</value>
+  </data>
+  <data name="Sch_rfe_per_Klick_aufs_Motiv_32e59472" xml:space="preserve">
+    <value>点击主体设定清晰范围</value>
+  </data>
+  <data name="Pipette_auf_das_Motiv_im_Bild_klicken_das_scharf_90a92d76" xml:space="preserve">
+    <value>吸管：点击图像中需要保持清晰的主体。按 ESC 取消</value>
+  </data>
+  <data name="Bereich_per_Klick_aufs_Motiv_750784e0" xml:space="preserve">
+    <value>点击主体设定范围</value>
+  </data>
+  <data name="Pipette_auf_das_Motiv_im_Bild_klicken_dessen_Ent_d8ba8c89" xml:space="preserve">
+    <value>吸管：点击图像中要按其距离选取的主体。按 ESC 取消</value>
+  </data>
+  <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
+    <value>清晰范围已设定在所点击的深度周围</value>
   </data>
 </root>

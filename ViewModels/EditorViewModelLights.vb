@@ -339,6 +339,7 @@ Namespace ViewModels
                               NameOf(LightColorValue), NameOf(LightBlendModeLabel), NameOf(LightGlow), NameOf(LightRayCount),
                               NameOf(LightRayContrast), NameOf(LightUseDepth), NameOf(LightDepthReach), NameOf(LightX), NameOf(LightY),
                               NameOf(LightHeight), NameOf(LightShading), NameOf(LightCastShadows), NameOf(LightAmbient),
+                              NameOf(LightShadowSoftness), NameOf(ShowLightShadowSoftness),
                               NameOf(IsLightSpot), NameOf(IsLightArea), NameOf(IsLightRays), NameOf(IsLightDirectional),
                               NameOf(LightSwatchBrush), NameOf(LightName)}
                 Me.RaisePropertyChanged(name)
@@ -623,7 +624,7 @@ Namespace ViewModels
                 Return If(SelectedLight?.UseDepth, False)
             End Get
             Set(value As Boolean)
-                SetLightValue(NameOf(LightUseDepth), Sub(l) l.UseDepth = value, Function(l) l.UseDepth = value)
+                SetLightValue(NameOf(LightUseDepth), Sub(l) l.UseDepth = value, Function(l) l.UseDepth = value, raiseAll:=True)
                 If value AndAlso Not DepthMapService.Available Then
                     ' Ohne Modell wuerde der Schalter nichts tun. Gefragt wird wie bei Nebel und
                     ' Tiefen-Unschaerfe; ohne Download geht er zurueck.
@@ -672,8 +673,27 @@ Namespace ViewModels
                 Return If(SelectedLight?.CastShadows, False)
             End Get
             Set(value As Boolean)
-                SetLightValue(NameOf(LightCastShadows), Sub(l) l.CastShadows = value, Function(l) l.CastShadows = value)
+                SetLightValue(NameOf(LightCastShadows), Sub(l) l.CastShadows = value, Function(l) l.CastShadows = value, raiseAll:=True)
             End Set
+        End Property
+
+        ''' <summary>Wie weich der Rand des geworfenen Schattens auslaeuft (mit Tiefe und Schatten).</summary>
+        Public Property LightShadowSoftness As Double
+            Get
+                Return If(SelectedLight?.ShadowSoftness, 40.0)
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.0, Math.Min(100.0, value))
+                SetLightValue(NameOf(LightShadowSoftness), Sub(l) l.ShadowSoftness = v, Function(l) Math.Abs(l.ShadowSoftness - v) < 0.0001)
+            End Set
+        End Property
+
+        ''' <summary>Der Regler der Schattenkante steht nur da, wenn das Licht Schatten wirft.</summary>
+        Public ReadOnly Property ShowLightShadowSoftness As Boolean
+            Get
+                Dim light = SelectedLight
+                Return light IsNot Nothing AndAlso light.UseDepth AndAlso light.CastShadows
+            End Get
         End Property
 
         Private _lightAmbient As Double
@@ -858,6 +878,7 @@ Namespace ViewModels
                 Case NameOf(LightHeight) : Return CombineHistoryLabel("Beleuchtung", "Höhe")
                 Case NameOf(LightShading) : Return CombineHistoryLabel("Beleuchtung", "Relief")
                 Case NameOf(LightCastShadows) : Return CombineHistoryLabel("Beleuchtung", "Schatten werfen")
+                Case NameOf(LightShadowSoftness) : Return CombineHistoryLabel("Beleuchtung", "Schattenkante")
                 Case NameOf(LightPresetLabel) : Return CombineHistoryLabel("Beleuchtung", "Lichtart")
                 Case NameOf(LightTemperature), NameOf(LightColorValue), NameOf(LightUseTemperature) : Return CombineHistoryLabel("Beleuchtung", "Lichtfarbe")
                 Case Else : Return LocalizationService.T("Beleuchtung")

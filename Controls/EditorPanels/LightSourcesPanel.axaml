@@ -270,6 +270,14 @@
                 <CheckBox Content="Schatten werfen" IsChecked="{Binding LightCastShadows}" IsVisible="{Binding LightUseDepth}"
                           FontSize="{DynamicResource FP.Font.Small}"
                           ToolTip.Tip="Gegenstände zwischen Licht und Fläche werfen einen Schatten. Die Weiche des Lichts macht ihn weicher." />
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" IsVisible="{Binding ShowLightShadowSoftness}">
+                    <TextBlock Text="Schattenkante" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                               ToolTip.Tip="Wie weich der Rand des Schattens ausläuft: bei 0 scharf, weiter rechts zunehmend weich." />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="40" Value="{Binding LightShadowSoftness}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightShadowSoftness, Mode=TwoWay}"
+                                             Minimum="0" Maximum="100" />
+                </Grid>
             </StackPanel>
         </Border>
     </StackPanel>

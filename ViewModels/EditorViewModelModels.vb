@@ -77,7 +77,6 @@ Namespace ViewModels
         ' etwas getan hatte.
         Private _bokehStaerke As Double = 0.0
         Private _bokehUebergang As Double = 25.0
-        Private _bokehBlende As Integer = 0
         Private _bokehLichter As Double = 60.0
 
         Public ReadOnly Property IsBokehAvailable As Boolean
@@ -157,51 +156,6 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Die Form der Blende: 0 rund, sonst die Zahl der Lamellen. Sie bestimmt, wie ein
-        ''' Lichtpunkt im unscharfen Bereich aussieht - rund oder als Vieleck.</summary>
-        Public Property BokehAperture As Integer
-            Get
-                Return _bokehBlende
-            End Get
-            Set(value As Integer)
-                ' Zwischen 1 und 2 gibt es keine Form: entweder rund (0) oder mindestens ein Dreieck.
-                Dim v = Math.Max(0, Math.Min(9, value))
-                If v = 1 OrElse v = 2 Then v = 0
-                If v = _bokehBlende Then Return
-                _bokehBlende = v
-                Me.RaisePropertyChanged(NameOf(BokehAperture))
-                For Each n In {NameOf(IsApertureRound), NameOf(IsApertureFive),
-                               NameOf(IsApertureSix), NameOf(IsApertureSeven)}
-                    Me.RaisePropertyChanged(n)
-                Next
-                ScheduleBokehPreview()
-            End Set
-        End Property
-
-        Public ReadOnly Property IsApertureRound As Boolean
-            Get
-                Return _bokehBlende <= 0
-            End Get
-        End Property
-
-        Public ReadOnly Property IsApertureFive As Boolean
-            Get
-                Return _bokehBlende = 5
-            End Get
-        End Property
-
-        Public ReadOnly Property IsApertureSix As Boolean
-            Get
-                Return _bokehBlende = 6
-            End Get
-        End Property
-
-        Public ReadOnly Property IsApertureSeven As Boolean
-            Get
-                Return _bokehBlende = 7
-            End Get
-        End Property
-
         ''' <summary>Wie stark Lichtpunkte als leuchtende Scheiben erhalten bleiben, statt sich
         ''' zu einem matten Fleck zu mitteln.</summary>
         Public Property BokehHighlights As Double
@@ -230,13 +184,10 @@ Namespace ViewModels
             _bokehBis = 100.0
             _bokehStaerke = 0.0
             _bokehUebergang = 25.0
-            _bokehBlende = 0
             _bokehLichter = 60.0
             DisposeBokehPreview()
             For Each n In {NameOf(BokehFrom), NameOf(BokehTo), NameOf(BokehStrength), NameOf(BokehTransition),
-                           NameOf(BokehAperture), NameOf(BokehHighlights), NameOf(HasBokehChanges),
-                           NameOf(IsApertureRound), NameOf(IsApertureFive), NameOf(IsApertureSix),
-                           NameOf(IsApertureSeven)}
+                           NameOf(BokehHighlights), NameOf(HasBokehChanges)}
                 Me.RaisePropertyChanged(n)
             Next
         End Sub
@@ -343,7 +294,7 @@ Namespace ViewModels
                 If basis Is Nothing OrElse map Is Nothing Then Return
                 Dim from = _bokehVon, bis = _bokehBis
                 Dim strength = _bokehStaerke, uebergang = _bokehUebergang
-                Dim corners = _bokehBlende, lichter = _bokehLichter
+                Dim lichter = _bokehLichter
                 Dim objectRecipe = GetCurrentAdjustments()
 
                 SetPreviewBusy(True)
@@ -351,8 +302,9 @@ Namespace ViewModels
                 Try
                     blurredPreview = Await Task.Run(
                     Function() As Bitmap
+                        ' Null Ecken: die Scheibe ist immer rund, eine Wahl der Form gibt es nicht.
                         Dim unscharf = DepthMapService.DepthBlur(basis, map, from, bis,
-                                                                 strength, uebergang, corners, lichter)
+                                                                 strength, uebergang, 0, lichter)
                         If unscharf Is Nothing Then Return Nothing
                         ' Nur die Vorschau: direkte Zeilenkopie statt PNG-Rundlauf.
                         ' Ohne Kopie: WithObjectsOnTop und NormalizePreviewBase geben ihr Eingangsbild
@@ -408,7 +360,7 @@ Namespace ViewModels
                 Dim map = ImageProcessor.CopyBitmap(_depthMap)
                 Dim from = _bokehVon, bis = _bokehBis
                 Dim strength = _bokehStaerke, uebergang = _bokehUebergang
-                Dim corners = _bokehBlende, lichter = _bokehLichter
+                Dim lichter = _bokehLichter
                 Dim objectRecipe = GetCurrentAdjustments()
 
                 SetPreviewBusy(True)
@@ -418,7 +370,7 @@ Namespace ViewModels
                     Function() As Bitmap
                         Try
                             Dim unscharf = DepthMapService.DepthBlur(basis, map, from, bis,
-                                                                     strength, uebergang, corners, lichter, token)
+                                                                     strength, uebergang, 0, lichter, token)
                             If unscharf Is Nothing Then Return Nothing
                             Using norm = NormalizePreviewBase(WithObjectsOnTop(unscharf, objectRecipe))
                                 Return ImageOrientationService.ToAvaloniaBitmapFast(norm)
@@ -617,7 +569,7 @@ Namespace ViewModels
 
                 Dim from = _bokehVon, bis = _bokehBis
                 Dim strength = _bokehStaerke, uebergang = _bokehUebergang
-                Dim corners = _bokehBlende, lichter = _bokehLichter
+                Dim lichter = _bokehLichter
                 PushUndo(LocalizationService.T("Bokeh"))
                 ' Der Schritt zurueck merkt sich nur das Rezept - der Flicken traegt die PIXEL.
                 Dim undoItem = _lastPushedUndoEntry
@@ -629,7 +581,7 @@ Namespace ViewModels
                         Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
                             Sub(full)
                                 Using unscharf = DepthMapService.DepthBlur(full, map, from, bis,
-                                                                                    strength, uebergang, corners, lichter, cancel)
+                                                                                    strength, uebergang, 0, lichter, cancel)
                                     If unscharf Is Nothing Then
                                         cancel.ThrowIfCancellationRequested()
                                         Return
@@ -743,9 +695,10 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Ab dieser Entfernung beginnt der Nebel, gezaehlt zwischen Kamera (100) und
-        ''' fernstem Punkt (0). Ab Werk 100: der Nebel waechst von der Kamera an mit der Entfernung,
-        ''' auch der naechste Punkt bekommt etwas (DepthMapService.DepthFog).</summary>
+        ''' <summary>Ab dieser Entfernung beginnt der Nebel, gezaehlt zwischen naechstem (100) und
+        ''' fernstem Punkt (0) der Tiefenkarte. Ab Werk 100: der Nebel waechst gleich hinter dem
+        ''' naechsten Punkt mit der Entfernung, der naechste Punkt selbst bleibt klar; was vor ihm
+        ''' liegen soll, stellt FogForeground ein (DepthMapService.DepthFog).</summary>
         Public Property FogNear As Double
             Get
                 Return _fogNear
@@ -1025,7 +978,8 @@ Namespace ViewModels
         '
         ' Dieselbe Bauform wie bei der Objektauswahl: das Modell laeuft EINMAL je Bild, die
         ' Tiefenkarte wird gemerkt, und die Regler rechnen nur noch die Maske daraus neu. Der Zusatz
-        ' ist, dass es hier gar keinen Klick gibt - ein Bild rein, eine Karte raus.
+        ' ist, dass das Modell hier keinen Klick braucht - ein Bild rein, eine Karte raus. Der
+        ' Klick der Pipette weiter unten liest nur aus der fertigen Karte.
 
         Private _depthMap As SKBitmap
         Private _depthKey As String = ""
@@ -1102,14 +1056,215 @@ Namespace ViewModels
             _depthKey = ""
         End Sub
 
+        ' ── Tiefe per Klick auf das Motiv ───────────────────────────────────────
+        '
+        ' Die Grenzen beider Werkzeuge stehen ab Werk auf "das Motiv ist das Naechste im Bild".
+        ' Liegt echter Vordergrund davor, greifen sie daneben, und an den Reglern laesst sich die
+        ' Tiefe eines Motivs nur raten. Die Pipette liest sie an der angeklickten Stelle.
+        '
+        ' Sie laeuft ueber DENSELBEN Zustand wie jede andere Pipette (BeginColorPickAt): Mauszeiger,
+        ' der Klick von der Buehne, ESC und der verschluckte Nachdruck gelten damit ohne eigenen
+        ' Weg in der Ansicht. Von der Aufnahme wird nur die STELLE gebraucht, die Farbe nicht.
+
+        Private Const DepthPickBokeh As String = "Bokeh"
+        Private Const DepthPickMask As String = "Mask"
+
+        ''' <summary>Fuer welches Werkzeug die Pipette gerade auf einen Klick wartet, leer ohne.</summary>
+        Private _depthPickTarget As String = ""
+        Private _pickBokehDepthCommand As ICommand
+        Private _pickMaskDepthCommand As ICommand
+
+        ''' <summary>Ob die Pipette der Tiefen-Unschaerfe auf einen Klick ins Bild wartet.</summary>
+        Public ReadOnly Property IsBokehDepthPickActive As Boolean
+            Get
+                Return String.Equals(_depthPickTarget, DepthPickBokeh, StringComparison.Ordinal)
+            End Get
+        End Property
+
+        ''' <summary>Ob die Pipette der Maske nach Tiefe auf einen Klick ins Bild wartet.</summary>
+        Public ReadOnly Property IsMaskDepthPickActive As Boolean
+            Get
+                Return String.Equals(_depthPickTarget, DepthPickMask, StringComparison.Ordinal)
+            End Get
+        End Property
+
+        Public ReadOnly Property PickBokehDepthCommand As ICommand
+            Get
+                If _pickBokehDepthCommand Is Nothing Then
+                    _pickBokehDepthCommand = ReactiveCommand.Create(Sub()
+                                                                        Dim ignored = ToggleDepthPickAsync(DepthPickBokeh)
+                                                                    End Sub)
+                End If
+                Return _pickBokehDepthCommand
+            End Get
+        End Property
+
+        Public ReadOnly Property PickMaskDepthCommand As ICommand
+            Get
+                If _pickMaskDepthCommand Is Nothing Then
+                    _pickMaskDepthCommand = ReactiveCommand.Create(Sub()
+                                                                       Dim ignored = ToggleDepthPickAsync(DepthPickMask)
+                                                                   End Sub)
+                End If
+                Return _pickMaskDepthCommand
+            End Get
+        End Property
+
+        ''' <summary>Der Knopf der Pipette: schaltet sie ein, ein zweiter Druck wieder aus.
+        '''
+        ''' Fehlt das Tiefenmodell, gilt dieselbe Rueckfrage wie beim Anwenden. Ohne Download
+        ''' geschieht nichts: die Pipette hat bis dahin keinen Wert angefasst, es gibt also auch
+        ''' nichts zurueckzusetzen.</summary>
+        Public Async Function ToggleDepthPickAsync(target As String) As Task
+            If String.Equals(_depthPickTarget, target, StringComparison.Ordinal) Then
+                CancelColorPick()
+                Return
+            End If
+            If Not DepthMapService.Available Then
+                Dim feature = If(String.Equals(target, DepthPickBokeh, StringComparison.Ordinal),
+                                 LocalizationService.T("Tiefen-Unschärfe"), LocalizationService.T("Maske nach Tiefe"))
+                ' Der Download dauert: wer inzwischen das Werkzeug, den Maskenmodus oder das Bild
+                ' gewechselt hat, bekommt danach keine Pipette mehr eingeschaltet, deren Knopf er
+                ' nicht mehr sieht und die dem neuen Werkzeug den naechsten Klick naehme.
+                Dim run = _depthPickRun
+                Dim document = _currentImagePath
+                If Not Await EnsureModelsAsync(feature, DepthMapService.ModelFile) Then Return
+                If run <> _depthPickRun OrElse Not String.Equals(document, _currentImagePath, StringComparison.Ordinal) Then Return
+            End If
+            If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
+            BeginColorPickAt(Sub(unusedColor, xFraction, yFraction)
+                                 Dim ignored = SetDepthRangeFromPickAsync(target, xFraction, yFraction)
+                             End Sub)
+            ' Erst NACH dem Start: BeginColorPickAt beendet eine Tiefen-Pipette, die noch wartet.
+            _depthPickTarget = target
+            RaiseDepthPickChanged()
+        End Function
+
+        ''' <summary>Die Tiefen-Pipette wartet nicht mehr. Gerufen von jedem Ende einer Aufnahme
+        ''' (Klick, Abbruch, eine andere Pipette, ein anderes Bild), damit der Knopf im Panel
+        ''' wieder aus ist.</summary>
+        Private Sub ClearDepthPickTarget()
+            If _depthPickTarget = "" Then Return
+            _depthPickTarget = ""
+            RaiseDepthPickChanged()
+        End Sub
+
+        Private Sub RaiseDepthPickChanged()
+            Me.RaisePropertyChanged(NameOf(IsBokehDepthPickActive))
+            Me.RaisePropertyChanged(NameOf(IsMaskDepthPickActive))
+        End Sub
+
+        ''' <summary>Bricht eine wartende Tiefen-Pipette ab, und nur sie. Fuer den Wechsel des
+        ''' Werkzeugs oder des Maskenmodus: der Knopf, zu dem sie gehoert, ist dann nicht mehr zu
+        ''' sehen, und ein Klick ins Bild soll wieder dem Werkzeug gehoeren.</summary>
+        Private Sub CancelDepthPick()
+            ' Auch ein schon angenommener Klick gilt nicht mehr: seine Rechnung laeuft noch, wenn
+            ' die Karte erst entsteht, und schriebe sonst nach dem Werkzeugwechsel die Grenzen und
+            ' haengte die Vorschau der Unschaerfe ueber das neue Werkzeug.
+            _depthPickRun += 1
+            If _depthPickTarget <> "" Then CancelColorPick()
+        End Sub
+
+        ''' <summary>Zaehlt die Abbrueche der Tiefen-Pipette (Werkzeugwechsel, Wechsel des
+        ''' Maskenmodus). Ein Klick merkt sich den Stand und schreibt nur, wenn er noch gilt.</summary>
+        Private _depthPickRun As Integer
+
+        ''' <summary>Der Klick der Pipette: liest die Tiefe an der Stelle (Anteile 0 bis 1 des
+        ''' angezeigten Bildes) und legt den Bereich des Werkzeugs darum.
+        '''
+        ''' <para>DIE STELLE gilt ohne Umrechnung: die Tiefenkarte ist so gross wie das gerenderte
+        ''' Bild, das auf der Buehne steht (dieselbe Geometrie, derselbe Zuschnitt), und Anteile
+        ''' davon sind Anteile der Karte. So schlagen auch die messenden Farbpipetten ihre Stelle
+        ''' nach.</para>
+        '''
+        ''' <para>FEHLT DIE KARTE NOCH, rechnet sie derselbe Weg wie die Vorschau des Werkzeugs,
+        ''' mit dessen Statustext: bei der Tiefen-Unschaerfe <see cref="PrepareBokehBase"/>, bei der
+        ''' Maske <see cref="RedrawDepthMask"/> (das die Karte bei markierter Ebene aus der Szene
+        ''' MIT den Objekten rechnet, was hier nicht nachgebaut werden soll).</para>
+        '''
+        ''' <para>KEIN SCHRITT IN DER HISTORIE aus dem Klick selbst, wie beim Ziehen der Regler: die
+        ''' Tiefen-Unschaerfe ist bis zum Anwenden eine Vorschau, und bei der Maske schreibt das
+        ''' Neuzeichnen, was es auch nach einer Reglerbewegung schreibt.</para></summary>
+        Public Async Function SetDepthRangeFromPickAsync(target As String,
+                                                         xFraction As Double, yFraction As Double) As Task
+            If Not DepthMapService.Available OrElse String.IsNullOrWhiteSpace(_currentImagePath) Then Return
+            Dim document = _currentImagePath
+            ' Ungueltig macht einen angenommenen Klick nur, was sein Panel verschwinden laesst
+            ' (Werkzeug, Maskenmodus) oder das Bild wechselt. Eine ANDERE Pipette, die danach
+            ' gestartet wird, laesst ihn stehen: der Klick war gewollt, sein Werkzeug ist noch da,
+            ' und sein Ergebnis kommt nur spaeter, weil die Karte erst entsteht. Deshalb zaehlt
+            ' ClearDepthPickTarget den Lauf nicht weiter.
+            Dim run = _depthPickRun
+            Dim forMask = String.Equals(target, DepthPickMask, StringComparison.Ordinal)
+            If forMask Then Await RedrawDepthMask()
+            If run <> _depthPickRun Then Return
+
+            Dim range As (Low As Double, High As Double)? = Nothing
+            Await _depthGate.WaitAsync()
+            Try
+                If Not String.Equals(document, _currentImagePath, StringComparison.Ordinal) Then Return
+                If run <> _depthPickRun Then Return
+                If Not forMask AndAlso Not Await PrepareBokehBase() Then Return
+                If Not String.Equals(document, _currentImagePath, StringComparison.Ordinal) Then Return
+                If run <> _depthPickRun Then Return
+                ' Die Maske waehlt eine Entfernung und bekommt das enge Band; die Unschaerfe soll
+                ' das ganze Motiv scharf lassen und bekommt den Bereich bis in die Luecke hinter ihm.
+                range = If(forMask,
+                           DepthMapService.RangeAroundPoint(_depthMap, xFraction, yFraction),
+                           DepthMapService.FocusRangeAroundPoint(_depthMap, xFraction, yFraction))
+            Finally
+                _depthGate.Release()
+            End Try
+            If Not ApplyDepthPickRange(target, range) Then
+                StatusText = LocalizationService.T("Diese Stelle lässt sich nicht messen")
+                Return
+            End If
+            If forMask Then
+                Await RedrawDepthMask()
+            Else
+                ScheduleBokehPreview()
+                StatusText = LocalizationService.T("Scharfer Bereich auf die angeklickte Tiefe gelegt")
+            End If
+        End Function
+
+        ''' <summary>Traegt den gemessenen Bereich in die Grenzen des Werkzeugs ein und meldet sie.
+        ''' False ohne Bereich. Die Felder direkt und beide zusammen: ueber die Eigenschaften
+        ''' schoebe die erste Grenze die zweite vor sich her, und jede stiesse ihr eigenes
+        ''' Neuzeichnen an. Das Neuzeichnen stoesst der Aufrufer einmal an.</summary>
+        Friend Function ApplyDepthPickRange(target As String, range As (Low As Double, High As Double)?) As Boolean
+            If Not range.HasValue Then Return False
+            Dim low = Math.Max(0.0, Math.Min(100.0, Math.Min(range.Value.Low, range.Value.High)))
+            Dim high = Math.Max(0.0, Math.Min(100.0, Math.Max(range.Value.Low, range.Value.High)))
+            If String.Equals(target, DepthPickMask, StringComparison.Ordinal) Then
+                _depthFrom = low
+                _depthTo = high
+                Me.RaisePropertyChanged(NameOf(DepthFrom))
+                Me.RaisePropertyChanged(NameOf(DepthTo))
+            ElseIf String.Equals(target, DepthPickBokeh, StringComparison.Ordinal) Then
+                _bokehVon = low
+                _bokehBis = high
+                Me.RaisePropertyChanged(NameOf(BokehFrom))
+                Me.RaisePropertyChanged(NameOf(BokehTo))
+            Else
+                Return False
+            End If
+            Return True
+        End Function
+
         ''' <summary>Die Maske aus dem gewaehlten Tiefenbereich. Rechnet die Tiefenkarte, falls sie
         ''' fuer diesen Bildstand noch fehlt.</summary>
         Public Async Function RedrawDepthMask() As Task
             If Not DepthMapService.Available Then Return
             If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
 
+            ' Bild und Maskenmodus, fuer die dieser Lauf gilt. Die Karte braucht Sekunden; wer
+            ' inzwischen weiterblaettert oder den Modus wechselt, bekaeme sonst die Karte des
+            ' vorigen Bildes abgelegt und dessen Maske auf das neue Bild gesetzt.
+            Dim document = _currentImagePath
+            Dim mode = _maskMode
             Await _depthGate.WaitAsync()
             Try
+                If Not String.Equals(document, _currentImagePath, StringComparison.Ordinal) Then Return
                 Dim size = GetAnnotationDisplayPixelSize()
                 If size.Width <= 0 OrElse size.Height <= 0 Then Return
                 ' DASSELBE Rezept wie die Vorschau: ohne Objekte. Zwei verschiedene Vorlagen unter
@@ -1149,6 +1304,11 @@ Namespace ViewModels
                         Me.RaisePropertyChanged(NameOf(IsDepthMaskRunning))
                     RefreshBusyState()
                     End Try
+                    If Not String.Equals(document, _currentImagePath, StringComparison.Ordinal) Then
+                        ' Ein anderes Bild: die Karte gehoert nirgendwohin mehr.
+                        neu?.Dispose()
+                        Return
+                    End If
                     If neu Is Nothing Then
                         StatusText = LocalizationService.T("Tiefe konnte nicht berechnet werden")
                         Return
@@ -1157,6 +1317,9 @@ Namespace ViewModels
                     _depthMap = neu
                     _depthKey = key
                 End If
+                ' Die Karte bleibt fuer dieses Bild liegen; die Maske setzt nur, wer noch im
+                ' selben Modus steht.
+                If Not String.Equals(mode, _maskMode, StringComparison.Ordinal) Then Return
 
                 Dim map = _depthMap
                 Dim from = _depthFrom, bis = _depthTo, weich = _depthFeather
@@ -1170,6 +1333,11 @@ Namespace ViewModels
                                               End If
                                               Return depthMask
                                           End Function)
+                If Not String.Equals(document, _currentImagePath, StringComparison.Ordinal) OrElse
+                   Not String.Equals(mode, _maskMode, StringComparison.Ordinal) Then
+                    mask?.Dispose()
+                    Return
+                End If
                 If mask Is Nothing Then
                     If confinePlan IsNot Nothing Then StatusText = LocalizationService.T("In diesem Tiefenbereich liegt nichts")
                     Return
