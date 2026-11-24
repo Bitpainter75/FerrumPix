@@ -12273,30 +12273,6 @@
   <data name="Der_Ordner_f_r_Anpassungen_ist_nicht_erreichbar__c8899bfd" xml:space="preserve">
     <value>Le dossier des réglages est inaccessible : {0}. Il se définit dans les paramètres, sous Éditeur.</value>
   </data>
-  <data name="Neuer_Ordner_in_0_3a44f881" xml:space="preserve">
-    <value>Nouveau dossier dans {0}</value>
-  </data>
-  <data name="Neuer_Name_des_Ordners_8e707c90" xml:space="preserve">
-    <value>Nouveau nom du dossier</value>
-  </data>
-  <data name="Neuer_Name_der_Anpassung_4b271b22" xml:space="preserve">
-    <value>Nouveau nom du réglage</value>
-  </data>
-  <data name="Es_gibt_keinen_anderen_Ordner_als_Ziel_de1e2a87" xml:space="preserve">
-    <value>Il n'y a pas d'autre dossier de destination.</value>
-  </data>
-  <data name="Ordner_0_verschieben_nach_792d7c44" xml:space="preserve">
-    <value>Déplacer le dossier {0} vers</value>
-  </data>
-  <data name="Anpassung_0_verschieben_nach_c3d26d55" xml:space="preserve">
-    <value>Déplacer le réglage {0} vers</value>
-  </data>
-  <data name="Der_Ordner_0_wird_mit_1_Anpassung_en_gel_scht_An_2be977f0" xml:space="preserve">
-    <value>Le dossier {0} sera supprimé avec {1} réglage(s). Les autres fichiers qu'il contient sont conservés.</value>
-  </data>
-  <data name="Die_Anpassung_0_wird_gel_scht_02b65971" xml:space="preserve">
-    <value>Le réglage {0} sera supprimé.</value>
-  </data>
   <data name="Bitte_einen_Namen_eingeben_79e2b03f" xml:space="preserve">
     <value>Saisissez un nom.</value>
   </data>
@@ -12308,9 +12284,6 @@
   </data>
   <data name="Die_Anpassung_lie_sich_nicht_umbenennen_Gibt_es__0fd26f4f" xml:space="preserve">
     <value>Le réglage n'a pas pu être renommé. Ce nom existe-t-il déjà dans ce dossier ?</value>
-  </data>
-  <data name="Der_Ordner_lie_sich_nicht_verschieben_Gibt_es_do_7cdb8df5" xml:space="preserve">
-    <value>Le dossier n'a pas pu être déplacé. Y en a-t-il déjà un du même nom à cet endroit ?</value>
   </data>
   <data name="Die_Anpassung_lie_sich_nicht_verschieben_Gibt_es_8db30dc2" xml:space="preserve">
     <value>Le réglage n'a pas pu être déplacé. Y en a-t-il déjà un du même nom à cet endroit ?</value>
@@ -12341,30 +12314,6 @@
   </data>
   <data name="Einen_Unterordner_im_gew_hlten_Ordner_anlegen_04fa4248" xml:space="preserve">
     <value>Créer un sous-dossier dans le dossier sélectionné</value>
-  </data>
-  <data name="Ordner_exportieren_e68ad9ad" xml:space="preserve">
-    <value>Exporter le dossier</value>
-  </data>
-  <data name="Den_gew_hlten_Ordner_samt_Unterordnern_in_ein_Ve_dec83286" xml:space="preserve">
-    <value>Écrire le dossier sélectionné et ses sous-dossiers dans un répertoire</value>
-  </data>
-  <data name="In_diesem_Ordner_liegt_keine_Anpassung_c72f5c19" xml:space="preserve">
-    <value>Ce dossier ne contient aucun réglage.</value>
-  </data>
-  <data name="Die_gew_hlte_Anpassung_als_Datei_an_einen_andere_419cc46b" xml:space="preserve">
-    <value>Écrire le réglage sélectionné sous forme de fichier à un autre emplacement</value>
-  </data>
-  <data name="Datei_importieren_a2367221" xml:space="preserve">
-    <value>Importer un fichier</value>
-  </data>
-  <data name="Dateien_mit_Anpassungen_in_den_gew_hlten_Ordner__d0a3086f" xml:space="preserve">
-    <value>Ajouter des fichiers de réglages au dossier sélectionné</value>
-  </data>
-  <data name="Ordner_importieren_751ddbf0" xml:space="preserve">
-    <value>Importer un dossier</value>
-  </data>
-  <data name="Einen_Ordner_samt_Unterordnern_in_den_gew_hlten__c0e65180" xml:space="preserve">
-    <value>Ajouter un dossier et ses sous-dossiers au dossier sélectionné</value>
   </data>
   <data name="Anpassungen_importieren_838230e9" xml:space="preserve">
     <value>Importer des réglages</value>
@@ -12464,5 +12413,92 @@
   </data>
   <data name="Zu_diesem_Live_Photo_geh_rt_0_Der_Name_1_ist_daf_2c7e82bc" xml:space="preserve">
     <value>{0} fait partie de ce Live Photo. Le nom {1} est déjà pris pour ce fichier.</value>
+  </data>
+  <data name="Die_gespeicherten_Anpassungen_fehlen_deshalb_in__fda49589" xml:space="preserve">
+    <value>Les réglages enregistrés manquent donc dans la sauvegarde.</value>
+  </data>
+  <data name="Die_gespeicherten_Anpassungen_lassen_sich_deshal_a30cd08a" xml:space="preserve">
+    <value>Les réglages enregistrés ne peuvent donc pas être restaurés, rien n'a été modifié.</value>
+  </data>
+  <data name="Ablage_c411bce3" xml:space="preserve">
+    <value>Emplacement :</value>
+  </data>
+  <data name="Den_Ordner_der_Anpassungen_im_Dateimanager_ffnen_b3fce593" xml:space="preserve">
+    <value>Ouvrir le dossier des réglages dans le gestionnaire de fichiers</value>
+  </data>
+  <data name="Schlie_t_dieses_Fenster_und_ffnet_die_Einstellun_58264913" xml:space="preserve">
+    <value>Ferme cette fenêtre et ouvre les paramètres. Le dossier des réglages s'y définit sous Éditeur.</value>
+  </data>
+  <data name="Ordner_ndern_6c04e2d7" xml:space="preserve">
+    <value>Changer de dossier</value>
+  </data>
+  <data name="Anpassungen_in_allen_Ordnern_nach_ihrem_Namen_su_6edcb468" xml:space="preserve">
+    <value>Rechercher des réglages par leur nom dans tous les dossiers</value>
+  </data>
+  <data name="Anpassungen_in_den_gew_hlten_Ordner_aufnehmen_65ddf882" xml:space="preserve">
+    <value>Ajouter des réglages au dossier sélectionné</value>
+  </data>
+  <data name="Ordner_samt_Unterordnern_91847af9" xml:space="preserve">
+    <value>Dossier et ses sous-dossiers</value>
+  </data>
+  <data name="Unterordner_zeigen_oder_verbergen_11fab487" xml:space="preserve">
+    <value>Afficher ou masquer les sous-dossiers</value>
+  </data>
+  <data name="Ordner_umbenennen_F2_91a94b55" xml:space="preserve">
+    <value>Renommer le dossier (F2)</value>
+  </data>
+  <data name="Ordner_samt_Unterordnern_in_ein_Verzeichnis_expo_2a332ad9" xml:space="preserve">
+    <value>Exporter le dossier et ses sous-dossiers dans un répertoire</value>
+  </data>
+  <data name="Ordner_l_schen_ENTF_Andere_Dateien_darin_bleiben_190eeb88" xml:space="preserve">
+    <value>Supprimer le dossier (SUPPR). Les autres fichiers qu'il contient sont conservés.</value>
+  </data>
+  <data name="Klicken_zeigt_was_die_Anpassung_enth_lt_Auf_eine_f063f797" xml:space="preserve">
+    <value>Cliquer pour voir ce que contient le réglage. Le faire glisser sur un dossier pour le déplacer.</value>
+  </data>
+  <data name="Auf_das_im_Editor_ge_ffnete_Bild_anwenden_e8e855ed" xml:space="preserve">
+    <value>Appliquer à l'image ouverte dans l'éditeur</value>
+  </data>
+  <data name="Umbenennen_F2_89b3b3ba" xml:space="preserve">
+    <value>Renommer (F2)</value>
+  </data>
+  <data name="In_einen_anderen_Ordner_verschieben_66b049c4" xml:space="preserve">
+    <value>Déplacer vers un autre dossier</value>
+  </data>
+  <data name="Als_Datei_an_einen_anderen_Ort_exportieren_b0632359" xml:space="preserve">
+    <value>Exporter sous forme de fichier vers un autre emplacement</value>
+  </data>
+  <data name="L_schen_ENTF_2e101259" xml:space="preserve">
+    <value>Supprimer (SUPPR)</value>
+  </data>
+  <data name="enthalten_7d3b9efe" xml:space="preserve">
+    <value>inclus</value>
+  </data>
+  <data name="Alle_brigen_Regler_werden_auf_den_Neutralwert_ge_926e23af" xml:space="preserve">
+    <value>Tous les autres curseurs sont remis à leur valeur neutre.</value>
+  </data>
+  <data name="L_schen_4b292f16" xml:space="preserve">
+    <value>Supprimer ?</value>
+  </data>
+  <data name="Anpassungen_in_0_cd658125" xml:space="preserve">
+    <value>Réglages dans {0}</value>
+  </data>
+  <data name="Keine_Anpassung_mit_diesem_Namen_gefunden_0faef088" xml:space="preserve">
+    <value>Aucun réglage portant ce nom n'a été trouvé.</value>
+  </data>
+  <data name="Links_einen_Ordner_w_hlen_8b9dbf96" xml:space="preserve">
+    <value>Choisissez un dossier à gauche.</value>
+  </data>
+  <data name="In_diesem_Ordner_liegt_keine_Anpassung_Gespeiche_ee81a890" xml:space="preserve">
+    <value>Ce dossier ne contient aucun réglage. On en enregistre dans l'éditeur, sous Réglages enregistrés.</value>
+  </data>
+  <data name="L_schen_0_Anpassung_en_und_1_Unterordner_gehen_m_fd2cb752" xml:space="preserve">
+    <value>Supprimer ? {0} réglage(s) et {1} sous-dossier(s) seront supprimés avec lui.</value>
+  </data>
+  <data name="Anpassung_verschoben_0_99bf71a4" xml:space="preserve">
+    <value>Réglage déplacé : {0}</value>
+  </data>
+  <data name="Angewendet_45946cda" xml:space="preserve">
+    <value>Appliqué</value>
   </data>
 </root>

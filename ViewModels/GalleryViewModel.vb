@@ -14577,6 +14577,8 @@ Namespace ViewModels
                     Where(Function(p) If(cut, FileOperationPolicy.CanMove(p, targetFolder), FileOperationPolicy.CanCopy(p))).
                     ToList()
                 Dim run As New TransferRun(sourcePaths)
+                ' Live Photos im Lauf: ihre Haelften bekommen denselben Zielstamm (ResolveCopyTargetAsync).
+                Await Task.Run(AddressOf run.FindLivePairs)
 
                 Await RunSidecarBatchAsync(Async Function()
                                                For Each source In sourcePaths
@@ -17749,6 +17751,8 @@ Namespace ViewModels
                     ToList()
                 If sourcePaths.Count = 0 Then Return
                 Dim run As New TransferRun(sourcePaths)
+                ' Live Photos im Lauf: ihre Haelften bekommen denselben Zielstamm (ResolveCopyTargetAsync).
+                Await Task.Run(AddressOf run.FindLivePairs)
 
                 Await RunSidecarBatchAsync(Async Function()
                                                For Each source In sourcePaths
@@ -17921,10 +17925,67 @@ Namespace ViewModels
         ''' ANDERE Quelle des Laufs (auch eine, die im Zielordner liegt), ohne Frage einen freien
         ''' Namen, wie im Stapel (ResolveBatchTargetsAsync). "Alle überschreiben" und "Überschreiben"
         ''' meinen vorhandene fremde Dateien, nicht die gleichnamige Datei aus einem anderen Ordner,
-        ''' die eben erst angekommen ist: beim Verschieben wäre deren Quelle schon fort.</summary>
+        ''' die eben erst angekommen ist: beim Verschieben wäre deren Quelle schon fort.
+        '''
+        ''' LIVE PHOTO: Bild und Film haengen am gleichen Stamm zusammen. Bekommt eine Haelfte einen
+        ''' neuen Namen (ein freier Name im Lauf, "Kopie", oder "Umbenennen" im Dialog), bekommt die
+        ''' andere denselben Stamm, und gewaehlt wird ein Stamm, unter dem BEIDE frei sind. Wird
+        ''' eine Haelfte uebersprungen, bleibt auch die andere. Das gilt, solange beide Haelften
+        ''' Quellen des Laufs sind (TransferRun.FindLivePairs) und die andere noch nicht uebertragen
+        ''' ist; stoesst erst die ZWEITE Haelfte auf ein vorhandenes Ziel, entscheidet der Dialog
+        ''' fuer sie allein.</summary>
         Private Async Function ResolveCopyTargetAsync(source As String, targetFolder As String, movePath As Boolean,
                                                       duplicate As Boolean,
                                                       Optional run As TransferRun = Nothing) As Task(Of (Path As String, ReplaceConfirmed As Boolean))
+            Dim partner = run?.LivePartnerOf(source)
+            If partner Is Nothing Then Return Await ResolveSingleCopyTargetAsync(source, targetFolder, movePath, duplicate, run)
+
+            Dim forced As String = Nothing
+            If run.TryGetForcedLiveTarget(source, forced) Then
+                If forced.Length = 0 Then Return (Nothing, False)
+                If Not File.Exists(forced) AndAlso Not Directory.Exists(forced) AndAlso Not run.IsReserved(forced, source) Then Return (forced, False)
+                ' Belegt (inzwischen von aussen entstanden): dann der gewoehnliche Weg.
+            End If
+
+            Dim resolved = Await ResolveSingleCopyTargetAsync(source, targetFolder, movePath, duplicate, run)
+            If run.IsDone(partner) Then Return resolved
+            If String.IsNullOrEmpty(resolved.Path) Then
+                run.ForceLiveTarget(partner, Nothing)
+                Return resolved
+            End If
+            If String.Equals(IO.Path.GetFileNameWithoutExtension(resolved.Path), IO.Path.GetFileNameWithoutExtension(source),
+                             PathIdentity.Comparison) Then Return resolved
+
+            ' Ein neuer Stamm: einer, unter dem auch die andere Haelfte frei ist.
+            Dim firstChoice = resolved.Path
+            Dim taken = Function(candidate As String) As Boolean
+                            Dim partnerTarget = LivePhotoService.PartnerTargetFor(partner, candidate)
+                            If File.Exists(partnerTarget) OrElse Directory.Exists(partnerTarget) OrElse run.IsReserved(partnerTarget, partner) Then Return True
+                            If String.Equals(candidate, firstChoice, PathIdentity.Comparison) Then Return False
+                            Return File.Exists(candidate) OrElse Directory.Exists(candidate) OrElse run.IsReserved(candidate, source)
+                        End Function
+            Dim common = firstChoice
+            If taken(common) Then
+                ' Weitergezaehlt wird am Namen ohne die Nummer, die er schon traegt: aus
+                ' "tour (1).jpg" wird "tour (2).jpg", nicht "tour (1) (1).jpg".
+                Dim folder = If(IO.Path.GetDirectoryName(firstChoice), "")
+                Dim extension = IO.Path.GetExtension(firstChoice)
+                Dim baseName = System.Text.RegularExpressions.Regex.Replace(IO.Path.GetFileNameWithoutExtension(firstChoice), " \(\d{1,6}\)$", "")
+                Dim number = 1
+                Do
+                    common = IO.Path.Combine(folder, $"{baseName} ({number}){extension}")
+                    number += 1
+                Loop While taken(common)
+            End If
+            run.ForceLiveTarget(partner, LivePhotoService.PartnerTargetFor(partner, common))
+            Return (common, False)
+        End Function
+
+        ''' <summary>Das Ziel einer einzelnen Quelle, ohne Ruecksicht auf die andere Haelfte eines
+        ''' Live Photos (die traegt <see cref="ResolveCopyTargetAsync"/> nach).</summary>
+        Private Async Function ResolveSingleCopyTargetAsync(source As String, targetFolder As String, movePath As Boolean,
+                                                            duplicate As Boolean,
+                                                            Optional run As TransferRun = Nothing) As Task(Of (Path As String, ReplaceConfirmed As Boolean))
             Dim name = IO.Path.GetFileName(source.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
             If String.IsNullOrWhiteSpace(name) Then Return (Nothing, False)
 
@@ -18273,9 +18334,71 @@ Namespace ViewModels
             ' Zielordner, in denen der Lauf schon aufgeräumt hat.
             Private ReadOnly _visitedFolders As New HashSet(Of String)(StringComparer.Ordinal)
 
+            ' Die Quellen, wie der Aufrufer sie nennt, fuer die Suche nach Live Photos.
+            Private ReadOnly _sourcePaths As List(Of String)
+            ' Live Photo: zu jeder Haelfte die andere, wenn BEIDE Quellen des Laufs sind.
+            Private ReadOnly _livePartners As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+            ' Live Photo: das Ziel, das eine Haelfte bekommen muss, weil die andere einen neuen
+            ' Stamm bekam; leer, wenn die andere uebersprungen wurde.
+            ' Hinter dem Lauf steht EIN Faden nach dem anderen (die Schleife wartet je Quelle).
+            Private ReadOnly _forcedLiveTargets As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+            ' Quellen, die schon uebertragen sind.
+            Private ReadOnly _done As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
             Public Sub New(sources As IEnumerable(Of String))
-                _sources = New HashSet(Of String)(sources.Select(Function(s) Key(s)), StringComparer.OrdinalIgnoreCase)
+                _sourcePaths = sources.ToList()
+                _sources = New HashSet(Of String)(_sourcePaths.Select(Function(s) Key(s)), StringComparer.OrdinalIgnoreCase)
             End Sub
+
+            ''' <summary>Sucht unter den Quellen die Live Photos, deren Bild UND Film im Lauf sind
+            ''' (gleicher Ordner, gleicher Stamm, gleiche Kennung, LivePhotoService.ArePair). Nur
+            ''' Quellen, neben denen im Lauf eine Datei gleichen Stamms mit der passenden Endung
+            ''' steht, werden nach ihrer Kennung gefragt. Fragt Katalog und im Zweifel Dateien: im
+            ''' Hintergrund rufen, einmal vor der Schleife.</summary>
+            Public Sub FindLivePairs()
+                Dim candidates = _sourcePaths.
+                    Where(Function(p) LivePhotoService.IsImageHalf(p) OrElse LivePhotoService.IsVideoHalf(p)).
+                    GroupBy(Function(p) IO.Path.Combine(If(IO.Path.GetDirectoryName(p), ""), IO.Path.GetFileNameWithoutExtension(p)),
+                            StringComparer.OrdinalIgnoreCase)
+                For Each group In candidates
+                    Dim images = group.Where(Function(p) LivePhotoService.IsImageHalf(p)).OrderBy(Function(p) p, StringComparer.OrdinalIgnoreCase).ToList()
+                    Dim videos = group.Where(Function(p) LivePhotoService.IsVideoHalf(p)).OrderBy(Function(p) p, StringComparer.OrdinalIgnoreCase).ToList()
+                    If images.Count = 0 OrElse videos.Count = 0 Then Continue For
+                    For Each video In videos
+                        Dim film = LivePhotoService.IdentityOf(video)
+                        For Each image In images
+                            If _livePartners.ContainsKey(Key(image)) Then Continue For
+                            Dim still = LivePhotoService.IdentityOf(image)
+                            If Not LivePhotoService.ArePair(image, still.Kind, still.Id, video, film.Kind, film.Id) Then Continue For
+                            _livePartners(Key(image)) = video
+                            _livePartners(Key(video)) = image
+                            Exit For
+                        Next
+                    Next
+                Next
+            End Sub
+
+            ''' <summary>Die andere Haelfte eines Live Photos, wenn sie ebenfalls Quelle des Laufs
+            ''' ist; sonst Nothing.</summary>
+            Public Function LivePartnerOf(source As String) As String
+                Dim partner As String = Nothing
+                Return If(_livePartners.TryGetValue(Key(source), partner), partner, Nothing)
+            End Function
+
+            ''' <summary>Ist diese Quelle schon uebertragen?</summary>
+            Public Function IsDone(source As String) As Boolean
+                Return _done.Contains(Key(source))
+            End Function
+
+            ''' <summary>Legt fest, wohin die andere Haelfte eines Live Photos muss; ein leeres Ziel
+            ''' heisst: nicht uebertragen, ihre Haelfte wurde uebersprungen.</summary>
+            Public Sub ForceLiveTarget(source As String, target As String)
+                _forcedLiveTargets(Key(source)) = If(target, "")
+            End Sub
+
+            Public Function TryGetForcedLiveTarget(source As String, ByRef target As String) As Boolean
+                Return _forcedLiveTargets.TryGetValue(Key(source), target)
+            End Function
 
             Private Shared Function Key(path As String) As String
                 Return FileOperationPolicy.ResolveLinks(NormalizePath(path))
@@ -18336,6 +18459,7 @@ Namespace ViewModels
             Public Sub Claim(target As String, source As String)
                 If String.IsNullOrEmpty(target) Then Return
                 _claimed.Add(Key(target))
+                If Not String.IsNullOrEmpty(source) Then _done.Add(Key(source))
                 If Not File.Exists(target) Then Return
                 Dim targetStem = RawSidecarService.StemXmpPathFor(target)
                 If targetStem Is Nothing Then Return

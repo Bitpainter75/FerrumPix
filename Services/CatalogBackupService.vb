@@ -27,6 +27,8 @@ Namespace Services
         Searches = 16
         ''' Die Zugangsdaten der Server in den Einstellungen; ohne diesen Teil fehlen sie in der Datei.
         Secrets = 32
+        ''' Die im Editor gespeicherten Anpassungen: der Baum der lesbaren Vorlagen im geltenden Ordner.
+        AdjustmentPresets = 64
     End Enum
 
     ''' <summary>Eine Datei in der Sicherung mit Pruefsumme.</summary>
@@ -50,6 +52,11 @@ Namespace Services
         ''' <summary>Die Pfadanfaenge des Katalogs mit ihrer Bildzahl, fuer das Umbiegen beim
         ''' Zurueckholen auf einem anderen Rechner.</summary>
         Public Property PathRoots As New List(Of BackupPathRoot)()
+        ''' <summary>Wie viele gespeicherte Anpassungen in der Sicherung stecken.</summary>
+        Public Property AdjustmentPresetCount As Integer
+        ''' <summary>Der Ordner der Anpassungen, wenn er beim Sichern nicht erreichbar war und der
+        ''' Teil deshalb fehlt; sonst leer.</summary>
+        Public Property UnreachableAdjustmentPresetFolder As String = ""
     End Class
 
     ''' <summary>Ein Pfadanfang im gesicherten Katalog: ein Benutzerordner, ein Laufwerk.</summary>
@@ -59,8 +66,8 @@ Namespace Services
     End Class
 
     ''' <summary>
-    ''' Sichert Katalog, Server-Indizes, Einstellungen, Favoriten und gespeicherte Suchen in eine ZIP
-    ''' und holt sie wieder zurueck.
+    ''' Sichert Katalog, Server-Indizes, Einstellungen, Favoriten, gespeicherte Suchen und die
+    ''' gespeicherten Anpassungen in eine ZIP und holt sie wieder zurueck.
     '''
     ''' SICHERN: Die Datenbanken laufen im WAL-Modus, eine Dateikopie waere kein verlaesslicher Stand.
     ''' Jede wird deshalb mit <c>VACUUM INTO</c> in eine Zwischendatei geschrieben, einen in sich
@@ -80,14 +87,38 @@ Namespace Services
     ''' ein versehentliches Zurueckholen laesst sich so umkehren. Fehlen in der Sicherung die
     ''' Zugangsdaten, behaelt die zurueckgeholte Einstellungsdatei die jetzigen.
     '''
+    ''' DIE GESPEICHERTEN ANPASSUNGEN sind kein einzelnes Stueck, sondern ein Ordnerbaum aus Dateien
+    ''' (AdjustmentPresetStore), womoeglich an einem selbst gewaehlten Ort. Gesichert wird jede
+    ''' lesbare Vorlage des geltenden Ordners als eigener Eintrag "presets/Ordner/Datei" mit
+    ''' Pruefsumme; Fremdes und Kaputtes im Ordner bleibt draussen. Ist der Ordner beim Sichern nicht
+    ''' erreichbar, fehlt der Teil, und das Inhaltsverzeichnis nennt den Ordner
+    ''' (<see cref="AdjustmentPresetHint"/>). Zurueck kommen sie NACH den Dateien, in den dann
+    ''' geltenden Ordner, ueber die Import-Regel des Bestands: was mit gleicher Kennung und gleichem
+    ''' Inhalt schon da ist, wird nicht noch einmal angelegt, und nichts im Ordner wird ersetzt oder
+    ''' geloescht.
+    '''
     ''' Nicht in der Sicherung: Vorschaubilder, Modelle, Kartenkacheln, die Zwischenspeicher fuer
     ''' Schaerfe und Aehnlichkeit. Das laesst sich alles neu erzeugen oder laden.
     ''' </summary>
     Public NotInheritable Class CatalogBackupService
 
         Private Const ManifestName As String = "manifest.json"
+        ''' Der Anfang jedes Eintrags einer Anpassung in der ZIP.
+        Private Const PresetEntryPrefix As String = "presets/"
+        ''' Der Ordner der bereitgelegten Anpassungen im Bereitstellungsordner.
+        Private Const StagedPresetsName As String = "presets"
         Private Const CurrentFormatVersion As Integer = 1
         Private Shared ReadOnly SecretFieldNames As String() = {"ImmichApiKey", "NextcloudAppPassword"}
+
+        ''' <summary>Von dem Gewaehlten gibt es nichts: keine der Dateien, keine Anpassung. Eine
+        ''' eigene Art, damit das Bereitlegen den leeren Stand vom echten Fehler trennen kann.</summary>
+        Private NotInheritable Class NothingToBackUpException
+            Inherits InvalidOperationException
+
+            Public Sub New(message As String)
+                MyBase.New(message)
+            End Sub
+        End Class
 
         Private Sub New()
         End Sub
@@ -166,7 +197,18 @@ Namespace Services
                 If (parts And BackupParts.Secrets) <> 0 AndAlso (manifest.Parts And BackupParts.Settings) <> 0 Then
                     manifest.Parts = manifest.Parts Or BackupParts.Secrets
                 End If
-                If prepared.Count = 0 Then Throw New InvalidOperationException("Nichts zu sichern")
+                If (parts And BackupParts.AdjustmentPresets) <> 0 Then
+                    Dim presetCopies = CollectAdjustmentPresets(work, manifest)
+                    If presetCopies.Count > 0 Then
+                        prepared.AddRange(presetCopies)
+                        manifest.Parts = manifest.Parts Or BackupParts.AdjustmentPresets
+                    End If
+                End If
+                If prepared.Count = 0 Then
+                    ' War nur der nicht erreichbare Ordner gewaehlt, sagt die Meldung das.
+                    Dim hint = AdjustmentPresetHint(manifest)
+                    Throw New NothingToBackUpException(If(hint.Length > 0, hint, "Nichts zu sichern"))
+                End If
                 Dim catalog = prepared.FirstOrDefault(Function(p) p.Name = "library.db")
                 If catalog.File IsNot Nothing Then
                     FillCounts(catalog.File, manifest)
@@ -205,6 +247,128 @@ Namespace Services
                 End Try
             End Try
         End Function
+
+        ''' <summary>Kopiert jede lesbare Anpassung des geltenden Ordners in den Arbeitsordner und
+        ''' gibt Eintragsname und Kopie zurueck. Der Eintragsname ist der Weg der Datei unter dem
+        ''' Wurzelordner. Gelesen wird ueber den Bestand selbst, also ohne Fremdes, Kaputtes,
+        ''' versteckte Ordner und Verknuepfungen. Der Ordner wird nur gelesen, nichts darin geaendert.
+        ''' Ist er nicht erreichbar, bleibt die Liste leer und das Inhaltsverzeichnis nennt ihn; die
+        ''' Sicherung der uebrigen Teile laeuft weiter.</summary>
+        Private Shared Function CollectAdjustmentPresets(work As String, manifest As BackupManifest) As List(Of (Name As String, File As String))
+            Dim result As New List(Of (Name As String, File As String))()
+            Dim listing = AdjustmentPresetStore.Current().ReadAll()
+            If Not listing.Reachable Then
+                manifest.UnreachableAdjustmentPresetFolder = listing.Root
+                DiagnosticLogService.LogAlways("Backup.Presets", "Ordner der Anpassungen nicht erreichbar: " & listing.Root)
+                Return result
+            End If
+            Dim copies = Path.Combine(work, StagedPresetsName)
+            Directory.CreateDirectory(copies)
+            Dim taken As New HashSet(Of String)(StringComparer.Ordinal)
+            For Each preset In listing.Presets
+                Try
+                    Dim entryName = PresetEntryPrefix & If(preset.Folder.Length = 0, "", preset.Folder & "/") & Path.GetFileName(preset.FilePath)
+                    If Not taken.Add(entryName) Then Continue For
+                    Dim copy = Path.Combine(copies, result.Count.ToString(CultureInfo.InvariantCulture) & AdjustmentPresetStore.FileExtension)
+                    File.Copy(preset.FilePath, copy)
+                    ' Zwischen Lesen und Kopieren kann die Datei ersetzt worden sein: nur was als
+                    ' Kopie noch eine Anpassung ist, geht in die Sicherung.
+                    If AdjustmentPresetStore.Parse(File.ReadAllText(copy)) Is Nothing Then
+                        File.Delete(copy)
+                        taken.Remove(entryName)
+                        Continue For
+                    End If
+                    result.Add((entryName, copy))
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Backup.Presets", ex)
+                End Try
+            Next
+            manifest.AdjustmentPresetCount = result.Count
+            Return result
+        End Function
+
+        ''' <summary>Der Hinweis zu einer Sicherung, in der die Anpassungen fehlen, weil ihr Ordner
+        ''' nicht erreichbar war; leer, wenn es nichts zu sagen gibt. Der Dialog haengt ihn an seine
+        ''' Meldung nach dem Sichern.</summary>
+        Public Shared Function AdjustmentPresetHint(manifest As BackupManifest) As String
+            Dim folder = If(manifest?.UnreachableAdjustmentPresetFolder, "")
+            If folder.Length = 0 Then Return ""
+            Return UnreachablePresetFolderText(folder) & " " &
+                   LocalizationService.T("Die gespeicherten Anpassungen fehlen deshalb in der Sicherung.")
+        End Function
+
+        ''' Derselbe Wortlaut wie im Editor und in der Verwaltung der Anpassungen.
+        Private Shared Function UnreachablePresetFolderText(folder As String) As String
+            Return String.Format(LocalizationService.T("Der Ordner für Anpassungen ist nicht erreichbar: {0}. Er wird in den Einstellungen unter Editor festgelegt."), folder)
+        End Function
+
+        Private Shared Function IsPresetEntry(name As String) As Boolean
+            Return name IsNot Nothing AndAlso name.Length > PresetEntryPrefix.Length AndAlso
+                   name.StartsWith(PresetEntryPrefix, StringComparison.Ordinal) AndAlso
+                   name.EndsWith(AdjustmentPresetStore.FileExtension, StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <summary>Wo eine Anpassung aus der Sicherung bereitgelegt wird. Vom Eintragsnamen zaehlt
+        ''' nur der Ordner, und der nur in seiner sicheren Schreibweise (ohne "..", ohne Zeichen,
+        ''' die ein Dateisystem nicht erlaubt): ein Name aus einer fremden Datei fuehrt so nie aus
+        ''' dem Bereitstellungsordner hinaus. Die Datei heisst nach ihrer laufenden Nummer; ihren
+        ''' endgueltigen Namen bekommt sie beim Einlesen aus dem Namen der Anpassung.</summary>
+        Private Shared Function StagedPresetPath(staging As String, entryName As String, index As Integer) As String
+            Dim relative = entryName.Substring(PresetEntryPrefix.Length)
+            Dim slash = relative.LastIndexOf("/"c)
+            Dim folder = AdjustmentPresetStore.NormalizeFolder(If(slash < 0, "", relative.Substring(0, slash)))
+            Dim directory = Path.Combine(staging, StagedPresetsName)
+            If folder.Length > 0 Then directory = Path.Combine(directory, folder.Replace("/"c, Path.DirectorySeparatorChar))
+            Return Path.Combine(directory, index.ToString(CultureInfo.InvariantCulture) & AdjustmentPresetStore.FileExtension)
+        End Function
+
+        ''' <summary>Der Ordner der Anpassungen, der NACH dem Einspielen gilt: steht eine
+        ''' Einstellungsdatei bereit, der aus ihr, sonst der jetzige.</summary>
+        Private Shared Function PresetRootAfterRestore(staging As String) As String
+            Dim settingsStaged = Path.Combine(staging, "settings.json")
+            If Not File.Exists(settingsStaged) Then Return AdjustmentPresetStore.ConfiguredRoot
+            Dim custom = ""
+            Try
+                Dim root = TryCast(JsonNode.Parse(File.ReadAllText(settingsStaged)), JsonObject)
+                Dim value = TryCast(root?("AdjustmentPresetFolder"), JsonValue)
+                Dim text As String = Nothing
+                If value IsNot Nothing AndAlso value.TryGetValue(Of String)(text) Then custom = If(text, "").Trim()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Backup.PresetRoot", ex)
+            End Try
+            Return If(custom.Length > 0, custom, AdjustmentPresetStore.DefaultRoot)
+        End Function
+
+        ''' <summary>Liest die bereitgelegten Anpassungen in den geltenden Ordner ein, nach der
+        ''' Import-Regel des Bestands (AdjustmentPresetStore.Import): gleiche Kennung und gleicher
+        ''' Inhalt wird nicht noch einmal angelegt, eine Kennung, die dort schon etwas anderes
+        ''' meint, bekommt eine neue, ein vergebener Name eine Zahl dahinter. Nichts im Ordner wird
+        ''' ersetzt oder geloescht. Liegt nichts bereit (eine Sicherung ohne diesen Teil), wird der
+        ''' Ordner gar nicht angefasst. Wirft, wenn der Ordner nicht erreichbar ist oder nicht jede
+        ''' Anpassung ankam; das Bereitgelegte bleibt dann beim Aufrufer liegen.</summary>
+        Private Shared Sub ImportStagedAdjustmentPresets(staging As String)
+            Dim staged = Path.Combine(staging, StagedPresetsName)
+            If Not Directory.Exists(staged) Then Return
+            Dim expected = Directory.EnumerateFiles(staged, "*" & AdjustmentPresetStore.FileExtension, SearchOption.AllDirectories).Count()
+            If expected = 0 Then Return
+            Dim store = AdjustmentPresetStore.Current()
+            If Not store.IsReachable() Then Throw New IOException("Ordner der Anpassungen nicht erreichbar: " & store.Root)
+            Dim arrived = 0
+            ' Die Dateien der obersten Ebene einzeln in den Wurzelordner, jeder Ordner als Ganzes:
+            ' ein Ordner kommt beim Import als Unterordner gleichen Namens an.
+            For Each stagedFile In Directory.GetFiles(staged, "*" & AdjustmentPresetStore.FileExtension).OrderBy(Function(f) f, StringComparer.Ordinal)
+                Dim outcome = store.Import(stagedFile, "")
+                arrived += outcome.Imported + outcome.AlreadyPresent
+            Next
+            For Each stagedFolder In Directory.GetDirectories(staged).OrderBy(Function(d) d, StringComparer.Ordinal)
+                Dim outcome = store.Import(stagedFolder, "")
+                arrived += outcome.Imported + outcome.AlreadyPresent
+            Next
+            If arrived < expected Then
+                Throw New InvalidDataException("Anpassungen nicht vollstaendig eingelesen: " &
+                                               arrived.ToString(CultureInfo.InvariantCulture) & " von " & expected.ToString(CultureInfo.InvariantCulture))
+            End If
+        End Sub
 
         ''' <summary>Liest und prueft das Inhaltsverzeichnis. Nothing, wenn die Datei keine
         ''' FerrumPix-Sicherung ist; eine Sicherung aus einer neueren Fassung wird abgelehnt
@@ -256,12 +420,20 @@ Namespace Services
             Try
                 If Directory.Exists(staging) Then Directory.Delete(staging, True)
                 Directory.CreateDirectory(staging)
+                Dim stagedPresets = 0
                 Using archive = ZipFile.OpenRead(zipPath)
                     For Each fileEntry In chosen
                         If PartOf(fileEntry.Name) = BackupParts.None Then Continue For
                         Dim entry = archive.GetEntry(fileEntry.Name)
                         If entry Is Nothing Then Throw New InvalidDataException(fileEntry.Name)
-                        Dim target = Path.Combine(staging, fileEntry.Name)
+                        Dim target As String
+                        If IsPresetEntry(fileEntry.Name) Then
+                            target = StagedPresetPath(staging, fileEntry.Name, stagedPresets)
+                            stagedPresets += 1
+                            Directory.CreateDirectory(Path.GetDirectoryName(target))
+                        Else
+                            target = Path.Combine(staging, fileEntry.Name)
+                        End If
                         entry.ExtractToFile(target, overwrite:=True)
                         If Not String.Equals(HashOf(target), fileEntry.Sha256, StringComparison.OrdinalIgnoreCase) Then
                             Throw New InvalidDataException("Pruefsumme stimmt nicht: " & fileEntry.Name)
@@ -272,17 +444,35 @@ Namespace Services
                     Next
                 End Using
                 ApplyRemaps(staging, remaps)
+                ' Die Anpassungen brauchen ihren Ordner. Ist der, der nach dem Einspielen gilt,
+                ' nicht erreichbar, wird hier abgelehnt, solange es sich noch sagen laesst: beim
+                ' naechsten Start gibt es keinen Dialog mehr.
+                If stagedPresets > 0 Then
+                    Dim presetRoot = PresetRootAfterRestore(staging)
+                    If Not New AdjustmentPresetStore(presetRoot).IsReachable() Then
+                        Directory.Delete(staging, True)
+                        Return UnreachablePresetFolderText(presetRoot) & " " &
+                               LocalizationService.T("Die gespeicherten Anpassungen lassen sich deshalb nicht zurückholen, es wurde nichts verändert.")
+                    End If
+                End If
                 ' Der Teil "Zugangsdaten" gilt nur, wenn er gewaehlt UND in der Sicherung ist.
                 Dim keepSecrets = (parts And BackupParts.Secrets) <> 0 AndAlso (manifest.Parts And BackupParts.Secrets) <> 0
                 File.WriteAllText(Path.Combine(staging, "restore.json"),
                                   JsonSerializer.Serialize(New With {.UseBackupSecrets = keepSecrets, .Source = zipPath}))
 
-                ' Den jetzigen Stand vollstaendig sichern, bevor er ersetzt wird.
+                ' Den jetzigen Stand vollstaendig sichern, bevor er ersetzt wird. Gibt es noch gar
+                ' keinen (kein Katalog, keine Einstellungen, keine Anpassung), ist nichts zu
+                ' verlieren, und das Zurueckholen scheitert daran nicht.
                 Directory.CreateDirectory(SafetyBackupDirectory)
-                Create(Path.Combine(SafetyBackupDirectory,
-                                    "before-restore-" & DateTime.Now.ToString("yyyy-MM-dd-HHmmss", CultureInfo.InvariantCulture) & ".zip"),
-                       BackupParts.Catalog Or BackupParts.ServerIndexes Or BackupParts.Settings Or
-                       BackupParts.Favorites Or BackupParts.Searches Or BackupParts.Secrets)
+                Try
+                    Create(Path.Combine(SafetyBackupDirectory,
+                                        "before-restore-" & DateTime.Now.ToString("yyyy-MM-dd-HHmmss", CultureInfo.InvariantCulture) & ".zip"),
+                           BackupParts.Catalog Or BackupParts.ServerIndexes Or BackupParts.Settings Or
+                           BackupParts.Favorites Or BackupParts.Searches Or BackupParts.Secrets Or
+                           BackupParts.AdjustmentPresets)
+                Catch ex As NothingToBackUpException
+                    DiagnosticLogService.LogAlways("Backup.StageRestore", "kein jetziger Stand zu sichern")
+                End Try
                 Return ""
             Catch ex As Exception
                 DiagnosticLogService.LogException("Backup.StageRestore", ex)
@@ -324,8 +514,12 @@ Namespace Services
                     File.WriteAllText(settingsStaged, WithSecretsFrom(File.ReadAllText(settingsStaged), settingsTarget))
                 End If
                 ReplaceAllOrNothing(staging)
-                Directory.Delete(staging, True)
+                ' Ab hier gelten die zurueckgeholten Einstellungen, auch fuer den Ordner der
+                ' Anpassungen. Die kommen als Letztes: sie ersetzen nichts, also braucht es fuer
+                ' sie keinen Rueckweg, und scheitern sie, bleiben sie unter restore-failed liegen.
                 AppSettingsService.InvalidateCache()
+                ImportStagedAdjustmentPresets(staging)
+                Directory.Delete(staging, True)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Backup.ApplyPendingRestore", ex)
                 Try
@@ -468,7 +662,24 @@ Namespace Services
                 Dim finished = lines.Contains("DONE") AndAlso Not lines.Contains(RolledBackMark)
                 If Directory.Exists(StagingDirectory) Then
                     If finished Then
-                        Directory.Delete(StagingDirectory, True)
+                        ' Die Dateien standen schon, die Anpassungen kommen erst danach: sie werden
+                        ' hier nachgeholt (ein zweites Einlesen legt nichts doppelt an). Gelingt
+                        ' das nicht, bleibt das Bereitgelegte zum Nachsehen stehen.
+                        Dim presetsArrived = True
+                        Try
+                            AppSettingsService.InvalidateCache()
+                            ImportStagedAdjustmentPresets(StagingDirectory)
+                        Catch ex As Exception
+                            presetsArrived = False
+                            DiagnosticLogService.LogException("Backup.Recover.Presets", ex)
+                        End Try
+                        If presetsArrived Then
+                            Directory.Delete(StagingDirectory, True)
+                        Else
+                            Dim failedPresets = Path.Combine(DataDirectory, "restore-failed")
+                            If Directory.Exists(failedPresets) Then Directory.Delete(failedPresets, True)
+                            Directory.Move(StagingDirectory, failedPresets)
+                        End If
                     Else
                         Dim failed = Path.Combine(DataDirectory, "restore-failed")
                         If Directory.Exists(failed) Then Directory.Delete(failed, True)
@@ -492,6 +703,7 @@ Namespace Services
         End Function
 
         Private Shared Function PartOf(name As String) As BackupParts
+            If IsPresetEntry(name) Then Return BackupParts.AdjustmentPresets
             Dim known = KnownFiles().FirstOrDefault(Function(k) k.Name = name)
             Return If(known.Name Is Nothing, BackupParts.None, known.Part)
         End Function

@@ -4591,9 +4591,10 @@ Namespace ViewModels
                 ' Anpassung speichern: Gruppenname, Zaehler und Haken in einer Zeile, darunter die
                 ' Regler eingerueckt.
                 If DialogShowsAdjustmentPresetSave Then Return 520
-                ' Anpassungen verwalten: Ordnerbaum und Liste nebeneinander, in der Liste steht
-                ' unter jedem Namen, was die Anpassung enthaelt.
-                If DialogShowsAdjustmentPresetManager Then Return 900
+                ' Anpassungen verwalten: Ordnerbaum und Liste nebeneinander. Jede Zeile der Liste
+                ' traegt Name, "Anwenden" und vier Symbolknoepfe, aufgeklappt stehen die Regler in
+                ' drei Spalten; der Baum braucht Platz fuer Einrueckung, Zaehler und drei Knoepfe.
+                If DialogShowsAdjustmentPresetManager Then Return 1040
                 If DialogShowsBackupOrRestore Then Return 620
                 Return 440
             End Get
@@ -5898,15 +5899,19 @@ Namespace ViewModels
 
         ''' <summary>Zeigt "Anpassungen verwalten", bis es geschlossen wird. Das Fenster hat nur
         ''' "Schließen": jede Aktion darin wirkt sofort auf die Dateien, es gibt nichts zu
-        ''' bestaetigen oder zu verwerfen.</summary>
+        ''' bestaetigen oder zu verwerfen. Der Inhalt kann das Fenster selbst schliessen
+        ''' (AdjustmentPresetManagerViewModel.CloseRequested: der Weg zur Einstellung).</summary>
         Public Async Function ShowAdjustmentPresetManagerAsync(manager As AdjustmentPresetManagerViewModel) As Task Implements IEditorHost.ShowAdjustmentPresetManagerAsync
             If manager Is Nothing Then Return
             DialogAdjustmentPresetManager = manager
+            Dim closeRequested As Action = Sub() CancelDialog()
+            AddHandler manager.CloseRequested, closeRequested
             Try
                 Await ShowDialogAsync(AppDialogKind.AdjustmentPresetManager, "Anpassungen verwalten",
                                       "Jede Anpassung ist eine Datei, jeder Ordner ein echter Ordner. Zum Weitergeben genügt es, Dateien oder einen Ordner zu kopieren.",
                                       "", "Schließen", "")
             Finally
+                RemoveHandler manager.CloseRequested, closeRequested
                 DialogAdjustmentPresetManager = Nothing
             End Try
         End Function

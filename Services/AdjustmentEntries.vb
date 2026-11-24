@@ -359,6 +359,27 @@ Namespace Services
             Apply(target, recipe, EntriesForFields(fields))
         End Sub
 
+        ''' Eintraege mit EINEM Regler, deren uebrige Felder keinen eigenen mehr haben: gezeigt
+        ''' wird der Wert des ersten Felds.
+        Private Shared ReadOnly _singleSliderKeys As String() = {"grain.amount", "rauschen.color"}
+
+        ''' <summary>Der Wert eines Eintrags im Rezept als Text, fuer die Anzeige dessen, was eine
+        ''' Vorlage enthaelt. Nur wo der Eintrag EIN Regler mit einer Zahl ist; Nothing bei allem
+        ''' aus mehreren Feldern (Kurve, Band des Farbmischers, Kanalmixer, Weissabgleich), bei
+        ''' Auswahlen und Texten und beim Rahmen: dort genuegt, dass der Eintrag enthalten ist.</summary>
+        Public Shared Function ValueText(entry As AdjustmentEntry, recipe As ImageAdjustments) As String
+            If entry Is Nothing OrElse recipe Is Nothing OrElse entry.IsFrame Then Return Nothing
+            If entry.Fields.Length <> 1 AndAlso Not _singleSliderKeys.Contains(entry.Key, StringComparer.Ordinal) Then Return Nothing
+            Dim p = PropertyOf(entry.Fields(0))
+            If p Is Nothing Then Return Nothing
+            Dim value = p.GetValue(recipe)
+            Dim culture = Globalization.CultureInfo.CurrentCulture
+            If TypeOf value Is Single Then Return DirectCast(value, Single).ToString("0.##", culture)
+            If TypeOf value Is Double Then Return DirectCast(value, Double).ToString("0.##", culture)
+            If TypeOf value Is Integer Then Return DirectCast(value, Integer).ToString(culture)
+            Return Nothing
+        End Function
+
         ''' <summary>Der Kurzhinweis, was eine Vorlage enthaelt, in der Sprache der Oberflaeche: je
         ''' Gruppe ihr Name, bei einer nur teilweise enthaltenen dazu ihre Regler. Ohne Liste "Alle
         ''' Anpassungen".</summary>

@@ -18928,25 +18928,38 @@ Namespace ViewModels
         Public Async Function ManageAdjustmentPresetsAsync() As Task
             If _mainVm Is Nothing Then Return
             Dim manager As New AdjustmentPresetManagerViewModel()
+            ' "Anwenden" im Fenster gibt es nur mit einem geoeffneten Bild; es nimmt denselben Weg
+            ' wie der Knopf im Bereich.
+            If HasDocument Then manager.ApplyHandler = Function(preset) ApplyAdjustmentPreset(preset)
             Await manager.ReloadAsync(If(_selectedAdjustmentPreset?.Folder, ""), _selectedAdjustmentPreset?.Id)
             Await _mainVm.ShowAdjustmentPresetManagerAsync(manager)
             Await EnsureAdjustmentPresetsLoadedAsync()
+            ' "Ordner ändern" im Fenster: erst nach dem Schliessen, die Anwendung zeigt nur einen
+            ' Dialog zur Zeit, und der Wechsel fragt womoeglich nach ungespeicherten Aenderungen.
+            If manager.SettingsRequested Then _mainVm.OpenSettings()
         End Function
 
-        ''' <summary>Wendet die gewählte Vorlage an. Eine Vorlage ohne Liste nimmt denselben Weg wie das
+        ''' <summary>Wendet die gewählte Vorlage an (<see cref="ApplyAdjustmentPreset"/>).</summary>
+        Public Sub ApplySelectedAdjustmentPreset()
+            ApplyAdjustmentPreset(_selectedAdjustmentPreset)
+        End Sub
+
+        ''' <summary>Wendet eine Vorlage auf das geoeffnete Bild an, als ein Schritt in der
+        ''' Historie. Eine Vorlage ohne Liste nimmt denselben Weg wie das
         ''' Einfügen der Ablage, ersetzt also die Pixel-Anpassungen auf dem aktuellen Stand und setzt
         ''' einen mitgebrachten Rahmen. Eine Vorlage mit Liste ersetzt nur ihre Eintraege, auch mit
-        ''' dem Neutralwert; alles andere am Bild bleibt (AdjustmentEntries.ApplyPreset).</summary>
-        Public Sub ApplySelectedAdjustmentPreset()
-            If Not HasDocument Then Return
-            Dim preset = _selectedAdjustmentPreset
-            If preset Is Nothing Then Return
+        ''' dem Neutralwert; alles andere am Bild bleibt (AdjustmentEntries.ApplyPreset). Der Knopf
+        ''' im Bereich und "Anwenden" in der Verwaltung nehmen beide diesen Weg.</summary>
+        ''' <returns>Ob angewendet wurde.</returns>
+        Public Function ApplyAdjustmentPreset(preset As AdjustmentPresetFile) As Boolean
+            If Not HasDocument Then Return False
+            If preset Is Nothing Then Return False
             Dim name = preset.Name
 
             Dim gespeichert = AdjustmentEntries.LoadPresetLook(preset)
             If gespeichert Is Nothing Then
                 StatusText = LocalizationService.T("Die Anpassung konnte nicht gelesen werden.")
-                Return
+                Return False
             End If
 
             PushUndo()
@@ -18962,7 +18975,8 @@ Namespace ViewModels
             NameHistoryStep(LocalizationService.T("Anpassung angewendet"))
             SchedulePreviewUpdate()
             StatusText = String.Format(LocalizationService.T("Anpassung angewendet: {0}"), name)
-        End Sub
+            Return True
+        End Function
 
         ''' <summary>Die Ablage als Rezept, oder Nothing, wenn sie leer oder beschaedigt ist (von
         ''' Hand bearbeitete Einstellungsdatei): lieber nichts tun als mit halb gelesenen Werten

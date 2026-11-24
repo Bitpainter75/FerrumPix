@@ -12291,30 +12291,6 @@
   <data name="Der_Ordner_f_r_Anpassungen_ist_nicht_erreichbar__c8899bfd" xml:space="preserve">
     <value>Der Ordner für Anpassungen ist nicht erreichbar: {0}. Er wird in den Einstellungen unter Editor festgelegt.</value>
   </data>
-  <data name="Neuer_Ordner_in_0_3a44f881" xml:space="preserve">
-    <value>Neuer Ordner in {0}</value>
-  </data>
-  <data name="Neuer_Name_des_Ordners_8e707c90" xml:space="preserve">
-    <value>Neuer Name des Ordners</value>
-  </data>
-  <data name="Neuer_Name_der_Anpassung_4b271b22" xml:space="preserve">
-    <value>Neuer Name der Anpassung</value>
-  </data>
-  <data name="Es_gibt_keinen_anderen_Ordner_als_Ziel_de1e2a87" xml:space="preserve">
-    <value>Es gibt keinen anderen Ordner als Ziel.</value>
-  </data>
-  <data name="Ordner_0_verschieben_nach_792d7c44" xml:space="preserve">
-    <value>Ordner {0} verschieben nach</value>
-  </data>
-  <data name="Anpassung_0_verschieben_nach_c3d26d55" xml:space="preserve">
-    <value>Anpassung {0} verschieben nach</value>
-  </data>
-  <data name="Der_Ordner_0_wird_mit_1_Anpassung_en_gel_scht_An_2be977f0" xml:space="preserve">
-    <value>Der Ordner {0} wird mit {1} Anpassung(en) gelöscht. Andere Dateien darin bleiben erhalten.</value>
-  </data>
-  <data name="Die_Anpassung_0_wird_gel_scht_02b65971" xml:space="preserve">
-    <value>Die Anpassung {0} wird gelöscht.</value>
-  </data>
   <data name="Bitte_einen_Namen_eingeben_79e2b03f" xml:space="preserve">
     <value>Bitte einen Namen eingeben.</value>
   </data>
@@ -12326,9 +12302,6 @@
   </data>
   <data name="Die_Anpassung_lie_sich_nicht_umbenennen_Gibt_es__0fd26f4f" xml:space="preserve">
     <value>Die Anpassung ließ sich nicht umbenennen. Gibt es den Namen in diesem Ordner schon?</value>
-  </data>
-  <data name="Der_Ordner_lie_sich_nicht_verschieben_Gibt_es_do_7cdb8df5" xml:space="preserve">
-    <value>Der Ordner ließ sich nicht verschieben. Gibt es dort schon einen gleichen Namens?</value>
   </data>
   <data name="Die_Anpassung_lie_sich_nicht_verschieben_Gibt_es_8db30dc2" xml:space="preserve">
     <value>Die Anpassung ließ sich nicht verschieben. Gibt es dort schon eine gleichen Namens?</value>
@@ -12359,30 +12332,6 @@
   </data>
   <data name="Einen_Unterordner_im_gew_hlten_Ordner_anlegen_04fa4248" xml:space="preserve">
     <value>Einen Unterordner im gewählten Ordner anlegen</value>
-  </data>
-  <data name="Ordner_exportieren_e68ad9ad" xml:space="preserve">
-    <value>Ordner exportieren</value>
-  </data>
-  <data name="Den_gew_hlten_Ordner_samt_Unterordnern_in_ein_Ve_dec83286" xml:space="preserve">
-    <value>Den gewählten Ordner samt Unterordnern in ein Verzeichnis schreiben</value>
-  </data>
-  <data name="In_diesem_Ordner_liegt_keine_Anpassung_c72f5c19" xml:space="preserve">
-    <value>In diesem Ordner liegt keine Anpassung.</value>
-  </data>
-  <data name="Die_gew_hlte_Anpassung_als_Datei_an_einen_andere_419cc46b" xml:space="preserve">
-    <value>Die gewählte Anpassung als Datei an einen anderen Ort schreiben</value>
-  </data>
-  <data name="Datei_importieren_a2367221" xml:space="preserve">
-    <value>Datei importieren</value>
-  </data>
-  <data name="Dateien_mit_Anpassungen_in_den_gew_hlten_Ordner__d0a3086f" xml:space="preserve">
-    <value>Dateien mit Anpassungen in den gewählten Ordner aufnehmen</value>
-  </data>
-  <data name="Ordner_importieren_751ddbf0" xml:space="preserve">
-    <value>Ordner importieren</value>
-  </data>
-  <data name="Einen_Ordner_samt_Unterordnern_in_den_gew_hlten__c0e65180" xml:space="preserve">
-    <value>Einen Ordner samt Unterordnern in den gewählten Ordner aufnehmen</value>
   </data>
   <data name="Anpassungen_importieren_838230e9" xml:space="preserve">
     <value>Anpassungen importieren</value>
@@ -12482,5 +12431,92 @@
   </data>
   <data name="Zu_diesem_Live_Photo_geh_rt_0_Der_Name_1_ist_daf_2c7e82bc" xml:space="preserve">
     <value>Zu diesem Live Photo gehört {0}. Der Name {1} ist dafür schon vergeben.</value>
+  </data>
+  <data name="Die_gespeicherten_Anpassungen_fehlen_deshalb_in__fda49589" xml:space="preserve">
+    <value>Die gespeicherten Anpassungen fehlen deshalb in der Sicherung.</value>
+  </data>
+  <data name="Die_gespeicherten_Anpassungen_lassen_sich_deshal_a30cd08a" xml:space="preserve">
+    <value>Die gespeicherten Anpassungen lassen sich deshalb nicht zurückholen, es wurde nichts verändert.</value>
+  </data>
+  <data name="Ablage_c411bce3" xml:space="preserve">
+    <value>Ablage:</value>
+  </data>
+  <data name="Den_Ordner_der_Anpassungen_im_Dateimanager_ffnen_b3fce593" xml:space="preserve">
+    <value>Den Ordner der Anpassungen im Dateimanager öffnen</value>
+  </data>
+  <data name="Schlie_t_dieses_Fenster_und_ffnet_die_Einstellun_58264913" xml:space="preserve">
+    <value>Schließt dieses Fenster und öffnet die Einstellungen. Der Ordner für Anpassungen steht dort unter Editor.</value>
+  </data>
+  <data name="Ordner_ndern_6c04e2d7" xml:space="preserve">
+    <value>Ordner ändern</value>
+  </data>
+  <data name="Anpassungen_in_allen_Ordnern_nach_ihrem_Namen_su_6edcb468" xml:space="preserve">
+    <value>Anpassungen in allen Ordnern nach ihrem Namen suchen</value>
+  </data>
+  <data name="Anpassungen_in_den_gew_hlten_Ordner_aufnehmen_65ddf882" xml:space="preserve">
+    <value>Anpassungen in den gewählten Ordner aufnehmen</value>
+  </data>
+  <data name="Ordner_samt_Unterordnern_91847af9" xml:space="preserve">
+    <value>Ordner samt Unterordnern</value>
+  </data>
+  <data name="Unterordner_zeigen_oder_verbergen_11fab487" xml:space="preserve">
+    <value>Unterordner zeigen oder verbergen</value>
+  </data>
+  <data name="Ordner_umbenennen_F2_91a94b55" xml:space="preserve">
+    <value>Ordner umbenennen (F2)</value>
+  </data>
+  <data name="Ordner_samt_Unterordnern_in_ein_Verzeichnis_expo_2a332ad9" xml:space="preserve">
+    <value>Ordner samt Unterordnern in ein Verzeichnis exportieren</value>
+  </data>
+  <data name="Ordner_l_schen_ENTF_Andere_Dateien_darin_bleiben_190eeb88" xml:space="preserve">
+    <value>Ordner löschen (ENTF). Andere Dateien darin bleiben erhalten.</value>
+  </data>
+  <data name="Klicken_zeigt_was_die_Anpassung_enth_lt_Auf_eine_f063f797" xml:space="preserve">
+    <value>Klicken zeigt, was die Anpassung enthält. Auf einen Ordner ziehen verschiebt sie.</value>
+  </data>
+  <data name="Auf_das_im_Editor_ge_ffnete_Bild_anwenden_e8e855ed" xml:space="preserve">
+    <value>Auf das im Editor geöffnete Bild anwenden</value>
+  </data>
+  <data name="Umbenennen_F2_89b3b3ba" xml:space="preserve">
+    <value>Umbenennen (F2)</value>
+  </data>
+  <data name="In_einen_anderen_Ordner_verschieben_66b049c4" xml:space="preserve">
+    <value>In einen anderen Ordner verschieben</value>
+  </data>
+  <data name="Als_Datei_an_einen_anderen_Ort_exportieren_b0632359" xml:space="preserve">
+    <value>Als Datei an einen anderen Ort exportieren</value>
+  </data>
+  <data name="L_schen_ENTF_2e101259" xml:space="preserve">
+    <value>Löschen (ENTF)</value>
+  </data>
+  <data name="enthalten_7d3b9efe" xml:space="preserve">
+    <value>enthalten</value>
+  </data>
+  <data name="Alle_brigen_Regler_werden_auf_den_Neutralwert_ge_926e23af" xml:space="preserve">
+    <value>Alle übrigen Regler werden auf den Neutralwert gesetzt.</value>
+  </data>
+  <data name="L_schen_4b292f16" xml:space="preserve">
+    <value>Löschen?</value>
+  </data>
+  <data name="Anpassungen_in_0_cd658125" xml:space="preserve">
+    <value>Anpassungen in {0}</value>
+  </data>
+  <data name="Keine_Anpassung_mit_diesem_Namen_gefunden_0faef088" xml:space="preserve">
+    <value>Keine Anpassung mit diesem Namen gefunden.</value>
+  </data>
+  <data name="Links_einen_Ordner_w_hlen_8b9dbf96" xml:space="preserve">
+    <value>Links einen Ordner wählen.</value>
+  </data>
+  <data name="In_diesem_Ordner_liegt_keine_Anpassung_Gespeiche_ee81a890" xml:space="preserve">
+    <value>In diesem Ordner liegt keine Anpassung. Gespeichert wird im Editor unter Gespeicherte Anpassungen.</value>
+  </data>
+  <data name="L_schen_0_Anpassung_en_und_1_Unterordner_gehen_m_fd2cb752" xml:space="preserve">
+    <value>Löschen? {0} Anpassung(en) und {1} Unterordner gehen mit.</value>
+  </data>
+  <data name="Anpassung_verschoben_0_99bf71a4" xml:space="preserve">
+    <value>Anpassung verschoben: {0}</value>
+  </data>
+  <data name="Angewendet_45946cda" xml:space="preserve">
+    <value>Angewendet</value>
   </data>
 </root>

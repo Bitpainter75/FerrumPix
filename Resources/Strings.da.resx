@@ -12313,30 +12313,6 @@
   <data name="Der_Ordner_f_r_Anpassungen_ist_nicht_erreichbar__c8899bfd" xml:space="preserve">
     <value>Mappen til justeringer kan ikke nås: {0}. Den vælges i indstillingerne under Redigering.</value>
   </data>
-  <data name="Neuer_Ordner_in_0_3a44f881" xml:space="preserve">
-    <value>Ny mappe i {0}</value>
-  </data>
-  <data name="Neuer_Name_des_Ordners_8e707c90" xml:space="preserve">
-    <value>Mappens nye navn</value>
-  </data>
-  <data name="Neuer_Name_der_Anpassung_4b271b22" xml:space="preserve">
-    <value>Justeringens nye navn</value>
-  </data>
-  <data name="Es_gibt_keinen_anderen_Ordner_als_Ziel_de1e2a87" xml:space="preserve">
-    <value>Der er ingen anden mappe at flytte til.</value>
-  </data>
-  <data name="Ordner_0_verschieben_nach_792d7c44" xml:space="preserve">
-    <value>Flyt mappen {0} til</value>
-  </data>
-  <data name="Anpassung_0_verschieben_nach_c3d26d55" xml:space="preserve">
-    <value>Flyt justeringen {0} til</value>
-  </data>
-  <data name="Der_Ordner_0_wird_mit_1_Anpassung_en_gel_scht_An_2be977f0" xml:space="preserve">
-    <value>Mappen {0} slettes sammen med {1} justering(er). Andre filer i den bevares.</value>
-  </data>
-  <data name="Die_Anpassung_0_wird_gel_scht_02b65971" xml:space="preserve">
-    <value>Justeringen {0} slettes.</value>
-  </data>
   <data name="Bitte_einen_Namen_eingeben_79e2b03f" xml:space="preserve">
     <value>Indtast et navn.</value>
   </data>
@@ -12348,9 +12324,6 @@
   </data>
   <data name="Die_Anpassung_lie_sich_nicht_umbenennen_Gibt_es__0fd26f4f" xml:space="preserve">
     <value>Justeringen kunne ikke omdøbes. Findes navnet allerede i denne mappe?</value>
-  </data>
-  <data name="Der_Ordner_lie_sich_nicht_verschieben_Gibt_es_do_7cdb8df5" xml:space="preserve">
-    <value>Mappen kunne ikke flyttes. Findes der allerede en med samme navn dér?</value>
   </data>
   <data name="Die_Anpassung_lie_sich_nicht_verschieben_Gibt_es_8db30dc2" xml:space="preserve">
     <value>Justeringen kunne ikke flyttes. Findes der allerede en med samme navn dér?</value>
@@ -12381,30 +12354,6 @@
   </data>
   <data name="Einen_Unterordner_im_gew_hlten_Ordner_anlegen_04fa4248" xml:space="preserve">
     <value>Opret en undermappe i den valgte mappe</value>
-  </data>
-  <data name="Ordner_exportieren_e68ad9ad" xml:space="preserve">
-    <value>Eksporter mappe</value>
-  </data>
-  <data name="Den_gew_hlten_Ordner_samt_Unterordnern_in_ein_Ve_dec83286" xml:space="preserve">
-    <value>Skriv den valgte mappe inklusive undermapper til en mappe på disken</value>
-  </data>
-  <data name="In_diesem_Ordner_liegt_keine_Anpassung_c72f5c19" xml:space="preserve">
-    <value>Der ligger ingen justering i denne mappe.</value>
-  </data>
-  <data name="Die_gew_hlte_Anpassung_als_Datei_an_einen_andere_419cc46b" xml:space="preserve">
-    <value>Skriv den valgte justering som fil til et andet sted</value>
-  </data>
-  <data name="Datei_importieren_a2367221" xml:space="preserve">
-    <value>Importér fil</value>
-  </data>
-  <data name="Dateien_mit_Anpassungen_in_den_gew_hlten_Ordner__d0a3086f" xml:space="preserve">
-    <value>Hent filer med justeringer ind i den valgte mappe</value>
-  </data>
-  <data name="Ordner_importieren_751ddbf0" xml:space="preserve">
-    <value>Importér mappe</value>
-  </data>
-  <data name="Einen_Ordner_samt_Unterordnern_in_den_gew_hlten__c0e65180" xml:space="preserve">
-    <value>Hent en mappe inklusive undermapper ind i den valgte mappe</value>
   </data>
   <data name="Anpassungen_importieren_838230e9" xml:space="preserve">
     <value>Importér justeringer</value>
@@ -12504,5 +12453,92 @@
   </data>
   <data name="Zu_diesem_Live_Photo_geh_rt_0_Der_Name_1_ist_daf_2c7e82bc" xml:space="preserve">
     <value>{0} hører til dette Live Photo. Navnet {1} er allerede optaget til den.</value>
+  </data>
+  <data name="Die_gespeicherten_Anpassungen_fehlen_deshalb_in__fda49589" xml:space="preserve">
+    <value>De gemte justeringer mangler derfor i sikkerhedskopien.</value>
+  </data>
+  <data name="Die_gespeicherten_Anpassungen_lassen_sich_deshal_a30cd08a" xml:space="preserve">
+    <value>De gemte justeringer kan derfor ikke gendannes, intet blev ændret.</value>
+  </data>
+  <data name="Ablage_c411bce3" xml:space="preserve">
+    <value>Placering:</value>
+  </data>
+  <data name="Den_Ordner_der_Anpassungen_im_Dateimanager_ffnen_b3fce593" xml:space="preserve">
+    <value>Åbn mappen med justeringer i filhåndteringen</value>
+  </data>
+  <data name="Schlie_t_dieses_Fenster_und_ffnet_die_Einstellun_58264913" xml:space="preserve">
+    <value>Lukker dette vindue og åbner indstillingerne. Mappen til justeringer vælges der under Redigering.</value>
+  </data>
+  <data name="Ordner_ndern_6c04e2d7" xml:space="preserve">
+    <value>Skift mappe</value>
+  </data>
+  <data name="Anpassungen_in_allen_Ordnern_nach_ihrem_Namen_su_6edcb468" xml:space="preserve">
+    <value>Søg efter justeringer i alle mapper efter navn</value>
+  </data>
+  <data name="Anpassungen_in_den_gew_hlten_Ordner_aufnehmen_65ddf882" xml:space="preserve">
+    <value>Hent justeringer ind i den valgte mappe</value>
+  </data>
+  <data name="Ordner_samt_Unterordnern_91847af9" xml:space="preserve">
+    <value>Mappe inklusive undermapper</value>
+  </data>
+  <data name="Unterordner_zeigen_oder_verbergen_11fab487" xml:space="preserve">
+    <value>Vis eller skjul undermapper</value>
+  </data>
+  <data name="Ordner_umbenennen_F2_91a94b55" xml:space="preserve">
+    <value>Omdøb mappen (F2)</value>
+  </data>
+  <data name="Ordner_samt_Unterordnern_in_ein_Verzeichnis_expo_2a332ad9" xml:space="preserve">
+    <value>Eksportér mappen inklusive undermapper til en mappe på disken</value>
+  </data>
+  <data name="Ordner_l_schen_ENTF_Andere_Dateien_darin_bleiben_190eeb88" xml:space="preserve">
+    <value>Slet mappen (DEL). Andre filer i den bevares.</value>
+  </data>
+  <data name="Klicken_zeigt_was_die_Anpassung_enth_lt_Auf_eine_f063f797" xml:space="preserve">
+    <value>Klik for at se, hvad justeringen indeholder. Træk den hen på en mappe for at flytte den.</value>
+  </data>
+  <data name="Auf_das_im_Editor_ge_ffnete_Bild_anwenden_e8e855ed" xml:space="preserve">
+    <value>Anvend på det billede, der er åbent i redigeringen</value>
+  </data>
+  <data name="Umbenennen_F2_89b3b3ba" xml:space="preserve">
+    <value>Omdøb (F2)</value>
+  </data>
+  <data name="In_einen_anderen_Ordner_verschieben_66b049c4" xml:space="preserve">
+    <value>Flyt til en anden mappe</value>
+  </data>
+  <data name="Als_Datei_an_einen_anderen_Ort_exportieren_b0632359" xml:space="preserve">
+    <value>Eksportér som fil til et andet sted</value>
+  </data>
+  <data name="L_schen_ENTF_2e101259" xml:space="preserve">
+    <value>Slet (DEL)</value>
+  </data>
+  <data name="enthalten_7d3b9efe" xml:space="preserve">
+    <value>indeholdt</value>
+  </data>
+  <data name="Alle_brigen_Regler_werden_auf_den_Neutralwert_ge_926e23af" xml:space="preserve">
+    <value>Alle øvrige skydere sættes til deres neutrale værdi.</value>
+  </data>
+  <data name="L_schen_4b292f16" xml:space="preserve">
+    <value>Slet?</value>
+  </data>
+  <data name="Anpassungen_in_0_cd658125" xml:space="preserve">
+    <value>Justeringer i {0}</value>
+  </data>
+  <data name="Keine_Anpassung_mit_diesem_Namen_gefunden_0faef088" xml:space="preserve">
+    <value>Ingen justering med dette navn fundet.</value>
+  </data>
+  <data name="Links_einen_Ordner_w_hlen_8b9dbf96" xml:space="preserve">
+    <value>Vælg en mappe til venstre.</value>
+  </data>
+  <data name="In_diesem_Ordner_liegt_keine_Anpassung_Gespeiche_ee81a890" xml:space="preserve">
+    <value>Der ligger ingen justering i denne mappe. Du gemmer en i redigeringen under Gemte justeringer.</value>
+  </data>
+  <data name="L_schen_0_Anpassung_en_und_1_Unterordner_gehen_m_fd2cb752" xml:space="preserve">
+    <value>Slet? {0} justering(er) og {1} undermappe(r) slettes med.</value>
+  </data>
+  <data name="Anpassung_verschoben_0_99bf71a4" xml:space="preserve">
+    <value>Justeringen flyttet: {0}</value>
+  </data>
+  <data name="Angewendet_45946cda" xml:space="preserve">
+    <value>Anvendt</value>
   </data>
 </root>
