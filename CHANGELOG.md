@@ -1,10 +1,13 @@
-## Unreleased
+## 0.9.91
 
 ### Changes
 
 - The viewer can show a frame around every detected face with the person's name below it,
   switched on and off with a new button in the footer. Confirmed names, suggestions and faces
   without a name look different, and the frames follow zoom, rotation and cropping.
+
+- The viewer can show where the camera focused, switched on and off with a new button in the
+  footer, and Z then zooms to 100 percent right at that spot.
 
 - The settings link to the documentation: an entry below the homepage opens the manual in the
   browser.
@@ -45,4 +48,8 @@
 - When the graphics card runs out of memory during the depth map, denoising, object removal or
   upscaling, for example because another program is using it, FerrumPix now continues on the
   processor instead of only reporting that it did not work.
+
+- Motion photos from phones, a JPEG with a short video attached, no longer lose the video when
+  they are saved in the editor or rotated in the viewer: the edit is stored beside the picture and
+  the file stays untouched.
 

@@ -459,11 +459,14 @@ Namespace ViewModels
                 End If
                 ' Vor dem Freigeben des alten Bildes: das Peaking kopiert das neue sofort.
                 If Not Object.ReferenceEquals(previous, value) Then RefreshFocusPeaking()
-                ' Die Gesichtsrahmen einen Takt spaeter: wer das Bild setzt, setzt danach im selben
-                ' Lauf, ob es eine entwickelte RAW ist (RunBitmapLoad), und davon haengt die Geometrie ab.
+                ' Gesichtsrahmen und Fokusfelder einen Takt spaeter: wer das Bild setzt, setzt danach
+                ' im selben Lauf, ob es eine entwickelte RAW ist (RunBitmapLoad), und davon haengt
+                ' die Geometrie ab.
                 If Not Object.ReferenceEquals(previous, value) Then
                     FaceFrames.Clear()
-                    Dispatcher.UIThread.Post(Sub() RefreshFaceFrameGeometry(), DispatcherPriority.Background)
+                    FocusFrames.Clear()
+                    _announceFocusPointStatus = False
+                    Dispatcher.UIThread.Post(Sub() RefreshImageMarkGeometry(), DispatcherPriority.Background)
                 End If
                 If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
             End Set
@@ -590,7 +593,8 @@ Namespace ViewModels
                 If _showFaceFrames = value Then Return
                 Me.RaiseAndSetIfChanged(_showFaceFrames, value)
                 AppSettingsService.Update(Sub(s) s.ViewerFaceFrames = value)
-                RefreshFaceFrameGeometry()
+                Me.RaisePropertyChanged(NameOf(ShowImageMarks))
+                RefreshImageMarkGeometry()
             End Set
         End Property
 
@@ -629,28 +633,50 @@ Namespace ViewModels
             RebuildFaceFrames()
         End Sub
 
-        ''' <summary>Holt Bezugsgroesse und Geometrie zum gezeigten Bild. Nach dem Setzen des Bildes
-        ''' gerufen, und zwar einen Takt spaeter: ob eine RAW entwickelt gezeigt wird
-        ''' (<see cref="IsRawDeveloped"/>), steht erst nach der Zuweisung fest.</summary>
-        Private Sub RefreshFaceFrameGeometry()
+        ''' <summary>Die Ebene der Markierungen ueber dem Bild ist an, sobald einer der beiden
+        ''' Schalter (Gesichtsrahmen, Fokusfelder) an ist.</summary>
+        Public ReadOnly Property ShowImageMarks As Boolean
+            Get
+                Return _showFaceFrames OrElse _showFocusPoints
+            End Get
+        End Property
+
+        ''' <summary>Holt Bezugsgroesse und Geometrie zum gezeigten Bild, fuer Gesichtsrahmen und
+        ''' Fokusfelder gemeinsam, und bei eingeschalteten Fokusfeldern deren Lage aus den
+        ''' Aufnahmedaten. Nach dem Setzen des Bildes gerufen, und zwar einen Takt spaeter: ob eine
+        ''' RAW entwickelt gezeigt wird (<see cref="IsRawDeveloped"/>), steht erst nach der
+        ''' Zuweisung fest.</summary>
+        Private Sub RefreshImageMarkGeometry()
             Dim token = System.Threading.Interlocked.Increment(_faceFrameToken)
             _faceFrameReady = False
+            _focusPointReading = Nothing
             FaceFrames.Clear()
+            FocusFrames.Clear()
             Dim path = _currentImagePath
-            If Not _showFaceFrames OrElse _currentImage Is Nothing OrElse String.IsNullOrWhiteSpace(path) Then Return
+            If Not ShowImageMarks OrElse _currentImage Is Nothing OrElse String.IsNullOrWhiteSpace(path) Then
+                SetFocusPointStatus(FocusPointStatus.Off)
+                Return
+            End If
             Dim recipeKey = ItemPathFor(path)
             Dim developed = IsRawDeveloped
-            Task.Run(Function() ReadFaceFrameGeometry(path, recipeKey, developed)).ContinueWith(
+            Dim readFocus = _showFocusPoints
+            Task.Run(Function()
+                         Dim geometry = ReadFaceFrameGeometry(path, recipeKey, developed)
+                         Dim reading = If(readFocus, FocusPointService.ReadFile(VariantKey.FileOf(path)), Nothing)
+                         Return (Geometry:=geometry, Reading:=reading)
+                     End Function).ContinueWith(
                 Sub(done)
                     Dispatcher.UIThread.Post(
                         Sub()
                             If token <> _faceFrameToken OrElse Not done.IsCompletedSuccessfully Then Return
-                            Dim result = done.Result
+                            Dim result = done.Result.Geometry
                             _faceFrameReference = result.Reference
                             _faceFrameGeometry = result.Geometry
                             _faceFrameQuarterTurn = result.QuarterTurn
+                            _focusPointReading = done.Result.Reading
                             _faceFrameReady = True
                             RebuildFaceFrames()
+                            RebuildFocusFrames()
                         End Sub)
                 End Sub, TaskScheduler.Default)
         End Sub
@@ -698,6 +724,130 @@ Namespace ViewModels
                                              entry.Name, FaceFrameLayout.KindOf(entry.Name, entry.IsManual)))
             Next
         End Sub
+
+        ' ── Fokusfelder ───────────────────────────────────────────────────────────
+        '
+        ' Wo die Kamera scharfgestellt hat, aus ihren eigenen Aufnahmedaten (FocusPointService),
+        ' ein- und ausgeschaltet in der Fusszeile. Der Knopf ist immer da: die Angabe fehlt bei
+        ' vielen Aufnahmen, und wer einschaltet und nichts sieht, soll den Grund lesen koennen
+        ' (FocusPointHint am Knopf, beim Einschalten einmal in der Statuszeile).
+        '
+        ' Bezugsgroesse und Geometrie sind dieselben wie bei den Gesichtsrahmen und werden mit
+        ' ihnen zusammen geholt (RefreshImageMarkGeometry); die Lage auf dem gezeigten Bild
+        ' rechnet FocusPointLayout.Place.
+
+        Private _showFocusPoints As Boolean = AppSettingsService.Load().ViewerFocusPoints
+        Private _focusPointReading As FocusPointReading
+        Private _focusPointStatus As FocusPointStatus = FocusPointStatus.Off
+        Private _announceFocusPointStatus As Boolean
+
+        ''' <summary>Die Fokusfelder zum gezeigten Bild, leer bei ausgeschaltetem Schalter und
+        ''' wenn die Aufnahme keine Lage hergibt.</summary>
+        Public ReadOnly Property FocusFrames As New ObservableCollection(Of FocusFrame)()
+
+        ''' <summary>Fokusfelder ueber dem Bild. Gemerkt in den Einstellungen (ViewerFocusPoints),
+        ''' unabhaengig von den Gesichtsrahmen. Gedrueckt (Akzent) heisst an.</summary>
+        Public Property ShowFocusPoints As Boolean
+            Get
+                Return _showFocusPoints
+            End Get
+            Set(value As Boolean)
+                If _showFocusPoints = value Then Return
+                Me.RaiseAndSetIfChanged(_showFocusPoints, value)
+                AppSettingsService.Update(Sub(s) s.ViewerFocusPoints = value)
+                Me.RaisePropertyChanged(NameOf(ShowImageMarks))
+                ' Nur das Einschalten von Hand meldet den Grund in der Statuszeile; beim Blaettern
+                ' stuende er sonst bei jedem Bild ohne Angabe an Stelle der Bildgroesse.
+                _announceFocusPointStatus = value
+                RefreshImageMarkGeometry()
+            End Set
+        End Property
+
+        Private _toggleFocusPointsCommand As ICommand
+
+        Public ReadOnly Property ToggleFocusPointsCommand As ICommand
+            Get
+                If _toggleFocusPointsCommand Is Nothing Then
+                    _toggleFocusPointsCommand = ReactiveCommand.Create(Sub() ShowFocusPoints = Not ShowFocusPoints)
+                End If
+                Return _toggleFocusPointsCommand
+            End Get
+        End Property
+
+        ''' <summary>Was zu den Fokusfeldern des gezeigten Bildes zu sagen ist.</summary>
+        Public ReadOnly Property FocusPointDisplayStatus As FocusPointStatus
+            Get
+                Return _focusPointStatus
+            End Get
+        End Property
+
+        ''' <summary>Der Hinweistext des Knopfs: was er tut, und in der zweiten Zeile der Grund,
+        ''' wenn er an ist und das Bild trotzdem keine Felder zeigt.</summary>
+        Public ReadOnly Property FocusPointHint As String
+            Get
+                Dim hint = LocalizationService.T("Fokusfelder ein/aus")
+                Dim reason = FocusPointReason(_focusPointStatus)
+                Return If(reason.Length = 0, hint, hint & vbLf & reason)
+            End Get
+        End Property
+
+        Private Shared Function FocusPointReason(status As FocusPointStatus) As String
+            Select Case status
+                Case FocusPointStatus.NoData
+                    Return LocalizationService.T("Diese Aufnahme enthält keine Fokusangabe")
+                Case FocusPointStatus.Empty
+                    Return LocalizationService.T("Die Kamera hat für diese Aufnahme kein Fokusfeld gemeldet")
+                Case FocusPointStatus.IndexOnly
+                    Return LocalizationService.T("Die Fokusangabe dieser Kamera nennt keine Lage im Bild")
+                Case FocusPointStatus.Mismatch
+                    Return LocalizationService.T("Die Fokusangabe passt nicht zum gezeigten Bildformat")
+                Case FocusPointStatus.OutsideCrop
+                    Return LocalizationService.T("Das Fokusfeld liegt außerhalb des gezeigten Ausschnitts")
+                Case Else
+                    Return ""
+            End Select
+        End Function
+
+        Private Sub SetFocusPointStatus(value As FocusPointStatus)
+            If _focusPointStatus = value Then Return
+            _focusPointStatus = value
+            Me.RaisePropertyChanged(NameOf(FocusPointDisplayStatus))
+            Me.RaisePropertyChanged(NameOf(FocusPointHint))
+        End Sub
+
+        ''' <summary>Baut die Felder aus der Lesung und der gemerkten Geometrie.</summary>
+        Private Sub RebuildFocusFrames()
+            FocusFrames.Clear()
+            If Not _showFocusPoints OrElse Not _faceFrameReady OrElse _currentImage Is Nothing Then
+                SetFocusPointStatus(FocusPointStatus.Off)
+                Return
+            End If
+            Dim frames As List(Of FocusFrame) = Nothing
+            Dim shown = _currentImage.PixelSize
+            Dim status = FocusPointLayout.Place(_focusPointReading, _faceFrameReference.Width, _faceFrameReference.Height,
+                                                _faceFrameGeometry, _faceFrameQuarterTurn, shown.Width, shown.Height, frames)
+            For Each frame In frames
+                FocusFrames.Add(frame)
+            Next
+            SetFocusPointStatus(status)
+            If _announceFocusPointStatus Then
+                _announceFocusPointStatus = False
+                Dim reason = FocusPointReason(status)
+                If reason.Length > 0 Then StatusInfo = reason
+            End If
+        End Sub
+
+        ''' <summary>Die Stelle, auf die Z zoomt, wenn Fokusfelder zu sehen sind: die Mitte des
+        ''' Felds, das der Bildmitte am naechsten liegt, in Anteilen des gezeigten Bildes. Nothing
+        ''' ohne sichtbare Felder und im Vergleich (die Felder gehoeren zum Einzelbild).</summary>
+        Public ReadOnly Property FocusZoomAnchor As (X As Double, Y As Double)?
+            Get
+                If Not _showFocusPoints OrElse _isCompareMode Then Return Nothing
+                Dim frame = FocusPointLayout.NearestToCenter(FocusFrames)
+                If frame Is Nothing Then Return Nothing
+                Return (frame.CenterX, frame.CenterY)
+            End Get
+        End Property
 
         ' Das Bild, das LibRaw fuer die Anzeige entwickelt hat. Nur eine Referenz zum Vergleich mit
         ' CurrentImage: jedes andere Bild (eingebettete Vorschau, FPX-Komposit, leer) loest sie ab.
@@ -1489,7 +1639,12 @@ Namespace ViewModels
             ZoomActualCommand = ReactiveCommand.Create(Sub()
                                                            ' Um die Mitte, siehe CenteredZoomRequested: aus
                                                            ' dem Einpassen heraus ist das die Bildmitte.
-                                                           RaiseEvent CenteredZoomRequested(Me, EventArgs.Empty)
+                                                           ' Nur Z bei sichtbaren Fokusfeldern gibt
+                                                           ' stattdessen eine Stelle im Bild mit.
+                                                           Dim anchor = _pendingZoomAnchor
+                                                           _pendingZoomAnchor = Nothing
+                                                           RaiseEvent CenteredZoomRequested(Me, If(anchor.HasValue,
+                                                               New ZoomAnchorEventArgs(anchor.Value.X, anchor.Value.Y), EventArgs.Empty))
                                                            ActiveZoomPreset = ZoomPresetMode.Actual
                                                            IsFitToWindow = False
                                                            ZoomLevel = 1.0
@@ -4559,11 +4714,16 @@ Namespace ViewModels
                                         AppendRotationStep(adj, angle)
                                         ' Die Nachbardatei geht danach UEBER das Original: fehlt die
                                         ' Quelle, wird nicht ohne Aufnahmedaten gedreht, sondern gar nicht.
-                                        Return ImageProcessor.SaveImage(source, temp, adj, 95, preserveMetadata,
-                                                                        missingSource:=ImageProcessor.MissingSourceMetadata.Fail)
+                                        If Not ImageProcessor.SaveImage(source, temp, adj, 95, preserveMetadata,
+                                                                        missingSource:=ImageProcessor.MissingSourceMetadata.Fail) Then Return False
+                                        If Not EntryExists(temp) Then Return False
+                                        ' Ueber das Original, und zwar hier auf dem Arbeitsfaden: der
+                                        ' Schritt wartet, wenn gerade jemand die Datei liest (das
+                                        ' Bild ist eben erst geoeffnet, siehe CopyOverOriginal).
+                                        ImageProcessor.CopyOverOriginal(temp, source)
+                                        Return True
                                     End Function)
-                If ok AndAlso EntryExists(temp) Then
-                    File.Copy(temp, source, True)
+                If ok Then
                     ExifService.Invalidate(source)
                     LoadBitmap()
                     ResetViewerRotation()
@@ -5475,13 +5635,22 @@ Namespace ViewModels
             ZoomLevel = ZoomLevel / 1.25
         End Sub
 
+        ' Die Stelle, die der naechste Sprung auf 100 Prozent in die Mitte ruecken soll. Nur von
+        ' ToggleActualZoom gesetzt und vom Kommando sofort verbraucht.
+        Private _pendingZoomAnchor As (X As Double, Y As Double)?
+
         ''' <summary>Z: zwischen 100 Prozent und Einpassen wechseln. Aus einem freien Zoom geht es
-        ''' auf 100 Prozent, erst das zweite Z passt wieder ein.</summary>
+        ''' auf 100 Prozent, erst das zweite Z passt wieder ein. Sind Fokusfelder zu sehen, geht
+        ''' der Sprung auf 100 Prozent auf das Feld (<see cref="FocusZoomAnchor"/>) statt auf die
+        ''' Mitte des Sichtfensters: dafuer blendet man sie ein, um dort die Schaerfe zu pruefen.
+        ''' Der Knopf fuer 100 Prozent bleibt bei der Mitte.</summary>
         Public Sub ToggleActualZoom()
             If ActiveZoomPreset = ZoomPresetMode.Actual Then
                 ZoomFitCommand.Execute(Nothing)
             Else
+                _pendingZoomAnchor = FocusZoomAnchor
                 ZoomActualCommand.Execute(Nothing)
+                _pendingZoomAnchor = Nothing
             End If
         End Sub
 

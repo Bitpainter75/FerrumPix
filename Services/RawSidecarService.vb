@@ -97,14 +97,20 @@ Namespace Services
         '''
         ''' Arbeitskopien vom Server bleiben dabei, wie sie waren (nur RAW und PSD): ihre Begleitdatei
         ''' laege im Temp-Ordner und waere beim naechsten Aufraeumen fort. Den Weg zum Server kennt
-        ''' fuer andere Formate noch niemand.</summary>
+        ''' fuer andere Formate noch niemand.
+        '''
+        ''' UNABHAENGIG VON DER EINSTELLUNG auch fuer ein JPEG mit angehaengtem Film (Motion Photo,
+        ''' MotionPhotoService.HasVideo): neu kodiert wuerde nur das Bild, der Film dahinter ginge
+        ''' still verloren. Gefragt wird die Datei selbst, zuletzt und nur, wenn die Einstellung
+        ''' nicht ohnehin Ja sagt.</summary>
         Public Shared Function SavesRecipeBeside(path As String) As Boolean
             If Not IsRecipeFormat(path) Then Return False
             If IsReadOnlyFormat(path) Then Return True
             Dim file = VariantKey.FileOf(path)
             If ImmichService.IsImmichTempPath(file) OrElse NextcloudService.IsNextcloudTempPath(file) Then Return False
             If Not ImageProcessor.CanEncodeToTargetExtension(file) Then Return True
-            Return AppSettingsService.Load().SaveEditsBesideOriginal
+            If AppSettingsService.Load().SaveEditsBesideOriginal Then Return True
+            Return MotionPhotoService.HasVideo(file)
         End Function
 
         ''' <summary>Die Frage der "leichten" Schreiber, die eine Bearbeitung auf eine Datei legen,

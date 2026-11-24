@@ -14750,6 +14750,20 @@ Namespace ViewModels
             Return BatchImageEditWritableExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant())
         End Function
 
+        ''' <summary>Laesst sich JEDES Bild der Auswahl mit neuen Bildpunkten ueberschreiben? Die
+        ''' Frage der Stapel, die nur Bildpunkte schreiben koennen (Bildgroesse, Wasserzeichen),
+        ''' bevor ihr Dialog "Originale ueberschreiben" anbietet. Nein, sobald ein Format dabei ist,
+        ''' das sich nicht zurueckschreiben laesst, oder ein Bild mit angehaengtem Film
+        ''' (MotionPhotoService.HasVideo): es wuerde beim Schreiben ohnehin ausgelassen
+        ''' (ImageProcessor.CanReplaceOriginal), und der Dialog sagt dann gleich, dass neue Dateien
+        ''' entstehen. Die Frage nach dem Film oeffnet jede JPEG-Datei und laeuft deshalb neben
+        ''' dem Oberflaechenfaden.</summary>
+        Private Shared Function AllPixelsOverwritableAsync(items As IList(Of ImageItem)) As Task(Of Boolean)
+            Dim paths = items.Select(Function(i) i.FilePath).ToList()
+            Return Task.Run(Function() paths.All(Function(p) IsBatchImageEditWritable(p) AndAlso
+                                                             Not MotionPhotoService.HasVideo(p)))
+        End Function
+
         ''' <summary>Bekommt dieses Element beim Ueberschreiben in "Anpassungen anwenden" sein REZEPT
         ''' statt neuer Bilddaten? Ja, wo RawSidecarService.WritesRecipe es sagt: RAW und PSD (nicht
         ''' schreibbar), TIFF, HEIC, JPEG XL, BMP und GIF (nicht ueber das Original schreibbar), JPG,
@@ -15069,9 +15083,9 @@ Namespace ViewModels
             Dim folderHint = BatchFolderHint(targetItems)
             ' Ueberschreiben nur anbieten, wenn JEDE Quelle ihr eigenes Format auch schreiben kann
             ' (BMP/GIF koennen es nicht - dort entstehen neue Dateien).
-            Dim ueberschreibbar = targetItems.All(Function(i) IsBatchImageEditWritable(i.FilePath))
+            Dim ueberschreibbar = Await AllPixelsOverwritableAsync(targetItems)
             Await _mainVm.PreparePendingBakedOptionAsync(targetItems.Select(Function(i) i.FilePath))
-            Dim resize = Await _mainVm.ShowBatchResizeAsync(samplePath, folderHint, ueberschreibbar,
+            Dim resize =Await _mainVm.ShowBatchResizeAsync(samplePath, folderHint, ueberschreibbar,
                                                            singleImage:=targetItems.Count = 1,
                                                            sourcesIncludeJpg:=BatchIncludesJpg(targetItems),
                                                            deepSourceAvailable:=Await BatchIncludesDeepSourceAsync(targetItems))
@@ -16069,7 +16083,7 @@ Namespace ViewModels
             Dim targetItems = If(vorgabe IsNot Nothing, vorgabe.ToList(), GetSelectedBatchEditableImageItems())
             If targetItems.Count = 0 Then Return
 
-            Dim ueberschreibbar = targetItems.All(Function(i) IsBatchImageEditWritable(i.FilePath))
+            Dim ueberschreibbar = Await AllPixelsOverwritableAsync(targetItems)
             Await _mainVm.PreparePendingBakedOptionAsync(targetItems.Select(Function(i) i.FilePath))
             Dim result = Await _mainVm.ShowWatermarkPresetDialogAsync(ueberschreibbar,
                                                                       currentFolder:=BatchFolderHint(targetItems),
@@ -16409,7 +16423,8 @@ Namespace ViewModels
                                 written = writer(source, temp)
                             End Using
                             If written AndAlso File.Exists(source) Then
-                                File.Copy(temp, source, True)
+                                ' Wartet, wenn gerade jemand die Datei liest (Kachel, Aufnahmedaten).
+                                ImageProcessor.CopyOverOriginal(temp, source)
                                 changedCount += 1
                                 rewritten?.Add(source)
                                 ExifService.Invalidate(source)
@@ -16725,20 +16740,24 @@ Namespace ViewModels
                     Dim source = Await EnsureLocalPathForBatchAsync(item)
                     If String.IsNullOrEmpty(source) OrElse Not File.Exists(source) Then Continue For
 
-                    Dim outputPath = If(updateExisting,
+                    ' Ein Bild mit angehaengtem Film (MotionPhotoService.HasVideo) wird auch im
+                    ' Aktualisieren-Modus nicht ersetzt: das Ergebnis traegt nur das neu kodierte
+                    ' Bild, der Film am Original waere fort. Dafuer entsteht ein neues Asset.
+                    Dim replaces = updateExisting AndAlso Not MotionPhotoService.HasVideo(source)
+                    Dim outputPath = If(replaces,
                                         CreateImmichReplaceOutputPath(item, outputExtension(source)),
                                         CreateImmichBatchOutputPath(source, outputExtension(source), nameSuffix, nameBuilder))
                     Try
                         ' Im Aktualisieren-Modus ersetzt das Ergebnis das Original auf dem Server.
                         Dim ok = Await Task.Run(Function()
-                                                    Using If(updateExisting, ImageProcessor.ReplacingSource(), Nothing)
+                                                    Using If(replaces, ImageProcessor.ReplacingSource(), Nothing)
                                                         Return writer(source, outputPath)
                                                     End Using
                                                 End Function)
                         If Not ok OrElse Not File.Exists(outputPath) Then Continue For
 
                         Dim newAssetId As String
-                        If updateExisting Then
+                        If replaces Then
                             newAssetId = Await ImmichService.ReplaceAssetAsync(item.ImmichAssetId, outputPath)
                         Else
                             newAssetId = Await ImmichService.UploadAssetAsync(outputPath)
@@ -16746,7 +16765,7 @@ Namespace ViewModels
                         If String.IsNullOrEmpty(newAssetId) Then Continue For
                         uploadedAssetIds?.Add(newAssetId)
                         ' Beim Ersetzen bringt PUT /assets/copy die Albenzugehörigkeit selbst mit.
-                        If Not updateExisting AndAlso Not String.IsNullOrEmpty(albumId) Then Await ImmichService.AddAssetsToAlbumAsync(albumId, {newAssetId})
+                        If Not replaces AndAlso Not String.IsNullOrEmpty(albumId) Then Await ImmichService.AddAssetsToAlbumAsync(albumId, {newAssetId})
                         Await ImmichService.WaitForThumbnailReadyAsync(newAssetId)
                         uploadedCount += 1
                     Finally

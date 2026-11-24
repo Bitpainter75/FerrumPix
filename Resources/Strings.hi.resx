@@ -12218,4 +12218,25 @@
   <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
     <value>शार्प सीमा क्लिक की गई गहराई के आसपास रखी गई</value>
   </data>
+  <data name="Fokusfelder_ein_aus_6fcc8715" xml:space="preserve">
+    <value>फ़ोकस बिंदु चालू/बंद</value>
+  </data>
+  <data name="Diese_Aufnahme_enth_lt_keine_Fokusangabe_0f44cb44" xml:space="preserve">
+    <value>इस फ़ोटो में फ़ोकस की कोई जानकारी नहीं है</value>
+  </data>
+  <data name="Die_Kamera_hat_f_r_diese_Aufnahme_kein_Fokusfeld_f627b6ee" xml:space="preserve">
+    <value>कैमरे ने इस फ़ोटो के लिए कोई फ़ोकस बिंदु दर्ज नहीं किया</value>
+  </data>
+  <data name="Die_Fokusangabe_dieser_Kamera_nennt_keine_Lage_i_8e520fea" xml:space="preserve">
+    <value>इस कैमरे की फ़ोकस जानकारी छवि में कोई स्थान नहीं बताती</value>
+  </data>
+  <data name="Die_Fokusangabe_passt_nicht_zum_gezeigten_Bildfo_1d7a3a71" xml:space="preserve">
+    <value>फ़ोकस जानकारी दिखाए गए छवि प्रारूप से मेल नहीं खाती</value>
+  </data>
+  <data name="Das_Fokusfeld_liegt_au_erhalb_des_gezeigten_Auss_ce87a97a" xml:space="preserve">
+    <value>फ़ोकस बिंदु दिखाए गए क्रॉप के बाहर है</value>
+  </data>
+  <data name="Zwischen_100_Prozent_und_Einpassen_wechseln_bei__f9add5f1" xml:space="preserve">
+    <value>100 प्रतिशत और फ़िट के बीच बदलें, फ़ोकस बिंदु दिखने पर फ़ोकस बिंदु बीच में रहता है</value>
+  </data>
 </root>

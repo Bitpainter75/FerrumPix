@@ -12214,4 +12214,25 @@
   <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
     <value>Skarpt område lagt kring det klickade djupet</value>
   </data>
+  <data name="Fokusfelder_ein_aus_6fcc8715" xml:space="preserve">
+    <value>Fokuspunkter på/av</value>
+  </data>
+  <data name="Diese_Aufnahme_enth_lt_keine_Fokusangabe_0f44cb44" xml:space="preserve">
+    <value>Den här bilden innehåller ingen fokusinformation</value>
+  </data>
+  <data name="Die_Kamera_hat_f_r_diese_Aufnahme_kein_Fokusfeld_f627b6ee" xml:space="preserve">
+    <value>Kameran har inte rapporterat någon fokuspunkt för den här bilden</value>
+  </data>
+  <data name="Die_Fokusangabe_dieser_Kamera_nennt_keine_Lage_i_8e520fea" xml:space="preserve">
+    <value>Kamerans fokusinformation anger ingen position i bilden</value>
+  </data>
+  <data name="Die_Fokusangabe_passt_nicht_zum_gezeigten_Bildfo_1d7a3a71" xml:space="preserve">
+    <value>Fokusinformationen passar inte det bildformat som visas</value>
+  </data>
+  <data name="Das_Fokusfeld_liegt_au_erhalb_des_gezeigten_Auss_ce87a97a" xml:space="preserve">
+    <value>Fokuspunkten ligger utanför det visade utsnittet</value>
+  </data>
+  <data name="Zwischen_100_Prozent_und_Einpassen_wechseln_bei__f9add5f1" xml:space="preserve">
+    <value>Växla mellan 100 procent och anpassa, med fokuspunkten i mitten när fokuspunkter visas</value>
+  </data>
 </root>
