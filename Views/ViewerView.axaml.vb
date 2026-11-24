@@ -1218,10 +1218,11 @@ Namespace Views
                 AddHandler _subscribedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
                 AddHandler _subscribedVm.CenteredZoomRequested, AddressOf OnCenteredZoomRequested
                 AddHandler _subscribedVm.InfoPanel.NavigatorPanRequested, AddressOf OnNavigatorPanRequested
-                AddHandler _subscribedVm.FaceFrames.CollectionChanged, AddressOf OnFaceFramesChanged
+                AddHandler _subscribedVm.FaceFrames.CollectionChanged, AddressOf OnImageMarksChanged
+                AddHandler _subscribedVm.FocusFrames.CollectionChanged, AddressOf OnImageMarksChanged
                 ' Eine Aenderung der Seite, solange die Ansicht nicht im Baum hing, kam hier nicht an.
                 ApplyFilmstripPlacement()
-                RebuildFaceFrameVisuals()
+                RebuildImageMarkVisuals()
             End If
         End Sub
 
@@ -1230,43 +1231,75 @@ Namespace Views
             RemoveHandler _subscribedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
             RemoveHandler _subscribedVm.CenteredZoomRequested, AddressOf OnCenteredZoomRequested
             RemoveHandler _subscribedVm.InfoPanel.NavigatorPanRequested, AddressOf OnNavigatorPanRequested
-            RemoveHandler _subscribedVm.FaceFrames.CollectionChanged, AddressOf OnFaceFramesChanged
+            RemoveHandler _subscribedVm.FaceFrames.CollectionChanged, AddressOf OnImageMarksChanged
+            RemoveHandler _subscribedVm.FocusFrames.CollectionChanged, AddressOf OnImageMarksChanged
             _subscribedVm = Nothing
         End Sub
 
-        ' ── Gesichtsrahmen ────────────────────────────────────────────────────────
+        ' ── Markierungen ueber dem Bild: Gesichtsrahmen und Fokusfelder ───────────
         '
-        ' Die Rahmen liegen in Anteilen des gezeigten Bildes vor (ViewerViewModel.FaceFrames). Hier
-        ' werden sie zu Rechtecken mit Namensschild auf FaceFrameCanvas. Die Ebene liegt NEBEN der
-        ' Huelle des Bildes, nicht darin: Drehen und Spiegeln des Betrachters laufen als
-        ' RenderTransform der Huelle, und in ihr stuende der Name dann quer oder spiegelverkehrt.
-        ' Die Ecken gehen deshalb ueber TranslatePoint durch die Huelle, so wie beim Zuschnitt-Rahmen.
+        ' Beide liegen in Anteilen des gezeigten Bildes vor (ViewerViewModel.FaceFrames und
+        ' FocusFrames) und werden hier zu Formen auf ImageMarkCanvas: Gesichter als Rechteck mit
+        ' Namensschild, Fokusfelder als vier Ecken, oder als Kreuz, wo die Kamera keine Groesse
+        ' nennt. Die Ebene liegt NEBEN der Huelle des Bildes, nicht darin: Drehen und Spiegeln des
+        ' Betrachters laufen als RenderTransform der Huelle, und in ihr stuende der Name dann quer
+        ' oder spiegelverkehrt, und jeder Strich wuerde mit dem Zoom dicker. Die Ecken gehen
+        ' deshalb ueber TranslatePoint durch die Huelle, so wie beim Zuschnitt-Rahmen.
         '
-        ' Aufbauen und Verschieben sind getrennt: aufgebaut wird nur, wenn sich die Rahmen aendern,
-        ' verschoben nach jedem Layoutlauf. Das Verschieben setzt nur Lage und Groesse; bleiben die
-        ' Werte gleich, loest es keinen neuen Lauf aus.
+        ' Aufbauen und Verschieben sind getrennt: aufgebaut wird nur, wenn sich eine der beiden
+        ' Listen aendert, verschoben nach jedem Layoutlauf. Jede Markierung bringt dafuer nur ihre
+        ' Lage in Anteilen und eine Routine mit, die sie auf ein Rechteck der Ebene legt
+        ' (ImageMark.Place); das Verschieben selbst kennt die Arten nicht. Bleibt das Rechteck
+        ' gleich, wird nichts gesetzt, und es entsteht kein neuer Layoutlauf.
 
-        Private ReadOnly _faceFrameVisuals As New List(Of (Frame As FaceFrame, Box As Avalonia.Controls.Shapes.Rectangle, Label As Border))()
-        Private _faceFrameLayoutHooked As Boolean
+        ''' <summary>Eine Markierung ueber dem Bild: ihre Lage in Anteilen des gezeigten Bildes und
+        ''' die Routine, die ihre Formen auf ein Rechteck der Ebene legt.</summary>
+        Private NotInheritable Class ImageMark
+            Public Left As Double
+            Public Top As Double
+            Public Right As Double
+            Public Bottom As Double
+            Public Place As Action(Of Rect)
+            ' Das zuletzt gesetzte Rechteck; NaN erzwingt das erste Setzen.
+            Public Placed As New Rect(Double.NaN, Double.NaN, 0, 0)
+        End Class
 
-        Private Sub OnFaceFramesChanged(sender As Object, e As Specialized.NotifyCollectionChangedEventArgs)
-            RebuildFaceFrameVisuals()
+        Private ReadOnly _imageMarks As New List(Of ImageMark)()
+        Private _imageMarkLayoutHooked As Boolean
+        Private _imageMarkRebuildQueued As Boolean
+
+        ''' <summary>Eine der beiden Listen hat sich geaendert. Gesammelt ueber einen Takt: die
+        ''' Listen werden Stueck fuer Stueck gefuellt, und eine Aufnahme mit Dutzenden scharf
+        ''' gemeldeter Felder baute sonst fuer jedes einzelne alles neu auf.</summary>
+        Private Sub OnImageMarksChanged(sender As Object, e As Specialized.NotifyCollectionChangedEventArgs)
+            If _imageMarkRebuildQueued Then Return
+            _imageMarkRebuildQueued = True
+            Dispatcher.UIThread.Post(
+                Sub()
+                    _imageMarkRebuildQueued = False
+                    RebuildImageMarkVisuals()
+                End Sub, DispatcherPriority.Render)
         End Sub
 
-        Private Sub RebuildFaceFrameVisuals()
-            Dim canvas = Me.FindControl(Of Canvas)("FaceFrameCanvas")
+        Private Sub RebuildImageMarkVisuals()
+            Dim canvas = Me.FindControl(Of Canvas)("ImageMarkCanvas")
             If canvas Is Nothing Then Return
             canvas.Children.Clear()
-            _faceFrameVisuals.Clear()
+            _imageMarks.Clear()
             Dim vm = GetVm()
             If vm Is Nothing Then Return
-            If Not _faceFrameLayoutHooked Then
+            If Not _imageMarkLayoutHooked Then
                 Dim image = Me.FindControl(Of Image)("MainImage")
                 If image IsNot Nothing Then
-                    AddHandler image.LayoutUpdated, Sub(s, e) UpdateFaceFramePositions()
-                    _faceFrameLayoutHooked = True
+                    AddHandler image.LayoutUpdated, Sub(s, e) UpdateImageMarkPositions()
+                    _imageMarkLayoutHooked = True
                 End If
             End If
+            ' Fokusfelder zuerst, also UNTER den Gesichtsrahmen: der Name eines Gesichts soll
+            ' lesbar bleiben, wenn ein Feld auf ihm liegt.
+            For Each focusFrame In vm.FocusFrames
+                _imageMarks.Add(BuildFocusMark(canvas, focusFrame))
+            Next
             For Each frame In vm.FaceFrames
                 Dim box As New Avalonia.Controls.Shapes.Rectangle With {.StrokeThickness = 2, .IsHitTestVisible = False}
                 ' Vorschlag und Handarbeit sehen verschieden aus, wie in der Leiste: bestaetigt
@@ -1298,27 +1331,102 @@ Namespace Views
                     }
                     canvas.Children.Add(label)
                 End If
-                _faceFrameVisuals.Add((frame, box, label))
+                ' Das Schild steht unter dem Rahmen, am linken Rand.
+                Dim faceBox = box, faceLabel = label
+                _imageMarks.Add(New ImageMark With {
+                    .Left = frame.Left, .Top = frame.Top, .Right = frame.Right, .Bottom = frame.Bottom,
+                    .Place = Sub(area)
+                                 Canvas.SetLeft(faceBox, area.X)
+                                 Canvas.SetTop(faceBox, area.Y)
+                                 faceBox.Width = Math.Max(1, area.Width)
+                                 faceBox.Height = Math.Max(1, area.Height)
+                                 If faceLabel IsNot Nothing Then
+                                     Canvas.SetLeft(faceLabel, area.X)
+                                     Canvas.SetTop(faceLabel, area.Bottom + 3)
+                                 End If
+                             End Sub})
             Next
-            UpdateFaceFramePositions()
+            UpdateImageMarkPositions()
         End Sub
 
-        ''' <summary>Legt die Rahmen auf das Bild, wie es gerade gezoomt, verschoben, gedreht und
-        ''' gespiegelt ist. Das Schild steht unter dem Rahmen, am linken Rand.</summary>
-        Private Sub UpdateFaceFramePositions()
-            If _faceFrameVisuals.Count = 0 Then Return
+        ' Die Fokusfelder sind gruen wie in den Suchern der Kameras: die Akzentfarbe gehoert den
+        ' bestaetigten Gesichtern, gestricheltes Weiss den unbenannten. Darunter liegt derselbe
+        ' Zug dunkel und breiter, damit er auch auf hellem Laub oder Himmel zu sehen ist.
+        Private Shared ReadOnly FocusMarkBrush As New Avalonia.Media.Immutable.ImmutableSolidColorBrush(Avalonia.Media.Color.FromArgb(&HFF, &H5B, &HE3, &H7A))
+        Private Shared ReadOnly FocusMarkShadowBrush As New Avalonia.Media.Immutable.ImmutableSolidColorBrush(Avalonia.Media.Color.FromArgb(&HA0, 0, 0, 0))
+        ' Halbe Armlaenge des Kreuzes und die Luecke in seiner Mitte, in Bildschirmpunkten: es
+        ' zeigt eine Stelle, keine Flaeche, und waechst deshalb nicht mit dem Zoom.
+        Private Const FocusCrossArm As Double = 13
+        Private Const FocusCrossGap As Double = 4
+
+        ''' <summary>Die Formen eines Fokusfelds: zwei Linienzuege (dunkel unten, gruen oben), deren
+        ''' Verlauf beim Verschieben neu gesetzt wird. Kein Schild.</summary>
+        Private Shared Function BuildFocusMark(canvas As Canvas, focus As FocusFrame) As ImageMark
+            Dim shadow As New Avalonia.Controls.Shapes.Path With {.Stroke = FocusMarkShadowBrush, .StrokeThickness = 4, .IsHitTestVisible = False}
+            Dim line As New Avalonia.Controls.Shapes.Path With {.Stroke = FocusMarkBrush, .StrokeThickness = 2, .IsHitTestVisible = False}
+            canvas.Children.Add(shadow)
+            canvas.Children.Add(line)
+            Dim hasSize = focus.HasSize
+            Return New ImageMark With {
+                .Left = focus.Left, .Top = focus.Top, .Right = focus.Right, .Bottom = focus.Bottom,
+                .Place = Sub(area)
+                             Dim geometry = FocusMarkGeometry(area, hasSize)
+                             shadow.Data = geometry
+                             line.Data = geometry
+                         End Sub}
+        End Function
+
+        ''' <summary>Der Linienzug eines Fokusfelds in Koordinaten der Ebene: die vier Ecken des
+        ''' Rechtecks (je ein Viertel der kuerzeren Kante lang), oder ein Kreuz mit offener Mitte
+        ''' um den Mittelpunkt, wenn das Feld keine Groesse hat.</summary>
+        Friend Shared Function FocusMarkGeometry(area As Rect, hasSize As Boolean) As Avalonia.Media.Geometry
+            Dim geometry As New Avalonia.Media.StreamGeometry()
+            Using context = geometry.Open()
+                Dim addLine = Sub(x1 As Double, y1 As Double, x2 As Double, y2 As Double)
+                                  context.BeginFigure(New Point(x1, y1), False)
+                                  context.LineTo(New Point(x2, y2))
+                                  context.EndFigure(False)
+                              End Sub
+                Dim addCorner = Sub(x As Double, y As Double, dx As Double, dy As Double)
+                                    context.BeginFigure(New Point(x + dx, y), False)
+                                    context.LineTo(New Point(x, y))
+                                    context.LineTo(New Point(x, y + dy))
+                                    context.EndFigure(False)
+                                End Sub
+                If hasSize Then
+                    Dim arm = Math.Max(3.0, Math.Min(area.Width, area.Height) / 4)
+                    arm = Math.Min(arm, Math.Min(area.Width, area.Height) / 2)
+                    addCorner(area.Left, area.Top, arm, arm)
+                    addCorner(area.Right, area.Top, -arm, arm)
+                    addCorner(area.Left, area.Bottom, arm, -arm)
+                    addCorner(area.Right, area.Bottom, -arm, -arm)
+                Else
+                    Dim cx = area.Center.X, cy = area.Center.Y
+                    addLine(cx - FocusCrossArm, cy, cx - FocusCrossGap, cy)
+                    addLine(cx + FocusCrossGap, cy, cx + FocusCrossArm, cy)
+                    addLine(cx, cy - FocusCrossArm, cx, cy - FocusCrossGap)
+                    addLine(cx, cy + FocusCrossGap, cx, cy + FocusCrossArm)
+                End If
+            End Using
+            Return geometry
+        End Function
+
+        ''' <summary>Legt die Markierungen auf das Bild, wie es gerade gezoomt, verschoben, gedreht
+        ''' und gespiegelt ist.</summary>
+        Private Sub UpdateImageMarkPositions()
+            If _imageMarks.Count = 0 Then Return
             Dim image = Me.FindControl(Of Image)("MainImage")
-            Dim layer = Me.FindControl(Of Canvas)("FaceFrameCanvas")
+            Dim layer = Me.FindControl(Of Canvas)("ImageMarkCanvas")
             If image Is Nothing OrElse layer Is Nothing OrElse Not layer.IsVisible Then Return
             Dim size = image.Bounds.Size
             If size.Width <= 0 OrElse size.Height <= 0 Then Return
-            For Each visual In _faceFrameVisuals
+            For Each mark In _imageMarks
                 ' Alle vier Ecken: bei einem Winkel, der kein Vielfaches von 90 Grad ist, liegen zwei
                 ' gegenueberliegende allein nicht mehr auf dem umschliessenden Rechteck.
                 Dim x1 = Double.MaxValue, y1 = Double.MaxValue, x2 = Double.MinValue, y2 = Double.MinValue
                 Dim complete = True
-                For Each corner In {New Point(visual.Frame.Left, visual.Frame.Top), New Point(visual.Frame.Right, visual.Frame.Top),
-                                    New Point(visual.Frame.Left, visual.Frame.Bottom), New Point(visual.Frame.Right, visual.Frame.Bottom)}
+                For Each corner In {New Point(mark.Left, mark.Top), New Point(mark.Right, mark.Top),
+                                    New Point(mark.Left, mark.Bottom), New Point(mark.Right, mark.Bottom)}
                     Dim mapped = image.TranslatePoint(New Point(corner.X * size.Width, corner.Y * size.Height), layer)
                     If Not mapped.HasValue Then
                         complete = False
@@ -1328,14 +1436,10 @@ Namespace Views
                     y1 = Math.Min(y1, mapped.Value.Y) : y2 = Math.Max(y2, mapped.Value.Y)
                 Next
                 If Not complete Then Continue For
-                Canvas.SetLeft(visual.Box, x1)
-                Canvas.SetTop(visual.Box, y1)
-                visual.Box.Width = Math.Max(1, x2 - x1)
-                visual.Box.Height = Math.Max(1, y2 - y1)
-                If visual.Label IsNot Nothing Then
-                    Canvas.SetLeft(visual.Label, x1)
-                    Canvas.SetTop(visual.Label, y2 + 3)
-                End If
+                Dim area As New Rect(x1, y1, x2 - x1, y2 - y1)
+                If area = mark.Placed Then Continue For
+                mark.Placed = area
+                mark.Place(area)
             Next
         End Sub
 
@@ -1425,6 +1529,13 @@ Namespace Views
         Private Sub OnCenteredZoomRequested(sender As Object, e As EventArgs)
             Dim vm = GetVm()
             If vm Is Nothing Then Return
+            ' Z bei sichtbaren Fokusfeldern: nicht die Mitte des Sichtfensters halten, sondern das
+            ' Feld in die Mitte ruecken. Nur im Einzelbild, die Felder gehoeren zu ihm.
+            Dim target = TryCast(e, ZoomAnchorEventArgs)
+            If target IsNot Nothing AndAlso Not vm.IsCompareMode Then
+                Dispatcher.UIThread.Post(Sub() CenterOnImagePoint(target.X, target.Y), DispatcherPriority.Background)
+                Return
+            End If
             Dim paneNames As String()
             If Not vm.IsCompareMode Then
                 paneNames = {"ImageScrollViewer"}
@@ -1452,6 +1563,24 @@ Namespace Views
                                                  OffsetForAnchor(anchor.Y, pane.Viewport.Height, pane.Extent.Height))
                     Next
                 End Sub, DispatcherPriority.Background)
+        End Sub
+
+        ''' <summary>Rueckt eine Stelle des Bildes (Anteile des gezeigten Bildes) in die Mitte des
+        ''' Sichtfensters, am Rand geklemmt. NACH dem Layoutlauf zu rufen, der den neuen Zoom
+        ''' vermessen hat. Die Stelle geht ueber TranslatePoint durch die Huelle des Bildes, Drehen
+        ''' und Spiegeln des Betrachters sind damit eingerechnet.</summary>
+        Private Sub CenterOnImagePoint(x As Double, y As Double)
+            Dim image = Me.FindControl(Of Image)("MainImage")
+            Dim pane = Me.FindControl(Of ScrollViewer)("ImageScrollViewer")
+            Dim content = TryCast(pane?.Content, Visual)
+            If image Is Nothing OrElse pane Is Nothing OrElse content Is Nothing Then Return
+            Dim size = image.Bounds.Size
+            Dim extent = pane.Extent
+            If size.Width <= 0 OrElse size.Height <= 0 OrElse extent.Width <= 0 OrElse extent.Height <= 0 Then Return
+            Dim mapped = image.TranslatePoint(New Point(x * size.Width, y * size.Height), content)
+            If Not mapped.HasValue Then Return
+            pane.Offset = New Vector(OffsetForAnchor(mapped.Value.X / extent.Width, pane.Viewport.Width, extent.Width),
+                                     OffsetForAnchor(mapped.Value.Y / extent.Height, pane.Viewport.Height, extent.Height))
         End Sub
 
         ''' <summary>Welche Stelle des Inhalts (0 bis 1) in der Mitte des Sichtfensters steht. Passt der
@@ -1541,8 +1670,8 @@ Namespace Views
             ' werden danach von Hand nachgezogen, sobald die Bindung die Transformation gesetzt hat.
             If e.PropertyName = NameOf(ViewerViewModel.RotationAngle) OrElse
                e.PropertyName = NameOf(ViewerViewModel.ScaleX) OrElse
-               e.PropertyName = NameOf(ViewerViewModel.ShowFaceFrames) Then
-                Dispatcher.UIThread.Post(AddressOf UpdateFaceFramePositions, DispatcherPriority.Render)
+               e.PropertyName = NameOf(ViewerViewModel.ShowImageMarks) Then
+                Dispatcher.UIThread.Post(AddressOf UpdateImageMarkPositions, DispatcherPriority.Render)
             End If
 
             If e.PropertyName = NameOf(ViewerViewModel.IsFullscreenMode) Then

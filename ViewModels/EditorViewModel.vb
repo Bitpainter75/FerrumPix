@@ -18265,12 +18265,26 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Haengt an der offenen Datei ein Film (Motion Photo, MotionPhotoService.HasVideo)?
+        ''' Dann darf kein Weg das Original durch das neu kodierte Bild ersetzen, auch nicht auf dem
+        ''' Server: der Film waere dort fort. Lokal geht "Speichern" ins Rezept daneben
+        ''' (RawSidecarService.SavesRecipeBeside); an der Arbeitskopie eines Serverbildes, fuer die
+        ''' es diesen Weg nicht gibt, bleibt "Speichern unter", und dabei entsteht ein neues Asset
+        ''' bzw. eine neue Datei.</summary>
+        Private ReadOnly Property CurrentImageCarriesVideo As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(_currentImagePath) AndAlso MotionPhotoService.HasVideo(_currentImagePath)
+            End Get
+        End Property
+
         ''' <summary>True, wenn "Speichern" das Immich-Quell-Asset ersetzt statt eine lokale Datei zu
         ''' schreiben (Einstellung "Vorhandene Assets aktualisieren"). Ohne die Einstellung bleibt bei
-        ''' Immich-Bildern nur "Speichern unter" - dann entsteht immer ein neues Asset.</summary>
+        ''' Immich-Bildern nur "Speichern unter" - dann entsteht immer ein neues Asset. Dasselbe fuer
+        ''' ein Bild mit angehaengtem Film, siehe <see cref="CurrentImageCarriesVideo"/>.</summary>
         Private ReadOnly Property SavesBackToImmich As Boolean
             Get
-                Return CurrentImmichAssetId() IsNot Nothing AndAlso AppSettingsService.Load().ImmichUpdateExistingAssets
+                Return CurrentImmichAssetId() IsNot Nothing AndAlso AppSettingsService.Load().ImmichUpdateExistingAssets AndAlso
+                       Not CurrentImageCarriesVideo
             End Get
         End Property
 
@@ -18285,14 +18299,18 @@ Namespace ViewModels
         '''   Rohdatei wäre kein Speichern, sondern ein Verlust.
         ''' - ein geöffnetes .fpx-Projekt: es hat sein eigenes Ziel, das Bündel selbst.
         ''' - Formate, die wir nicht schreiben können (.tiff, .gif, .heic): sonst lägen JPEG-Bytes
-        '''   unter fremder Endung auf dem Server. Dieselbe Regel wie beim Immich-Ersetzen.</summary>
+        '''   unter fremder Endung auf dem Server. Dieselbe Regel wie beim Immich-Ersetzen.
+        '''
+        ''' Und ein Bild mit angehaengtem Film (<see cref="CurrentImageCarriesVideo"/>): der Film
+        ''' ginge beim Ersetzen verloren.</summary>
         Private ReadOnly Property SavesBackToNextcloud As Boolean
             Get
                 Return Not String.IsNullOrEmpty(_nextcloudSourcePath) AndAlso
                        Not IsCurrentImageSidecarFormat AndAlso
                        String.IsNullOrEmpty(_currentFpxPath) AndAlso
                        ImageProcessor.CanEncodeToTargetExtension(_nextcloudSourcePath) AndAlso
-                       AppSettingsService.Load().NextcloudReplaceOriginal
+                       AppSettingsService.Load().NextcloudReplaceOriginal AndAlso
+                       Not CurrentImageCarriesVideo
             End Get
         End Property
 
@@ -24957,8 +24975,11 @@ Namespace ViewModels
                     ' beim Speichern-unter, ob ein neues Asset entsteht oder das Original
                     ' ueberschrieben wird); ohne Immich-Quelle oder mit ausgeschaltetem Setting
                     ' entsteht wie bisher ein neues Asset.
+                    ' Ein Bild mit angehaengtem Film wird nie ersetzt (CurrentImageCarriesVideo): es
+                    ' entsteht ein neues Asset, das Original behaelt seinen Film.
                     Dim replaceAssetId = CurrentImmichAssetId()
-                    If Not String.IsNullOrEmpty(replaceAssetId) AndAlso AppSettingsService.Load().ImmichUpdateExistingAssets Then
+                    If Not String.IsNullOrEmpty(replaceAssetId) AndAlso AppSettingsService.Load().ImmichUpdateExistingAssets AndAlso
+                       Not CurrentImageCarriesVideo Then
                         StatusText = LocalizationService.T("Immich-Asset wird aktualisiert…")
                         Dim newAssetId = Await ImmichService.ReplaceAssetAsync(replaceAssetId, targetPath)
                         Try : IO.File.Delete(targetPath) : Catch : End Try

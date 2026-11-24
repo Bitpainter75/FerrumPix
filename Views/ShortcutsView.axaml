@@ -256,7 +256,7 @@
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="Z" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                                <TextBlock Grid.Column="1" Text="Zwischen 100 Prozent und Einpassen wechseln" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Zwischen 100 Prozent und Einpassen wechseln, bei eingeblendeten Fokusfeldern mit dem Fokusfeld in der Mitte" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="K" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>

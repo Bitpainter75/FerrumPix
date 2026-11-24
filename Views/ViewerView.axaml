@@ -285,12 +285,13 @@
                                            RenderOptions.BitmapInterpolationMode="MediumQuality" />
                                 </Panel>
                             </Border>
-                            <!-- GESICHTSRAHMEN: neben dem Bild statt in seiner Huelle, damit die Namen
-                                 beim Drehen und Spiegeln des Betrachters lesbar bleiben. Die Lage
-                                 rechnet der Code ueber TranslatePoint durch dieselbe Huelle
-                                 (UpdateFaceFramePositions), sie folgt also Zoom, Drehung und Spiegeln. -->
-                            <Canvas Name="FaceFrameCanvas" IsHitTestVisible="False"
-                                    IsVisible="{Binding ShowFaceFrames}"/>
+                            <!-- MARKIERUNGEN UEBER DEM BILD (Gesichtsrahmen, Fokusfelder): neben dem Bild
+                                 statt in seiner Huelle, damit die Namen beim Drehen und Spiegeln des
+                                 Betrachters lesbar bleiben und kein Strich mit dem Zoom dicker wird.
+                                 Die Lage rechnet der Code ueber TranslatePoint durch dieselbe Huelle
+                                 (UpdateImageMarkPositions), sie folgt also Zoom, Drehung und Spiegeln. -->
+                            <Canvas Name="ImageMarkCanvas" IsHitTestVisible="False"
+                                    IsVisible="{Binding ShowImageMarks}"/>
                             <Canvas Name="CropSelectionCanvas" IsHitTestVisible="False">
                                 <Border Name="CropSelectionRect"
                                         IsVisible="False"
@@ -799,6 +800,17 @@
                                       IsChecked="{Binding ShowFaceFrames, Mode=TwoWay}"
                                       ToolTip.Tip="Gesichtsrahmen mit Namen ein/aus">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/scan-smiley.svg"
+                                           Width="18" Height="18"/>
+                        </ToggleButton>
+                        <!-- FOKUSFELDER aus den Aufnahmedaten ueber dem Bild, gemerkt in den
+                             Einstellungen (ViewerFocusPoints). IMMER da, auch bei Bildern ohne
+                             Angabe: der Hinweistext nennt dann den Grund (FocusPointHint), sonst
+                             saehe ein Knopf, der mal da ist und mal nicht, wie ein Fehler aus. -->
+                        <ToggleButton Classes="icon-btn" Width="28" Height="28"
+                                      Margin="-5,0,0,0"
+                                      IsChecked="{Binding ShowFocusPoints, Mode=TwoWay}"
+                                      ToolTip.Tip="{Binding FocusPointHint}">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/frame-corners.svg"
                                            Width="18" Height="18"/>
                         </ToggleButton>
                         <!-- Dateiname steht jetzt als Fenstertitel oben in der Mitte. -->

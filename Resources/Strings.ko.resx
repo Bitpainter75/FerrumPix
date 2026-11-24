@@ -12218,6 +12218,27 @@
   <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
     <value>클릭한 깊이 주변으로 선명한 범위를 설정했습니다</value>
   </data>
+  <data name="Fokusfelder_ein_aus_6fcc8715" xml:space="preserve">
+    <value>초점 포인트 켜기/끄기</value>
+  </data>
+  <data name="Diese_Aufnahme_enth_lt_keine_Fokusangabe_0f44cb44" xml:space="preserve">
+    <value>이 사진에는 초점 정보가 없습니다</value>
+  </data>
+  <data name="Die_Kamera_hat_f_r_diese_Aufnahme_kein_Fokusfeld_f627b6ee" xml:space="preserve">
+    <value>카메라가 이 사진의 초점 포인트를 기록하지 않았습니다</value>
+  </data>
+  <data name="Die_Fokusangabe_dieser_Kamera_nennt_keine_Lage_i_8e520fea" xml:space="preserve">
+    <value>이 카메라의 초점 정보에는 이미지 안의 위치가 없습니다</value>
+  </data>
+  <data name="Die_Fokusangabe_passt_nicht_zum_gezeigten_Bildfo_1d7a3a71" xml:space="preserve">
+    <value>초점 정보가 표시된 이미지 형식과 맞지 않습니다</value>
+  </data>
+  <data name="Das_Fokusfeld_liegt_au_erhalb_des_gezeigten_Auss_ce87a97a" xml:space="preserve">
+    <value>초점 포인트가 표시된 자르기 영역 밖에 있습니다</value>
+  </data>
+  <data name="Zwischen_100_Prozent_und_Einpassen_wechseln_bei__f9add5f1" xml:space="preserve">
+    <value>100퍼센트와 맞춤 사이 전환, 초점 포인트가 표시되어 있으면 초점 포인트를 가운데로</value>
+  </data>
   <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
     <value>뷰어에서 현상하는 동안 갤러리 타일 표시</value>
   </data>

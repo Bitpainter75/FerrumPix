@@ -742,6 +742,10 @@ Namespace Services
         ''' Gesichtsrahmen mit Namen ueber dem Bild im Betrachter (Schalter in der Fusszeile).
         ''' Gemerkt wie das Fokus-Peaking: wer Gesichter durchsieht, will es fuer viele Bilder.
         Public Property ViewerFaceFrames As Boolean = False
+        ''' Fokusfelder aus den Aufnahmedaten ueber dem Bild im Betrachter (Schalter in der
+        ''' Fusszeile). Gemerkt wie die beiden darueber: wer eine Serie auf Schaerfe durchsieht,
+        ''' will sie bei jedem Bild.
+        Public Property ViewerFocusPoints As Boolean = False
         ''' RAWs OHNE .fpxmp-Rezept auch in den Stapelfunktionen voll entwickeln (Demosaic in
         ''' Sensoraufloesung) statt ihre eingebettete JPEG-Vorschau zu nehmen. Mit Rezept wird
         ''' IMMER entwickelt - dort waere die Vorschau schlicht das falsche Bild.
