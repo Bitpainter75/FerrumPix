@@ -4539,9 +4539,6 @@
   <data name="Die_gew_hlte_Anpassung_auf_dieses_Bild_anwenden_b40e940c" xml:space="preserve">
     <value>Применить выбранную коррекцию к этому изображению</value>
   </data>
-  <data name="Die_aktuellen_Regler_unter_diesem_Namen_merken_e_28792148" xml:space="preserve">
-    <value>Запомнить текущие ползунки под этим именем; запись с тем же именем заменяется</value>
-  </data>
   <data name="Standardformat_1c812c8e" xml:space="preserve">
     <value>Формат по умолчанию</value>
   </data>
@@ -4553,9 +4550,6 @@
   </data>
   <data name="Anpassung_gespeichert_0_55443bca" xml:space="preserve">
     <value>Коррекция сохранена: {0}</value>
-  </data>
-  <data name="Anpassung_gel_scht_0_1f26438b" xml:space="preserve">
-    <value>Коррекция удалена: {0}</value>
   </data>
   <data name="Anpassung_angewendet_0_25f50909" xml:space="preserve">
     <value>Коррекция применена: {0}</value>
@@ -12303,5 +12297,212 @@
   </data>
   <data name="TAB_38d4aa69" xml:space="preserve">
     <value>TAB</value>
+  </data>
+  <data name="ALT_1_bis_ALT_4_68193d8c" xml:space="preserve">
+    <value>ALT+1 до ALT+4</value>
+  </data>
+  <data name="Dieses_Feld_direkt_aktiv_machen_6a8d2c76" xml:space="preserve">
+    <value>Сразу сделать это поле активным</value>
+  </data>
+  <data name="In_diesen_Ordner_wird_die_Anpassung_gespeichert__1506e780" xml:space="preserve">
+    <value>Коррекция сохраняется в эту папку. Папки создаются в окне управления коррекциями.</value>
+  </data>
+  <data name="Hauptordner_93a2f3f0" xml:space="preserve">
+    <value>Основная папка</value>
+  </data>
+  <data name="Der_Ordner_f_r_Anpassungen_ist_nicht_erreichbar__c8899bfd" xml:space="preserve">
+    <value>Папка для коррекций недоступна: {0}. Она задаётся в настройках, в разделе Редактор.</value>
+  </data>
+  <data name="Neuer_Ordner_in_0_3a44f881" xml:space="preserve">
+    <value>Новая папка в {0}</value>
+  </data>
+  <data name="Neuer_Name_des_Ordners_8e707c90" xml:space="preserve">
+    <value>Новое имя папки</value>
+  </data>
+  <data name="Neuer_Name_der_Anpassung_4b271b22" xml:space="preserve">
+    <value>Новое имя коррекции</value>
+  </data>
+  <data name="Es_gibt_keinen_anderen_Ordner_als_Ziel_de1e2a87" xml:space="preserve">
+    <value>Нет другой папки, в которую можно переместить.</value>
+  </data>
+  <data name="Ordner_0_verschieben_nach_792d7c44" xml:space="preserve">
+    <value>Переместить папку {0} в</value>
+  </data>
+  <data name="Anpassung_0_verschieben_nach_c3d26d55" xml:space="preserve">
+    <value>Переместить коррекцию {0} в</value>
+  </data>
+  <data name="Der_Ordner_0_wird_mit_1_Anpassung_en_gel_scht_An_2be977f0" xml:space="preserve">
+    <value>Папка {0} будет удалена вместе с коррекциями ({1}). Остальные файлы в ней сохранятся.</value>
+  </data>
+  <data name="Die_Anpassung_0_wird_gel_scht_02b65971" xml:space="preserve">
+    <value>Коррекция {0} будет удалена.</value>
+  </data>
+  <data name="Bitte_einen_Namen_eingeben_79e2b03f" xml:space="preserve">
+    <value>Введите имя.</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_anlegen_Gibt_es_ihn_sc_c47f51e0" xml:space="preserve">
+    <value>Не удалось создать папку. Возможно, она уже существует?</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_umbenennen_Gibt_es_den_12fb5f51" xml:space="preserve">
+    <value>Не удалось переименовать папку. Возможно, такое имя уже есть?</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_umbenennen_Gibt_es__0fd26f4f" xml:space="preserve">
+    <value>Не удалось переименовать коррекцию. Возможно, такое имя в этой папке уже есть?</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_verschieben_Gibt_es_do_7cdb8df5" xml:space="preserve">
+    <value>Не удалось переместить папку. Возможно, там уже есть папка с таким именем?</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_verschieben_Gibt_es_8db30dc2" xml:space="preserve">
+    <value>Не удалось переместить коррекцию. Возможно, там уже есть коррекция с таким именем?</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_l_schen_fc8f1e99" xml:space="preserve">
+    <value>Не удалось удалить папку.</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_l_schen_ecd96ecc" xml:space="preserve">
+    <value>Не удалось удалить коррекцию.</value>
+  </data>
+  <data name="0_Anpassung_en_importiert_fdc783e6" xml:space="preserve">
+    <value>Импортировано коррекций: {0}</value>
+  </data>
+  <data name="0_schon_vorhanden_68664521" xml:space="preserve">
+    <value>Уже было: {0}</value>
+  </data>
+  <data name="0_Datei_en_nicht_lesbar_9653e2bc" xml:space="preserve">
+    <value>Не удалось прочитать файлов: {0}</value>
+  </data>
+  <data name="Anpassung_exportiert_0_98d89e68" xml:space="preserve">
+    <value>Коррекция экспортирована: {0}</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_exportieren_53eb4a9a" xml:space="preserve">
+    <value>Не удалось экспортировать коррекцию.</value>
+  </data>
+  <data name="0_Anpassung_en_exportiert_fd94c88c" xml:space="preserve">
+    <value>Экспортировано коррекций: {0}</value>
+  </data>
+  <data name="Einen_Unterordner_im_gew_hlten_Ordner_anlegen_04fa4248" xml:space="preserve">
+    <value>Создать вложенную папку в выбранной папке</value>
+  </data>
+  <data name="Ordner_exportieren_e68ad9ad" xml:space="preserve">
+    <value>Экспорт папки</value>
+  </data>
+  <data name="Den_gew_hlten_Ordner_samt_Unterordnern_in_ein_Ve_dec83286" xml:space="preserve">
+    <value>Записать выбранную папку вместе с вложенными в каталог</value>
+  </data>
+  <data name="In_diesem_Ordner_liegt_keine_Anpassung_c72f5c19" xml:space="preserve">
+    <value>В этой папке нет коррекций.</value>
+  </data>
+  <data name="Die_gew_hlte_Anpassung_als_Datei_an_einen_andere_419cc46b" xml:space="preserve">
+    <value>Записать выбранную коррекцию файлом в другое место</value>
+  </data>
+  <data name="Datei_importieren_a2367221" xml:space="preserve">
+    <value>Импорт файла</value>
+  </data>
+  <data name="Dateien_mit_Anpassungen_in_den_gew_hlten_Ordner__d0a3086f" xml:space="preserve">
+    <value>Добавить файлы с коррекциями в выбранную папку</value>
+  </data>
+  <data name="Ordner_importieren_751ddbf0" xml:space="preserve">
+    <value>Импорт папки</value>
+  </data>
+  <data name="Einen_Ordner_samt_Unterordnern_in_den_gew_hlten__c0e65180" xml:space="preserve">
+    <value>Добавить папку вместе с вложенными в выбранную папку</value>
+  </data>
+  <data name="Anpassungen_importieren_838230e9" xml:space="preserve">
+    <value>Импорт коррекций</value>
+  </data>
+  <data name="Ordner_mit_Anpassungen_importieren_9be5ad2e" xml:space="preserve">
+    <value>Импорт папки с коррекциями</value>
+  </data>
+  <data name="Anpassung_exportieren_ecc0fac1" xml:space="preserve">
+    <value>Экспорт коррекции</value>
+  </data>
+  <data name="Einstellungen_ffnen_dd5e857e" xml:space="preserve">
+    <value>Открыть настройки</value>
+  </data>
+  <data name="Verwalten_d0d41dd9" xml:space="preserve">
+    <value>Управление</value>
+  </data>
+  <data name="Anpassungen_in_Ordnern_ordnen_umbenennen_verschi_87e5728e" xml:space="preserve">
+    <value>Раскладывать коррекции по папкам, переименовывать, перемещать, удалять, импортировать и экспортировать</value>
+  </data>
+  <data name="Einf_gen_mit_Auswahl_4c235020" xml:space="preserve">
+    <value>Вставить с выбором</value>
+  </data>
+  <data name="Aus_den_kopierten_Anpassungen_w_hlen_welche_Regl_bc4e7b97" xml:space="preserve">
+    <value>Выбрать, какие ползунки из скопированных коррекций будут вставлены</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_speichern_d315a955" xml:space="preserve">
+    <value>Не удалось сохранить коррекцию.</value>
+  </data>
+  <data name="Eingef_gt_wird_nur_was_hier_angehakt_ist_Diese_R_6f35b039" xml:space="preserve">
+    <value>Вставляется только то, что здесь отмечено. Эти ползунки заменяют ползунки изображения, все остальные остаются как есть.</value>
+  </data>
+  <data name="Anpassungen_verwalten_360f5bee" xml:space="preserve">
+    <value>Управление коррекциями</value>
+  </data>
+  <data name="Jede_Anpassung_ist_eine_Datei_jeder_Ordner_ein_e_cd4fd224" xml:space="preserve">
+    <value>Каждая коррекция хранится в отдельном файле, каждая папка является настоящей папкой. Чтобы поделиться ими, достаточно скопировать файлы или папку.</value>
+  </data>
+  <data name="Ordner_f_r_Anpassungen_a11c8c84" xml:space="preserve">
+    <value>Папка для коррекций</value>
+  </data>
+  <data name="Hier_liegen_die_im_Editor_gespeicherten_Anpassun_89b2f8b3" xml:space="preserve">
+    <value>Здесь хранятся коррекции, сохранённые в редакторе: каждая в отдельном файле, каждая папка как настоящая папка. Собственная папка, например в облачном хранилище, делает их доступными на нескольких компьютерах. Если она недоступна, список остаётся пустым.</value>
+  </data>
+  <data name="Wieder_den_Ordner_im_Datenordner_der_Anwendung_v_67a35185" xml:space="preserve">
+    <value>Снова использовать папку в каталоге данных приложения</value>
+  </data>
+  <data name="Ordner_f_r_Anpassungen_w_hlen_79bdb005" xml:space="preserve">
+    <value>Выбрать папку для коррекций</value>
+  </data>
+  <data name="Im_bisherigen_Ordner_liegen_0_Anpassung_en_Solle_20cdd6ce" xml:space="preserve">
+    <value>В прежней папке находится коррекций: {0}. Перенести их в новую папку? Иначе они останутся в прежней папке и больше не будут показаны в списке.</value>
+  </data>
+  <data name="Mitziehen_b1307569" xml:space="preserve">
+    <value>Перенести</value>
+  </data>
+  <data name="Dort_lassen_d8c7764f" xml:space="preserve">
+    <value>Оставить там</value>
+  </data>
+  <data name="0_Anpassung_en_in_den_neuen_Ordner_verschoben_efb3edec" xml:space="preserve">
+    <value>Перемещено коррекций в новую папку: {0}</value>
+  </data>
+  <data name="0_lie_en_sich_nicht_verschieben_und_liegen_weite_74250764" xml:space="preserve">
+    <value>Не удалось переместить: {0}. Они остаются в прежней папке</value>
+  </data>
+  <data name="Bewegtbild_f306457a" xml:space="preserve">
+    <value>Движущееся изображение</value>
+  </data>
+  <data name="Motion_Photo_Film_in_der_Datei_254d738f" xml:space="preserve">
+    <value>Motion Photo, видео внутри файла</value>
+  </data>
+  <data name="Live_Photo_Bild_4f903725" xml:space="preserve">
+    <value>Live Photo, изображение</value>
+  </data>
+  <data name="Live_Photo_Film_7c876762" xml:space="preserve">
+    <value>Live Photo, видео</value>
+  </data>
+  <data name="Motion_Photo_an_diesem_Bild_h_ngt_ein_kurzer_Fil_7b0b12c8" xml:space="preserve">
+    <value>Motion Photo: к этому изображению прикреплено короткое видео</value>
+  </data>
+  <data name="Live_Photo_zu_diesem_Bild_geh_rt_ein_kurzer_Film_19de2886" xml:space="preserve">
+    <value>Live Photo: к этому изображению относится короткое видео</value>
+  </data>
+  <data name="Live_Photo_der_Film_zu_einem_Bild_0aa4441a" xml:space="preserve">
+    <value>Live Photo: видео к изображению</value>
+  </data>
+  <data name="Film_zu_diesem_Bild_abspielen_e6390328" xml:space="preserve">
+    <value>Воспроизвести видео этого изображения</value>
+  </data>
+  <data name="Film_anhalten_und_zum_Bild_zur_ck_0f3d9659" xml:space="preserve">
+    <value>Остановить видео и вернуться к изображению</value>
+  </data>
+  <data name="Der_Film_zu_diesem_Bild_ist_nicht_mehr_da_28434c71" xml:space="preserve">
+    <value>Видео этого изображения больше нет</value>
+  </data>
+  <data name="Der_Film_zu_diesem_Bild_lie_sich_nicht_abspielen_55dff2c2" xml:space="preserve">
+    <value>Не удалось воспроизвести видео этого изображения</value>
+  </data>
+  <data name="Zu_diesem_Live_Photo_geh_rt_0_Der_Name_1_ist_daf_2c7e82bc" xml:space="preserve">
+    <value>К этому Live Photo относится {0}. Имя {1} для него уже занято.</value>
   </data>
 </root>

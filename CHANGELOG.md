@@ -19,10 +19,20 @@
 
 - Saving an adjustment in the editor now asks what it should contain: tick whole groups such as
   colour or single sliders, and applying it later changes only those and leaves the rest of the
-  picture alone. Adjustments saved before keep working as they did.
+  picture alone. Adjustments saved before keep working as they did. Saved adjustments can be
+  sorted into folders, and a new Manage button opens a window to rename, move, delete, import and
+  export them. Each one is a small file, so sharing them means copying files or a whole folder,
+  and the settings let you keep them in a folder of your choice, for example in a cloud folder.
+  Pasting copied adjustments has a second command, Paste with selection, that asks which sliders
+  to paste and leaves all others as they are.
 
 - While the viewer develops a picture, it can show the tile from the gallery right away instead of
   an empty area. A new switch in the RAW settings turns this on.
+
+- Live photos and motion photos from phones are recognised. Their tile carries a small badge, the
+  info bar says what the file is, and a new button in the footer of the viewer plays the short
+  video once. The picture and the video of a live photo stay together when you delete, move, copy
+  or rename one of them, and with stacks switched on the video sits behind its picture.
 
 - The settings link to the documentation: an entry below the homepage opens the manual in the
   browser.

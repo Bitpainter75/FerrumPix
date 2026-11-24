@@ -1691,6 +1691,7 @@ Namespace ViewModels
                                                     .ApplyFilter = ApplyFilterCurrentCommand,
                                                     .CopyAdjustments = CopyAdjustmentsCurrentCommand,
                                                     .PasteAdjustments = PasteAdjustmentsCurrentCommand,
+                                                    .PasteAdjustmentsWithChoice = PasteAdjustmentsWithChoiceCurrentCommand,
                                                     .SwitchVariant = SwitchVariantCurrentCommand,
                                                     .NewVariant = NewVariantCurrentCommand,
                                                     .NewVariantFromStartValues = NewVariantFromStartValuesCurrentCommand,
@@ -1742,6 +1743,8 @@ Namespace ViewModels
         ''' dieselbe Ablage und derselbe Ablauf wie in der Galerie, für das Bild auf der Bühne.</summary>
         Public ReadOnly Property CopyAdjustmentsCurrentCommand As ICommand
         Public ReadOnly Property PasteAdjustmentsCurrentCommand As ICommand
+        ''' Die Ablage auf das gezeigte Bild einfuegen, vorher waehlen, welche Regler.
+        Public ReadOnly Property PasteAdjustmentsWithChoiceCurrentCommand As ICommand
         ''' <summary>Die Varianten des gezeigten Bildes, über denselben Ablauf wie in der Galerie.</summary>
         Public ReadOnly Property SwitchVariantCurrentCommand As ICommand
         Public ReadOnly Property NewVariantCurrentCommand As ICommand
@@ -1871,6 +1874,7 @@ Namespace ViewModels
             ApplyFilterCurrentCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i) g.ApplyFilterToImageItems(i)))
             CopyAdjustmentsCurrentCommand = ReactiveCommand.CreateFromTask(Function() CopyAdjustmentsCurrentAsync())
             PasteAdjustmentsCurrentCommand = ReactiveCommand.CreateFromTask(Function() PasteAdjustmentsCurrentAsync())
+            PasteAdjustmentsWithChoiceCurrentCommand = ReactiveCommand.CreateFromTask(Function() PasteAdjustmentsCurrentAsync(chooseEntries:=True))
             SwitchVariantCurrentCommand = ReactiveCommand.Create(Of Object)(Sub(parameter) ShowVariant(TryCast(parameter, String)))
             NewVariantCurrentCommand = ReactiveCommand.CreateFromTask(Function() ChangeVariantCurrentAsync(GalleryViewModel.VariantAction.AddFromCurrent))
             NewVariantFromStartValuesCurrentCommand = ReactiveCommand.CreateFromTask(Function() ChangeVariantCurrentAsync(GalleryViewModel.VariantAction.AddFromStartValues))
@@ -3753,6 +3757,9 @@ Namespace ViewModels
         ''' Aufrufer haben sie direkt nach LoadBitmap nur fuer das noch angezeigte alte Bild
         ''' aktualisiert.</summary>
         Private Sub LoadBitmap()
+            ' Bewegtbild: ein laufender Film gehoert zum vorigen Bild, und fuer das neue wird
+            ' nachgesehen, ob es eines mit Film ist (ViewerViewModelMotion.vb).
+            OnMotionImageChanged()
             If VideoPreviewService.IsSupportedVideo(_currentImagePath) Then
                 ' Laufende Bild-Loads (inkl. FPX-Vollaufloesung) verwerfen - sonst wuerde ein spaet
                 ' eintreffendes Bitmap das Video-Layout ueberschreiben.
@@ -4524,6 +4531,9 @@ Namespace ViewModels
         End Sub
 
         Public Sub StopVideoPlayback()
+            ' Wer den Spieler anhaelt, beendet auch ein laufendes Bewegtbild: sonst bliebe die
+            ' Videoflaeche ueber dem Standbild stehen, ohne dass noch etwas laeuft.
+            EndMotionPlayback(stopPlayer:=False)
             If _mediaPlayer Is Nothing Then Return
             Try
                 _mediaPlayer.Stop()
@@ -4712,6 +4722,10 @@ Namespace ViewModels
             Dispatcher.UIThread.Post(Sub()
                                           If Not IsCurrentPlayer(player) Then Return
                                           If reason <> CInt(MpvInterop.MpvEndFileReason.Eof) Then
+                                              ' Bewegtbild: ein Fehler beim Laden fuehrt in den Rueckfall
+                                              ' oder zurueck zum Standbild (HandleMotionEndFile).
+                                              If reason = CInt(MpvInterop.MpvEndFileReason.Error) AndAlso
+                                                 HandleMotionEndFile(reason) Then Return
                                               ' Ein Film wurde ersetzt oder gestoppt. Das Ende des
                                               ' ERSETZTEN kommt oft erst an, wenn der naechste schon
                                               ' laeuft; deshalb der Stand des Spielers statt "steht".
@@ -4730,6 +4744,9 @@ Namespace ViewModels
                                               IsVideoPlaying = player.IsPlaying
                                               Return
                                           End If
+                                          ' Bewegtbild: abgespielt wird EINMAL, danach steht wieder
+                                          ' das Standbild.
+                                          If HandleMotionEndFile(reason) Then Return
                                           If _isSlideshowPlaying Then
                                               IsVideoPlaying = False
                                               VideoPositionSeconds = VideoDurationSeconds
@@ -5646,6 +5663,9 @@ Namespace ViewModels
             ' Geloescht wird der gezeigte EINTRAG: eine Variante, solange die Datei mehrere hat,
             ' sonst die Datei (DeleteEntry).
             Dim deletedPath = CurrentItemPath
+            ' Live Photo: die andere Haelfte geht mit (MainWindowViewModel.RequestDeletePaths). Steht
+            ' sie als eigener Eintrag im Streifen, faellt sie unten mit heraus.
+            Dim livePartner = LivePartnerOfCurrent()
             DeleteEntry(deletedPath, Sub()
                                                            ' Der Rueckruf kommt auch, wenn das Loeschen
                                                            ' scheiterte (Papierkorb nicht erreichbar,
@@ -5659,6 +5679,7 @@ Namespace ViewModels
                                                            End If
                                                            _folderPaths.RemoveAll(Function(p) String.Equals(p, deletedPath, PathIdentity.Comparison) OrElse Not EntryExists(p) AndAlso
                                                                                               String.Equals(VariantKey.FileOf(p), VariantKey.FileOf(deletedPath), PathIdentity.Comparison))
+                                                           DropDeletedLivePartner(livePartner)
                                                            If _currentIndex >= _folderPaths.Count Then _currentIndex = _folderPaths.Count - 1
                                                            If _currentIndex >= 0 Then
                                                                LoadFilmstrip(reuseItems:=True)
@@ -5945,7 +5966,8 @@ Namespace ViewModels
 
         ''' <summary>Fügt die kopierten Anpassungen auf das gezeigte Bild ein, mit denselben Regeln
         ''' wie in der Galerie (ein JPG, PNG oder WebP erst nach Rückfrage), und lädt es danach neu.</summary>
-        Private Async Function PasteAdjustmentsCurrentAsync() As Task
+        ''' <param name="chooseEntries">"Einfügen mit Auswahl": vorher fragen, welche Regler.</param>
+        Private Async Function PasteAdjustmentsCurrentAsync(Optional chooseEntries As Boolean = False) As Task
             Dim refused As String = Nothing
             Dim pasted = False
             Await WithCurrentImageAsync(Async Function(g, i)
@@ -5957,7 +5979,7 @@ Namespace ViewModels
                                                 refused = LocalizationService.T("Auf diese Bilder lassen sich keine Anpassungen einfügen.")
                                                 Return
                                             End If
-                                            Await g.PasteAdjustmentsToImageItemsAsync(i)
+                                            Await g.PasteAdjustmentsToImageItemsAsync(i, chooseEntries:=chooseEntries)
                                             pasted = True
                                         End Function)
             If pasted Then ReloadCurrentImageFromDisk()
@@ -6184,7 +6206,10 @@ Namespace ViewModels
                 Return
             End If
             Dim oldPath = _currentImagePath
+            ' Live Photo: die andere Haelfte bekommt denselben Stamm (MainWindowViewModel.RequestRenamePath).
+            Dim livePartner = LivePartnerOfCurrent()
             _mainVm.RequestRenamePath(oldPath, Sub(newPath)
+                                                   FollowRenamedLivePartner(livePartner, newPath)
                                                    ' Alle Eintraege der Datei ziehen um, auch die ihrer
                                                    ' zusaetzlichen Varianten.
                                                    For idx = 0 To _folderPaths.Count - 1

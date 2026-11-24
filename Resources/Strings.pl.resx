@@ -4539,9 +4539,6 @@
   <data name="Die_gew_hlte_Anpassung_auf_dieses_Bild_anwenden_b40e940c" xml:space="preserve">
     <value>Zastosuj wybraną korektę do tego obrazu</value>
   </data>
-  <data name="Die_aktuellen_Regler_unter_diesem_Namen_merken_e_28792148" xml:space="preserve">
-    <value>Zapamiętaj bieżące suwaki pod tą nazwą; pozycja o tej samej nazwie zostanie zastąpiona</value>
-  </data>
   <data name="Standardformat_1c812c8e" xml:space="preserve">
     <value>Format domyślny</value>
   </data>
@@ -4553,9 +4550,6 @@
   </data>
   <data name="Anpassung_gespeichert_0_55443bca" xml:space="preserve">
     <value>Zapisano korektę: {0}</value>
-  </data>
-  <data name="Anpassung_gel_scht_0_1f26438b" xml:space="preserve">
-    <value>Usunięto korektę: {0}</value>
   </data>
   <data name="Anpassung_angewendet_0_25f50909" xml:space="preserve">
     <value>Zastosowano korektę: {0}</value>
@@ -12303,5 +12297,212 @@
   </data>
   <data name="TAB_38d4aa69" xml:space="preserve">
     <value>TAB</value>
+  </data>
+  <data name="ALT_1_bis_ALT_4_68193d8c" xml:space="preserve">
+    <value>ALT+1 do ALT+4</value>
+  </data>
+  <data name="Dieses_Feld_direkt_aktiv_machen_6a8d2c76" xml:space="preserve">
+    <value>Bezpośrednio uaktywnij to pole</value>
+  </data>
+  <data name="In_diesen_Ordner_wird_die_Anpassung_gespeichert__1506e780" xml:space="preserve">
+    <value>Korekta zostanie zapisana w tym folderze. Foldery tworzy się w oknie zarządzania.</value>
+  </data>
+  <data name="Hauptordner_93a2f3f0" xml:space="preserve">
+    <value>Folder główny</value>
+  </data>
+  <data name="Der_Ordner_f_r_Anpassungen_ist_nicht_erreichbar__c8899bfd" xml:space="preserve">
+    <value>Folder korekt jest niedostępny: {0}. Ustawia się go w ustawieniach, w sekcji Edytor.</value>
+  </data>
+  <data name="Neuer_Ordner_in_0_3a44f881" xml:space="preserve">
+    <value>Nowy folder w {0}</value>
+  </data>
+  <data name="Neuer_Name_des_Ordners_8e707c90" xml:space="preserve">
+    <value>Nowa nazwa folderu</value>
+  </data>
+  <data name="Neuer_Name_der_Anpassung_4b271b22" xml:space="preserve">
+    <value>Nowa nazwa korekty</value>
+  </data>
+  <data name="Es_gibt_keinen_anderen_Ordner_als_Ziel_de1e2a87" xml:space="preserve">
+    <value>Nie ma innego folderu, który mógłby być celem.</value>
+  </data>
+  <data name="Ordner_0_verschieben_nach_792d7c44" xml:space="preserve">
+    <value>Przenieś folder {0} do</value>
+  </data>
+  <data name="Anpassung_0_verschieben_nach_c3d26d55" xml:space="preserve">
+    <value>Przenieś korektę {0} do</value>
+  </data>
+  <data name="Der_Ordner_0_wird_mit_1_Anpassung_en_gel_scht_An_2be977f0" xml:space="preserve">
+    <value>Folder {0} zostanie usunięty, a wraz z nim korekty: {1}. Inne znajdujące się w nim pliki pozostaną.</value>
+  </data>
+  <data name="Die_Anpassung_0_wird_gel_scht_02b65971" xml:space="preserve">
+    <value>Korekta {0} zostanie usunięta.</value>
+  </data>
+  <data name="Bitte_einen_Namen_eingeben_79e2b03f" xml:space="preserve">
+    <value>Wpisz nazwę.</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_anlegen_Gibt_es_ihn_sc_c47f51e0" xml:space="preserve">
+    <value>Nie udało się utworzyć folderu. Czy już istnieje?</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_umbenennen_Gibt_es_den_12fb5f51" xml:space="preserve">
+    <value>Nie udało się zmienić nazwy folderu. Czy taka nazwa już istnieje?</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_umbenennen_Gibt_es__0fd26f4f" xml:space="preserve">
+    <value>Nie udało się zmienić nazwy korekty. Czy taka nazwa już istnieje w tym folderze?</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_verschieben_Gibt_es_do_7cdb8df5" xml:space="preserve">
+    <value>Nie udało się przenieść folderu. Czy jest tam już folder o tej samej nazwie?</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_verschieben_Gibt_es_8db30dc2" xml:space="preserve">
+    <value>Nie udało się przenieść korekty. Czy jest tam już korekta o tej samej nazwie?</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_l_schen_fc8f1e99" xml:space="preserve">
+    <value>Nie udało się usunąć folderu.</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_l_schen_ecd96ecc" xml:space="preserve">
+    <value>Nie udało się usunąć korekty.</value>
+  </data>
+  <data name="0_Anpassung_en_importiert_fdc783e6" xml:space="preserve">
+    <value>Zaimportowano korekt: {0}</value>
+  </data>
+  <data name="0_schon_vorhanden_68664521" xml:space="preserve">
+    <value>już istniejących: {0}</value>
+  </data>
+  <data name="0_Datei_en_nicht_lesbar_9653e2bc" xml:space="preserve">
+    <value>nieczytelnych plików: {0}</value>
+  </data>
+  <data name="Anpassung_exportiert_0_98d89e68" xml:space="preserve">
+    <value>Wyeksportowano korektę: {0}</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_exportieren_53eb4a9a" xml:space="preserve">
+    <value>Nie udało się wyeksportować korekty.</value>
+  </data>
+  <data name="0_Anpassung_en_exportiert_fd94c88c" xml:space="preserve">
+    <value>Wyeksportowano korekt: {0}</value>
+  </data>
+  <data name="Einen_Unterordner_im_gew_hlten_Ordner_anlegen_04fa4248" xml:space="preserve">
+    <value>Utwórz podfolder w wybranym folderze</value>
+  </data>
+  <data name="Ordner_exportieren_e68ad9ad" xml:space="preserve">
+    <value>Eksportuj folder</value>
+  </data>
+  <data name="Den_gew_hlten_Ordner_samt_Unterordnern_in_ein_Ve_dec83286" xml:space="preserve">
+    <value>Zapisz wybrany folder wraz z podfolderami w katalogu</value>
+  </data>
+  <data name="In_diesem_Ordner_liegt_keine_Anpassung_c72f5c19" xml:space="preserve">
+    <value>W tym folderze nie ma żadnej korekty.</value>
+  </data>
+  <data name="Die_gew_hlte_Anpassung_als_Datei_an_einen_andere_419cc46b" xml:space="preserve">
+    <value>Zapisz wybraną korektę jako plik w innym miejscu</value>
+  </data>
+  <data name="Datei_importieren_a2367221" xml:space="preserve">
+    <value>Importuj plik</value>
+  </data>
+  <data name="Dateien_mit_Anpassungen_in_den_gew_hlten_Ordner__d0a3086f" xml:space="preserve">
+    <value>Dodaj pliki z korektami do wybranego folderu</value>
+  </data>
+  <data name="Ordner_importieren_751ddbf0" xml:space="preserve">
+    <value>Importuj folder</value>
+  </data>
+  <data name="Einen_Ordner_samt_Unterordnern_in_den_gew_hlten__c0e65180" xml:space="preserve">
+    <value>Dodaj folder wraz z podfolderami do wybranego folderu</value>
+  </data>
+  <data name="Anpassungen_importieren_838230e9" xml:space="preserve">
+    <value>Importuj korekty</value>
+  </data>
+  <data name="Ordner_mit_Anpassungen_importieren_9be5ad2e" xml:space="preserve">
+    <value>Importuj folder z korektami</value>
+  </data>
+  <data name="Anpassung_exportieren_ecc0fac1" xml:space="preserve">
+    <value>Eksportuj korektę</value>
+  </data>
+  <data name="Einstellungen_ffnen_dd5e857e" xml:space="preserve">
+    <value>Otwórz ustawienia</value>
+  </data>
+  <data name="Verwalten_d0d41dd9" xml:space="preserve">
+    <value>Zarządzaj</value>
+  </data>
+  <data name="Anpassungen_in_Ordnern_ordnen_umbenennen_verschi_87e5728e" xml:space="preserve">
+    <value>Porządkowanie korekt w folderach, zmiana nazw, przenoszenie, usuwanie, importowanie i eksportowanie</value>
+  </data>
+  <data name="Einf_gen_mit_Auswahl_4c235020" xml:space="preserve">
+    <value>Wklej z wyborem</value>
+  </data>
+  <data name="Aus_den_kopierten_Anpassungen_w_hlen_welche_Regl_bc4e7b97" xml:space="preserve">
+    <value>Wybierz, które suwaki ze skopiowanych korekt mają zostać wklejone</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_speichern_d315a955" xml:space="preserve">
+    <value>Nie udało się zapisać korekty.</value>
+  </data>
+  <data name="Eingef_gt_wird_nur_was_hier_angehakt_ist_Diese_R_6f35b039" xml:space="preserve">
+    <value>Wklejane jest tylko to, co jest tu zaznaczone. Te suwaki zastępują suwaki obrazu, wszystkie pozostałe zostają bez zmian.</value>
+  </data>
+  <data name="Anpassungen_verwalten_360f5bee" xml:space="preserve">
+    <value>Zarządzaj korektami</value>
+  </data>
+  <data name="Jede_Anpassung_ist_eine_Datei_jeder_Ordner_ein_e_cd4fd224" xml:space="preserve">
+    <value>Każda korekta jest plikiem, a każdy folder prawdziwym folderem. Aby je komuś przekazać, wystarczy skopiować pliki lub folder.</value>
+  </data>
+  <data name="Ordner_f_r_Anpassungen_a11c8c84" xml:space="preserve">
+    <value>Folder korekt</value>
+  </data>
+  <data name="Hier_liegen_die_im_Editor_gespeicherten_Anpassun_89b2f8b3" xml:space="preserve">
+    <value>Tutaj znajdują się korekty zapisane w edytorze, każda jako osobny plik, a każdy folder jako prawdziwy folder. Własny folder, na przykład w chmurze, udostępnia je na kilku komputerach. Jeśli jest niedostępny, lista pozostaje pusta.</value>
+  </data>
+  <data name="Wieder_den_Ordner_im_Datenordner_der_Anwendung_v_67a35185" xml:space="preserve">
+    <value>Używaj ponownie folderu w folderze danych aplikacji</value>
+  </data>
+  <data name="Ordner_f_r_Anpassungen_w_hlen_79bdb005" xml:space="preserve">
+    <value>Wybierz folder korekt</value>
+  </data>
+  <data name="Im_bisherigen_Ordner_liegen_0_Anpassung_en_Solle_20cdd6ce" xml:space="preserve">
+    <value>W dotychczasowym folderze znajdują się korekty: {0}. Czy przenieść je do nowego folderu? W przeciwnym razie zostaną w dotychczasowym folderze i nie będą już widoczne na liście.</value>
+  </data>
+  <data name="Mitziehen_b1307569" xml:space="preserve">
+    <value>Przenieś</value>
+  </data>
+  <data name="Dort_lassen_d8c7764f" xml:space="preserve">
+    <value>Zostaw tam</value>
+  </data>
+  <data name="0_Anpassung_en_in_den_neuen_Ordner_verschoben_efb3edec" xml:space="preserve">
+    <value>Przeniesiono korekt do nowego folderu: {0}</value>
+  </data>
+  <data name="0_lie_en_sich_nicht_verschieben_und_liegen_weite_74250764" xml:space="preserve">
+    <value>Nie udało się przenieść korekt ({0}), pozostają w dotychczasowym folderze</value>
+  </data>
+  <data name="Bewegtbild_f306457a" xml:space="preserve">
+    <value>Ruchomy obraz</value>
+  </data>
+  <data name="Motion_Photo_Film_in_der_Datei_254d738f" xml:space="preserve">
+    <value>Motion Photo, wideo w pliku</value>
+  </data>
+  <data name="Live_Photo_Bild_4f903725" xml:space="preserve">
+    <value>Live Photo, obraz</value>
+  </data>
+  <data name="Live_Photo_Film_7c876762" xml:space="preserve">
+    <value>Live Photo, wideo</value>
+  </data>
+  <data name="Motion_Photo_an_diesem_Bild_h_ngt_ein_kurzer_Fil_7b0b12c8" xml:space="preserve">
+    <value>Motion Photo: do tego obrazu dołączone jest krótkie wideo</value>
+  </data>
+  <data name="Live_Photo_zu_diesem_Bild_geh_rt_ein_kurzer_Film_19de2886" xml:space="preserve">
+    <value>Live Photo: do tego obrazu należy krótkie wideo</value>
+  </data>
+  <data name="Live_Photo_der_Film_zu_einem_Bild_0aa4441a" xml:space="preserve">
+    <value>Live Photo: wideo należące do obrazu</value>
+  </data>
+  <data name="Film_zu_diesem_Bild_abspielen_e6390328" xml:space="preserve">
+    <value>Odtwórz wideo tego obrazu</value>
+  </data>
+  <data name="Film_anhalten_und_zum_Bild_zur_ck_0f3d9659" xml:space="preserve">
+    <value>Zatrzymaj wideo i wróć do obrazu</value>
+  </data>
+  <data name="Der_Film_zu_diesem_Bild_ist_nicht_mehr_da_28434c71" xml:space="preserve">
+    <value>Wideo tego obrazu już nie istnieje</value>
+  </data>
+  <data name="Der_Film_zu_diesem_Bild_lie_sich_nicht_abspielen_55dff2c2" xml:space="preserve">
+    <value>Nie udało się odtworzyć wideo tego obrazu</value>
+  </data>
+  <data name="Zu_diesem_Live_Photo_geh_rt_0_Der_Name_1_ist_daf_2c7e82bc" xml:space="preserve">
+    <value>Do tego Live Photo należy {0}. Nazwa {1} jest już dla niego zajęta.</value>
   </data>
 </root>

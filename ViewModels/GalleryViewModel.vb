@@ -2303,6 +2303,8 @@ Namespace ViewModels
         ''' die der Editor kopiert; und die Ablage auf die Auswahl einfügen.</summary>
         Public ReadOnly Property CopyAdjustmentsCommand As ICommand
         Public ReadOnly Property PasteAdjustmentsCommand As ICommand
+        ''' Die Ablage auf die Auswahl einfuegen, vorher waehlen, welche Regler.
+        Public ReadOnly Property PasteAdjustmentsWithChoiceCommand As ICommand
         ''' <summary>Die Varianten an der EINEN markierten Kachel: daneben eine anlegen, die Variante
         ''' der Kachel umbenennen oder löschen. Gewechselt wird in der Galerie nicht, jede Variante
         ''' ist dort eine eigene Kachel.</summary>
@@ -2715,6 +2717,9 @@ Namespace ViewModels
             ApplyFilterSelectedCommand = ReactiveCommand.Create(Sub() If Not RefuseOfflineSelection() Then ApplyFilterSelected())
             CopyAdjustmentsCommand = ReactiveCommand.Create(Sub() If Not RefuseOfflineSelection() Then CopyAdjustmentsFromSelected())
             PasteAdjustmentsCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, PasteAdjustmentsToSelectedAsync()))
+            PasteAdjustmentsWithChoiceCommand = ReactiveCommand.CreateFromTask(
+                Function() If(RefuseOfflineSelection(), Task.CompletedTask,
+                              PasteAdjustmentsToImageItemsAsync(GetSelectedImageItems(), chooseEntries:=True)))
             NewVariantCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, ChangeVariantOfSelectedAsync(VariantAction.AddFromCurrent)))
             NewVariantFromStartValuesCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, ChangeVariantOfSelectedAsync(VariantAction.AddFromStartValues)))
             RenameVariantCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, ChangeVariantOfSelectedAsync(VariantAction.Rename)))
@@ -10538,6 +10543,7 @@ Namespace ViewModels
                 item.ExifDateModified = ExifService.ParseExifDateTime(meta.DateModifiedExif)
                 item.ExifCamera = meta.Camera
                 item.CaptureMode = meta.CaptureMode
+                item.SetMotion(meta.MotionKind, meta.MotionId)
                 item.ExifIso = meta.Iso
                 item.ExifAperture = meta.Aperture
                 item.ExifLens = meta.Lens
@@ -10658,6 +10664,8 @@ Namespace ViewModels
                                                                Dim exifModified = ExifService.ParseExifDateTime(fields.DateModifiedExif)
                                                                Dim camera = fields.Camera
                                                                Dim shotMode = fields.CaptureMode
+                                                               Dim motionKind = fields.MotionKind
+                                                               Dim motionId = fields.MotionId
                                                                Dim iso = fields.Iso
                                                                Dim aperture = fields.Aperture
                                                                Dim lens = fields.Lens
@@ -10685,6 +10693,7 @@ Namespace ViewModels
                                                                                                           item.ExifDateModified = exifModified
                                                                                                           item.ExifCamera = camera
                                                                                                           item.CaptureMode = shotMode
+                                                                                                          item.SetMotion(motionKind, motionId)
                                                                                                           item.ExifIso = iso
                                                                                                           item.ExifAperture = aperture
                                                                                                           item.ExifLens = lens
@@ -11257,10 +11266,16 @@ Namespace ViewModels
                             item.Tags = If(m.Tags, New List(Of String)())
                             ' Nur übernehmen, wenn die Datei sich seit dem letzten EXIF-Scan nicht geändert hat -
                             ' sonst würde man dauerhaft veraltete Breite/Höhe/EXIF-Daten anzeigen (siehe IsMetaStale).
-                            If m.ImageWidth.HasValue AndAlso m.ImageHeight.HasValue AndAlso
-                               IsScannedSnapshotFresh(m.ScannedSourceModifiedAt, item.DateModified,
-                                                      m.ScannedSidecarModifiedAt,
-                                                      sidecarStamps.StampFor(file)) Then
+                            Dim rowIsFresh = IsScannedSnapshotFresh(m.ScannedSourceModifiedAt, item.DateModified,
+                                                                    m.ScannedSidecarModifiedAt,
+                                                                    sidecarStamps.StampFor(file))
+                            ' Art und Kennung des Bewegtbilds haengen NICHT an den Massen: der Film eines
+                            ' Live Photos hat im Katalog keine, liefe also nie durch den Zweig unten. Ohne
+                            ' diese Zeile stand er beim zweiten Besuch des Ordners ohne Kennung da (der
+                            ' Abgleich mit dem Dateisystem ueberschreibt den Katalogstand der Kachel,
+                            ' AdoptScannedState), und Bild und Film fanden nicht zusammen.
+                            If rowIsFresh Then item.SetMotion(m.MotionKind, m.MotionId)
+                            If m.ImageWidth.HasValue AndAlso m.ImageHeight.HasValue AndAlso rowIsFresh Then
                                 Dim needsMetadataFlagBackfill =
                                     Not m.HasExifMetadata AndAlso
                                     Not m.HasIptcMetadata AndAlso
@@ -11840,10 +11855,46 @@ Namespace ViewModels
             Return filtered.ToList()
         End Function
 
+        ''' <summary>Die Elemente, die beim letzten Lauf Haelfte eines Live Photos waren.</summary>
+        Private _livePaired As New List(Of ImageItem)()
+
+        ''' <summary>Legt an Bild und Film eines Live Photos die jeweils andere Haelfte
+        ''' (ImageItem.LivePartner). Gepaart wird am UNGEFILTERTEN Bestand und unabhaengig von den
+        ''' Stapeln: das Abzeichen und das gemeinsame Loeschen, Verschieben und Kopieren gelten auch
+        ''' dann, wenn Stapel aus sind oder ein Filter den Film gerade ausblendet. Kein Dateizugriff
+        ''' (LivePhotoService.PairItems).</summary>
+        Private Sub ApplyLivePairs()
+            Dim partners = LivePhotoService.PairItems(_allItems)
+            For Each item In _livePaired
+                If Not partners.ContainsKey(item) Then item.LivePartner = Nothing
+            Next
+            For Each pair In partners
+                pair.Key.LivePartner = pair.Value
+            Next
+            _livePaired = partners.Keys.ToList()
+        End Sub
+
+        ''' <summary>Nimmt zu jedem Element die andere Haelfte seines Live Photos dazu, gleich
+        ''' hinter ihm. Fuer alles, was die DATEIEN meint: Loeschen, Verschieben, Kopieren, Ziehen.
+        ''' Anders als <see cref="WithHiddenPartners"/> unabhaengig davon, ob die Haelfte gerade
+        ''' hinter der Kachel verborgen ist.</summary>
+        Friend Shared Function WithLivePartners(items As IEnumerable(Of ImageItem)) As List(Of ImageItem)
+            Dim result As New List(Of ImageItem)()
+            Dim seen As New HashSet(Of ImageItem)()
+            For Each item In items
+                If item Is Nothing Then Continue For
+                If seen.Add(item) Then result.Add(item)
+                Dim partner = item.LivePartner
+                If partner IsNot Nothing AndAlso seen.Add(partner) Then result.Add(partner)
+            Next
+            Return result
+        End Function
+
         ''' <summary>Der zweite Teil eines Laufs, immer auf dem Anzeigefaden: aus der gesiebten Liste
         ''' und ihrer sortierten Folge die Stapel bilden, die Liste der Ansicht austauschen,
         ''' Anzeigefenster, Zaehler und Statuszeile nachziehen.</summary>
         Private Sub FinishFilterAndSort(filteredList As List(Of ImageItem), sorted As IEnumerable(Of ImageItem))
+            PerformanceTraceService.Measure("Galerie: Live Photos paaren", AddressOf ApplyLivePairs)
             Dim stacked = PerformanceTraceService.Measure("Galerie: sortieren und Stapel bilden",
                                                           Function() ApplyStacks(filteredList, SimilarOrder(sorted)))
             ' Nur melden, was sich geaendert hat (ReplaceAllMinimal): eine Ruecksetzung laesst das
@@ -13973,14 +14024,54 @@ Namespace ViewModels
                                               End Sub)
         End Sub
 
+        ''' <summary>Die Live Photos unter den Pfaden eines Umbenennens: je Paar die Datei, die den
+        ''' Namen bekommt (das Bild, wenn es dabei ist, sonst der Film), und die andere Haelfte, die
+        ''' ihr auf denselben Stamm folgt. Bild und Film haengen am gleichen Stamm zusammen; bekaeme
+        ''' jede Haelfte ihre eigene Nummer aus dem Muster, waere das Paar danach keines mehr.</summary>
+        Friend Function LiveRenameFollowers(paths As IEnumerable(Of String)) As Dictionary(Of String, String)
+            Dim result As New Dictionary(Of String, String)(PathIdentity.Comparer)
+            Dim wanted As New HashSet(Of String)(If(paths, Enumerable.Empty(Of String)()), PathIdentity.Comparer)
+            For Each item In _allItems
+                If item Is Nothing OrElse item.LivePartner Is Nothing OrElse item.MotionKind <> MotionKind.LivePhotoImage Then Continue For
+                Dim video = item.LivePartner
+                If wanted.Contains(item.FilePath) Then
+                    result(item.FilePath) = video.FilePath
+                ElseIf wanted.Contains(video.FilePath) Then
+                    result(video.FilePath) = item.FilePath
+                End If
+            Next
+            Return result
+        End Function
+
         Private Async Sub BatchRenameSelected()
             Dim paths = GetSelectedPaths().
                 Where(Function(p) FileOperationPolicy.CanRename(p)).
                 ToList()
+            ' Live Photo: die andere Haelfte steht nicht im Dialog, sie folgt ihrer Datei auf
+            ' denselben Stamm (LiveRenameFollowers).
+            Dim followers = LiveRenameFollowers(paths)
+            If followers.Count > 0 Then
+                Dim following As New HashSet(Of String)(followers.Values, PathIdentity.Comparer)
+                paths = paths.Where(Function(p) Not following.Contains(p)).ToList()
+                ' Gewaehlt waren nur die beiden Haelften EINES Live Photos: das ist ein einzelnes
+                ' Umbenennen, und dessen Weg nimmt die andere Haelfte ebenfalls mit.
+                If paths.Count = 1 Then
+                    RenamePath(paths(0))
+                    Return
+                End If
+            End If
             If paths.Count < 2 Then Return
 
             Dim result = Await _mainVm.ShowBatchRenameAsync(paths)
             If result Is Nothing OrElse result.Mappings Is Nothing OrElse result.Mappings.Count = 0 Then Return
+            For Each mapping In result.Mappings.ToList()
+                Dim follower As String = Nothing
+                If String.IsNullOrEmpty(mapping.SourcePath) OrElse String.IsNullOrEmpty(mapping.TargetPath) OrElse
+                   Not followers.TryGetValue(mapping.SourcePath, follower) Then Continue For
+                result.Mappings.Add(New BatchRenameMapping With {
+                    .SourcePath = follower,
+                    .TargetPath = LivePhotoService.PartnerTargetFor(follower, mapping.TargetPath)})
+            Next
 
             Dim errorMessage As String = Nothing
             Dim failedCompanions As New List(Of String)()
@@ -14072,12 +14163,14 @@ Namespace ViewModels
         ''' <summary>Wie <see cref="GetSelectedPaths"/>, dazu die Dateien, die hinter einer
         ''' zugeklappten Kachel derselben Aufnahme liegen. Fuer Loeschen: ein RAW ohne sein JPEG zu
         ''' verschieben trennte das Paar. Kopieren und Verschieben einer Serie gehen über
-        ''' <see cref="GetPathsForTransfer"/>, weil sie zusätzlich ALLE Serienaufnahmen meinen.</summary>
+        ''' <see cref="GetPathsForTransfer"/>, weil sie zusätzlich ALLE Serienaufnahmen meinen.
+        ''' Die andere Haelfte eines Live Photos geht immer mit, auch ohne Stapel
+        ''' (<see cref="WithLivePartners"/>).</summary>
         Public Function GetSelectedPathsWithPartners() As List(Of String)
             Dim selected = If(SelectedItems Is Nothing OrElse SelectedItems.Count = 0,
                               If(SelectedItem Is Nothing, Enumerable.Empty(Of ImageItem)(), {SelectedItem}),
                               SelectedItems)
-            Return WithHiddenPartners(selected).
+            Return WithLivePartners(WithHiddenPartners(selected)).
                 Where(Function(i) Not i.IsParentFolderEntry).
                 Select(Function(i) i.FilePath).
                 Where(Function(p) Not String.IsNullOrEmpty(p)).
@@ -14095,7 +14188,10 @@ Namespace ViewModels
         ''' Paar; eine einzelne, nicht zur Serie gehörende Datei bleibt einzeln.</para>
         '''
         ''' <para>Der Weg ist absichtlich NICHT für Löschen: dort muss eine zugeklappte Serie erst
-        ''' geöffnet werden, damit ein gefährlicher Schritt nicht unsichtbare Bilder trifft.</para></summary>
+        ''' geöffnet werden, damit ein gefährlicher Schritt nicht unsichtbare Bilder trifft.</para>
+        '''
+        ''' <para>Bild und Film eines Live Photos gehen immer zusammen, auch ohne Stapel und auch,
+        ''' wenn nur eine der beiden Kacheln gewählt ist (<see cref="WithLivePartners"/>).</para></summary>
         Public Function GetPathsForTransfer(Optional items As IEnumerable(Of ImageItem) = Nothing) As List(Of String)
             Dim source = If(items,
                             If(SelectedItems Is Nothing OrElse SelectedItems.Count = 0,
@@ -14109,7 +14205,7 @@ Namespace ViewModels
                 Dim members = If(stack IsNot Nothing AndAlso stack.IsBurst,
                                  stack.AllFiles(),
                                  WithHiddenPartners({item}))
-                For Each member In members
+                For Each member In WithLivePartners(members)
                     If member IsNot Nothing AndAlso seen.Add(member) Then files.Add(member)
                 Next
             Next
@@ -14805,6 +14901,47 @@ Namespace ViewModels
                                                    isAutoEnhance As Boolean,
                                                    Optional replacePixelAdjustments As Boolean = False,
                                                    Optional denoise As DenoiseModelService.DenoiseRequest = Nothing) As RawSidecarService.ModifyRecipeResult
+            Return WriteRecipeInPlaceWithEntries(source, template, isAutoEnhance, replacePixelAdjustments, denoise, Nothing)
+        End Function
+
+        ''' <summary>Wie eingefuegte Anpassungen auf ein Rezept kommen. Ohne
+        ''' <paramref name="entries"/> ersetzen sie alle Bildanpassungen; mit ihnen nur diese
+        ''' Eintraege (Einfügen mit Auswahl, AdjustmentEntries.Apply), jeder andere Regler bleibt
+        ''' bitgleich. Der Rahmen folgt danach ApplyTransferredFrameFrom.</summary>
+        Friend Shared Sub ApplyPastedPixelAdjustments(target As ImageAdjustments, template As ImageAdjustments,
+                                                      entries As IReadOnlyList(Of AdjustmentEntry))
+            If entries Is Nothing Then
+                target.CopyPixelAdjustmentsFrom(template)
+            Else
+                AdjustmentEntries.Apply(target, template, entries.Where(Function(e) Not e.IsFrame))
+            End If
+        End Sub
+
+        ''' <summary>Die Ablage, wie sie bei "Einfügen mit Auswahl" gilt: ohne Rahmen, wenn er
+        ''' nicht gewaehlt ist, und ohne Umkehr und Graufarbausgleich, wenn das Filmnegativ nicht
+        ''' gewaehlt ist. Die Schritte nach den Reglern (Rahmen setzen, Graufarbausgleich vergessen,
+        ''' Diaerkennung) fragen die Ablage selbst und sehen so nur, was eingefuegt wird.</summary>
+        Friend Shared Function RestrictPastedTemplate(template As ImageAdjustments,
+                                                      entries As IReadOnlyList(Of AdjustmentEntry)) As ImageAdjustments
+            If template Is Nothing OrElse entries Is Nothing Then Return template
+            Dim restricted = template.Clone()
+            If Not entries.Any(Function(e) e.IsFrame) AndAlso restricted.Annotations IsNot Nothing Then
+                restricted.Annotations.RemoveAll(AddressOf ImageAdjustments.IsFrameAnnotation)
+            End If
+            If Not entries.Any(Function(e) e.Fields.Contains(NameOf(ImageAdjustments.NegativeEnabled))) Then
+                restricted.NegativeEnabled = False
+                restricted.NegativeGrayBalance = ""
+            End If
+            Return restricted
+        End Function
+
+        ''' <summary><see cref="WriteRecipeInPlace"/> mit der Auswahl von "Einfügen mit Auswahl":
+        ''' <paramref name="entries"/> gilt nur zusammen mit replacePixelAdjustments.</summary>
+        Private Shared Function WriteRecipeInPlaceWithEntries(source As String, template As ImageAdjustments,
+                                                              isAutoEnhance As Boolean,
+                                                              replacePixelAdjustments As Boolean,
+                                                              denoise As DenoiseModelService.DenoiseRequest,
+                                                              entries As IReadOnlyList(Of AdjustmentEntry)) As RawSidecarService.ModifyRecipeResult
             ' Der Schluessel einer zusaetzlichen Variante (VariantKey) meint IHR Rezept. Alles, was
             ' die Datei liest oder misst, nimmt den Pfad.
             Dim recipeKey = source
@@ -14829,7 +14966,7 @@ Namespace ViewModels
             ' faellt weg (ForgetTransferredNegativeGrayBalance).
             Dim applyLook = Sub(a As ImageAdjustments)
                                 If replacePixelAdjustments Then
-                                    a.CopyPixelAdjustmentsFrom(template)
+                                    ApplyPastedPixelAdjustments(a, template, entries)
                                 Else
                                     a.MergeNonDefaultPixelAdjustmentsFrom(template)
                                 End If
@@ -14944,10 +15081,20 @@ Namespace ViewModels
         '''
         ''' Nacheinander und im Hintergrund: die automatische Bildverbesserung dekodiert jedes Bild,
         ''' und es gibt nur einen Decode gleichzeitig.</summary>
-        Private Async Function WriteRecipesInPlaceAsync(targets As List(Of String), template As ImageAdjustments,
-                                                        isAutoEnhance As Boolean,
-                                                        Optional replacePixelAdjustments As Boolean = False,
-                                                        Optional denoise As DenoiseModelService.DenoiseRequest = Nothing) As Task(Of Integer)
+        Private Function WriteRecipesInPlaceAsync(targets As List(Of String), template As ImageAdjustments,
+                                                  isAutoEnhance As Boolean,
+                                                  Optional replacePixelAdjustments As Boolean = False,
+                                                  Optional denoise As DenoiseModelService.DenoiseRequest = Nothing) As Task(Of Integer)
+            Return WriteRecipesInPlaceWithEntriesAsync(targets, template, isAutoEnhance, replacePixelAdjustments, denoise, Nothing)
+        End Function
+
+        ''' <summary><see cref="WriteRecipesInPlaceAsync"/> mit der Auswahl von "Einfügen mit
+        ''' Auswahl" (<see cref="WriteRecipeInPlaceWithEntries"/>).</summary>
+        Private Async Function WriteRecipesInPlaceWithEntriesAsync(targets As List(Of String), template As ImageAdjustments,
+                                                                   isAutoEnhance As Boolean,
+                                                                   replacePixelAdjustments As Boolean,
+                                                                   denoise As DenoiseModelService.DenoiseRequest,
+                                                                   entries As IReadOnlyList(Of AdjustmentEntry)) As Task(Of Integer)
             If targets Is Nothing OrElse targets.Count = 0 Then Return 0
             Dim changedCount = 0
             Dim errorMessage As String = Nothing
@@ -14960,7 +15107,7 @@ Namespace ViewModels
                 Await Task.Run(Sub()
                     For Each source In targets
                         If BatchWasCancelled() Then Exit For
-                        Select Case WriteRecipeInPlace(source, template, isAutoEnhance, replacePixelAdjustments, denoise)
+                        Select Case WriteRecipeInPlaceWithEntries(source, template, isAutoEnhance, replacePixelAdjustments, denoise, entries)
                             Case RawSidecarService.ModifyRecipeResult.Written
                                 changedCount += 1
                             Case RawSidecarService.ModifyRecipeResult.Unreadable
@@ -15332,6 +15479,9 @@ Namespace ViewModels
             If result Is Nothing Then Return
             Dim applyPendingBaked = result.ApplyPendingBaked
 
+            ' Eine Anpassungsvorlage kommt aus dem Ordner der Anpassungen; gelesen wird er im
+            ' Hintergrund, falls kein Stand gemerkt ist.
+            If result.SourceKind = BatchFilterDialogResult.SourceAdjustmentPreset Then Await EnsureAdjustmentPresetsReadAsync()
             Dim adjustmentsTemplate = BuildBatchFilterAdjustments(result)
             If adjustmentsTemplate Is Nothing Then
                 Await _mainVm.ShowMessageAsync(LocalizationService.T("Anpassungen anwenden"), LocalizationService.T("Die gewählte Vorgabe konnte nicht gelesen werden."))
@@ -15481,7 +15631,7 @@ Namespace ViewModels
                     Return XmpPresetService.LoadLook(result.PresetPath)
 
                 Case BatchFilterDialogResult.SourceAdjustmentPreset
-                    Return LoadAdjustmentPresetLook(result.DisplayName)
+                    Return LoadAdjustmentPresetLook(result.PresetId, result.DisplayName)
 
                 Case BatchFilterDialogResult.SourceLut
                     If String.IsNullOrWhiteSpace(result.PresetPath) OrElse Not File.Exists(result.PresetPath) Then Return Nothing
@@ -15582,8 +15732,10 @@ Namespace ViewModels
         ''' Nutzer dort selbst eingeschaltet. Eine Datei nach der anderen, eine RAW halb gross.</summary>
         ''' <param name="replacePixelAdjustments">Wie die Vorlage auf das Rezept kommt: ersetzend
         ''' (Einfuegen) oder nur mit ihren gesetzten Reglern (Anpassungen anwenden).</param>
+        ''' <param name="entries">Bei "Einfügen mit Auswahl" die gewaehlten Eintraege.</param>
         Private Async Function FindPositivesForNegativeAsync(paths As IList(Of String), template As ImageAdjustments,
-                                                             replacePixelAdjustments As Boolean) As Task(Of List(Of String))
+                                                             replacePixelAdjustments As Boolean,
+                                                             Optional entries As IReadOnlyList(Of AdjustmentEntry) = Nothing) As Task(Of List(Of String))
             Dim found As New List(Of String)()
             If template Is Nothing OrElse Not template.NegativeEnabled OrElse paths Is Nothing OrElse paths.Count = 0 Then Return found
             Await Task.Run(Sub()
@@ -15591,7 +15743,7 @@ Namespace ViewModels
                                    If BatchWasCancelled() Then Exit For
                                    Dim adj = BatchBaseAdjustments(source)
                                    If replacePixelAdjustments Then
-                                       adj.CopyPixelAdjustmentsFrom(template)
+                                       ApplyPastedPixelAdjustments(adj, template, entries)
                                    Else
                                        adj.MergeNonDefaultPixelAdjustmentsFrom(template)
                                    End If
@@ -15620,7 +15772,14 @@ Namespace ViewModels
 
         ''' <summary>"Anpassungen einfügen" für eine Liste von Bildern, öffentlich aus demselben
         ''' Grund wie <see cref="CopyAdjustmentsFromImageItems"/>.</summary>
-        Public Async Function PasteAdjustmentsToImageItemsAsync(items As IList(Of ImageItem)) As Task
+        ''' <param name="entries">Nur diese Eintraege einfuegen ("Einfügen mit Auswahl"); ohne sie
+        ''' alles, wie bisher.</param>
+        ''' <param name="chooseEntries">Vorher fragen, welche Eintraege: der Dialog aus "Anpassung
+        ''' speichern" ohne Name und Ordner, vorbelegt mit dem, was in der Ablage vom Neutralwert
+        ''' abweicht.</param>
+        Public Async Function PasteAdjustmentsToImageItemsAsync(items As IList(Of ImageItem),
+                                                                Optional entries As IReadOnlyList(Of AdjustmentEntry) = Nothing,
+                                                                Optional chooseEntries As Boolean = False) As Task
             If items Is Nothing Then items = New List(Of ImageItem)()
             Dim template As ImageAdjustments = Nothing
             Try
@@ -15640,6 +15799,13 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("Auf diese Bilder lassen sich keine Anpassungen einfügen.")
                 Return
             End If
+            If chooseEntries Then
+                Dim choice = EditorViewModel.CreatePasteAdjustmentsDialog()
+                If choice Is Nothing OrElse Not Await _mainVm.ShowAdjustmentPresetSaveAsync(choice) Then Return
+                entries = choice.SelectedEntries()
+            End If
+            ' Ab hier sehen Rahmen, Graufarbausgleich und Diaerkennung nur, was eingefuegt wird.
+            template = RestrictPastedTemplate(template, entries)
             ' Mit dem Schluessel der Kachel, siehe WriteRecipeInPlace.
             Dim recipePaths = targets.Where(AddressOf IsBatchRecipeWritable).Select(Function(i) i.ItemPath).ToList()
             Dim pixelPaths = targets.Where(Function(i) Not IsBatchRecipeWritable(i)).Select(Function(i) i.FilePath).ToList()
@@ -15654,11 +15820,11 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("Wende Anpassungen an...")
                 ' VOR dem Schreiben: ein JPG wird gleich ueberschrieben und waere danach schon umgekehrt.
                 ReportPositivesForNegative(Await FindPositivesForNegativeAsync(
-                    targets.Select(Function(i) i.FilePath).ToList(), template, replacePixelAdjustments:=True))
+                    targets.Select(Function(i) i.FilePath).ToList(), template, replacePixelAdjustments:=True, entries:=entries))
                 Dim quality = AppSettingsService.Load().JpgSaveQuality
                 Dim writer = Function(source As String, target As String)
                                  Dim adj = BatchBaseAdjustments(source)
-                                 adj.CopyPixelAdjustmentsFrom(template)
+                                 ApplyPastedPixelAdjustments(adj, template, entries)
                                  adj.ApplyTransferredFrameFrom(template)
                                  adj.ForgetTransferredNegativeGrayBalance(template)
                                  ImageProcessor.MeasureFilmNegativeGrayBalanceFor(adj, source)
@@ -15667,8 +15833,9 @@ Namespace ViewModels
                                                                  cancel:=cancel,
                                                                  missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata)
                              End Function
-                Dim changedCount = Await WriteRecipesInPlaceAsync(recipePaths, template, isAutoEnhance:=False,
-                                                                  replacePixelAdjustments:=True)
+                Dim changedCount = Await WriteRecipesInPlaceWithEntriesAsync(recipePaths, template, isAutoEnhance:=False,
+                                                                             replacePixelAdjustments:=True,
+                                                                             denoise:=Nothing, entries:=entries)
                 If pixelTarget = MainWindowViewModel.PastePixelTarget.Copy Then
                     ' Die Namen entstehen hier, das Freimachen eines belegten Namens erst beim
                     ' Schreiben: zwei Quellen können auf denselben Namen kommen.
@@ -15936,20 +16103,26 @@ Namespace ViewModels
             End Try
         End Function
 
-        ''' <summary>Holt eine im Anpassen-Werkzeug gespeicherte Vorlage über ihren Namen aus den
-        ''' Einstellungen. Das Rezept enthält nur die Pixel-Anpassungen - genau das, was der Stapel
-        ''' über die vorhandene Bearbeitung legt. Nothing, wenn es die Vorlage nicht mehr gibt oder
-        ''' ihr Rezept unlesbar ist (von Hand bearbeitete Einstellungsdatei).
+        ''' <summary>Liest den Ordner der Anpassungen im Hintergrund, wenn kein Stand gemerkt ist,
+        ''' damit <see cref="LoadAdjustmentPresetLook"/> danach ohne Plattenzugriff auskommt.</summary>
+        Private Shared Async Function EnsureAdjustmentPresetsReadAsync() As Task
+            If AdjustmentPresetStore.Cached IsNot Nothing Then Return
+            Await Task.Run(Function() AdjustmentPresetStore.LoadCurrent())
+        End Function
+
+        ''' <summary>Holt eine im Anpassen-Werkzeug gespeicherte Vorlage aus dem Ordner der
+        ''' Anpassungen: über ihre KENNUNG, und erst wenn die nichts findet, über den Namen (ein
+        ''' Auftrag von früher kennt nur ihn). Über die Kennung wird sie auch nach dem Verschieben
+        ''' oder Umbenennen gefunden. Das Rezept enthält nur die Pixel-Anpassungen - genau das, was
+        ''' der Stapel über die vorhandene Bearbeitung legt. Nothing, wenn es die Vorlage nicht mehr
+        ''' gibt, ihr Rezept unlesbar oder der Ordner nicht erreichbar ist.
         '''
         ''' EINE TEILVORLAGE KOMMT BESCHRAENKT AUF IHRE EINTRAEGE ZURUECK
         ''' (AdjustmentEntries.LoadPresetLook): was sie nicht enthaelt, steht auf dem Neutralwert und
         ''' ueberschreibt im Stapel nichts, auch wenn ihr gespeichertes Rezept dort einen Wert
         ''' traegt.</summary>
-        Private Shared Function LoadAdjustmentPresetLook(name As String) As ImageAdjustments
-            Dim trimmedName = If(name, "").Trim()
-            If trimmedName.Length = 0 Then Return Nothing
-            Dim preset = AppSettingsService.Load().AdjustmentPresets.
-                FirstOrDefault(Function(p) String.Equals(p.Name, trimmedName, StringComparison.OrdinalIgnoreCase))
+        Private Shared Function LoadAdjustmentPresetLook(id As String, name As String) As ImageAdjustments
+            Dim preset = AdjustmentPresetStore.CachedOrLoad().Find(id, name)
             If preset Is Nothing Then Return Nothing
             Return AdjustmentEntries.LoadPresetLook(preset)
         End Function
@@ -17218,8 +17391,10 @@ Namespace ViewModels
                 Case BatchFilterDialogResult.SourceXmpPreset
                     template = XmpPresetService.LoadLook(result.LookPath)
                 Case BatchFilterDialogResult.SourceAdjustmentPreset
-                    ' Kein Pfad: die Vorlage steht unter ihrem Namen in den Einstellungen.
-                    template = LoadAdjustmentPresetLook(result.LookName)
+                    ' Kein Pfad: die Vorlage wird ueber ihre Kennung im Ordner der Anpassungen
+                    ' gefunden. Der Ordner wird im Hintergrund gelesen, wenn kein Stand gemerkt ist.
+                    Await EnsureAdjustmentPresetsReadAsync()
+                    template = LoadAdjustmentPresetLook(result.LookId, result.LookName)
                 Case BatchFilterDialogResult.SourceLut
                     template = If(File.Exists(result.LookPath),
                                  New ImageAdjustments With {.LutPath = result.LookPath, .LutStrength = result.LookStrength},

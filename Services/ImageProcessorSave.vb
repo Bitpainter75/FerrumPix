@@ -737,8 +737,9 @@ Namespace Services
             ' kodiert wird nur das Bild, der Film dahinter waere weg, und das uebernommene XMP
             ' behauptete ihn weiter. Die Aufrufer leiten so eine Datei vorher ins Rezept daneben
             ' (RawSidecarService.SavesRecipeBeside, CanReplaceOriginal); das hier ist die letzte
-            ' Sperre fuer einen Weg, der daran vorbeikommt.
-            If PathIdentity.AreSame(sourcePath, targetPath) AndAlso MotionPhotoService.HasVideo(targetPath) Then
+            ' Sperre fuer einen Weg, der daran vorbeikommt. Sie fragt die Datei selbst und nicht den
+            ' Katalog: hier kostet das eine Datei je Speichern.
+            If PathIdentity.AreSame(sourcePath, targetPath) AndAlso MotionPhotoService.HasVideoInFile(targetPath) Then
                 DiagnosticLogService.LogAlways("ImageProcessor.Save",
                     $"refused: Bild mit angehaengtem Film wird nicht ueberschrieben target={IO.Path.GetFileName(targetPath)}")
                 workingFull?.Dispose()

@@ -204,6 +204,8 @@ Namespace ViewModels
                 If commands.PasteAdjustments IsNot Nothing AndAlso GalleryViewModel.HasCopiedAdjustments AndAlso
                    (commands.AdjustmentsFromOpenDocument OrElse images.Any(AddressOf GalleryViewModel.CanPasteAdjustments)) Then
                     AddIfOffered(adjustmentChildren, commands.PasteAdjustments, FooterMenuCatalog.PasteAdjustments(commands.PasteAdjustments))
+                    ' Unter denselben Bedingungen: dieselbe Ablage, nur mit der Frage davor.
+                    AddIfOffered(adjustmentChildren, commands.PasteAdjustmentsWithChoice, FooterMenuCatalog.PasteAdjustmentsWithChoice(commands.PasteAdjustmentsWithChoice))
                 End If
                 AddIfOffered(adjustmentChildren, commands.ApplyWatermark, FooterMenuCatalog.ApplyWatermark(commands.ApplyWatermark))
                 AddGroup(list, adjustmentChildren, AddressOf FooterMenuCatalog.Adjustments)

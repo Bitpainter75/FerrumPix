@@ -135,7 +135,7 @@ Namespace ViewModels
 
         Public Sub New(path As String)
             Me.Path = AdjustmentPresetStore.NormalizeFolder(path)
-            Label = If(Me.Path.Length = 0, LocalizationService.T("Ordner"), Me.Path.Replace("/", " / "))
+            Label = If(Me.Path.Length = 0, LocalizationService.T("Hauptordner"), Me.Path.Replace("/", " / "))
         End Sub
 
         Public Overrides Function ToString() As String

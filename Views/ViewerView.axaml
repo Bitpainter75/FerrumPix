@@ -638,6 +638,23 @@
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/scan.svg"
                                            Width="18" Height="18"/>
                         </ToggleButton>
+                        <!-- BEWEGTBILD: spielt den kurzen Film eines Live Photos oder Motion Photos
+                             einmal ab, ein zweiter Druck haelt ihn an. Nur da, wenn zum gezeigten Bild
+                             ein Film gehoert (HasMotionClip), nicht in der Diashow und nicht im
+                             Vergleich. Der Hinweis kommt uebersetzt aus dem ViewModel. -->
+                        <Button Classes="icon-btn" Width="28" Height="28"
+                                Margin="-5,0,0,0"
+                                IsVisible="{Binding HasMotionClip}"
+                                Classes.active="{Binding IsMotionPlaying}"
+                                Command="{Binding PlayMotionCommand}"
+                                ToolTip.Tip="{Binding MotionButtonTip}">
+                            <Panel>
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/play-circle.svg"
+                                               Width="18" Height="18" IsVisible="{Binding !IsMotionPlaying}"/>
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/stop.svg"
+                                               Width="18" Height="18" IsVisible="{Binding IsMotionPlaying}"/>
+                            </Panel>
+                        </Button>
                         <!-- Dateiname steht jetzt als Fenstertitel oben in der Mitte. -->
                         <TextBlock Text="{Binding StatusInfo}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
@@ -841,6 +858,14 @@
                             Command="{Binding NextCommand}"
                             ToolTip.Tip="Nächstes Bild">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/caret-right.svg" Width="18" Height="18" IconBrush="White"/>
+                    </Button>
+                    <!-- Bewegtbild im Vollbild: derselbe Knopf wie in der Fussleiste. Solange der
+                         Film laeuft, steht hier die Leiste des Videos. -->
+                    <Button Classes="icon-btn" Width="36" Height="36"
+                            IsVisible="{Binding HasMotionClip}"
+                            Command="{Binding PlayMotionCommand}"
+                            ToolTip.Tip="{Binding MotionButtonTip}">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/play-circle.svg" Width="18" Height="18" IconBrush="White"/>
                     </Button>
                     <Button Classes="icon-btn bar-toggle" Width="36" Height="36"
                             Command="{Binding ToggleSlideshowShuffleCommand}"
@@ -1070,7 +1095,7 @@
               Margin="88,0,80,0"
               Background="Black"
               ClipToBounds="True"
-              IsVisible="{Binding IsVideoFile}"
+              IsVisible="{Binding ShowsVideoStage}"
               RowDefinitions="*,Auto">
             <!-- Zwei Ausgabewege, immer nur einer sichtbar: die native Fläche für Windows und
                  Linux, die abholende Fläche für macOS. Welcher gilt, entscheidet der Spieler

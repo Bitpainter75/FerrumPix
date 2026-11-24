@@ -452,6 +452,25 @@ Namespace Views
                 Return
             End If
 
+            ' ALT+1 bis ALT+4 machen im Vergleich ein Feld direkt aktiv. Mit ALT, weil die blanken
+            ' Ziffern bewerten und SHIFT+Ziffer das Farbetikett setzt. Ein Feld, das es bei zwei
+            ' Feldern nicht gibt oder das leer ist, nimmt den Fokus nicht an (das entscheidet das
+            ' ViewModel); die Taste gilt dann trotzdem als verbraucht.
+            If vm.IsCompareMode AndAlso e.KeyModifiers = KeyModifiers.Alt Then
+                Dim paneIndex = -1
+                Select Case e.Key
+                    Case Key.D1, Key.NumPad1 : paneIndex = 0
+                    Case Key.D2, Key.NumPad2 : paneIndex = 1
+                    Case Key.D3, Key.NumPad3 : paneIndex = 2
+                    Case Key.D4, Key.NumPad4 : paneIndex = 3
+                End Select
+                If paneIndex >= 0 Then
+                    vm.FocusedComparePane = paneIndex
+                    e.Handled = True
+                    Return
+                End If
+            End If
+
             ' HOCH und RUNTER blaettern wie LINKS und RECHTS: im Betrachter steht nur ein Bild, die
             ' Pfeile haben keine zweite Richtung, nach der man sich bewegen koennte.
             Select Case e.Key
@@ -567,7 +586,7 @@ Namespace Views
             ' Streifen, nicht beim Bild.
             ' Ein waagrechtes Wischen im Trackpad-Modus geht wie bisher unten zum Blaettern.
             Dim trackpadSwipe = IsTrackpadMode() AndAlso Math.Abs(e.Delta.X) > Math.Abs(e.Delta.Y)
-            If vm.IsFullscreenMode AndAlso Not vm.IsVideoFile AndAlso Not vm.IsCompareMode AndAlso
+            If vm.IsFullscreenMode AndAlso Not vm.ShowsVideoStage AndAlso Not vm.IsCompareMode AndAlso
                Not IsOverFullscreenFilmstrip(e) AndAlso Not trackpadSwipe Then
                 Dim viewport = Me.FindControl(Of Grid)("FullscreenViewport")
                 If viewport IsNot Nothing Then
@@ -1035,6 +1054,19 @@ Namespace Views
         ''' Flaeche loest deren ScrollChanged aus, das sonst sofort wieder zurueckschriebe.</summary>
         Private _mirrorsRegion As Boolean
 
+        ''' <summary>Das Feld unter dem Zeiger wird aktiv, ohne Klick: Fusszeile, Info-Leiste und
+        ''' das Blaettern folgen dem Bild, auf das man gerade schaut. Waehrend eines Zugs nicht:
+        ''' wer den Ausschnitt eines Felds verschiebt und dabei ueber das naechste geraet, meint
+        ''' weiter das erste. Eine leere Flaeche nimmt den Fokus nicht an (das entscheidet das
+        ''' ViewModel).</summary>
+        Private Sub OnComparePaneEntered(sender As Object, e As PointerEventArgs)
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse Not vm.IsCompareMode OrElse _compareZiehtScroll IsNot Nothing Then Return
+            Dim sv = TryCast(sender, ScrollViewer)
+            If sv Is Nothing Then Return
+            vm.FocusedComparePane = ComparePaneIndexOf(sv)
+        End Sub
+
         Private Sub OnComparePanePressed(sender As Object, e As PointerPressedEventArgs)
             Dim vm = GetVm()
             If vm Is Nothing OrElse Not vm.IsCompareMode Then Return
@@ -1118,6 +1150,7 @@ Namespace Views
                 RemoveHandler scroll.ScrollChanged, AddressOf OnCompareScrollChanged
                 RemoveHandler scroll.SizeChanged, AddressOf OnCompareViewportSizeChanged
                 RemoveHandler scroll.PointerPressed, AddressOf OnComparePanePressed
+                RemoveHandler scroll.PointerEntered, AddressOf OnComparePaneEntered
                 RemoveHandler scroll.DoubleTapped, AddressOf OnComparePaneDoubleTapped
                 RemoveHandler scroll.PointerMoved, AddressOf OnComparePaneMoved
                 RemoveHandler scroll.PointerReleased, AddressOf OnComparePaneReleased
@@ -1125,6 +1158,7 @@ Namespace Views
                 AddHandler scroll.ScrollChanged, AddressOf OnCompareScrollChanged
                 AddHandler scroll.SizeChanged, AddressOf OnCompareViewportSizeChanged
                 AddHandler scroll.PointerPressed, AddressOf OnComparePanePressed
+                AddHandler scroll.PointerEntered, AddressOf OnComparePaneEntered
                 AddHandler scroll.DoubleTapped, AddressOf OnComparePaneDoubleTapped
                 AddHandler scroll.PointerMoved, AddressOf OnComparePaneMoved
                 AddHandler scroll.PointerReleased, AddressOf OnComparePaneReleased
@@ -1782,7 +1816,11 @@ Namespace Views
 
             ' ShowVideoSurface kippt beim Videoende (Fläche verschwindet) und beim erneuten Abspielen
             ' (Fläche kommt zurück) - im zweiten Fall muss der Player an das neu erzeugte native Fenster.
-            If e.PropertyName = NameOf(ViewerViewModel.IsVideoFile) OrElse
+            ' ShowsVideoStage kippt, wenn der Film eines Bewegtbilds beginnt oder endet: die Datei
+            ' bleibt ein Bild, aber die Videoflaeche liegt solange darueber. Alles Folgende in dieser
+            ' Ansicht fragt deshalb ShowsVideoStage, nicht IsVideoFile. Gemeldet wird es bei jedem
+            ' Bildwechsel mit (das ViewModel reicht die Meldung von IsVideoFile weiter).
+            If e.PropertyName = NameOf(ViewerViewModel.ShowsVideoStage) OrElse
                e.PropertyName = NameOf(ViewerViewModel.ShowVideoSurface) Then
                 UpdateActiveVideoView()
                 ResetFullscreenVideoControlsVisibility()
@@ -1847,10 +1885,10 @@ Namespace Views
             _fullscreenVideoControlsVisible = True
             UpdateVideoPlaybackBarVisibility()
             _fullscreenVideoControlsHideTimer.Stop()
-            If vm.IsVideoFile AndAlso vm.IsVideoPlaybackAvailable Then
+            If vm.ShowsVideoStage AndAlso vm.IsVideoPlaybackAvailable Then
                 _fullscreenVideoControlsHideTimer.Start()
                 EnsureFullscreenVideoCursorPolling()
-            ElseIf Not vm.IsVideoFile Then
+            ElseIf Not vm.ShowsVideoStage Then
                 ' Die Bedienleiste fuer Bilder geht nach derselben Ruhezeit wie die des Videos.
                 ' Bilder brauchen das Abfragen der Zeigerlage nicht: anders als das native
                 ' Videofenster lassen sie die Mausereignisse bei Avalonia ankommen.
@@ -1862,9 +1900,9 @@ Namespace Views
             StopFullscreenVideoControlTimers()
             Dim vm = GetVm()
             ' Bilder im Vollbild: die Leiste behaelt ihren Zustand, nur die Ruhezeit laeuft neu an.
-            ' Hier kommt JEDER Bildwechsel vorbei (IsVideoFile wird je Bild gemeldet); stand hier die
+            ' Hier kommt JEDER Bildwechsel vorbei (ShowsVideoStage wird je Bild gemeldet); stand hier die
             ' Leiste stets wieder auf sichtbar und ohne Ruhezeit, ging sie in der Diashow nie weg.
-            If vm IsNot Nothing AndAlso vm.IsFullscreenMode AndAlso Not vm.IsVideoFile Then
+            If vm IsNot Nothing AndAlso vm.IsFullscreenMode AndAlso Not vm.ShowsVideoStage Then
                 If _fullscreenVideoControlsVisible Then _fullscreenVideoControlsHideTimer.Start()
                 UpdateVideoPlaybackBarVisibility()
                 Return
@@ -1873,7 +1911,7 @@ Namespace Views
             _fullscreenVideoControlsVisible = True
             UpdateVideoPlaybackBarVisibility()
 
-            If vm IsNot Nothing AndAlso vm.IsFullscreenMode AndAlso vm.IsVideoFile AndAlso vm.IsVideoPlaybackAvailable Then
+            If vm IsNot Nothing AndAlso vm.IsFullscreenMode AndAlso vm.ShowsVideoStage AndAlso vm.IsVideoPlaybackAvailable Then
                 _fullscreenVideoControlsHideTimer.Start()
                 EnsureFullscreenVideoCursorPolling()
             End If
@@ -1889,7 +1927,7 @@ Namespace Views
             Dim ratingBar = Me.FindControl(Of Border)("FullscreenRatingBar")
             Dim pointerOnBar = (imageBar IsNot Nothing AndAlso imageBar.IsVisible AndAlso imageBar.IsPointerOver) OrElse
                                (ratingBar IsNot Nothing AndAlso ratingBar.IsVisible AndAlso ratingBar.IsPointerOver)
-            If Not vm.IsVideoFile AndAlso pointerOnBar Then
+            If Not vm.ShowsVideoStage AndAlso pointerOnBar Then
                 _fullscreenVideoControlsHideTimer.Start()
                 Return
             End If
@@ -1900,7 +1938,7 @@ Namespace Views
 
         Private Sub OnFullscreenVideoCursorPoll(sender As Object, e As EventArgs)
             Dim vm = GetVm()
-            If vm Is Nothing OrElse Not vm.IsFullscreenMode OrElse Not vm.IsVideoFile OrElse Not vm.IsVideoPlaybackAvailable Then
+            If vm Is Nothing OrElse Not vm.IsFullscreenMode OrElse Not vm.ShowsVideoStage OrElse Not vm.IsVideoPlaybackAvailable Then
                 StopFullscreenVideoControlTimers()
                 Return
             End If
@@ -1942,7 +1980,7 @@ Namespace Views
             Dim bar = Me.FindControl(Of Border)("VideoPlaybackBar")
             If bar Is Nothing Then Return
 
-            Dim available = vm IsNot Nothing AndAlso vm.IsVideoFile AndAlso vm.IsVideoPlaybackAvailable
+            Dim available = vm IsNot Nothing AndAlso vm.ShowsVideoStage AndAlso vm.IsVideoPlaybackAvailable
             Dim visibleInMode = vm Is Nothing OrElse Not vm.IsFullscreenMode OrElse _fullscreenVideoControlsVisible
             bar.IsVisible = available AndAlso visibleInMode
             UpdateFullscreenImageBar()
@@ -1978,7 +2016,7 @@ Namespace Views
         End Sub
 
         ''' Weist den von ViewerViewModel gehaltenen MediaPlayer dem einzigen VideoOverlay zu
-        ''' (bzw. leert es), wenn sich IsVideoFile ändert - der Vollbild-Wechsel selbst löst dies
+        ''' (bzw. leert es), wenn sich ShowsVideoStage ändert - der Vollbild-Wechsel selbst löst dies
         ''' NICHT mehr aus (siehe ApplyVideoLayout), wodurch das native Fenster-Handle über
         ''' Vollbild-Wechsel und Video-zu-Video-Navigation hinweg bestehen bleibt.
         Private _pendingVideoAttachHandler As EventHandler
@@ -2003,7 +2041,7 @@ Namespace Views
                 _pendingVideoAttachHandler = Nothing
             End If
 
-            Dim isVideoActive = vm IsNot Nothing AndAlso vm.IsVideoFile AndAlso vm.IsVideoPlaybackAvailable
+            Dim isVideoActive = vm IsNot Nothing AndAlso vm.ShowsVideoStage AndAlso vm.IsVideoPlaybackAvailable
             active.IsVisible = isVideoActive AndAlso vm.ShowVideoSurface
             If Not isVideoActive Then
                 target.Player = Nothing
@@ -2047,7 +2085,7 @@ Namespace Views
                 If target Is Nothing OrElse vm Is Nothing Then Return
                 If Not Object.ReferenceEquals(target.Player, mediaPlayer) Then Return
                 If Not Object.ReferenceEquals(vm.VideoMediaPlayer, mediaPlayer) Then Return
-                If Not vm.IsVideoFile Then Return
+                If Not vm.ShowsVideoStage Then Return
                 vm.StartPendingVideoAutoplay()
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
@@ -2345,7 +2383,7 @@ Namespace Views
         Private Sub ZoomFullscreen(factor As Double, anchor As Point?)
             Dim vm = GetVm()
             Dim viewport = Me.FindControl(Of Grid)("FullscreenViewport")
-            If vm Is Nothing OrElse viewport Is Nothing OrElse vm.CurrentImage Is Nothing OrElse vm.IsVideoFile Then Return
+            If vm Is Nothing OrElse viewport Is Nothing OrElse vm.CurrentImage Is Nothing OrElse vm.ShowsVideoStage Then Return
             Dim vw = viewport.Bounds.Width
             Dim vh = viewport.Bounds.Height
             Dim iw = vm.CurrentImage.Size.Width
@@ -2399,7 +2437,7 @@ Namespace Views
         ''' True, wenn die Taste hier eine Bedeutung hatte.</summary>
         Public Function HandleFullscreenZoomKey(key As Key, modifiers As KeyModifiers) As Boolean
             Dim vm = GetVm()
-            If vm Is Nothing OrElse Not vm.IsFullscreenMode OrElse vm.IsVideoFile OrElse vm.IsCompareMode Then Return False
+            If vm Is Nothing OrElse Not vm.IsFullscreenMode OrElse vm.ShowsVideoStage OrElse vm.IsCompareMode Then Return False
             If modifiers <> KeyModifiers.None Then Return False
             Select Case key
                 Case Key.Add, Key.OemPlus
@@ -2468,7 +2506,7 @@ Namespace Views
             Dim vm = GetVm()
             Dim bar = Me.FindControl(Of Border)("FullscreenImageBar")
             If bar Is Nothing Then Return
-            Dim forImage = vm IsNot Nothing AndAlso vm.IsFullscreenMode AndAlso Not vm.IsVideoFile AndAlso vm.CurrentImage IsNot Nothing
+            Dim forImage = vm IsNot Nothing AndAlso vm.IsFullscreenMode AndAlso Not vm.ShowsVideoStage AndAlso vm.CurrentImage IsNot Nothing
             bar.IsVisible = forImage AndAlso _fullscreenVideoControlsVisible
             bar.Margin = New Thickness(0, 0, 0, If(_fullscreenFilmstripEdge = FilmstripPlacement.PositionBottom, 24 + FilmstripPlacement.TopExtent, 24))
             ' Die Bewertungsleiste oben geht mit der Bedienleiste unten und rueckt unter einen oben
@@ -2524,7 +2562,7 @@ Namespace Views
             Dim vm = GetVm()
             Dim viewport = Me.FindControl(Of Grid)("FullscreenViewport")
             If vm Is Nothing OrElse viewport Is Nothing Then Return
-            If Not vm.IsFullscreenMode OrElse Not vm.ShowFilmstrip OrElse vm.IsVideoFile Then
+            If Not vm.IsFullscreenMode OrElse Not vm.ShowFilmstrip OrElse vm.ShowsVideoStage Then
                 If _fullscreenFilmstripEdge IsNot Nothing Then HideFullscreenFilmstrip()
                 Return
             End If

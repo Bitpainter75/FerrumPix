@@ -25,6 +25,11 @@ Namespace Services
                 Return Folder.Replace("/", " / ") & " / " & Name
             End Get
         End Property
+
+        ''' So zeigt eine Auswahlliste die Anpassung.
+        Public Overrides Function ToString() As String
+            Return DisplayPath
+        End Function
     End Class
 
     ''' <summary>Der gelesene Stand des Ordners der Anpassungen: alle Ordner und alle Anpassungen
@@ -675,7 +680,9 @@ Namespace Services
                 Next
             End If
             For Each filePath In IO.Directory.GetFiles(directory)
-                If Not IsPresetFileName(filePath) Then Continue For
+                ' Nur was sich als Anpassung lesen laesst: eine Datei mit der Endung, die keine ist,
+                ' gehoert nicht zum Bestand und bleibt liegen wie jede fremde.
+                If Not IsPresetFileName(filePath) OrElse ReadFile(filePath) Is Nothing Then Continue For
                 File.Delete(filePath)
                 deleted += 1
             Next
@@ -739,7 +746,9 @@ Namespace Services
             Dim id = incoming.Id
             Dim sameId = known.FirstOrDefault(Function(p) String.Equals(p.Id, id, StringComparison.Ordinal))
             If sameId IsNot Nothing Then
-                If SameContent(sameId, incoming) Then
+                ' Ohne den Namen: die vorhandene kann umbenannt sein, von Hand oder weil ihr Name
+                ' beim ersten Import im Zielordner vergeben war. Sie ist trotzdem dieselbe.
+                If SameSettings(sameId, incoming) Then
                     result.AlreadyPresent += 1
                     Return
                 End If
@@ -759,6 +768,12 @@ Namespace Services
         Public Shared Function SameContent(a As AdjustmentPresetSettings, b As AdjustmentPresetSettings) As Boolean
             If a Is Nothing OrElse b Is Nothing Then Return False
             If Not String.Equals(a.Name, b.Name, StringComparison.Ordinal) Then Return False
+            Return SameSettings(a, b)
+        End Function
+
+        ''' <summary>Stellen zwei Anpassungen dasselbe ein: Feldliste und Rezept, ohne den Namen?</summary>
+        Public Shared Function SameSettings(a As AdjustmentPresetSettings, b As AdjustmentPresetSettings) As Boolean
+            If a Is Nothing OrElse b Is Nothing Then Return False
             If (a.Fields Is Nothing) <> (b.Fields Is Nothing) Then Return False
             If a.Fields IsNot Nothing AndAlso Not a.Fields.SequenceEqual(b.Fields, StringComparer.Ordinal) Then Return False
             Return SameRecipe(a.RecipeJson, b.RecipeJson)

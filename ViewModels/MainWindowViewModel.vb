@@ -1034,7 +1034,7 @@ Namespace ViewModels
         ''' wird wieder ausgeblendet.</summary>
         Public Event EditorViewNotNeeded As EventHandler
 
-        Public Async Sub OpenSettings()
+        Public Async Sub OpenSettings() Implements IEditorHost.OpenSettings
             Try
                 If CurrentMode = AppMode.Editor Then
                     If Not Await ConfirmEditorLeaveAsync("die Einstellungen öffnest") Then Return
@@ -2369,6 +2369,7 @@ Namespace ViewModels
             DialogFilterChoices.Clear()
             _dialogFilterChoicePaths.Clear()
             _dialogFilterChoiceNames.Clear()
+            _dialogFilterChoiceIds.Clear()
 
             If IsDialogFilterSourceFilter Then
                 ' "Keine" ist der neutrale Eintrag des Editors und im Stapel sinnlos.
@@ -2387,13 +2388,25 @@ Namespace ViewModels
                 ' nicht - gemessen wird an der Auswahl, nicht an der Anzeige.
                 DialogFilterChoices.Add(LocalizationService.T("Automatische Bildverbesserung"))
             ElseIf IsDialogFilterSourceAdjustmentPreset Then
-                ' Anpassungsvorlagen stehen unter ihrem Namen in den Einstellungen - kein Pfad, also
-                ' bleibt _dialogFilterChoicePaths leer und der Name ist der Schlüssel.
-                For Each preset In AppSettingsService.Load().AdjustmentPresets
-                    Dim label = If(preset.Name, "").Trim()
-                    If label.Length = 0 OrElse DialogFilterChoices.Contains(label) Then Continue For
-                    DialogFilterChoices.Add(label)
-                Next
+                ' Anpassungsvorlagen liegen als Dateien im Ordner der Anpassungen. Die Liste zeigt
+                ' sie mit Ordnerpfad, gefunden werden sie ueber ihre KENNUNG: zwei gleichen Namens
+                ' in verschiedenen Ordnern bleiben auseinander. Kein Pfad zum Waehlen, also bleibt
+                ' _dialogFilterChoicePaths leer.
+                '
+                ' NUR DER GEMERKTE STAND, kein Plattenzugriff: der Ordner kann entfernt liegen.
+                ' Gelesen wird im Hintergrund, wenn der Dialog aufgeht
+                ' (RefreshDialogAdjustmentPresets); kommt dabei etwas anderes heraus, wird die
+                ' Liste neu aufgebaut.
+                Dim listing = AdjustmentPresetStore.Cached
+                If listing IsNot Nothing Then
+                    For Each preset In listing.Presets.OrderBy(Function(p) p.DisplayPath, StringComparer.OrdinalIgnoreCase)
+                        Dim label = preset.DisplayPath
+                        If String.IsNullOrWhiteSpace(label) OrElse _dialogFilterChoiceIds.ContainsKey(label) Then Continue For
+                        _dialogFilterChoiceNames(label) = preset.Name
+                        _dialogFilterChoiceIds(label) = preset.Id
+                        DialogFilterChoices.Add(label)
+                    Next
+                End If
             Else
                 Dim settings = AppSettingsService.Load()
                 Dim entries = If(IsDialogFilterSourceXmpPreset,
@@ -2423,6 +2436,42 @@ Namespace ViewModels
             If _dialogFilterChoiceNames.TryGetValue(If(label, ""), name) Then Return name
             Return If(label, "")
         End Function
+
+        ''' Sichtbarer Eintrag -> Kennung der Anpassungsvorlage. Der Eintrag traegt den Ordnerpfad,
+        ''' der Lauf findet die Vorlage ueber die Kennung, auch wenn sie inzwischen verschoben oder
+        ''' umbenannt wurde.
+        Private ReadOnly _dialogFilterChoiceIds As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+
+        ''' <summary>Die Kennung der gewaehlten Anpassungsvorlage, leer bei jeder anderen Quelle.</summary>
+        Private Function DialogFilterChoiceId(label As String) As String
+            Dim id As String = Nothing
+            If _dialogFilterChoiceIds.TryGetValue(If(label, ""), id) Then Return id
+            Return ""
+        End Function
+
+        ''' <summary>Liest den Ordner der Anpassungen im Hintergrund, wenn "Anpassungen anwenden"
+        ''' oder "Exportieren nach" aufgeht, ohne das Oeffnen aufzuhalten. Steht die Quelle
+        ''' Anpassungsvorlage dann gerade offen und hat sich die Liste geaendert, wird sie neu
+        ''' aufgebaut; die gewaehlte bleibt gewaehlt, solange es sie noch gibt.</summary>
+        Private Async Sub RefreshDialogAdjustmentPresets()
+            Try
+                Await Task.Run(Function() AdjustmentPresetStore.LoadCurrent())
+                If Not IsDialogFilterSourceAdjustmentPreset Then Return
+                If _dialogKind <> AppDialogKind.BatchFilter AndAlso _dialogKind <> AppDialogKind.ExportTo Then Return
+                Dim listing = AdjustmentPresetStore.Cached
+                If listing Is Nothing Then Return
+                Dim shown = New HashSet(Of String)(_dialogFilterChoiceIds.Values, StringComparer.Ordinal)
+                If shown.SetEquals(listing.Presets.Select(Function(p) p.Id)) AndAlso
+                   listing.Presets.All(Function(p) _dialogFilterChoiceIds.ContainsKey(p.DisplayPath)) Then Return
+                Dim selectedId = DialogFilterChoiceId(_dialogSelectedFilterChoice)
+                RebuildDialogFilterChoices()
+                Dim again = _dialogFilterChoiceIds.FirstOrDefault(Function(pair) String.Equals(pair.Value, selectedId, StringComparison.Ordinal)).Key
+                If Not String.IsNullOrEmpty(again) Then DialogSelectedFilterChoice = again
+            Catch ex As Exception
+                ' Async Sub: eine Ausnahme landete sonst beim Dispatcher.
+                DiagnosticLogService.LogException("MainWindowViewModel.RefreshDialogAdjustmentPresets", ex)
+            End Try
+        End Sub
 
         ' ── „Exportieren nach" (Galerie): Sammel-Export ─────────────────────────
         ' Ein Look aus EINER Liste (eingebaute Filter + gespeicherte XMP-/LUT-Vorgaben),
@@ -2557,6 +2606,7 @@ Namespace ViewModels
             ' <deepSourceAvailable>: unter den Quellen ist eine, aus der eine Datei mit 16 Bit
             ' entstehen kann; dann bietet der Dialog die Farbtiefe an (IsDialogBitDepthVisible).
             SetDialogDeepSource(deepSourceAvailable)
+            RefreshDialogAdjustmentPresets()
             Dim settings = AppSettingsService.Load()
             ' Zuletzt benutzte Zusammenstellung wiederherstellen - ein Sammel-Export wird meist mit
             ' denselben Bausteinen wiederholt.
@@ -2606,6 +2656,7 @@ Namespace ViewModels
             ' eigener Schalter - so steht sie im Dialog nur einmal.
             Dim lookKind = ""
             Dim lookName = ""
+            Dim lookId = ""
             Dim lookPath = ""
             Dim autoEnhance = False
             If _dialogExportUseFilter Then
@@ -2615,6 +2666,7 @@ Namespace ViewModels
                     lookKind = _dialogFilterSourceKind
                     Dim selectedLabel = If(_dialogSelectedFilterChoice, "")
                     lookName = DialogFilterChoiceName(selectedLabel)
+                    lookId = DialogFilterChoiceId(selectedLabel)
                     _dialogFilterChoicePaths.TryGetValue(selectedLabel, lookPath)
                     If String.IsNullOrWhiteSpace(lookName) Then lookKind = ""
                 End If
@@ -2657,6 +2709,7 @@ Namespace ViewModels
                 .AutoEnhance = autoEnhance,
                 .LookKind = lookKind,
                 .LookName = lookName,
+                .LookId = lookId,
                 .LookPath = If(lookPath, ""),
                 .LookStrength = _dialogFilterStrength,
                 .WatermarkPresetName = If(_dialogExportUseWatermark, If(DialogSelectedWatermarkPresetName, ""), ""),
@@ -2923,6 +2976,7 @@ Namespace ViewModels
                                                    Optional denoiseBlockedCount As Integer = 0,
                                                    Optional deepSourceAvailable As Boolean = False) As Task(Of BatchFilterDialogResult)
             SetDialogDeepSource(deepSourceAvailable)
+            RefreshDialogAdjustmentPresets()
             _dialogFilterSourceKind = BatchFilterDialogResult.SourceFilter
             _dialogFilterNoneAllowed = True
             _dialogBatchOverwriteAvailable = allowOverwrite
@@ -2987,6 +3041,7 @@ Namespace ViewModels
                 .DisplayName = If(IsDialogFilterSourceAuto, "Auto",
                                   If(IsDialogFilterSourceNone, LocalizationService.T("Entrauscht"), selectedName)),
                 .PresetPath = If(path, ""),
+                .PresetId = DialogFilterChoiceId(_dialogSelectedFilterChoice),
                 .Strength = _dialogFilterStrength,
                 .Overwrite = _dialogBatchFilterOverwrite,
                 .AppendNameToFileName = _dialogBatchFilterAppendName,
@@ -3397,6 +3452,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsCatalogTransfer))
                 Me.RaisePropertyChanged(NameOf(DialogShowsCompareMetadata))
                 Me.RaisePropertyChanged(NameOf(DialogShowsAdjustmentPresetSave))
+                Me.RaisePropertyChanged(NameOf(DialogShowsAdjustmentPresetManager))
                 Me.RaisePropertyChanged(NameOf(DialogShowsModelDownload))
                 Me.RaisePropertyChanged(NameOf(DialogShowsImport))
                 Me.RaisePropertyChanged(NameOf(DialogShowsBackup))
@@ -3458,6 +3514,7 @@ Namespace ViewModels
                        _dialogKind <> AppDialogKind.ExtensionDownload AndAlso
                        _dialogKind <> AppDialogKind.DiagnosticLog AndAlso
                        _dialogKind <> AppDialogKind.AdjustmentPresetSave AndAlso
+                       _dialogKind <> AppDialogKind.AdjustmentPresetManager AndAlso
                        _dialogKind <> AppDialogKind.SaveAs
             End Get
         End Property
@@ -4534,6 +4591,9 @@ Namespace ViewModels
                 ' Anpassung speichern: Gruppenname, Zaehler und Haken in einer Zeile, darunter die
                 ' Regler eingerueckt.
                 If DialogShowsAdjustmentPresetSave Then Return 520
+                ' Anpassungen verwalten: Ordnerbaum und Liste nebeneinander, in der Liste steht
+                ' unter jedem Namen, was die Anpassung enthaelt.
+                If DialogShowsAdjustmentPresetManager Then Return 900
                 If DialogShowsBackupOrRestore Then Return 620
                 Return 440
             End Get
@@ -5799,13 +5859,55 @@ Namespace ViewModels
             DialogAdjustmentPresetSave = dialog
             AddHandler dialog.PropertyChanged, onChanged
             Try
-                Dim confirmed = Await ShowDialogAsync(AppDialogKind.AdjustmentPresetSave, "Anpassung speichern",
+                Dim confirmed As String
+                If dialog.IsPaste Then
+                    confirmed = Await ShowDialogAsync(AppDialogKind.AdjustmentPresetSave, "Einfügen mit Auswahl",
+                                                      "Eingefügt wird nur, was hier angehakt ist. Diese Regler ersetzen die des Bildes, alle anderen bleiben, wie sie sind.",
+                                                      "", "Einfügen", "Abbrechen")
+                Else
+                    confirmed = Await ShowDialogAsync(AppDialogKind.AdjustmentPresetSave, "Anpassung speichern",
                                                       "Die Anpassung enthält nur, was hier angehakt ist. Beim Anwenden ersetzt sie genau diese Regler, alle anderen am Bild bleiben, wie sie sind.",
                                                       "", "Speichern", "Abbrechen")
+                End If
                 Return confirmed IsNot Nothing AndAlso dialog.CanConfirm
             Finally
                 RemoveHandler dialog.PropertyChanged, onChanged
                 DialogAdjustmentPresetSave = Nothing
+            End Try
+        End Function
+
+        ' ---------------------------------------------------------------- Anpassungen verwalten
+
+        Private _dialogAdjustmentPresetManager As AdjustmentPresetManagerViewModel
+
+        Public ReadOnly Property DialogShowsAdjustmentPresetManager As Boolean
+            Get
+                Return _dialogKind = AppDialogKind.AdjustmentPresetManager
+            End Get
+        End Property
+
+        ''' <summary>Der Inhalt von "Anpassungen verwalten"; eigener Datenkontext der Ansicht.</summary>
+        Public Property DialogAdjustmentPresetManager As AdjustmentPresetManagerViewModel
+            Get
+                Return _dialogAdjustmentPresetManager
+            End Get
+            Private Set(value As AdjustmentPresetManagerViewModel)
+                Me.RaiseAndSetIfChanged(_dialogAdjustmentPresetManager, value)
+            End Set
+        End Property
+
+        ''' <summary>Zeigt "Anpassungen verwalten", bis es geschlossen wird. Das Fenster hat nur
+        ''' "Schließen": jede Aktion darin wirkt sofort auf die Dateien, es gibt nichts zu
+        ''' bestaetigen oder zu verwerfen.</summary>
+        Public Async Function ShowAdjustmentPresetManagerAsync(manager As AdjustmentPresetManagerViewModel) As Task Implements IEditorHost.ShowAdjustmentPresetManagerAsync
+            If manager Is Nothing Then Return
+            DialogAdjustmentPresetManager = manager
+            Try
+                Await ShowDialogAsync(AppDialogKind.AdjustmentPresetManager, "Anpassungen verwalten",
+                                      "Jede Anpassung ist eine Datei, jeder Ordner ein echter Ordner. Zum Weitergeben genügt es, Dateien oder einen Ordner zu kopieren.",
+                                      "", "Schließen", "")
+            Finally
+                DialogAdjustmentPresetManager = Nothing
             End Try
         End Function
 
@@ -7015,6 +7117,13 @@ Namespace ViewModels
         Private Async Function RequestDeletePathsCoreAsync(paths As IEnumerable(Of String), afterDelete As Action,
                                                            beforeDelete As Action) As Task
             Dim angefragt = If(paths, Enumerable.Empty(Of String)()).ToList()
+            ' LIVE PHOTO: Bild und Film gehen zusammen, wer auch immer loescht (Galerie, Betrachter,
+            ' Editor) und ob Stapel eingeschaltet sind oder nicht. Hier und nicht bei den Aufrufern,
+            ' aus demselben Grund wie das Abraeumen der Galerie weiter unten. Vor der Rueckfrage,
+            ' damit sie die Zahl nennt, die wirklich geht. Liest Ordner und im Zweifel Dateien,
+            ' deshalb im Hintergrund.
+            Dim requested = angefragt
+            angefragt = Await Task.Run(Function() LivePhotoService.WithPartners(requested))
             Dim pathList = angefragt.
                 Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso (IO.File.Exists(p) OrElse IO.Directory.Exists(p))).
                 Where(Function(p) FileOperationPolicy.CanDelete(p)).
@@ -7267,11 +7376,36 @@ Namespace ViewModels
                 If IO.File.Exists(target) OrElse IO.Directory.Exists(target) Then Throw New IOException("Ein Element mit diesem Namen existiert bereits.")
                 If IO.File.Exists(itemPath) Then
                     GalleryViewModel.ThrowIfTargetSidecarConflict(itemPath, target, replaceConfirmed:=False)
+                    ' LIVE PHOTO: Bild und Film tragen denselben Stamm, daran haengt das Paar. Die
+                    ' andere Haelfte bekommt deshalb den neuen Stamm mit. Gefragt wird VOR dem
+                    ' Umbenennen (danach passt der Stamm nicht mehr), und ist ihr neuer Name schon
+                    ' vergeben, wird gar nichts umbenannt.
+                    Dim livePartner = Await Task.Run(Function() LivePhotoService.FindPartnerPath(itemPath))
+                    Dim livePartnerTarget = If(livePartner Is Nothing, Nothing, LivePhotoService.PartnerTargetFor(livePartner, target))
+                    If livePartnerTarget IsNot Nothing AndAlso
+                       (IO.File.Exists(livePartnerTarget) OrElse IO.Directory.Exists(livePartnerTarget)) Then
+                        Throw New IOException(String.Format(
+                            LocalizationService.T("Zu diesem Live Photo gehört {0}. Der Name {1} ist dafür schon vergeben."),
+                            IO.Path.GetFileName(livePartner), IO.Path.GetFileName(livePartnerTarget)))
+                    End If
                     Viewer.ReleaseCurrentImageIfAny({itemPath})
                     Editor.ReleaseCurrentImageIfAny({itemPath})
                     IO.File.Move(itemPath, target)
                     Dim failed = RawSidecarService.AccompanyMove(itemPath, target)
                     LibraryService.Instance.MoveEverythingForPath(itemPath, target)
+                    If livePartner IsNot Nothing Then
+                        Try
+                            GalleryViewModel.ThrowIfTargetSidecarConflict(livePartner, livePartnerTarget, replaceConfirmed:=False)
+                            IO.File.Move(livePartner, livePartnerTarget)
+                            failed.AddRange(RawSidecarService.AccompanyMove(livePartner, livePartnerTarget))
+                            LibraryService.Instance.MoveEverythingForPath(livePartner, livePartnerTarget)
+                        Catch ex As Exception
+                            ' Die Datei selbst IST umbenannt; die Haelfte, die nicht mitkam, steht in
+                            ' der Warnung, wie eine liegen gebliebene Begleitdatei.
+                            DiagnosticLogService.LogException("Rename.LivePartner", ex)
+                            failed.Add(livePartner)
+                        End Try
+                    End If
                     afterRename?.Invoke(target)
                     ' Die Datei IST umbenannt. Eine liegen gebliebene Begleitdatei gehoert deshalb in
                     ' die Warnung des Fensters und nicht in "Umbenennen fehlgeschlagen": das lud dazu

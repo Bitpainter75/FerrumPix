@@ -64,6 +64,9 @@ Namespace ViewModels
         ''' Auswahl. Galerie, Betrachter und Editor bieten beide an, über dieselbe Ablage.</summary>
         Public Property CopyAdjustments As ICommand
         Public Property PasteAdjustments As ICommand
+        ''' <summary>Die Ablage einfuegen, vorher waehlen, welche Regler. Steht neben
+        ''' <see cref="PasteAdjustments"/>, das unveraendert alles einfuegt.</summary>
+        Public Property PasteAdjustmentsWithChoice As ICommand
         ''' <summary>Der Editor kopiert aus dem GEÖFFNETEN Stand und fügt in ihn ein, nicht aus und
         ''' in die Datei: Kopieren gibt es dort auch ohne gespeichertes Rezept, Einfügen in jedes
         ''' geöffnete Bild und ohne Rückfrage, weil es sich zurücknehmen lässt.</summary>

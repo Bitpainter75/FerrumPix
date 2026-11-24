@@ -16,6 +16,16 @@
                  PlaceholderText="Name"
                  IsVisible="{Binding ShowsName}"
                  MinHeight="36"/>
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" IsVisible="{Binding ShowsFolder}">
+            <TextBlock Text="Ordner" VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <ComboBox Grid.Column="1" Classes="no-translate"
+                      ItemsSource="{Binding Folders}"
+                      SelectedItem="{Binding SelectedFolder, Mode=TwoWay}"
+                      MinHeight="36"
+                      HorizontalAlignment="Stretch"
+                      ToolTip.Tip="In diesen Ordner wird die Anpassung gespeichert. Ordner legt die Verwaltung an."/>
+        </Grid>
         <StackPanel Orientation="Horizontal" Spacing="8">
             <Button Classes="ghost" Padding="12,5" Command="{Binding SelectAllCommand}"
                     ToolTip.Tip="Alle Regler in die Anpassung aufnehmen">

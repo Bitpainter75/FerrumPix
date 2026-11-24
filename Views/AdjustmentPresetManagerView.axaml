@@ -1,0 +1,171 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Views.AdjustmentPresetManagerView">
+
+    <!-- Anpassungen verwalten (AdjustmentPresetManagerViewModel): links der Ordnerbaum, rechts die
+         Anpassungen des gewaehlten Ordners mit dem, was sie enthalten. Unter jeder Seite ihre
+         Knoepfe. Namen, Zielordner und Rueckfragen stehen in der Zeile darunter und nicht in
+         einem zweiten Dialog: die Anwendung zeigt nur einen zur Zeit. Ordner- und
+         Anpassungsnamen sind Namen des Nutzers, Beschreibungen kommen uebersetzt aus dem
+         ViewModel, deshalb no-translate. -->
+    <StackPanel Spacing="10">
+        <!-- Der Ordner ist nicht erreichbar: statt Baum und Liste der Hinweis mit dem Weg zur
+             Einstellung. Es wird nicht auf den Datenordner ausgewichen. -->
+        <TextBlock Classes="no-translate"
+                   Text="{Binding UnreachableText}"
+                   IsVisible="{Binding IsUnreachable}"
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+
+        <Grid ColumnDefinitions="260,*" ColumnSpacing="14" IsVisible="{Binding IsReachable}">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Ordner" FontWeight="SemiBold" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                <ListBox ItemsSource="{Binding Folders}"
+                         SelectedItem="{Binding SelectedFolder, Mode=TwoWay}"
+                         Height="300">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6" Margin="{Binding Indent}">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-simple.svg"
+                                               Width="16" Height="16" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Classes="no-translate"
+                                           Text="{Binding Name}"
+                                           TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Classes="no-translate"
+                                           Text="{Binding Count}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Small}"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <WrapPanel>
+                    <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
+                            Command="{Binding NewFolderCommand}"
+                            ToolTip.Tip="Einen Unterordner im gewählten Ordner anlegen">
+                        <TextBlock Text="Neuer Ordner" FontSize="{DynamicResource FP.Font.Small}"/>
+                    </Button>
+                    <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
+                            IsEnabled="{Binding CanChangeFolder}"
+                            Command="{Binding RenameFolderCommand}">
+                        <TextBlock Text="Umbenennen" FontSize="{DynamicResource FP.Font.Small}"/>
+                    </Button>
+                    <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
+                            IsEnabled="{Binding CanChangeFolder}"
+                            Command="{Binding MoveFolderCommand}">
+                        <TextBlock Text="Verschieben" FontSize="{DynamicResource FP.Font.Small}"/>
+                    </Button>
+                    <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
+                            IsEnabled="{Binding CanChangeFolder}"
+                            Command="{Binding DeleteFolderCommand}">
+                        <TextBlock Text="Löschen" FontSize="{DynamicResource FP.Font.Small}"/>
+                    </Button>
+                    <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
+                            Click="OnExportFolderClick"
+                            ToolTip.Tip="Den gewählten Ordner samt Unterordnern in ein Verzeichnis schreiben">
+                        <TextBlock Text="Ordner exportieren" FontSize="{DynamicResource FP.Font.Small}"/>
+                    </Button>
+                </WrapPanel>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Spacing="8">
+                <TextBlock Text="Anpassungen" FontWeight="SemiBold" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                <Panel Height="300">
+                    <ListBox ItemsSource="{Binding Presets}"
+                             SelectedItem="{Binding SelectedPreset, Mode=TwoWay}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Spacing="2">
+                                    <TextBlock Classes="no-translate" Text="{Binding Name}" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Classes="no-translate" Text="{Binding Summary}"
+                                               TextWrapping="Wrap"
+                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                               FontSize="{DynamicResource FP.Font.Small}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <TextBlock Text="In diesem Ordner liegt keine Anpassung."
+                               IsVisible="{Binding HasNoPresets}"
+                               IsHitTestVisible="False"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Foreground="{DynamicResource FP.Text.Secondary}"/>
+                </Panel>
+                <WrapPanel>
+                    <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
+                            IsEnabled="{Binding HasSelectedPreset}"
+                            Command="{Binding RenamePresetCommand}">
+                        <TextBlock Text="Umbenennen" FontSize="{DynamicResource FP.Font.Small}"/>
+                    </Button>
+                    <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
+                            IsEnabled="{Binding HasSelectedPreset}"
+                            Command="{Binding MovePresetCommand}">
+                        <TextBlock Text="Verschieben" FontSize="{DynamicResource FP.Font.Small}"/>
+                    </Button>
+                    <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
+                            IsEnabled="{Binding HasSelectedPreset}"
+                            Command="{Binding DeletePresetCommand}">
+                        <TextBlock Text="Löschen" FontSize="{DynamicResource FP.Font.Small}"/>
+                    </Button>
+                    <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
+                            IsEnabled="{Binding HasSelectedPreset}"
+                            Click="OnExportPresetClick"
+                            ToolTip.Tip="Die gewählte Anpassung als Datei an einen anderen Ort schreiben">
+                        <TextBlock Text="Exportieren" FontSize="{DynamicResource FP.Font.Small}"/>
+                    </Button>
+                    <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
+                            Click="OnImportFileClick"
+                            ToolTip.Tip="Dateien mit Anpassungen in den gewählten Ordner aufnehmen">
+                        <TextBlock Text="Datei importieren" FontSize="{DynamicResource FP.Font.Small}"/>
+                    </Button>
+                    <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
+                            Click="OnImportFolderClick"
+                            ToolTip.Tip="Einen Ordner samt Unterordnern in den gewählten Ordner aufnehmen">
+                        <TextBlock Text="Ordner importieren" FontSize="{DynamicResource FP.Font.Small}"/>
+                    </Button>
+                    <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
+                            Command="{Binding ShowInFileManagerCommand}">
+                        <TextBlock Text="Im Dateimanager zeigen" FontSize="{DynamicResource FP.Font.Small}"/>
+                    </Button>
+                </WrapPanel>
+            </StackPanel>
+        </Grid>
+
+        <!-- Die vorgemerkte Aktion: was gefragt wird, darunter Name oder Zielordner, dann
+             Ausfuehren und Abbrechen. Beim Loeschen ist die Zeile die Rueckfrage. -->
+        <Border IsVisible="{Binding HasPending}"
+                BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="1" CornerRadius="6" Padding="12,10">
+            <StackPanel Spacing="8">
+                <TextBlock Classes="no-translate" Text="{Binding PendingPrompt}" TextWrapping="Wrap"/>
+                <TextBox x:Name="PendingBox" Classes="no-translate"
+                         Text="{Binding PendingText, Mode=TwoWay}"
+                         IsVisible="{Binding IsPendingInput}"
+                         KeyDown="OnPendingKeyDown"
+                         MinHeight="36"/>
+                <ComboBox Classes="no-translate"
+                          ItemsSource="{Binding MoveTargets}"
+                          SelectedItem="{Binding PendingTarget, Mode=TwoWay}"
+                          IsVisible="{Binding IsPendingMove}"
+                          MinHeight="36" HorizontalAlignment="Stretch"/>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Classes="accent no-translate" Padding="14,6"
+                            Command="{Binding ConfirmPendingCommand}"
+                            Content="{Binding PendingConfirmText}"/>
+                    <Button Classes="ghost" Padding="14,6" Command="{Binding CancelPendingCommand}">
+                        <TextBlock Text="Abbrechen"/>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Classes="no-translate"
+                   Text="{Binding StatusText}"
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource FP.Text.Secondary}"
+                   FontSize="{DynamicResource FP.Font.Small}"/>
+    </StackPanel>
+</UserControl>

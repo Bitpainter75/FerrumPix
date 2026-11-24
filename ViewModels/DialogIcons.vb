@@ -82,6 +82,7 @@ Namespace ViewModels
                 ' Das Puzzleteil wie beim Werkzeug und im Bereich der Einstellungen.
                 Case AppDialogKind.ExtensionDownload : Return "puzzle-piece"
                 Case AppDialogKind.DiagnosticLog : Return "file-text"
+                Case AppDialogKind.AdjustmentPresetManager : Return "folders"
                 Case Else : Return If(hasCancel, "question", "info")
             End Select
         End Function

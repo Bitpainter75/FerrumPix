@@ -2535,6 +2535,22 @@
                                                                            VerticalAlignment="Center"/>
                                                         </Panel>
                                                     </Border>
+                                                    <!-- BEWEGTBILD (ImageItem.HasMotionBadge): ein Motion
+                                                         Photo, oder Bild und Film eines Live Photos, wenn
+                                                         die andere Haelfte daneben liegt. Kein Knopf und
+                                                         unabhaengig von Stapeln und Einstellungen; der
+                                                         Hinweis kommt uebersetzt aus dem Element. -->
+                                                    <icons:DeferredPart Load="{Binding HasMotionBadge}"><Template>
+                                                    <Border Classes="motion-badge"
+                                                            IsVisible="{Binding HasMotionBadge}"
+                                                            ToolTip.Tip="{Binding MotionBadgeTip}">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/play-circle.svg"
+                                                                       Width="16" Height="16"
+                                                                       IconBrush="{DynamicResource FP.Accent}"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    </Template></icons:DeferredPart>
                                                 </StackPanel>
                                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder.svg"
                                                                IsVisible="{Binding IsFolder}"
@@ -3143,6 +3159,16 @@
                                                                            HorizontalAlignment="Center"
                                                                            VerticalAlignment="Center"/>
                                                         </Panel>
+                                                    </Border>
+                                                    <!-- Bewegtbild, wie auf der Kachel. -->
+                                                    <Border Classes="motion-badge" Margin="0,0,6,0"
+                                                            IsVisible="{Binding HasMotionBadge}"
+                                                            ToolTip.Tip="{Binding MotionBadgeTip}">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/play-circle.svg"
+                                                                       Width="16" Height="16"
+                                                                       IconBrush="{DynamicResource FP.Accent}"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"/>
                                                     </Border>
                                                     <Ellipse Width="10" Height="10" Margin="0,0,6,0" VerticalAlignment="Center"
                                                              Fill="{Binding ColorLabelBrush}"

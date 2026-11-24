@@ -88,6 +88,12 @@ Namespace Services
     ''' NICHT ERKANNT werden Dateien ohne dieses XMP (ein Hersteller legt den Film nur mit einer
     ''' eigenen Marke am Dateiende ab) und Filme in HEIC. Fuer sie gilt der Schutz nicht; HEIC wird
     ''' ohnehin nie an Ort und Stelle geschrieben.
+    '''
+    ''' ZUM ABSPIELEN im Betrachter gibt es hier die Adresse, unter der der Spieler den Film direkt
+    ''' aus der Datei liest (<see cref="SubfileAddress"/>), und fuer Spieler, die das nicht koennen,
+    ''' den Rueckfall: der Filmteil als eigene Datei im Cache der Anwendung
+    ''' (<see cref="ExtractClip"/>, <see cref="ClearClipCache"/>). Nur dieser Rueckfall liest den
+    ''' Film selbst und schreibt etwas, und nie neben das Foto.
     ''' </summary>
     Public NotInheritable Class MotionPhotoService
 
@@ -366,9 +372,71 @@ Namespace Services
         ''' <summary>Haengt an dieser Datei ein Film, der beim Neukodieren verloren ginge? Die Frage
         ''' von SavesRecipeBeside, CanReplaceOriginal und SaveImage. Nur fuer JPEG nach der Endung
         ''' (nur sie werden an Ort und Stelle neu kodiert und koennen einen Film tragen), damit
-        ''' nicht jede RAW und jedes PNG dafuer geoeffnet wird.</summary>
+        ''' nicht jede RAW und jedes PNG dafuer geoeffnet wird.
+        '''
+        ''' WO DER KATALOG DIE ANTWORT KENNT, WIRD DIE DATEI NICHT GEOEFFNET. Der EXIF-Lauf hat die
+        ''' Art schon bestimmt (Spalte MotionKind), und die Zeile gilt, solange die Datei seither
+        ''' nicht geaendert wurde (LibraryService.TryGetCurrentMotion). Bei "Anpassungen anwenden"
+        ''' und beim Einfuegen laeuft die Frage je gewaehltem Bild auf dem Anzeigefaden; auf einer
+        ''' Netzfreigabe war das je Bild ein Oeffnen. Ohne passende Zeile gilt wie bisher die Datei.
+        ''' Die letzte Sperre vor dem Ueberschreiben fragt immer die Datei
+        ''' (<see cref="HasVideoInFile"/>).</summary>
         Public Shared Function HasVideo(path As String) As Boolean
+            Dim remembered As MotionPhotoInfo
+            If TryGetRemembered(path, remembered) Then Return remembered.HasVideo
+            Dim known = CatalogAnswer(path)
+            If known.HasValue Then Return known.Value
             Return DetectCached(path).HasVideo
+        End Function
+
+        ''' <summary>Dieselbe Frage, immer an der Datei selbst beantwortet (gemerkt je Pfad mit
+        ''' Laenge und Aenderungszeit), ohne den Katalog. Fuer die letzte Sperre in SaveImage: dort
+        ''' kostet das eine Datei je Speichern, und ein Irrtum waere ein verlorener Film.</summary>
+        Public Shared Function HasVideoInFile(path As String) As Boolean
+            Return DetectCached(path).HasVideo
+        End Function
+
+        ''' <summary>Wo die Datei selbst zuletzt gefragt wurde und seither unveraendert ist, gilt
+        ''' diese Antwort vor dem Katalog.</summary>
+        Private Shared Function TryGetRemembered(path As String, ByRef info As MotionPhotoInfo) As Boolean
+            info = New MotionPhotoInfo()
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            Try
+                Dim cached As CachedAnswer
+                If Not _answers.TryGetValue(path, cached) Then Return False
+                Dim file As New FileInfo(path)
+                If Not file.Exists OrElse cached.Length <> file.Length OrElse cached.WriteTicks <> file.LastWriteTimeUtc.Ticks Then Return False
+                info = cached.Info
+                Return True
+            Catch
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Fuer die Pruefungen: zaehlt, wie oft eine Datei fuer die Frage wirklich
+        ''' geoeffnet wurde.</summary>
+        Friend Shared FileDetections As Integer
+
+        ''' <summary>Fuer die Pruefungen: vergisst die je Pfad gemerkten Antworten.</summary>
+        Friend Shared Sub ForgetRememberedAnswers()
+            _answers.Clear()
+        End Sub
+
+        ''' <summary>Was der Katalog ueber einen angehaengten Film weiss, oder Nothing, wenn er keine
+        ''' Zeile hat, die zur Datei auf der Platte passt. Nur fuer JPEG nach der Endung, wie die
+        ''' Frage an die Datei auch.</summary>
+        Private Shared Function CatalogAnswer(path As String) As Boolean?
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            Try
+                If Not JpegExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant()) Then Return False
+                Dim kind As MotionKind
+                Dim ignoredId As String = Nothing
+                If LibraryService.Instance.TryGetCurrentMotion(path, kind, ignoredId) Then Return kind = MotionKind.MotionPhoto
+            Catch ex As Exception
+                ' Katalog nicht erreichbar: dann antwortet die Datei.
+                DiagnosticLogService.LogException("MotionPhoto.CatalogAnswer", ex)
+            End Try
+            Return Nothing
         End Function
 
         ''' <summary>Behauptet das XMP dieser Datei einen Film, ob er da ist oder nicht?</summary>
@@ -389,6 +457,7 @@ Namespace Services
                 If _answers.TryGetValue(path, cached) AndAlso cached.Length = length AndAlso cached.WriteTicks = ticks Then
                     Return cached.Info
                 End If
+                Threading.Interlocked.Increment(FileDetections)
                 Dim info = Detect(path)
                 If _answers.Count >= MaximumAnswers Then _answers.Clear()
                 _answers(path) = New CachedAnswer With {.Length = length, .WriteTicks = ticks, .Info = info}
@@ -397,6 +466,108 @@ Namespace Services
                 DiagnosticLogService.LogException("MotionPhoto.DetectCached", ex)
                 Return nothingFound
             End Try
+        End Function
+
+        ' ── Abspielen: die Adresse fuer den Spieler und der Rueckfall in den Cache ──
+
+        ''' <summary>Die Adresse, unter der der Spieler den angehaengten Film direkt aus der Datei
+        ''' liest: der Ausschnitt von <see cref="MotionPhotoInfo.VideoOffset"/> bis zu seinem Ende.
+        ''' Schluessel und Wert trennt das Zeichen hinter dem Namen des Protokolls (hier das
+        ''' Komma), kein Gleichheitszeichen; zwei Trennzeichen beenden die Angaben, dahinter steht
+        ''' nach dem Doppelpunkt der Pfad, unveraendert, auch mit Komma, Leerzeichen oder Umlaut.
+        ''' Ohne den Vorsatz hielte der Spieler die Adresse fuer einen Dateinamen. Nothing, wenn
+        ''' kein Film da ist. Versatz und Ende gelten nur fuer die Datei, wie sie jetzt daliegt:
+        ''' unmittelbar vor dem Abspielen bestimmen, nie aufheben.</summary>
+        Public Shared Function SubfileAddress(path As String, info As MotionPhotoInfo) As String
+            If String.IsNullOrEmpty(path) OrElse Not info.HasVideo Then Return Nothing
+            Dim videoEnd = info.VideoOffset + info.VideoLength
+            Return "lavf://subfile,,start," & info.VideoOffset.ToString(CultureInfo.InvariantCulture) &
+                   ",end," & videoEnd.ToString(CultureInfo.InvariantCulture) & ",,:" & path
+        End Function
+
+        ''' <summary>Der Ordner fuer den herausgeschriebenen Film: im Cache der Anwendung, nie
+        ''' neben dem Foto.</summary>
+        Friend Shared ReadOnly Property ClipCacheFolder As String
+            Get
+                Return IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                                       "FerrumPix", "MotionClipCache")
+            End Get
+        End Property
+
+        Private Shared ReadOnly _clipCacheLock As New Object()
+
+        ''' <summary>Raeumt den herausgeschriebenen Film weg: beim Bildwechsel, nach dem Abspielen
+        ''' und beim Start der Anwendung (dort liegt hoechstens der Rest einer Sitzung, die nicht
+        ''' ordentlich endete). Liefert, wie viele Dateien gingen. Wirft nie; was sich gerade nicht
+        ''' loeschen laesst (der Spieler haelt es noch), nimmt der naechste Aufruf.</summary>
+        Public Shared Function ClearClipCache() As Integer
+            Dim removed = 0
+            SyncLock _clipCacheLock
+                Try
+                    Dim folder = ClipCacheFolder
+                    If Not Directory.Exists(folder) Then Return 0
+                    For Each file In Directory.GetFiles(folder)
+                        Try
+                            IO.File.Delete(file)
+                            removed += 1
+                        Catch ex As Exception
+                            DiagnosticLogService.LogException("MotionPhoto.ClearClipCache", ex)
+                        End Try
+                    Next
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("MotionPhoto.ClearClipCache", ex)
+                End Try
+            End SyncLock
+            Return removed
+        End Function
+
+        ''' <summary>Der Rueckfall, wenn der Spieler den Film nicht direkt aus der Datei lesen kann
+        ''' (<see cref="SubfileAddress"/>): schreibt den Filmteil als eigene Datei in den Cache der
+        ''' Anwendung und liefert ihren Pfad, oder Nothing. EINE Datei zur Zeit: was vorher dort
+        ''' lag, geht zuerst. Die Lage des Films wird hier neu bestimmt, nicht uebernommen.
+        ''' Kopiert wird in Stuecken; die Laenge ist an der Datei geprueft (Detect), ein Feld in
+        ''' der Groesse des Films entsteht nicht. Liest und schreibt: im Hintergrund rufen.</summary>
+        Public Shared Function ExtractClip(path As String) As String
+            If String.IsNullOrWhiteSpace(path) Then Return Nothing
+            SyncLock _clipCacheLock
+                Try
+                    Dim folder = ClipCacheFolder
+                    Directory.CreateDirectory(folder)
+                    For Each old In Directory.GetFiles(folder)
+                        Try
+                            IO.File.Delete(old)
+                        Catch ex As Exception
+                            DiagnosticLogService.LogException("MotionPhoto.ExtractClip.Clear", ex)
+                        End Try
+                    Next
+                    Dim target = IO.Path.Combine(folder, "clip-" & Guid.NewGuid().ToString("N") & ".mp4")
+                    Using source As New FileStream(path, FileMode.Open, FileAccess.Read,
+                                                   FileShare.ReadWrite Or FileShare.Delete, 81920)
+                        Dim info = Detect(source)
+                        If Not info.HasVideo Then Return Nothing
+                        source.Seek(info.VideoOffset, SeekOrigin.Begin)
+                        Dim remaining = info.VideoLength
+                        Dim buffer(81919) As Byte
+                        Using output As New FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.Read)
+                            While remaining > 0
+                                Dim got = source.Read(buffer, 0, CInt(Math.Min(CLng(buffer.Length), remaining)))
+                                If got <= 0 Then Exit While
+                                output.Write(buffer, 0, got)
+                                remaining -= got
+                            End While
+                        End Using
+                        If remaining > 0 Then
+                            ' Die Datei wurde waehrenddessen kuerzer: ein halber Film ist keiner.
+                            IO.File.Delete(target)
+                            Return Nothing
+                        End If
+                    End Using
+                    Return target
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("MotionPhoto.ExtractClip", ex)
+                    Return Nothing
+                End Try
+            End SyncLock
         End Function
 
         ' ── Neu geschriebene Dateien sind ehrlich ─────────────────────────────────

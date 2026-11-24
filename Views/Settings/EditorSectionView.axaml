@@ -595,6 +595,28 @@
                             </ItemsControl>
                         </StackPanel>
 
+                        <!-- Der Ordner der gespeicherten Anpassungen (AdjustmentPresetStore): ab Werk
+                             im Datenordner, auf Wunsch ein eigener, etwa in einer Cloud-Ablage.
+                             Der Pfad ist ein Pfad des Nutzers, die Meldung kommt uebersetzt aus dem
+                             ViewModel, deshalb no-translate. Beim Wechsel fragt die Anwendung, ob
+                             die vorhandenen Anpassungen mitziehen. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Ordner für Anpassungen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Hier liegen die im Editor gespeicherten Anpassungen, jede als eigene Datei, jeder Ordner als echter Ordner. Ein eigener Ordner, etwa in einer Cloud-Ablage, macht sie auf mehreren Rechnern verfügbar. Ist er nicht erreichbar, bleibt die Liste leer." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Classes="no-translate" Text="{Binding AdjustmentPresetFolderText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <TextBlock Classes="no-translate" Text="{Binding AdjustmentPresetFolderStatus}" IsVisible="{Binding HasAdjustmentPresetFolderStatus}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost" Padding="10,6"
+                                        Click="OnBrowseAdjustmentPresetFolderClick">Auswählen</Button>
+                                <Button Classes="ghost" Padding="10,6"
+                                        IsEnabled="{Binding IsAdjustmentPresetFolderCustom}"
+                                        Command="{Binding ResetAdjustmentPresetFolderCommand}"
+                                        ToolTip.Tip="Wieder den Ordner im Datenordner der Anwendung verwenden">Standard</Button>
+                            </StackPanel>
+                        </Grid>
+
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="JPG-Qualität" FontSize="{DynamicResource FP.Font.Body}"/>

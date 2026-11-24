@@ -1980,13 +1980,30 @@
                                              Vorlage enthält. Der Kurzhinweis der Liste nennt, was
                                              die gewählte Vorlage enthält; er kommt übersetzt aus dem
                                              ViewModel. -->
-                                        <ComboBox ItemsSource="{Binding AdjustmentPresetNames}"
-                                                  SelectedItem="{Binding SelectedAdjustmentPresetName}"
+                                        <!-- Jede Anpassung steht mit ihrem Ordnerpfad davor in der
+                                             Liste (AdjustmentPresetFile.DisplayPath). Umbenennen,
+                                             Verschieben und Löschen stehen hinter Verwalten. -->
+                                        <ComboBox ItemsSource="{Binding AdjustmentPresetChoices}"
+                                                  SelectedItem="{Binding SelectedAdjustmentPreset}"
                                                   PlaceholderText="Keine Anpassung gespeichert"
                                                   ToolTip.Tip="{Binding SelectedAdjustmentPresetSummary}"
                                                   MinHeight="32"
                                                   FontSize="{DynamicResource FP.Font.Small}"
                                                   HorizontalAlignment="Stretch" />
+                                        <!-- Der Ordner der Anpassungen ist nicht erreichbar: die
+                                             Liste bleibt leer, die Zeile sagt es und führt zur
+                                             Einstellung. Der Text kommt übersetzt aus dem ViewModel. -->
+                                        <StackPanel Spacing="4" IsVisible="{Binding IsAdjustmentPresetFolderUnreachable}">
+                                            <TextBlock Classes="no-translate"
+                                                       Text="{Binding AdjustmentPresetFolderHint}"
+                                                       TextWrapping="Wrap"
+                                                       FontSize="{DynamicResource FP.Font.Small}"
+                                                       Foreground="{DynamicResource FP.Text.Secondary}" />
+                                            <Button Classes="ghost" Padding="8,5" HorizontalAlignment="Left"
+                                                    Command="{Binding OpenAdjustmentPresetSettingsCommand}">
+                                                <TextBlock Text="Einstellungen öffnen" FontSize="{DynamicResource FP.Font.Small}" />
+                                            </Button>
+                                        </StackPanel>
                                         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
                                             <Button Classes="ghost"
                                                     HorizontalAlignment="Stretch"
@@ -2022,12 +2039,12 @@
                                                     HorizontalAlignment="Stretch"
                                                     HorizontalContentAlignment="Center"
                                                     Padding="4,5"
-                                                    IsEnabled="{Binding CanApplyAdjustmentPreset}"
-                                                    Command="{Binding DeleteAdjustmentPresetCommand}">
+                                                    Command="{Binding ManageAdjustmentPresetsCommand}"
+                                                    ToolTip.Tip="Anpassungen in Ordnern ordnen, umbenennen, verschieben, löschen, importieren und exportieren">
                                                 <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folders.svg"
                                                                    Width="18" Height="18" />
-                                                    <TextBlock Text="Löschen" FontSize="{DynamicResource FP.Font.Small}"
+                                                    <TextBlock Text="Verwalten" FontSize="{DynamicResource FP.Font.Small}"
                                                                TextWrapping="Wrap" TextAlignment="Center" />
                                                 </StackPanel>
                                             </Button>
@@ -2067,6 +2084,22 @@
                                                 </StackPanel>
                                             </Button>
                                         </Grid>
+                                        <!-- Einfügen mit Auswahl: derselbe Dialog wie beim
+                                             Speichern, ohne Name und Ordner. Einfügen daneben
+                                             fügt weiter alles ein. -->
+                                        <Button Classes="ghost"
+                                                HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Center"
+                                                Padding="4,5"
+                                                Command="{Binding PasteAdjustmentsWithChoiceCommand}"
+                                                ToolTip.Tip="Aus den kopierten Anpassungen wählen, welche Regler eingefügt werden">
+                                            <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/list-checks.svg"
+                                                               Width="18" Height="18" />
+                                                <TextBlock Text="Einfügen mit Auswahl" FontSize="{DynamicResource FP.Font.Small}"
+                                                           TextWrapping="Wrap" TextAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
                                     </StackPanel>
                                 </Expander>
                             </Border>

@@ -4539,9 +4539,6 @@
   <data name="Die_gew_hlte_Anpassung_auf_dieses_Bild_anwenden_b40e940c" xml:space="preserve">
     <value>将所选调整应用到此图像</value>
   </data>
-  <data name="Die_aktuellen_Regler_unter_diesem_Namen_merken_e_28792148" xml:space="preserve">
-    <value>以此名称保存当前滑块设置；同名条目将被替换</value>
-  </data>
   <data name="Standardformat_1c812c8e" xml:space="preserve">
     <value>默认格式</value>
   </data>
@@ -4553,9 +4550,6 @@
   </data>
   <data name="Anpassung_gespeichert_0_55443bca" xml:space="preserve">
     <value>已保存调整：{0}</value>
-  </data>
-  <data name="Anpassung_gel_scht_0_1f26438b" xml:space="preserve">
-    <value>已删除调整：{0}</value>
   </data>
   <data name="Anpassung_angewendet_0_25f50909" xml:space="preserve">
     <value>已应用调整：{0}</value>
@@ -12261,5 +12255,212 @@
   </data>
   <data name="TAB_38d4aa69" xml:space="preserve">
     <value>TAB</value>
+  </data>
+  <data name="ALT_1_bis_ALT_4_68193d8c" xml:space="preserve">
+    <value>ALT+1 to ALT+4</value>
+  </data>
+  <data name="Dieses_Feld_direkt_aktiv_machen_6a8d2c76" xml:space="preserve">
+    <value>直接将此格设为当前格</value>
+  </data>
+  <data name="In_diesen_Ordner_wird_die_Anpassung_gespeichert__1506e780" xml:space="preserve">
+    <value>调整将保存到此文件夹。文件夹在管理窗口中创建。</value>
+  </data>
+  <data name="Hauptordner_93a2f3f0" xml:space="preserve">
+    <value>主文件夹</value>
+  </data>
+  <data name="Der_Ordner_f_r_Anpassungen_ist_nicht_erreichbar__c8899bfd" xml:space="preserve">
+    <value>无法访问调整文件夹：{0}。该文件夹在设置的编辑器部分指定。</value>
+  </data>
+  <data name="Neuer_Ordner_in_0_3a44f881" xml:space="preserve">
+    <value>在 {0} 中新建文件夹</value>
+  </data>
+  <data name="Neuer_Name_des_Ordners_8e707c90" xml:space="preserve">
+    <value>文件夹的新名称</value>
+  </data>
+  <data name="Neuer_Name_der_Anpassung_4b271b22" xml:space="preserve">
+    <value>调整的新名称</value>
+  </data>
+  <data name="Es_gibt_keinen_anderen_Ordner_als_Ziel_de1e2a87" xml:space="preserve">
+    <value>没有其他文件夹可作为目标。</value>
+  </data>
+  <data name="Ordner_0_verschieben_nach_792d7c44" xml:space="preserve">
+    <value>将文件夹 {0} 移动到</value>
+  </data>
+  <data name="Anpassung_0_verschieben_nach_c3d26d55" xml:space="preserve">
+    <value>将调整 {0} 移动到</value>
+  </data>
+  <data name="Der_Ordner_0_wird_mit_1_Anpassung_en_gel_scht_An_2be977f0" xml:space="preserve">
+    <value>文件夹 {0} 将连同 {1} 个调整一起删除。其中的其他文件会保留。</value>
+  </data>
+  <data name="Die_Anpassung_0_wird_gel_scht_02b65971" xml:space="preserve">
+    <value>调整 {0} 将被删除。</value>
+  </data>
+  <data name="Bitte_einen_Namen_eingeben_79e2b03f" xml:space="preserve">
+    <value>请输入名称。</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_anlegen_Gibt_es_ihn_sc_c47f51e0" xml:space="preserve">
+    <value>无法创建文件夹。它是否已经存在？</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_umbenennen_Gibt_es_den_12fb5f51" xml:space="preserve">
+    <value>无法重命名文件夹。该名称是否已经存在？</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_umbenennen_Gibt_es__0fd26f4f" xml:space="preserve">
+    <value>无法重命名调整。此文件夹中是否已有该名称？</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_verschieben_Gibt_es_do_7cdb8df5" xml:space="preserve">
+    <value>无法移动文件夹。那里是否已有同名文件夹？</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_verschieben_Gibt_es_8db30dc2" xml:space="preserve">
+    <value>无法移动调整。那里是否已有同名调整？</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_l_schen_fc8f1e99" xml:space="preserve">
+    <value>无法删除文件夹。</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_l_schen_ecd96ecc" xml:space="preserve">
+    <value>无法删除调整。</value>
+  </data>
+  <data name="0_Anpassung_en_importiert_fdc783e6" xml:space="preserve">
+    <value>已导入 {0} 个调整</value>
+  </data>
+  <data name="0_schon_vorhanden_68664521" xml:space="preserve">
+    <value>已存在 {0} 个</value>
+  </data>
+  <data name="0_Datei_en_nicht_lesbar_9653e2bc" xml:space="preserve">
+    <value>{0} 个文件无法读取</value>
+  </data>
+  <data name="Anpassung_exportiert_0_98d89e68" xml:space="preserve">
+    <value>已导出调整：{0}</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_exportieren_53eb4a9a" xml:space="preserve">
+    <value>无法导出调整。</value>
+  </data>
+  <data name="0_Anpassung_en_exportiert_fd94c88c" xml:space="preserve">
+    <value>已导出 {0} 个调整</value>
+  </data>
+  <data name="Einen_Unterordner_im_gew_hlten_Ordner_anlegen_04fa4248" xml:space="preserve">
+    <value>在所选文件夹中创建子文件夹</value>
+  </data>
+  <data name="Ordner_exportieren_e68ad9ad" xml:space="preserve">
+    <value>导出文件夹</value>
+  </data>
+  <data name="Den_gew_hlten_Ordner_samt_Unterordnern_in_ein_Ve_dec83286" xml:space="preserve">
+    <value>将所选文件夹连同子文件夹写入一个目录</value>
+  </data>
+  <data name="In_diesem_Ordner_liegt_keine_Anpassung_c72f5c19" xml:space="preserve">
+    <value>此文件夹中没有调整。</value>
+  </data>
+  <data name="Die_gew_hlte_Anpassung_als_Datei_an_einen_andere_419cc46b" xml:space="preserve">
+    <value>将所选调整作为文件写到其他位置</value>
+  </data>
+  <data name="Datei_importieren_a2367221" xml:space="preserve">
+    <value>导入文件</value>
+  </data>
+  <data name="Dateien_mit_Anpassungen_in_den_gew_hlten_Ordner__d0a3086f" xml:space="preserve">
+    <value>将包含调整的文件加入所选文件夹</value>
+  </data>
+  <data name="Ordner_importieren_751ddbf0" xml:space="preserve">
+    <value>导入文件夹</value>
+  </data>
+  <data name="Einen_Ordner_samt_Unterordnern_in_den_gew_hlten__c0e65180" xml:space="preserve">
+    <value>将一个文件夹连同子文件夹加入所选文件夹</value>
+  </data>
+  <data name="Anpassungen_importieren_838230e9" xml:space="preserve">
+    <value>导入调整</value>
+  </data>
+  <data name="Ordner_mit_Anpassungen_importieren_9be5ad2e" xml:space="preserve">
+    <value>导入包含调整的文件夹</value>
+  </data>
+  <data name="Anpassung_exportieren_ecc0fac1" xml:space="preserve">
+    <value>导出调整</value>
+  </data>
+  <data name="Einstellungen_ffnen_dd5e857e" xml:space="preserve">
+    <value>打开设置</value>
+  </data>
+  <data name="Verwalten_d0d41dd9" xml:space="preserve">
+    <value>管理</value>
+  </data>
+  <data name="Anpassungen_in_Ordnern_ordnen_umbenennen_verschi_87e5728e" xml:space="preserve">
+    <value>将调整整理到文件夹中，并重命名、移动、删除、导入和导出</value>
+  </data>
+  <data name="Einf_gen_mit_Auswahl_4c235020" xml:space="preserve">
+    <value>选择性粘贴</value>
+  </data>
+  <data name="Aus_den_kopierten_Anpassungen_w_hlen_welche_Regl_bc4e7b97" xml:space="preserve">
+    <value>从复制的调整中选择要粘贴哪些滑块</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_speichern_d315a955" xml:space="preserve">
+    <value>无法保存调整。</value>
+  </data>
+  <data name="Eingef_gt_wird_nur_was_hier_angehakt_ist_Diese_R_6f35b039" xml:space="preserve">
+    <value>只粘贴此处勾选的内容。这些滑块会替换图像的相应滑块，其余全部保持不变。</value>
+  </data>
+  <data name="Anpassungen_verwalten_360f5bee" xml:space="preserve">
+    <value>管理调整</value>
+  </data>
+  <data name="Jede_Anpassung_ist_eine_Datei_jeder_Ordner_ein_e_cd4fd224" xml:space="preserve">
+    <value>每个调整都是一个文件，每个文件夹都是真实的文件夹。要分享给他人，只需复制文件或文件夹。</value>
+  </data>
+  <data name="Ordner_f_r_Anpassungen_a11c8c84" xml:space="preserve">
+    <value>调整文件夹</value>
+  </data>
+  <data name="Hier_liegen_die_im_Editor_gespeicherten_Anpassun_89b2f8b3" xml:space="preserve">
+    <value>在编辑器中保存的调整存放在这里，每个调整是一个独立的文件，每个文件夹都是真实的文件夹。使用自选的文件夹，例如云存储中的文件夹，就能在多台电脑上使用它们。如果无法访问该文件夹，列表将为空。</value>
+  </data>
+  <data name="Wieder_den_Ordner_im_Datenordner_der_Anwendung_v_67a35185" xml:space="preserve">
+    <value>重新使用应用程序数据文件夹中的文件夹</value>
+  </data>
+  <data name="Ordner_f_r_Anpassungen_w_hlen_79bdb005" xml:space="preserve">
+    <value>选择调整文件夹</value>
+  </data>
+  <data name="Im_bisherigen_Ordner_liegen_0_Anpassung_en_Solle_20cdd6ce" xml:space="preserve">
+    <value>原文件夹中有 {0} 个调整。要将它们一并移到新文件夹吗？否则它们会留在原文件夹中，不再出现在列表里。</value>
+  </data>
+  <data name="Mitziehen_b1307569" xml:space="preserve">
+    <value>一并移动</value>
+  </data>
+  <data name="Dort_lassen_d8c7764f" xml:space="preserve">
+    <value>留在原处</value>
+  </data>
+  <data name="0_Anpassung_en_in_den_neuen_Ordner_verschoben_efb3edec" xml:space="preserve">
+    <value>已将 {0} 个调整移到新文件夹</value>
+  </data>
+  <data name="0_lie_en_sich_nicht_verschieben_und_liegen_weite_74250764" xml:space="preserve">
+    <value>{0} 个无法移动，仍留在原文件夹中</value>
+  </data>
+  <data name="Bewegtbild_f306457a" xml:space="preserve">
+    <value>动态图像</value>
+  </data>
+  <data name="Motion_Photo_Film_in_der_Datei_254d738f" xml:space="preserve">
+    <value>Motion Photo，视频在文件内</value>
+  </data>
+  <data name="Live_Photo_Bild_4f903725" xml:space="preserve">
+    <value>Live Photo，图像</value>
+  </data>
+  <data name="Live_Photo_Film_7c876762" xml:space="preserve">
+    <value>Live Photo，视频</value>
+  </data>
+  <data name="Motion_Photo_an_diesem_Bild_h_ngt_ein_kurzer_Fil_7b0b12c8" xml:space="preserve">
+    <value>Motion Photo：此图像附带一段短视频</value>
+  </data>
+  <data name="Live_Photo_zu_diesem_Bild_geh_rt_ein_kurzer_Film_19de2886" xml:space="preserve">
+    <value>Live Photo：此图像带有一段短视频</value>
+  </data>
+  <data name="Live_Photo_der_Film_zu_einem_Bild_0aa4441a" xml:space="preserve">
+    <value>Live Photo：属于某张图像的视频</value>
+  </data>
+  <data name="Film_zu_diesem_Bild_abspielen_e6390328" xml:space="preserve">
+    <value>播放此图像的视频</value>
+  </data>
+  <data name="Film_anhalten_und_zum_Bild_zur_ck_0f3d9659" xml:space="preserve">
+    <value>停止视频并返回图像</value>
+  </data>
+  <data name="Der_Film_zu_diesem_Bild_ist_nicht_mehr_da_28434c71" xml:space="preserve">
+    <value>此图像的视频已不存在</value>
+  </data>
+  <data name="Der_Film_zu_diesem_Bild_lie_sich_nicht_abspielen_55dff2c2" xml:space="preserve">
+    <value>无法播放此图像的视频</value>
+  </data>
+  <data name="Zu_diesem_Live_Photo_geh_rt_0_Der_Name_1_ist_daf_2c7e82bc" xml:space="preserve">
+    <value>{0} 属于此 Live Photo。名称 {1} 已被占用。</value>
   </data>
 </root>

@@ -4539,9 +4539,6 @@
   <data name="Die_gew_hlte_Anpassung_auf_dieses_Bild_anwenden_b40e940c" xml:space="preserve">
     <value>Seçili ayarlamayı bu görüntüye uygula</value>
   </data>
-  <data name="Die_aktuellen_Regler_unter_diesem_Namen_merken_e_28792148" xml:space="preserve">
-    <value>Şu anki kaydırıcıları bu adla akılda tut - aynı adı taşıyan bir girdi değiştirilir</value>
-  </data>
   <data name="Standardformat_1c812c8e" xml:space="preserve">
     <value>Varsayılan biçim</value>
   </data>
@@ -4553,9 +4550,6 @@
   </data>
   <data name="Anpassung_gespeichert_0_55443bca" xml:space="preserve">
     <value>Ayarlama kaydedildi: {0}</value>
-  </data>
-  <data name="Anpassung_gel_scht_0_1f26438b" xml:space="preserve">
-    <value>Ayarlama silindi: {0}</value>
   </data>
   <data name="Anpassung_angewendet_0_25f50909" xml:space="preserve">
     <value>Ayarlama uygulandı: {0}</value>
@@ -12307,5 +12301,212 @@
   </data>
   <data name="TAB_38d4aa69" xml:space="preserve">
     <value>TAB</value>
+  </data>
+  <data name="ALT_1_bis_ALT_4_68193d8c" xml:space="preserve">
+    <value>ALT+1 ile ALT+4 arası</value>
+  </data>
+  <data name="Dieses_Feld_direkt_aktiv_machen_6a8d2c76" xml:space="preserve">
+    <value>Bu alanı doğrudan etkin yap</value>
+  </data>
+  <data name="In_diesen_Ordner_wird_die_Anpassung_gespeichert__1506e780" xml:space="preserve">
+    <value>Ayarlama bu klasöre kaydedilir. Klasörler yönetim penceresinde oluşturulur.</value>
+  </data>
+  <data name="Hauptordner_93a2f3f0" xml:space="preserve">
+    <value>Ana klasör</value>
+  </data>
+  <data name="Der_Ordner_f_r_Anpassungen_ist_nicht_erreichbar__c8899bfd" xml:space="preserve">
+    <value>Ayarlamalar klasörüne erişilemiyor: {0}. Bu klasör Ayarlar içinde, Düzenleyici bölümünde belirlenir.</value>
+  </data>
+  <data name="Neuer_Ordner_in_0_3a44f881" xml:space="preserve">
+    <value>{0} içinde yeni klasör</value>
+  </data>
+  <data name="Neuer_Name_des_Ordners_8e707c90" xml:space="preserve">
+    <value>Klasörün yeni adı</value>
+  </data>
+  <data name="Neuer_Name_der_Anpassung_4b271b22" xml:space="preserve">
+    <value>Ayarlamanın yeni adı</value>
+  </data>
+  <data name="Es_gibt_keinen_anderen_Ordner_als_Ziel_de1e2a87" xml:space="preserve">
+    <value>Hedef olabilecek başka bir klasör yok.</value>
+  </data>
+  <data name="Ordner_0_verschieben_nach_792d7c44" xml:space="preserve">
+    <value>{0} klasörünü şuraya taşı</value>
+  </data>
+  <data name="Anpassung_0_verschieben_nach_c3d26d55" xml:space="preserve">
+    <value>{0} ayarlamasını şuraya taşı</value>
+  </data>
+  <data name="Der_Ordner_0_wird_mit_1_Anpassung_en_gel_scht_An_2be977f0" xml:space="preserve">
+    <value>{0} klasörü, içindeki {1} ayarlamayla birlikte silinecek. İçindeki diğer dosyalar korunur.</value>
+  </data>
+  <data name="Die_Anpassung_0_wird_gel_scht_02b65971" xml:space="preserve">
+    <value>{0} ayarlaması silinecek.</value>
+  </data>
+  <data name="Bitte_einen_Namen_eingeben_79e2b03f" xml:space="preserve">
+    <value>Lütfen bir ad girin.</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_anlegen_Gibt_es_ihn_sc_c47f51e0" xml:space="preserve">
+    <value>Klasör oluşturulamadı. Zaten var olabilir mi?</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_umbenennen_Gibt_es_den_12fb5f51" xml:space="preserve">
+    <value>Klasör yeniden adlandırılamadı. Bu ad zaten var olabilir mi?</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_umbenennen_Gibt_es__0fd26f4f" xml:space="preserve">
+    <value>Ayarlama yeniden adlandırılamadı. Bu ad bu klasörde zaten var olabilir mi?</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_verschieben_Gibt_es_do_7cdb8df5" xml:space="preserve">
+    <value>Klasör taşınamadı. Orada aynı adda bir klasör zaten var olabilir mi?</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_verschieben_Gibt_es_8db30dc2" xml:space="preserve">
+    <value>Ayarlama taşınamadı. Orada aynı adda bir ayarlama zaten var olabilir mi?</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_l_schen_fc8f1e99" xml:space="preserve">
+    <value>Klasör silinemedi.</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_l_schen_ecd96ecc" xml:space="preserve">
+    <value>Ayarlama silinemedi.</value>
+  </data>
+  <data name="0_Anpassung_en_importiert_fdc783e6" xml:space="preserve">
+    <value>{0} ayarlama içe aktarıldı</value>
+  </data>
+  <data name="0_schon_vorhanden_68664521" xml:space="preserve">
+    <value>{0} zaten vardı</value>
+  </data>
+  <data name="0_Datei_en_nicht_lesbar_9653e2bc" xml:space="preserve">
+    <value>{0} dosya okunamadı</value>
+  </data>
+  <data name="Anpassung_exportiert_0_98d89e68" xml:space="preserve">
+    <value>Ayarlama dışa aktarıldı: {0}</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_exportieren_53eb4a9a" xml:space="preserve">
+    <value>Ayarlama dışa aktarılamadı.</value>
+  </data>
+  <data name="0_Anpassung_en_exportiert_fd94c88c" xml:space="preserve">
+    <value>{0} ayarlama dışa aktarıldı</value>
+  </data>
+  <data name="Einen_Unterordner_im_gew_hlten_Ordner_anlegen_04fa4248" xml:space="preserve">
+    <value>Seçili klasörde bir alt klasör oluştur</value>
+  </data>
+  <data name="Ordner_exportieren_e68ad9ad" xml:space="preserve">
+    <value>Klasörü dışa aktar</value>
+  </data>
+  <data name="Den_gew_hlten_Ordner_samt_Unterordnern_in_ein_Ve_dec83286" xml:space="preserve">
+    <value>Seçili klasörü alt klasörleriyle birlikte bir dizine yaz</value>
+  </data>
+  <data name="In_diesem_Ordner_liegt_keine_Anpassung_c72f5c19" xml:space="preserve">
+    <value>Bu klasörde ayarlama yok.</value>
+  </data>
+  <data name="Die_gew_hlte_Anpassung_als_Datei_an_einen_andere_419cc46b" xml:space="preserve">
+    <value>Seçili ayarlamayı dosya olarak başka bir yere yaz</value>
+  </data>
+  <data name="Datei_importieren_a2367221" xml:space="preserve">
+    <value>Dosya içe aktar</value>
+  </data>
+  <data name="Dateien_mit_Anpassungen_in_den_gew_hlten_Ordner__d0a3086f" xml:space="preserve">
+    <value>Ayarlama içeren dosyaları seçili klasöre al</value>
+  </data>
+  <data name="Ordner_importieren_751ddbf0" xml:space="preserve">
+    <value>Klasör içe aktar</value>
+  </data>
+  <data name="Einen_Ordner_samt_Unterordnern_in_den_gew_hlten__c0e65180" xml:space="preserve">
+    <value>Bir klasörü alt klasörleriyle birlikte seçili klasöre al</value>
+  </data>
+  <data name="Anpassungen_importieren_838230e9" xml:space="preserve">
+    <value>Ayarlamaları içe aktar</value>
+  </data>
+  <data name="Ordner_mit_Anpassungen_importieren_9be5ad2e" xml:space="preserve">
+    <value>Ayarlama içeren klasörü içe aktar</value>
+  </data>
+  <data name="Anpassung_exportieren_ecc0fac1" xml:space="preserve">
+    <value>Ayarlamayı dışa aktar</value>
+  </data>
+  <data name="Einstellungen_ffnen_dd5e857e" xml:space="preserve">
+    <value>Ayarları aç</value>
+  </data>
+  <data name="Verwalten_d0d41dd9" xml:space="preserve">
+    <value>Yönet</value>
+  </data>
+  <data name="Anpassungen_in_Ordnern_ordnen_umbenennen_verschi_87e5728e" xml:space="preserve">
+    <value>Ayarlamaları klasörlere yerleştir, yeniden adlandır, taşı, sil, içe ve dışa aktar</value>
+  </data>
+  <data name="Einf_gen_mit_Auswahl_4c235020" xml:space="preserve">
+    <value>Seçerek yapıştır</value>
+  </data>
+  <data name="Aus_den_kopierten_Anpassungen_w_hlen_welche_Regl_bc4e7b97" xml:space="preserve">
+    <value>Kopyalanan ayarlamalardan hangi kaydırıcıların yapıştırılacağını seç</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_speichern_d315a955" xml:space="preserve">
+    <value>Ayarlama kaydedilemedi.</value>
+  </data>
+  <data name="Eingef_gt_wird_nur_was_hier_angehakt_ist_Diese_R_6f35b039" xml:space="preserve">
+    <value>Yalnızca burada işaretli olanlar yapıştırılır. Bu kaydırıcılar görüntününkilerin yerini alır, diğerlerinin hepsi olduğu gibi kalır.</value>
+  </data>
+  <data name="Anpassungen_verwalten_360f5bee" xml:space="preserve">
+    <value>Ayarlamaları yönet</value>
+  </data>
+  <data name="Jede_Anpassung_ist_eine_Datei_jeder_Ordner_ein_e_cd4fd224" xml:space="preserve">
+    <value>Her ayarlama bir dosya, her klasör gerçek bir klasördür. Başkasına vermek için dosyaları veya bir klasörü kopyalamak yeterlidir.</value>
+  </data>
+  <data name="Ordner_f_r_Anpassungen_a11c8c84" xml:space="preserve">
+    <value>Ayarlamalar klasörü</value>
+  </data>
+  <data name="Hier_liegen_die_im_Editor_gespeicherten_Anpassun_89b2f8b3" xml:space="preserve">
+    <value>Düzenleyicide kaydedilen ayarlamalar burada durur; her biri ayrı bir dosya, her klasör gerçek bir klasördür. Kendi seçtiğiniz bir klasör, örneğin bir bulut depolama alanında, onları birden çok bilgisayarda kullanılabilir kılar. Klasöre erişilemiyorsa liste boş kalır.</value>
+  </data>
+  <data name="Wieder_den_Ordner_im_Datenordner_der_Anwendung_v_67a35185" xml:space="preserve">
+    <value>Yeniden uygulamanın veri klasöründeki klasörü kullan</value>
+  </data>
+  <data name="Ordner_f_r_Anpassungen_w_hlen_79bdb005" xml:space="preserve">
+    <value>Ayarlamalar klasörünü seç</value>
+  </data>
+  <data name="Im_bisherigen_Ordner_liegen_0_Anpassung_en_Solle_20cdd6ce" xml:space="preserve">
+    <value>Önceki klasörde {0} ayarlama var. Yeni klasöre taşınsınlar mı? Aksi halde önceki klasörde kalırlar ve artık listede görünmezler.</value>
+  </data>
+  <data name="Mitziehen_b1307569" xml:space="preserve">
+    <value>Birlikte taşı</value>
+  </data>
+  <data name="Dort_lassen_d8c7764f" xml:space="preserve">
+    <value>Orada bırak</value>
+  </data>
+  <data name="0_Anpassung_en_in_den_neuen_Ordner_verschoben_efb3edec" xml:space="preserve">
+    <value>{0} ayarlama yeni klasöre taşındı</value>
+  </data>
+  <data name="0_lie_en_sich_nicht_verschieben_und_liegen_weite_74250764" xml:space="preserve">
+    <value>{0} tanesi taşınamadı ve önceki klasörde duruyor</value>
+  </data>
+  <data name="Bewegtbild_f306457a" xml:space="preserve">
+    <value>Hareketli görüntü</value>
+  </data>
+  <data name="Motion_Photo_Film_in_der_Datei_254d738f" xml:space="preserve">
+    <value>Motion Photo, video dosyanın içinde</value>
+  </data>
+  <data name="Live_Photo_Bild_4f903725" xml:space="preserve">
+    <value>Live Photo, görüntü</value>
+  </data>
+  <data name="Live_Photo_Film_7c876762" xml:space="preserve">
+    <value>Live Photo, video</value>
+  </data>
+  <data name="Motion_Photo_an_diesem_Bild_h_ngt_ein_kurzer_Fil_7b0b12c8" xml:space="preserve">
+    <value>Motion Photo: bu görüntüye kısa bir video eklidir</value>
+  </data>
+  <data name="Live_Photo_zu_diesem_Bild_geh_rt_ein_kurzer_Film_19de2886" xml:space="preserve">
+    <value>Live Photo: bu görüntüye ait kısa bir video var</value>
+  </data>
+  <data name="Live_Photo_der_Film_zu_einem_Bild_0aa4441a" xml:space="preserve">
+    <value>Live Photo: bir görüntüye ait video</value>
+  </data>
+  <data name="Film_zu_diesem_Bild_abspielen_e6390328" xml:space="preserve">
+    <value>Bu görüntünün videosunu oynat</value>
+  </data>
+  <data name="Film_anhalten_und_zum_Bild_zur_ck_0f3d9659" xml:space="preserve">
+    <value>Videoyu durdur ve görüntüye dön</value>
+  </data>
+  <data name="Der_Film_zu_diesem_Bild_ist_nicht_mehr_da_28434c71" xml:space="preserve">
+    <value>Bu görüntünün videosu artık yok</value>
+  </data>
+  <data name="Der_Film_zu_diesem_Bild_lie_sich_nicht_abspielen_55dff2c2" xml:space="preserve">
+    <value>Bu görüntünün videosu oynatılamadı</value>
+  </data>
+  <data name="Zu_diesem_Live_Photo_geh_rt_0_Der_Name_1_ist_daf_2c7e82bc" xml:space="preserve">
+    <value>Bu Live Photo'ya {0} aittir. {1} adı bunun için zaten kullanılıyor.</value>
   </data>
 </root>

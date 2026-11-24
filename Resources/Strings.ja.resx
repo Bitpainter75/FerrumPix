@@ -4539,9 +4539,6 @@
   <data name="Die_gew_hlte_Anpassung_auf_dieses_Bild_anwenden_b40e940c" xml:space="preserve">
     <value>選んだ調整をこの画像に適用します</value>
   </data>
-  <data name="Die_aktuellen_Regler_unter_diesem_Namen_merken_e_28792148" xml:space="preserve">
-    <value>現在のスライダーの状態をこの名前で覚えます。同じ名前の項目は置き換えられます</value>
-  </data>
   <data name="Standardformat_1c812c8e" xml:space="preserve">
     <value>既定の形式</value>
   </data>
@@ -4553,9 +4550,6 @@
   </data>
   <data name="Anpassung_gespeichert_0_55443bca" xml:space="preserve">
     <value>調整を保存しました: {0}</value>
-  </data>
-  <data name="Anpassung_gel_scht_0_1f26438b" xml:space="preserve">
-    <value>調整を削除しました: {0}</value>
   </data>
   <data name="Anpassung_angewendet_0_25f50909" xml:space="preserve">
     <value>調整を適用しました: {0}</value>
@@ -12303,5 +12297,212 @@
   </data>
   <data name="TAB_38d4aa69" xml:space="preserve">
     <value>TAB</value>
+  </data>
+  <data name="ALT_1_bis_ALT_4_68193d8c" xml:space="preserve">
+    <value>ALT+1 から ALT+4</value>
+  </data>
+  <data name="Dieses_Feld_direkt_aktiv_machen_6a8d2c76" xml:space="preserve">
+    <value>この枠を直接アクティブにします</value>
+  </data>
+  <data name="In_diesen_Ordner_wird_die_Anpassung_gespeichert__1506e780" xml:space="preserve">
+    <value>調整はこのフォルダーに保存されます。フォルダーは管理画面で作成します。</value>
+  </data>
+  <data name="Hauptordner_93a2f3f0" xml:space="preserve">
+    <value>ルートフォルダー</value>
+  </data>
+  <data name="Der_Ordner_f_r_Anpassungen_ist_nicht_erreichbar__c8899bfd" xml:space="preserve">
+    <value>調整用のフォルダーにアクセスできません: {0}。このフォルダーは設定のエディターで指定します。</value>
+  </data>
+  <data name="Neuer_Ordner_in_0_3a44f881" xml:space="preserve">
+    <value>{0} に新規フォルダー</value>
+  </data>
+  <data name="Neuer_Name_des_Ordners_8e707c90" xml:space="preserve">
+    <value>フォルダーの新しい名前</value>
+  </data>
+  <data name="Neuer_Name_der_Anpassung_4b271b22" xml:space="preserve">
+    <value>調整の新しい名前</value>
+  </data>
+  <data name="Es_gibt_keinen_anderen_Ordner_als_Ziel_de1e2a87" xml:space="preserve">
+    <value>移動先にできるフォルダーがほかにありません。</value>
+  </data>
+  <data name="Ordner_0_verschieben_nach_792d7c44" xml:space="preserve">
+    <value>フォルダー {0} の移動先</value>
+  </data>
+  <data name="Anpassung_0_verschieben_nach_c3d26d55" xml:space="preserve">
+    <value>調整 {0} の移動先</value>
+  </data>
+  <data name="Der_Ordner_0_wird_mit_1_Anpassung_en_gel_scht_An_2be977f0" xml:space="preserve">
+    <value>フォルダー {0} と、その中の {1} 件の調整を削除します。中にあるほかのファイルは残ります。</value>
+  </data>
+  <data name="Die_Anpassung_0_wird_gel_scht_02b65971" xml:space="preserve">
+    <value>調整 {0} を削除します。</value>
+  </data>
+  <data name="Bitte_einen_Namen_eingeben_79e2b03f" xml:space="preserve">
+    <value>名前を入力してください。</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_anlegen_Gibt_es_ihn_sc_c47f51e0" xml:space="preserve">
+    <value>フォルダーを作成できませんでした。すでに存在していませんか？</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_umbenennen_Gibt_es_den_12fb5f51" xml:space="preserve">
+    <value>フォルダーの名前を変更できませんでした。その名前はすでに使われていませんか？</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_umbenennen_Gibt_es__0fd26f4f" xml:space="preserve">
+    <value>調整の名前を変更できませんでした。このフォルダーにその名前はすでにありませんか？</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_verschieben_Gibt_es_do_7cdb8df5" xml:space="preserve">
+    <value>フォルダーを移動できませんでした。移動先に同じ名前のフォルダーがありませんか？</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_verschieben_Gibt_es_8db30dc2" xml:space="preserve">
+    <value>調整を移動できませんでした。移動先に同じ名前の調整がありませんか？</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_l_schen_fc8f1e99" xml:space="preserve">
+    <value>フォルダーを削除できませんでした。</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_l_schen_ecd96ecc" xml:space="preserve">
+    <value>調整を削除できませんでした。</value>
+  </data>
+  <data name="0_Anpassung_en_importiert_fdc783e6" xml:space="preserve">
+    <value>{0} 件の調整を取り込みました</value>
+  </data>
+  <data name="0_schon_vorhanden_68664521" xml:space="preserve">
+    <value>{0} 件はすでにあります</value>
+  </data>
+  <data name="0_Datei_en_nicht_lesbar_9653e2bc" xml:space="preserve">
+    <value>{0} 個のファイルを読み込めません</value>
+  </data>
+  <data name="Anpassung_exportiert_0_98d89e68" xml:space="preserve">
+    <value>調整を書き出しました: {0}</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_exportieren_53eb4a9a" xml:space="preserve">
+    <value>調整を書き出せませんでした。</value>
+  </data>
+  <data name="0_Anpassung_en_exportiert_fd94c88c" xml:space="preserve">
+    <value>{0} 件の調整を書き出しました</value>
+  </data>
+  <data name="Einen_Unterordner_im_gew_hlten_Ordner_anlegen_04fa4248" xml:space="preserve">
+    <value>選択したフォルダーにサブフォルダーを作成します</value>
+  </data>
+  <data name="Ordner_exportieren_e68ad9ad" xml:space="preserve">
+    <value>フォルダーを書き出し</value>
+  </data>
+  <data name="Den_gew_hlten_Ordner_samt_Unterordnern_in_ein_Ve_dec83286" xml:space="preserve">
+    <value>選択したフォルダーをサブフォルダーごとディレクトリに書き出します</value>
+  </data>
+  <data name="In_diesem_Ordner_liegt_keine_Anpassung_c72f5c19" xml:space="preserve">
+    <value>このフォルダーに調整はありません。</value>
+  </data>
+  <data name="Die_gew_hlte_Anpassung_als_Datei_an_einen_andere_419cc46b" xml:space="preserve">
+    <value>選択した調整をファイルとして別の場所に書き出します</value>
+  </data>
+  <data name="Datei_importieren_a2367221" xml:space="preserve">
+    <value>ファイルを取り込む</value>
+  </data>
+  <data name="Dateien_mit_Anpassungen_in_den_gew_hlten_Ordner__d0a3086f" xml:space="preserve">
+    <value>調整のファイルを選択したフォルダーに取り込みます</value>
+  </data>
+  <data name="Ordner_importieren_751ddbf0" xml:space="preserve">
+    <value>フォルダーを取り込む</value>
+  </data>
+  <data name="Einen_Ordner_samt_Unterordnern_in_den_gew_hlten__c0e65180" xml:space="preserve">
+    <value>フォルダーをサブフォルダーごと選択したフォルダーに取り込みます</value>
+  </data>
+  <data name="Anpassungen_importieren_838230e9" xml:space="preserve">
+    <value>調整を取り込む</value>
+  </data>
+  <data name="Ordner_mit_Anpassungen_importieren_9be5ad2e" xml:space="preserve">
+    <value>調整の入ったフォルダーを取り込む</value>
+  </data>
+  <data name="Anpassung_exportieren_ecc0fac1" xml:space="preserve">
+    <value>調整を書き出し</value>
+  </data>
+  <data name="Einstellungen_ffnen_dd5e857e" xml:space="preserve">
+    <value>設定を開く</value>
+  </data>
+  <data name="Verwalten_d0d41dd9" xml:space="preserve">
+    <value>管理</value>
+  </data>
+  <data name="Anpassungen_in_Ordnern_ordnen_umbenennen_verschi_87e5728e" xml:space="preserve">
+    <value>調整をフォルダーに整理し、名前の変更、移動、削除、取り込み、書き出しを行います</value>
+  </data>
+  <data name="Einf_gen_mit_Auswahl_4c235020" xml:space="preserve">
+    <value>選んで貼り付け</value>
+  </data>
+  <data name="Aus_den_kopierten_Anpassungen_w_hlen_welche_Regl_bc4e7b97" xml:space="preserve">
+    <value>コピーした調整から、貼り付けるスライダーを選びます</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_speichern_d315a955" xml:space="preserve">
+    <value>調整を保存できませんでした。</value>
+  </data>
+  <data name="Eingef_gt_wird_nur_was_hier_angehakt_ist_Diese_R_6f35b039" xml:space="preserve">
+    <value>ここでチェックを入れたものだけが貼り付けられます。これらのスライダーは画像のものを置き換え、ほかはすべてそのまま残ります。</value>
+  </data>
+  <data name="Anpassungen_verwalten_360f5bee" xml:space="preserve">
+    <value>調整を管理</value>
+  </data>
+  <data name="Jede_Anpassung_ist_eine_Datei_jeder_Ordner_ein_e_cd4fd224" xml:space="preserve">
+    <value>調整は 1 つずつファイルになっており、フォルダーは実際のフォルダーです。ほかの人に渡すには、ファイルやフォルダーをコピーするだけで済みます。</value>
+  </data>
+  <data name="Ordner_f_r_Anpassungen_a11c8c84" xml:space="preserve">
+    <value>調整用のフォルダー</value>
+  </data>
+  <data name="Hier_liegen_die_im_Editor_gespeicherten_Anpassun_89b2f8b3" xml:space="preserve">
+    <value>エディターで保存した調整がここに置かれます。調整は 1 つずつファイルになり、フォルダーは実際のフォルダーです。クラウドストレージなどに専用のフォルダーを置くと、複数のコンピューターで使えます。フォルダーにアクセスできないときは、一覧は空のままです。</value>
+  </data>
+  <data name="Wieder_den_Ordner_im_Datenordner_der_Anwendung_v_67a35185" xml:space="preserve">
+    <value>アプリケーションのデータフォルダー内のフォルダーに戻します</value>
+  </data>
+  <data name="Ordner_f_r_Anpassungen_w_hlen_79bdb005" xml:space="preserve">
+    <value>調整用のフォルダーを選択</value>
+  </data>
+  <data name="Im_bisherigen_Ordner_liegen_0_Anpassung_en_Solle_20cdd6ce" xml:space="preserve">
+    <value>これまでのフォルダーに {0} 件の調整があります。新しいフォルダーへ一緒に移しますか？移さない場合は、これまでのフォルダーに残り、一覧には表示されなくなります。</value>
+  </data>
+  <data name="Mitziehen_b1307569" xml:space="preserve">
+    <value>一緒に移す</value>
+  </data>
+  <data name="Dort_lassen_d8c7764f" xml:space="preserve">
+    <value>そのまま残す</value>
+  </data>
+  <data name="0_Anpassung_en_in_den_neuen_Ordner_verschoben_efb3edec" xml:space="preserve">
+    <value>{0} 件の調整を新しいフォルダーへ移動しました</value>
+  </data>
+  <data name="0_lie_en_sich_nicht_verschieben_und_liegen_weite_74250764" xml:space="preserve">
+    <value>{0} 件は移動できず、これまでのフォルダーに残っています</value>
+  </data>
+  <data name="Bewegtbild_f306457a" xml:space="preserve">
+    <value>動く画像</value>
+  </data>
+  <data name="Motion_Photo_Film_in_der_Datei_254d738f" xml:space="preserve">
+    <value>Motion Photo、動画はファイル内</value>
+  </data>
+  <data name="Live_Photo_Bild_4f903725" xml:space="preserve">
+    <value>Live Photo、画像</value>
+  </data>
+  <data name="Live_Photo_Film_7c876762" xml:space="preserve">
+    <value>Live Photo、動画</value>
+  </data>
+  <data name="Motion_Photo_an_diesem_Bild_h_ngt_ein_kurzer_Fil_7b0b12c8" xml:space="preserve">
+    <value>Motion Photo: この画像には短い動画が付いています</value>
+  </data>
+  <data name="Live_Photo_zu_diesem_Bild_geh_rt_ein_kurzer_Film_19de2886" xml:space="preserve">
+    <value>Live Photo: この画像には短い動画が対応しています</value>
+  </data>
+  <data name="Live_Photo_der_Film_zu_einem_Bild_0aa4441a" xml:space="preserve">
+    <value>Live Photo: 画像に対応する動画</value>
+  </data>
+  <data name="Film_zu_diesem_Bild_abspielen_e6390328" xml:space="preserve">
+    <value>この画像の動画を再生</value>
+  </data>
+  <data name="Film_anhalten_und_zum_Bild_zur_ck_0f3d9659" xml:space="preserve">
+    <value>動画を止めて画像に戻る</value>
+  </data>
+  <data name="Der_Film_zu_diesem_Bild_ist_nicht_mehr_da_28434c71" xml:space="preserve">
+    <value>この画像の動画はもうありません</value>
+  </data>
+  <data name="Der_Film_zu_diesem_Bild_lie_sich_nicht_abspielen_55dff2c2" xml:space="preserve">
+    <value>この画像の動画を再生できませんでした</value>
+  </data>
+  <data name="Zu_diesem_Live_Photo_geh_rt_0_Der_Name_1_ist_daf_2c7e82bc" xml:space="preserve">
+    <value>この Live Photo には {0} が含まれます。名前 {1} はすでに使われています。</value>
   </data>
 </root>
