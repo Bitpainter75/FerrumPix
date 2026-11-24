@@ -210,6 +210,14 @@
                         <TextBlock Text="Wähle ein Bild aus der Galerie" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
                     </StackPanel>
 
+                    <!-- Die Galerie-Kachel, solange das Bild noch entwickelt wird. Sie steht VOR der
+                         Ladeanzeige, damit diese darueber liegt: fertig ist noch nichts. -->
+                    <Image Source="{Binding TransitionImage, Converter={x:Static icons:ColorManagedBitmapConverter.Instance}}"
+                           IsVisible="{Binding ShowTransitionImage}"
+                           IsHitTestVisible="False"
+                           Stretch="Uniform"
+                           RenderOptions.BitmapInterpolationMode="MediumQuality" />
+
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12"
                                 IsVisible="{Binding ShowBitmapLoading}">
                         <ProgressBar Width="220" Height="4" IsIndeterminate="True" />
@@ -916,6 +924,12 @@
               PointerMoved="OnFullscreenViewportPointerMoved"
               PointerReleased="OnFullscreenViewportPointerReleased"
               IsVisible="{Binding IsFullscreenMode}">
+            <!-- Auch im Vollbild fuellt die Kachel die Flaeche, bis das Bild entwickelt ist. -->
+            <Image Source="{Binding TransitionImage, Converter={x:Static icons:ColorManagedBitmapConverter.Instance}}"
+                   IsVisible="{Binding ShowTransitionImage}"
+                   IsHitTestVisible="False"
+                   Stretch="Uniform"
+                   RenderOptions.BitmapInterpolationMode="MediumQuality" />
             <Border Name="FullscreenImageBackgroundBorder"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
