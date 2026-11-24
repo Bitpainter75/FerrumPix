@@ -12195,4 +12195,10 @@
   <data name="Zwischen_100_Prozent_und_Einpassen_wechseln_bei__f9add5f1" xml:space="preserve">
     <value>Basculer entre 100 pour cent et l'ajustement, avec le collimateur au centre lorsque les collimateurs sont affichés</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>Afficher la vignette de la galerie pendant le développement dans la visionneuse</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>Affiche aussitôt la vignette de la galerie dans la visionneuse et en plein écran jusqu'à la fin du développement, au lieu d'une zone vide. La vignette est plus petite que l'image et paraît donc floue un court instant.</value>
+  </data>
 </root>

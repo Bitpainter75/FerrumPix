@@ -12213,4 +12213,10 @@
   <data name="Zwischen_100_Prozent_und_Einpassen_wechseln_bei__f9add5f1" xml:space="preserve">
     <value>Zwischen 100 Prozent und Einpassen wechseln, bei eingeblendeten Fokusfeldern mit dem Fokusfeld in der Mitte</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>Galerie-Kachel zeigen, solange im Viewer entwickelt wird</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>Zeigt im Viewer und im Vollbild sofort die Kachel aus der Galerie, bis die Entwicklung fertig ist, statt einer leeren Fläche. Die Kachel ist kleiner als das Bild und wirkt deshalb kurz unscharf.</value>
+  </data>
 </root>

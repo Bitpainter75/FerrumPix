@@ -12193,4 +12193,10 @@
   <data name="Zwischen_100_Prozent_und_Einpassen_wechseln_bei__f9add5f1" xml:space="preserve">
     <value>在 100% 与适合窗口之间切换，显示对焦点时以对焦点为中心</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>在查看器冲洗期间显示图库缩略图</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>在冲洗完成之前，立即在查看器和全屏中显示图库中的缩略图，而不是空白区域。缩略图比图片小，因此会短暂显得模糊。</value>
+  </data>
 </root>

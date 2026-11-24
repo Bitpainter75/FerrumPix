@@ -12235,4 +12235,10 @@
   <data name="Zwischen_100_Prozent_und_Einpassen_wechseln_bei__f9add5f1" xml:space="preserve">
     <value>Wisselen tussen 100 procent en passend, met het scherpstelpunt in het midden als scherpstelpunten worden getoond</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>Galerijtegel tonen zolang de viewer ontwikkelt</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>Toont in de viewer en in volledig scherm meteen de tegel uit de galerij tot het ontwikkelen klaar is, in plaats van een leeg vlak. De tegel is kleiner dan de foto en oogt daardoor even onscherp.</value>
+  </data>
 </root>

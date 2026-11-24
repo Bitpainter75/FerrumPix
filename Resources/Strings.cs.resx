@@ -12235,4 +12235,10 @@
   <data name="Zwischen_100_Prozent_und_Einpassen_wechseln_bei__f9add5f1" xml:space="preserve">
     <value>Přepnout mezi 100 procenty a přizpůsobením, při zobrazených zaostřovacích polích se zaostřovacím polem uprostřed</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>Zobrazit dlaždici z galerie, dokud prohlížeč vyvolává</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>V prohlížeči a na celé obrazovce ihned zobrazí dlaždici z galerie, dokud není vyvolání hotové, místo prázdné plochy. Dlaždice je menší než snímek, a proto chvíli působí neostře.</value>
+  </data>
 </root>

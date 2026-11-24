@@ -41,6 +41,7 @@ Namespace ViewModels
         Private _developRawThumbnails As Boolean = False
         Private _developRawInViewer As Boolean = False
         Private _developRawInViewerWithoutRecipe As Boolean = False
+        Private _viewerTransitionTile As Boolean = False
         Private _compareRawFullResolution As Boolean = False
         Private _viewerRawFullResolution As Boolean = False
         Private _developRawInBatch As Boolean = True
@@ -252,6 +253,7 @@ Namespace ViewModels
         Private _savedDevelopRawThumbnails As Boolean = False
         Private _savedDevelopRawInViewer As Boolean = False
         Private _savedDevelopRawInViewerWithoutRecipe As Boolean = False
+        Private _savedViewerTransitionTile As Boolean = False
         Private _savedCompareRawFullResolution As Boolean = False
         Private _savedViewerRawFullResolution As Boolean = False
         Private _savedThumbnailCacheEnabled As Boolean = True
@@ -884,6 +886,19 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _developRawInViewerWithoutRecipe = value Then Return
                 Me.RaiseAndSetIfChanged(_developRawInViewerWithoutRecipe, value)
+                SavePerformanceSettings()
+            End Set
+        End Property
+
+        ''' <summary>Solange der Betrachter entwickelt, die Galerie-Kachel als Uebergangsbild
+        ''' zeigen (Standard AUS). Wirkt beim naechsten Bild.</summary>
+        Public Property ViewerTransitionTile As Boolean
+            Get
+                Return _viewerTransitionTile
+            End Get
+            Set(value As Boolean)
+                If _viewerTransitionTile = value Then Return
+                Me.RaiseAndSetIfChanged(_viewerTransitionTile, value)
                 SavePerformanceSettings()
             End Set
         End Property
@@ -5355,6 +5370,7 @@ Namespace ViewModels
             _developRawThumbnails = _appSettings.DevelopRawThumbnails
             _developRawInViewer = _appSettings.DevelopRawInViewer
             _developRawInViewerWithoutRecipe = _appSettings.DevelopRawInViewerWithoutRecipe
+            _viewerTransitionTile = _appSettings.ViewerTransitionTile
             _compareRawFullResolution = _appSettings.CompareRawFullResolution
             _viewerRawFullResolution = _appSettings.ViewerRawFullResolution
             _developRawInBatch = _appSettings.DevelopRawInBatch
@@ -5827,6 +5843,7 @@ Namespace ViewModels
             _savedDevelopRawThumbnails = _developRawThumbnails
             _savedDevelopRawInViewer = _developRawInViewer
             _savedDevelopRawInViewerWithoutRecipe = _developRawInViewerWithoutRecipe
+            _savedViewerTransitionTile = _viewerTransitionTile
             _savedCompareRawFullResolution = _compareRawFullResolution
             _savedViewerRawFullResolution = _viewerRawFullResolution
             _savedThumbnailCacheEnabled = _thumbnailCacheEnabled
@@ -6057,6 +6074,7 @@ Namespace ViewModels
             DevelopRawThumbnails = _savedDevelopRawThumbnails
             DevelopRawInViewer = _savedDevelopRawInViewer
             DevelopRawInViewerWithoutRecipe = _savedDevelopRawInViewerWithoutRecipe
+            ViewerTransitionTile = _savedViewerTransitionTile
             CompareRawFullResolution = _savedCompareRawFullResolution
             ViewerRawFullResolution = _savedViewerRawFullResolution
             ThumbnailCacheEnabled = _savedThumbnailCacheEnabled
@@ -6226,6 +6244,7 @@ Namespace ViewModels
             DevelopRawThumbnails = False
             DevelopRawInViewer = False
             DevelopRawInViewerWithoutRecipe = False
+            ViewerTransitionTile = False
             CompareRawFullResolution = False
             ViewerRawFullResolution = False
             ThumbnailCacheEnabled = True
@@ -6768,6 +6787,7 @@ Namespace ViewModels
                                           s.DevelopRawThumbnails = _developRawThumbnails
                                           s.DevelopRawInViewer = _developRawInViewer
                                           s.DevelopRawInViewerWithoutRecipe = _developRawInViewerWithoutRecipe
+                                          s.ViewerTransitionTile = _viewerTransitionTile
                                           s.CompareRawFullResolution = _compareRawFullResolution
                                           s.ViewerRawFullResolution = _viewerRawFullResolution
                                       End Sub)

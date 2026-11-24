@@ -12235,4 +12235,10 @@
   <data name="Zwischen_100_Prozent_und_Einpassen_wechseln_bei__f9add5f1" xml:space="preserve">
     <value>Skift mellem 100 procent og tilpasning, med fokusfeltet i midten når fokusfelter vises</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>Vis galleriets flise, mens fremviseren fremkalder</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>Viser straks flisen fra galleriet i fremviseren og i fuld skærm, indtil fremkaldelsen er færdig, i stedet for en tom flade. Flisen er mindre end billedet og ser derfor kortvarigt uskarp ud.</value>
+  </data>
 </root>

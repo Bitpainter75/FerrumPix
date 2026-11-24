@@ -12239,4 +12239,10 @@
   <data name="Zwischen_100_Prozent_und_Einpassen_wechseln_bei__f9add5f1" xml:space="preserve">
     <value>สลับระหว่าง 100 เปอร์เซ็นต์กับพอดีหน้าจอ โดยให้จุดโฟกัสอยู่ตรงกลางเมื่อแสดงจุดโฟกัส</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>แสดงภาพย่อของแกลเลอรีระหว่างที่โปรแกรมดูภาพกำลังล้างภาพ</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>แสดงภาพย่อจากแกลเลอรีทันทีในโปรแกรมดูภาพและโหมดเต็มหน้าจอจนกว่าการล้างภาพจะเสร็จ แทนพื้นที่ว่าง ภาพย่อมีขนาดเล็กกว่าภาพจริงจึงดูไม่คมชัดชั่วครู่</value>
+  </data>
 </root>

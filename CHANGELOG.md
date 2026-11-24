@@ -9,6 +9,9 @@
 - The viewer can show where the camera focused, switched on and off with a new button in the
   footer, and Z then zooms to 100 percent right at that spot.
 
+- While the viewer develops a picture, it can show the tile from the gallery right away instead of
+  an empty area. A new switch in the RAW settings turns this on.
+
 - The settings link to the documentation: an entry below the homepage opens the manual in the
   browser.
 

@@ -12235,4 +12235,10 @@
   <data name="Zwischen_100_Prozent_und_Einpassen_wechseln_bei__f9add5f1" xml:space="preserve">
     <value>100 パーセントと全体表示を切り替え、フォーカスポイント表示中はフォーカスポイントを中央に</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>ビューアーで現像中はギャラリーのタイルを表示する</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>現像が終わるまで、空の領域の代わりにギャラリーのタイルをビューアーと全画面表示にすぐ表示します。タイルは画像より小さいため、少しの間ぼやけて見えます。</value>
+  </data>
 </root>

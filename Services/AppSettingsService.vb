@@ -723,6 +723,9 @@ Namespace Services
         ''' Entwicklung statt der Kamera-Vorschau sehen will, schaltet diesen hier ein - er wirkt
         ''' unabhaengig vom Rezept-Schalter und kostet je Bild einen vollen Decode.
         Public Property DevelopRawInViewerWithoutRecipe As Boolean = False
+        ''' Solange der Betrachter ein Bild entwickelt, die Galerie-Kachel als Uebergangsbild
+        ''' zeigen (Standard AUS, dann bleibt die Flaeche wie bisher leer bis zum fertigen Bild).
+        Public Property ViewerTransitionTile As Boolean = False
         ''' RAWs im Bildvergleich in voller Sensoraufloesung entwickeln (Standard AUS). Ausgeschaltet
         ''' entwickelt der Vergleich ueber half_size: halbe Kantenlaenge, rund siebenmal schneller,
         ''' und fuer eine Flaeche von halber Fensterbreite genug. Erst beim Hineinzoomen fehlt

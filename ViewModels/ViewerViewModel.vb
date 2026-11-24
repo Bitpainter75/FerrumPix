@@ -442,6 +442,33 @@ Namespace ViewModels
             Dispatcher.UIThread.Post(Sub() bitmap.Dispose(), DispatcherPriority.Background)
         End Sub
 
+        Private _transitionImage As Bitmap
+
+        ''' <summary>Die Galerie-Kachel, die die Flaeche fuellt, solange ein Bild noch entwickelt
+        ''' wird (<see cref="SeedTransitionFromTile"/>). Bewusst NICHT <see cref="CurrentImage"/>:
+        ''' alles, was am gezeigten Bild haengt, soll die Kachel nie fuer das Bild halten.</summary>
+        Public Property TransitionImage As Bitmap
+            Get
+                Return _transitionImage
+            End Get
+            Private Set(value As Bitmap)
+                Dim previous = _transitionImage
+                If Object.ReferenceEquals(previous, value) Then Return
+                Me.RaiseAndSetIfChanged(_transitionImage, value)
+                Me.RaisePropertyChanged(NameOf(ShowTransitionImage))
+                Me.RaisePropertyChanged(NameOf(ShowBitmapLoading))
+                DisposeDeferred(previous)
+            End Set
+        End Property
+
+        ''' <summary>Die Kachel ist nur zu sehen, solange das Bild selbst noch fehlt.</summary>
+        Public ReadOnly Property ShowTransitionImage As Boolean
+            Get
+                Return _transitionImage IsNot Nothing AndAlso _currentImage Is Nothing AndAlso
+                       Not _isCompareMode AndAlso Not IsVideoFile
+            End Get
+        End Property
+
         Public Property CurrentImage As Bitmap
             Get
                 Return _currentImage
@@ -452,6 +479,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(HasNoMedia))
                 Me.RaisePropertyChanged(NameOf(IsSingleImageVisible))
                 Me.RaisePropertyChanged(NameOf(ShowBitmapLoading))
+                Me.RaisePropertyChanged(NameOf(ShowTransitionImage))
                 If Not Object.ReferenceEquals(previous, value) Then
                     ' Die Akzentfarbe des Titels haengt am gezeigten Bild (IsRawDeveloped).
                     Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
@@ -881,7 +909,10 @@ Namespace ViewModels
         ''' beim Blaettern wie bisher stehen und braucht keinen zusaetzlichen Platzhalter.</summary>
         Public ReadOnly Property ShowBitmapLoading As Boolean
             Get
+                ' Steht die Galerie-Kachel als Uebergangsbild, entfaellt die Anzeige: wer den
+                ' Schalter dafuer einschaltet, will die Kachel sehen und keinen Balken darueber.
                 Return _isBitmapLoading AndAlso _currentImage Is Nothing AndAlso
+                       _transitionImage Is Nothing AndAlso
                        IsRenderableImagePath(_currentImagePath) AndAlso Not IsVideoFile
             End Get
         End Property
@@ -908,6 +939,8 @@ Namespace ViewModels
         End Function
 
         Private Sub SetBitmapLoading(value As Boolean)
+            ' Mit dem Ende des Ladens geht auch die Kachel, die es ueberbrueckt hat.
+            If Not value Then TransitionImage = Nothing
             If _isBitmapLoading = value Then Return
             _isBitmapLoading = value
             Me.RaisePropertyChanged(NameOf(ShowBitmapLoading))
@@ -3297,6 +3330,9 @@ Namespace ViewModels
             Dim token = System.Threading.Interlocked.Increment(_bitmapLoadToken)
             Dim path = _currentImagePath
             SetBitmapLoading(True)
+            ' Die Kachel des vorigen Bildes geht mit ihm: lief dessen Laden noch, hat der Aufruf
+            ' oben nichts geaendert und sie stuende sonst unter dem neuen Bild.
+            TransitionImage = Nothing
             ' Bildwechsel atomar anzeigen: das alte Bitmap darf nicht waehrend des neuen
             ' Decode-/Render-Vorgangs als scheinbar aktuelles Bild stehen bleiben. Der Ladezustand
             ' wird erst sichtbar, wenn CurrentImage Nothing ist (ShowBitmapLoading).
@@ -3346,6 +3382,10 @@ Namespace ViewModels
                 End If
                 If bmp Is Nothing Then
                     Dim recipeKey = ItemPathFor(path)
+                    ' Bei einer Entwicklung dauert der Decode unten noch; solange bleibt die
+                    ' Flaeche leer. SeedTransitionFromTile holt bis dahin die fertige
+                    ' Galerie-Kachel als Uebergangsbild herein, ohne auf sie zu warten.
+                    SeedTransitionFromTile(path, recipeKey, token, writeTime)
                     Dim decoded = Await Task.Run(Function() DecodeViewerBitmapUnlessStale(path, reduced, token, recipeKey))
                     bmp = decoded.Bitmap
                     rawDeveloped = decoded.RawDeveloped
@@ -3625,6 +3665,96 @@ Namespace ViewModels
             If _isFitToWindow Then UpdateFitZoom()
             UpdateStatus()
             Return True
+        End Function
+
+        ''' <summary>Legt die schon fertige Galerie-Kachel eines Bildes als Uebergangsbild auf,
+        ''' solange seine Entwicklung noch rechnet, statt die Flaeche in der Zwischenzeit leer zu
+        ''' lassen.
+        '''
+        ''' Zwischen LoadBitmap (leere Flaeche) und dem fertigen Decode vergeht bei einer Entwicklung
+        ''' - RAW, RAW-Variante oder Nicht-RAW mit Rezept daneben - spuerbar Zeit. Liegt die Kachel
+        ''' fuer genau dieses Bild schon im Cache, ueberbrueckt sie die Wartezeit: dieselbe Aufnahme,
+        ''' nur in Kachelgroesse.
+        '''
+        ''' DIE KACHEL IST NICHT DAS BILD. Sie liegt in <see cref="TransitionImage"/> und nicht in
+        ''' <see cref="CurrentImage"/>: Masse in der Statuszeile, Zoom, Histogramm, Peaking,
+        ''' Gesichtsrahmen und die Uebergabe an den Editor haengen am gezeigten Bild und sollen die
+        ''' Kachel nie fuer es halten. Die Ladeanzeige weicht ihr (<see cref="ShowBitmapLoading"/>):
+        ''' das Uebergangsbild ist eine bewusst eingeschaltete Einstellung
+        ''' (AppSettings.ViewerTransitionTile, ab Werk aus). Weg ist die Kachel, sobald das Laden endet (<see cref="SetBitmapLoading"/>)
+        ''' oder ein anderes Bild beginnt (<see cref="LoadBitmap"/>).
+        '''
+        ''' Gelesen wird im HINTERGRUND: die Frage nach Datei und Beistelldatei und das Lesen der
+        ''' Kachel sind Plattenzugriffe, und auf einer Netzfreigabe hielten sie sonst bei jedem
+        ''' Blaettern die Oberflaeche an. Die Entwicklung wartet nicht darauf; kommt die Kachel
+        ''' erst nach ihr, wird sie verworfen.
+        '''
+        ''' Nur die GENAUE Kachel zaehlt, keine veraltete: nach einer Bearbeitung stuende sonst
+        ''' kurz der alte Stand da. Und nur bei "Einpassen": die Kachel fuellt die Flaeche, bei
+        ''' einem festen Zoom spraenge das Bild beim Wechsel auf das volle Ergebnis.
+        '''
+        ''' Schnell geladene Bilder (eingebettete Vorschau, normales JPEG) bleiben bewusst aussen vor:
+        ''' ein Uebergangsbild waere dort beim Blaettern nur ein Flackern.</summary>
+        ''' <param name="path">Datei des Bildes.</param>
+        ''' <param name="recipeKey">Pfad oder Varianten-Schluessel; nach genau diesem Schluessel
+        ''' legt die Galerie ihre Kachel an, nach der sie hier sucht.</param>
+        ''' <param name="token">Der Lade-Token des Bildes, fuer das hier gesetzt wird.</param>
+        ''' <param name="writeTime">Aenderungszeit der Datei, wie schon vor dem Decode gelesen.</param>
+        Private Async Sub SeedTransitionFromTile(path As String, recipeKey As String,
+                                                 token As Integer, writeTime As DateTime)
+            If _slideshowSession OrElse Not _isFitToWindow Then Return
+
+            Dim scopeId = _thumbCacheScopeId
+            Dim scopeName = _thumbCacheScopeName
+            Dim tile As Bitmap = Nothing
+            Try
+                tile = Await Task.Run(Function() LoadExactTileOfDevelopedImage(path, recipeKey, writeTime, scopeId, scopeName))
+            Catch
+                tile = Nothing
+            End Try
+            If tile Is Nothing Then Return
+
+            ' Wer inzwischen weitergeblaettert hat oder das volle Bild schon sieht, braucht die
+            ' Kachel nicht mehr.
+            If token <> System.Threading.Volatile.Read(_bitmapLoadToken) OrElse
+               Not _isBitmapLoading OrElse _currentImage IsNot Nothing Then
+                tile.Dispose()
+                Return
+            End If
+            TransitionImage = tile
+        End Sub
+
+        ''' <summary>Die genaue Galerie-Kachel eines Bildes, das der Betrachter gleich entwickelt,
+        ''' sonst Nothing. Fasst Datei und Beistelldatei an und gehoert deshalb nicht auf den
+        ''' Oberflaechenfaden.
+        '''
+        ''' Nur fuer Bilder, die entwickelt werden: genau fuer sie legt die Galerie ihre Kachel aus
+        ''' der Entwicklung an, darum zeigt sie dasselbe wie das Ergebnis.</summary>
+        Friend Shared Function LoadExactTileOfDevelopedImage(path As String, recipeKey As String,
+                                                             writeTime As DateTime,
+                                                             scopeId As String, scopeName As String) As Bitmap
+            ' Ab Werk aus: dann bleibt die Flaeche wie bisher leer, bis das Bild fertig ist. Hier
+            ' gelesen und nicht beim Aufrufer, damit ein umgelegter Schalter beim naechsten Bild wirkt.
+            If Not AppSettingsService.Load().ViewerTransitionTile Then Return Nothing
+            Dim key = If(recipeKey, path)
+            Dim willDevelop = VariantKey.IsVariant(key) OrElse WillDevelopRawInViewer(path) OrElse
+                              (Not RawPreviewService.IsSupportedRaw(path) AndAlso RawSidecarService.HasRecipeBeside(key))
+            If Not willDevelop Then Return Nothing
+
+            Dim fileSize As Long = 0
+            Try
+                fileSize = New FileInfo(path).Length
+            Catch
+            End Try
+
+            Dim isExact As Boolean = False
+            Dim tile = ThumbnailCacheService.LoadCached(key, writeTime, fileSize,
+                                                        False, isExact, Nothing, scopeId, scopeName)
+            If tile IsNot Nothing AndAlso Not isExact Then
+                tile.Dispose()
+                Return Nothing
+            End If
+            Return tile
         End Function
 
         ''' <summary>Wie <see cref="DecodeViewerBitmap"/>, aber ein Auftrag, den ein Bildwechsel

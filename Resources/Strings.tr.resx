@@ -12239,4 +12239,10 @@
   <data name="Zwischen_100_Prozent_und_Einpassen_wechseln_bei__f9add5f1" xml:space="preserve">
     <value>Yüzde 100 ile sığdırma arasında geç, odak noktaları gösterilirken odak noktası ortada</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>Görüntüleyici işlerken galeri karosunu göster</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>İşleme bitene kadar boş bir alan yerine galerideki karoyu görüntüleyicide ve tam ekranda hemen gösterir. Karo resimden küçüktür ve bu yüzden kısa bir süre bulanık görünür.</value>
+  </data>
 </root>

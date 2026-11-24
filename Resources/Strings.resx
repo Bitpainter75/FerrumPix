@@ -12214,4 +12214,10 @@
   <data name="Zwischen_100_Prozent_und_Einpassen_wechseln_bei__f9add5f1" xml:space="preserve">
     <value>Switch between 100 percent and fit, with the focus point centered while focus points are shown</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>Show the gallery tile while the viewer develops</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>Shows the tile from the gallery right away in the viewer and in fullscreen until the development is finished, instead of an empty area. The tile is smaller than the picture and therefore looks soft for a moment.</value>
+  </data>
 </root>
