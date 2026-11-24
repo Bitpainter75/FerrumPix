@@ -3728,8 +3728,10 @@ Namespace ViewModels
         ''' sonst Nothing. Fasst Datei und Beistelldatei an und gehoert deshalb nicht auf den
         ''' Oberflaechenfaden.
         '''
-        ''' Nur fuer Bilder, die entwickelt werden: genau fuer sie legt die Galerie ihre Kachel aus
-        ''' der Entwicklung an, darum zeigt sie dasselbe wie das Ergebnis.</summary>
+        ''' Nur fuer Bilder, die entwickelt werden: fuer sie legt die Galerie ihre Kachel aus der
+        ''' Entwicklung an, darum zeigt sie in der Regel dasselbe wie das Ergebnis. Die Ausnahme ist
+        ''' eine unbearbeitete RAW, die nur der Betrachter entwickelt und die Galerie nicht: ihre
+        ''' genaue Kachel ist die Vorschau der Kamera, es steht also kurz deren Darstellung da.</summary>
         Friend Shared Function LoadExactTileOfDevelopedImage(path As String, recipeKey As String,
                                                              writeTime As DateTime,
                                                              scopeId As String, scopeName As String) As Bitmap

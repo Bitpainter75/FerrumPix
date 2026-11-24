@@ -5099,12 +5099,24 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' Kantenlänge einer Rasterzelle in Bildpixeln (Einstellungen -> Editor).
-        Public ReadOnly Property EditorGridSize As Integer
+        ''' <summary>Kantenlaenge einer Rasterzelle in Bildpixeln. Derselbe Wert wie in den
+        ''' Einstellungen (Editor); gesetzt wird er auch aus dem Aufklapper am Rasterknopf. Klemmen,
+        ''' Speichern und Melden besorgt die Einstellung (SettingsViewModel.EditorGridSize), sie
+        ''' meldet ueber MainWindowViewModel.RefreshLayoutBindings auch diese Eigenschaft.
+        '''
+        ''' Wer die Groesse HIER aendert, schaltet das Raster ein: bei ausgeschaltetem Raster saehe
+        ''' man sonst nicht, was man stellt.</summary>
+        Public Property EditorGridSize As Integer
             Get
                 If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return 50
                 Return _mainVm.Settings.EditorGridSize
             End Get
+            Set(value As Integer)
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
+                If AppSettingsService.NormalizeEditorGridSize(value) = _mainVm.Settings.EditorGridSize Then Return
+                _mainVm.Settings.EditorGridSize = value
+                If Not EditorShowGrid Then EditorShowGrid = True
+            End Set
         End Property
 
         Public Property EditorShowRulers As Boolean
