@@ -12214,4 +12214,10 @@
   <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
     <value>Terävä alue asetettu napsautetun syvyyden ympärille</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>Näytä gallerian ruutu, kun katselin kehittää</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>Näyttää katselimessa ja koko näytössä heti gallerian ruudun tyhjän alueen sijaan, kunnes kehitys on valmis. Ruutu on kuvaa pienempi ja näyttää siksi hetken epäterävältä.</value>
+  </data>
 </root>

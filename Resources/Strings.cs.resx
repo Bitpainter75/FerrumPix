@@ -12214,4 +12214,10 @@
   <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
     <value>Ostrý rozsah nastaven kolem hloubky v místě kliknutí</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>Zobrazit dlaždici z galerie, dokud prohlížeč vyvolává</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>V prohlížeči a na celé obrazovce ihned zobrazí dlaždici z galerie, dokud není vyvolání hotové, místo prázdné plochy. Dlaždice je menší než snímek, a proto chvíli působí neostře.</value>
+  </data>
 </root>

@@ -12218,4 +12218,10 @@
   <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
     <value>Net alan tıklanan derinliğin çevresine yerleştirildi</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>Görüntüleyici işlerken galeri karosunu göster</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>İşleme bitene kadar boş bir alan yerine galerideki karoyu görüntüleyicide ve tam ekranda hemen gösterir. Karo resimden küçüktür ve bu yüzden kısa bir süre bulanık görünür.</value>
+  </data>
 </root>

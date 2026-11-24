@@ -12174,4 +12174,10 @@
   <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
     <value>Zona nitida posta attorno alla profondità scelta</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>Mostra il riquadro della galleria mentre il visualizzatore sviluppa</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>Mostra subito nel visualizzatore e a schermo intero il riquadro della galleria finché lo sviluppo non è terminato, invece di un'area vuota. Il riquadro è più piccolo dell'immagine e per un attimo appare quindi poco nitido.</value>
+  </data>
 </root>

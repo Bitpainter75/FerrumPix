@@ -12214,4 +12214,10 @@
   <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
     <value>Резкая зона установлена вокруг глубины в точке щелчка</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>Показывать плитку галереи, пока просмотрщик проявляет</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>В просмотрщике и в полноэкранном режиме сразу показывает плитку из галереи, пока проявка не завершится, вместо пустой области. Плитка меньше снимка и поэтому недолго выглядит нерезкой.</value>
+  </data>
 </root>

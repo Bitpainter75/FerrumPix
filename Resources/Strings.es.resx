@@ -12174,4 +12174,10 @@
   <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
     <value>Zona nítida colocada alrededor de la profundidad elegida</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>Mostrar la miniatura de la galería mientras el visor revela</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>Muestra de inmediato en el visor y en pantalla completa la miniatura de la galería hasta que termine el revelado, en lugar de un área vacía. La miniatura es más pequeña que la imagen y por eso se ve poco nítida un instante.</value>
+  </data>
 </root>

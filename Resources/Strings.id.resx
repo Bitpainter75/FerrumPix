@@ -12218,4 +12218,10 @@
   <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
     <value>Area tajam ditempatkan di sekitar kedalaman yang diklik</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>Tampilkan ubin galeri selama penampil mengembangkan</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>Langsung menampilkan ubin dari galeri di penampil dan layar penuh sampai pengembangan selesai, sebagai ganti area kosong. Ubin lebih kecil daripada gambar sehingga sesaat tampak kurang tajam.</value>
+  </data>
 </root>

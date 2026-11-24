@@ -12214,4 +12214,10 @@
   <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
     <value>Skarpt område lagt kring det klickade djupet</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>Visa galleriets ruta medan visaren framkallar</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>Visar genast rutan från galleriet i visaren och i helskärm tills framkallningen är klar, i stället för en tom yta. Rutan är mindre än bilden och ser därför oskarp ut en kort stund.</value>
+  </data>
 </root>

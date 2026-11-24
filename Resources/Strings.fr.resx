@@ -12174,4 +12174,10 @@
   <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
     <value>Zone nette placée autour de la profondeur cliquée</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>Afficher la vignette de la galerie pendant le développement dans la visionneuse</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>Affiche aussitôt la vignette de la galerie dans la visionneuse et en plein écran jusqu'à la fin du développement, au lieu d'une zone vide. La vignette est plus petite que l'image et paraît donc floue un court instant.</value>
+  </data>
 </root>

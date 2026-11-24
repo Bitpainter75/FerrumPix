@@ -456,6 +456,7 @@ Namespace ViewModels
                 If Object.ReferenceEquals(previous, value) Then Return
                 Me.RaiseAndSetIfChanged(_transitionImage, value)
                 Me.RaisePropertyChanged(NameOf(ShowTransitionImage))
+                Me.RaisePropertyChanged(NameOf(ShowBitmapLoading))
                 DisposeDeferred(previous)
             End Set
         End Property
@@ -758,7 +759,10 @@ Namespace ViewModels
         ''' beim Blaettern wie bisher stehen und braucht keinen zusaetzlichen Platzhalter.</summary>
         Public ReadOnly Property ShowBitmapLoading As Boolean
             Get
+                ' Steht die Galerie-Kachel als Uebergangsbild, entfaellt die Anzeige: wer den
+                ' Schalter dafuer einschaltet, will die Kachel sehen und keinen Balken darueber.
                 Return _isBitmapLoading AndAlso _currentImage Is Nothing AndAlso
+                       _transitionImage Is Nothing AndAlso
                        IsRenderableImagePath(_currentImagePath) AndAlso Not IsVideoFile
             End Get
         End Property
@@ -3520,8 +3524,9 @@ Namespace ViewModels
         ''' DIE KACHEL IST NICHT DAS BILD. Sie liegt in <see cref="TransitionImage"/> und nicht in
         ''' <see cref="CurrentImage"/>: Masse in der Statuszeile, Zoom, Histogramm, Peaking,
         ''' Gesichtsrahmen und die Uebergabe an den Editor haengen am gezeigten Bild und sollen die
-        ''' Kachel nie fuer es halten. Die Ladeanzeige bleibt darueber stehen, denn fertig ist noch
-        ''' nichts. Weg ist die Kachel, sobald das Laden endet (<see cref="SetBitmapLoading"/>)
+        ''' Kachel nie fuer es halten. Die Ladeanzeige weicht ihr (<see cref="ShowBitmapLoading"/>):
+        ''' das Uebergangsbild ist eine bewusst eingeschaltete Einstellung
+        ''' (AppSettings.ViewerTransitionTile, ab Werk aus). Weg ist die Kachel, sobald das Laden endet (<see cref="SetBitmapLoading"/>)
         ''' oder ein anderes Bild beginnt (<see cref="LoadBitmap"/>).
         '''
         ''' Gelesen wird im HINTERGRUND: die Frage nach Datei und Beistelldatei und das Lesen der
@@ -3573,6 +3578,9 @@ Namespace ViewModels
         Friend Shared Function LoadExactTileOfDevelopedImage(path As String, recipeKey As String,
                                                              writeTime As DateTime,
                                                              scopeId As String, scopeName As String) As Bitmap
+            ' Ab Werk aus: dann bleibt die Flaeche wie bisher leer, bis das Bild fertig ist. Hier
+            ' gelesen und nicht beim Aufrufer, damit ein umgelegter Schalter beim naechsten Bild wirkt.
+            If Not AppSettingsService.Load().ViewerTransitionTile Then Return Nothing
             Dim key = If(recipeKey, path)
             Dim willDevelop = VariantKey.IsVariant(key) OrElse WillDevelopRawInViewer(path) OrElse
                               (Not RawPreviewService.IsSupportedRaw(path) AndAlso RawSidecarService.HasRecipeBeside(key))

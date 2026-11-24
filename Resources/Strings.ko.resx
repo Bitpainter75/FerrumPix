@@ -12218,4 +12218,10 @@
   <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
     <value>클릭한 깊이 주변으로 선명한 범위를 설정했습니다</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>뷰어에서 현상하는 동안 갤러리 타일 표시</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>현상이 끝날 때까지 빈 영역 대신 갤러리의 타일을 뷰어와 전체 화면에 바로 표시합니다. 타일은 사진보다 작아서 잠시 흐릿하게 보입니다.</value>
+  </data>
 </root>

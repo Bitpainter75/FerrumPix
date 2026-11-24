@@ -12218,4 +12218,10 @@
   <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
     <value>กำหนดช่วงคมชัดรอบความลึกที่คลิกแล้ว</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>แสดงภาพย่อของแกลเลอรีระหว่างที่โปรแกรมดูภาพกำลังล้างภาพ</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>แสดงภาพย่อจากแกลเลอรีทันทีในโปรแกรมดูภาพและโหมดเต็มหน้าจอจนกว่าการล้างภาพจะเสร็จ แทนพื้นที่ว่าง ภาพย่อมีขนาดเล็กกว่าภาพจริงจึงดูไม่คมชัดชั่วครู่</value>
+  </data>
 </root>

@@ -12218,4 +12218,10 @@
   <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
     <value>शार्प सीमा क्लिक की गई गहराई के आसपास रखी गई</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>व्यूअर में विकसित होने तक गैलरी की टाइल दिखाएँ</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>व्यूअर और पूर्ण स्क्रीन में विकास पूरा होने तक खाली क्षेत्र की जगह तुरंत गैलरी की टाइल दिखाता है। टाइल चित्र से छोटी होती है, इसलिए थोड़ी देर धुंधली दिखती है।</value>
+  </data>
 </root>

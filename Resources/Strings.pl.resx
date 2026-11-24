@@ -12214,4 +12214,10 @@
   <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
     <value>Ostry zakres ustawiony wokół klikniętej głębi</value>
   </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>Pokazuj kafelek z galerii, gdy przeglądarka wywołuje</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>W przeglądarce i na pełnym ekranie od razu pokazuje kafelek z galerii, dopóki wywoływanie się nie zakończy, zamiast pustego obszaru. Kafelek jest mniejszy niż zdjęcie i dlatego przez chwilę wygląda nieostro.</value>
+  </data>
 </root>

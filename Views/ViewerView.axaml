@@ -210,8 +210,8 @@
                         <TextBlock Text="Wähle ein Bild aus der Galerie" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
                     </StackPanel>
 
-                    <!-- Die Galerie-Kachel, solange das Bild noch entwickelt wird. Sie steht VOR der
-                         Ladeanzeige, damit diese darueber liegt: fertig ist noch nichts. -->
+                    <!-- Die Galerie-Kachel, solange das Bild noch entwickelt wird (Einstellung, ab
+                         Werk aus). Steht sie da, entfaellt die Ladeanzeige darunter. -->
                     <Image Source="{Binding TransitionImage, Converter={x:Static icons:ColorManagedBitmapConverter.Instance}}"
                            IsVisible="{Binding ShowTransitionImage}"
                            IsHitTestVisible="False"
