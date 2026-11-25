@@ -84,6 +84,13 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property ShowFilmstripPickBadge As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       _mainVm.Settings.FilmstripPickBadge
+            End Get
+        End Property
+
         Public ReadOnly Property ShowFilmstripEditedBadge As Boolean
             Get
                 Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso

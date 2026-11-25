@@ -472,6 +472,13 @@ Namespace Services
         Public Property ViewerFilmstripPosition As String = "Bottom"
         ''' Markierungen im Filmstrip kosten etwas Bildruhe und sind deshalb ab Werk aus.
         Public Property FilmstripItemBadgesVisible As Boolean = False
+        ''' Die Pillen fuer behalten und verworfen oben auf den Kacheln des Filmstreifens, so wie
+        ''' an der Galeriekachel. AB WERK AN: die beiden Daumen waren auf dem Streifen schon zu
+        ''' sehen, nur zusammen mit Stern, Herz und Etikett in einem dunklen Kasten. Eigener
+        ''' Schalter, weil ein verworfenes Bild ohne Zeichen nicht als verworfen zu erkennen ist
+        ''' (das Dimmen haengt an keiner Einstellung) und weil nicht jeder dafuer gleich die ganze
+        ''' Markierreihe einschalten will. Aus nimmt nur die Pillen weg.
+        Public Property FilmstripPickBadge As Boolean = True
         ''' Das Zeichen "bearbeitet" der Galeriekachel auch im Filmstreifen. Ab Werk aus, aus
         ''' demselben Grund wie die Markierungen darueber.
         Public Property FilmstripEditedBadgeVisible As Boolean = False

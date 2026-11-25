@@ -7926,6 +7926,15 @@
   <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
     <value>뷰어와 편집기의 필름 스트립 타일에 별점, 즐겨찾기, 색 라벨, 유지 및 제외 표시를 보여줍니다.</value>
   </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
+    <value>뷰어와 편집기의 필름 스트립 타일에 별점, 즐겨찾기, 색 라벨을 보여줍니다.</value>
+  </data>
+  <data name="Behalten_und_Verworfen_im_Filmstreifen_kennzeich_a30d9ce0" xml:space="preserve">
+    <value>필름 스트립에서 보관 및 거부 표시</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
+    <value>필름 스트립 타일 위쪽에 보관한 사진에는 초록색 엄지 위, 거부한 사진에는 빨간색 엄지 아래를 표시합니다. 거부한 사진은 표시가 없어도 어둡게 유지됩니다.</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>목록에서 {0} '{1}'을(를) 지울까요? 파일 자체는 그대로 남습니다.</value>
   </data>

@@ -7926,6 +7926,15 @@
   <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
     <value>Показывает оценку звёздами, избранное, цветовую метку и отметки «оставить» и «отклонить» на миниатюрах ленты в просмотрщике и редакторе.</value>
   </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
+    <value>Показывает оценку звёздами, избранное и цветовую метку на миниатюрах ленты в просмотрщике и редакторе.</value>
+  </data>
+  <data name="Behalten_und_Verworfen_im_Filmstreifen_kennzeich_a30d9ce0" xml:space="preserve">
+    <value>Отмечать оставленные и отклонённые фото на ленте кадров</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
+    <value>Показывает вверху миниатюры ленты зелёный палец вверх у оставленных и красный палец вниз у отклонённых фото. Отклонённые фото остаются затемнёнными и без значка.</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Удалить {0} '{1}' из списка? Сам файл будет сохранён.</value>
   </data>

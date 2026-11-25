@@ -7886,6 +7886,15 @@
   <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
     <value>Zeigt Sternbewertung, Favorit, Farbetikett sowie Behalten und Verworfen auf den Filmstreifen-Kacheln im Viewer und Editor.</value>
   </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
+    <value>Zeigt Sternbewertung, Favorit und Farbetikett auf den Filmstreifen-Kacheln im Viewer und Editor.</value>
+  </data>
+  <data name="Behalten_und_Verworfen_im_Filmstreifen_kennzeich_a30d9ce0" xml:space="preserve">
+    <value>Behalten und Verworfen im Filmstreifen kennzeichnen</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
+    <value>Zeigt oben auf der Filmstreifen-Kachel einen grünen Daumen nach oben für behaltene und einen roten Daumen nach unten für verworfene Bilder. Verworfene Bilder bleiben auch ohne das Zeichen gedimmt.</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Soll {0} '{1}' aus der Liste entfernt werden? Die Datei selbst bleibt erhalten.</value>
   </data>

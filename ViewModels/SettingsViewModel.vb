@@ -76,6 +76,7 @@ Namespace ViewModels
         Private _editorFilmstripPosition As String = "Bottom"
         Private _fullscreenFilmstripPosition As String = "Bottom"
         Private _filmstripItemBadgesVisible As Boolean = False
+        Private _filmstripPickBadge As Boolean = True
         Private _filmstripEditedBadgeVisible As Boolean = False
         Private _filmstripKeepSelectionCentered As Boolean = False
         Private _galleryTileFrame As Boolean = True
@@ -284,6 +285,7 @@ Namespace ViewModels
         Private _savedEditorFilmstripPosition As String = "Bottom"
         Private _savedFullscreenFilmstripPosition As String = "Bottom"
         Private _savedFilmstripItemBadgesVisible As Boolean = False
+        Private _savedFilmstripPickBadge As Boolean = True
         Private _savedFilmstripEditedBadgeVisible As Boolean = False
         Private _savedFilmstripKeepSelectionCentered As Boolean = False
         Private _savedGalleryTileFrame As Boolean = True
@@ -2529,6 +2531,22 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _filmstripItemBadgesVisible = value Then Return
                 Me.RaiseAndSetIfChanged(_filmstripItemBadgesVisible, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Die Pillen für behalten und verworfen oben auf den Kacheln des Filmstreifens,
+        ''' wie an der Galeriekachel. Standardmäßig an. Derselbe Weg wie bei den anderen
+        ''' Filmstreifen-Einstellungen: der Setter meldet über RefreshLayoutBindings die gelesene
+        ''' Eigenschaft allen drei Ansichten neu.</summary>
+        Public Property FilmstripPickBadge As Boolean
+            Get
+                Return _filmstripPickBadge
+            End Get
+            Set(value As Boolean)
+                If _filmstripPickBadge = value Then Return
+                Me.RaiseAndSetIfChanged(_filmstripPickBadge, value)
                 _mainVm?.RefreshLayoutBindings()
                 SaveLayoutSettings()
             End Set
@@ -5398,6 +5416,7 @@ Namespace ViewModels
             _editorFilmstripPosition = AppSettingsService.NormalizeFilmstripPosition(_appSettings.EditorFilmstripPosition)
             _fullscreenFilmstripPosition = AppSettingsService.NormalizeFilmstripPosition(_appSettings.FullscreenFilmstripPosition)
             _filmstripItemBadgesVisible = _appSettings.FilmstripItemBadgesVisible
+            _filmstripPickBadge = _appSettings.FilmstripPickBadge
             _filmstripEditedBadgeVisible = _appSettings.FilmstripEditedBadgeVisible
             _filmstripKeepSelectionCentered = _appSettings.FilmstripKeepSelectionCentered
             _galleryTileFrame = _appSettings.GalleryTileFrame
@@ -5871,6 +5890,7 @@ Namespace ViewModels
             _savedEditorFilmstripPosition = _editorFilmstripPosition
             _savedFullscreenFilmstripPosition = _fullscreenFilmstripPosition
             _savedFilmstripItemBadgesVisible = _filmstripItemBadgesVisible
+            _savedFilmstripPickBadge = _filmstripPickBadge
             _savedFilmstripEditedBadgeVisible = _filmstripEditedBadgeVisible
             _savedFilmstripKeepSelectionCentered = _filmstripKeepSelectionCentered
             _savedGalleryTileFrame = _galleryTileFrame
@@ -6103,6 +6123,7 @@ Namespace ViewModels
             EditorFilmstripPosition = _savedEditorFilmstripPosition
             FullscreenFilmstripPosition = _savedFullscreenFilmstripPosition
             FilmstripItemBadgesVisible = _savedFilmstripItemBadgesVisible
+            FilmstripPickBadge = _savedFilmstripPickBadge
             FilmstripEditedBadgeVisible = _savedFilmstripEditedBadgeVisible
             FilmstripKeepSelectionCentered = _savedFilmstripKeepSelectionCentered
             GalleryTileFrame = _savedGalleryTileFrame
@@ -6266,6 +6287,7 @@ Namespace ViewModels
             EditorFilmstripPosition = "Bottom"
             FullscreenFilmstripPosition = "Bottom"
             FilmstripItemBadgesVisible = False
+            FilmstripPickBadge = True
             FilmstripEditedBadgeVisible = False
             FilmstripKeepSelectionCentered = False
             GalleryTileFrame = True
@@ -6698,6 +6720,7 @@ Namespace ViewModels
                                           s.EditorFilmstripPosition = _editorFilmstripPosition
                                           s.FullscreenFilmstripPosition = _fullscreenFilmstripPosition
                                           s.FilmstripItemBadgesVisible = _filmstripItemBadgesVisible
+                                          s.FilmstripPickBadge = _filmstripPickBadge
                                           s.FilmstripEditedBadgeVisible = _filmstripEditedBadgeVisible
                                           s.FilmstripKeepSelectionCentered = _filmstripKeepSelectionCentered
                                           s.GalleryTileFrame = _galleryTileFrame

@@ -7886,6 +7886,15 @@
   <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
     <value>Affiche la note par étoiles, le favori, l’étiquette de couleur ainsi que les marques conserver et rejeter sur les vignettes de la pellicule dans le visualiseur et l’éditeur.</value>
   </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
+    <value>Affiche la note par étoiles, le favori et l’étiquette de couleur sur les vignettes de la pellicule dans le visualiseur et l’éditeur.</value>
+  </data>
+  <data name="Behalten_und_Verworfen_im_Filmstreifen_kennzeich_a30d9ce0" xml:space="preserve">
+    <value>Signaler les photos conservées et rejetées dans la pellicule</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
+    <value>Affiche en haut de la vignette de la pellicule un pouce vert levé pour les photos conservées et un pouce rouge baissé pour les photos rejetées. Les photos rejetées restent assombries même sans le signe.</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Supprimer {0} '{1}' de la liste ? Le fichier lui-même sera conservé.</value>
   </data>

@@ -7926,6 +7926,15 @@
   <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
     <value>İzleyicide ve düzenleyicide film şeridi karolarında puan yıldızlarını, sık kullanılanı, renk etiketini ve tut ile reddet işaretlerini gösterir.</value>
   </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
+    <value>İzleyicide ve düzenleyicide film şeridi karolarında puan yıldızlarını, sık kullanılanı ve renk etiketini gösterir.</value>
+  </data>
+  <data name="Behalten_und_Verworfen_im_Filmstreifen_kennzeich_a30d9ce0" xml:space="preserve">
+    <value>Film şeridinde tutulan ve reddedilen fotoğrafları işaretle</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
+    <value>Film şeridi karosunun üstünde tutulan fotoğraflarda yeşil başparmak yukarı, reddedilenlerde kırmızı başparmak aşağı gösterir. Reddedilen fotoğraflar işaret olmadan da soluk kalır.</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>{0} '{1}' listeden kaldırılsın mı? Dosyanın kendisi korunur.</value>
   </data>

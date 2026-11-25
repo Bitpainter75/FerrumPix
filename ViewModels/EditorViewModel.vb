@@ -4992,6 +4992,15 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Die Pillen fuer behalten und verworfen oben auf den Kacheln des
+        ''' Filmstreifens, genau wie an der Galeriekachel (eigene Einstellung, ab Werk an).</summary>
+        Public ReadOnly Property ShowFilmstripPickBadge As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       _mainVm.Settings.FilmstripPickBadge
+            End Get
+        End Property
+
         ''' <summary>Das Zeichen "bearbeitet" auf den Kacheln des Filmstreifens.</summary>
         Public ReadOnly Property ShowFilmstripEditedBadge As Boolean
             Get
@@ -21978,7 +21987,11 @@ Namespace ViewModels
         ''' <summary>Der Editor-Filmstrip verwendet ebenfalls schlanke Kacheln. Sobald seine
         ''' Markierungen eingeschaltet sind, werden die drei Katalogwerte gesammelt nachgereicht.</summary>
         Public Sub RefreshFilmstripItemBadges()
-            If Not ShowFilmstripItemBadges OrElse FilmstripItems Is Nothing Then Return
+            ' Die Pillen fuer behalten und verworfen haengen an einer EIGENEN Einstellung. Wer nur
+            ' sie will, laesst die Markierreihe aus; ohne diesen Oder-Zweig waeren die Daumen auf
+            ' dem Streifen nie zu sehen, weil ihr Wert hier gar nicht erst geladen wuerde.
+            If Not (ShowFilmstripItemBadges OrElse ShowFilmstripPickBadge) OrElse
+               FilmstripItems Is Nothing Then Return
 
             ' Nach dem Schluessel der Kachel: eine zusaetzliche Variante traegt eigene Katalogdaten.
             Dim catalog = LibraryService.Instance.GetMetaForPaths(

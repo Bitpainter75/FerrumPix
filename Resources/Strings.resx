@@ -7887,6 +7887,15 @@
   <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
     <value>Shows star rating, favorite, color label, and the keep and reject marks on filmstrip tiles in the viewer and editor.</value>
   </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
+    <value>Shows star rating, favorite, and color label on filmstrip tiles in the viewer and editor.</value>
+  </data>
+  <data name="Behalten_und_Verworfen_im_Filmstreifen_kennzeich_a30d9ce0" xml:space="preserve">
+    <value>Mark kept and rejected pictures in the filmstrip</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
+    <value>Shows a green thumbs up on kept and a red thumbs down on rejected pictures at the top of the filmstrip tile. Rejected pictures stay dimmed even without the mark.</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Remove {0} '{1}' from the list? The file itself will be kept.</value>
   </data>

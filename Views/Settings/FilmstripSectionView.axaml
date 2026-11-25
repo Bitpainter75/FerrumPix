@@ -80,10 +80,22 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Markierungen im Filmstreifen anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Zeigt Sternbewertung, Favorit, Farbetikett sowie Behalten und Verworfen auf den Filmstreifen-Kacheln im Viewer und Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Zeigt Sternbewertung, Favorit und Farbetikett auf den Filmstreifen-Kacheln im Viewer und Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding FilmstripItemBadgesVisible}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Behalten und Verworfen im Filmstreifen kennzeichnen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt oben auf der Filmstreifen-Kachel einen grünen Daumen nach oben für behaltene und einen roten Daumen nach unten für verworfene Bilder. Verworfene Bilder bleiben auch ohne das Zeichen gedimmt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding FilmstripPickBadge}"
                                           OnContent=""
                                           OffContent=""
                                           VerticalAlignment="Center"/>

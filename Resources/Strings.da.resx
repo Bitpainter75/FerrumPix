@@ -7926,6 +7926,15 @@
   <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
     <value>Viser stjernebedømmelse, favorit, farveetiket samt mærkerne behold og kassér på filmstribens felter i fremviseren og redigeringsprogrammet.</value>
   </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
+    <value>Viser stjernebedømmelse, favorit og farveetiket på filmstribens felter i fremviseren og redigeringsprogrammet.</value>
+  </data>
+  <data name="Behalten_und_Verworfen_im_Filmstreifen_kennzeich_a30d9ce0" xml:space="preserve">
+    <value>Marker beholdte og forkastede billeder i filmstriben</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
+    <value>Viser øverst på feltet i filmstriben en grøn tommelfinger op for beholdte og en rød tommelfinger ned for forkastede billeder. Forkastede billeder forbliver dæmpede, også uden mærket.</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Fjern {0} '{1}' fra listen? Selve filen bevares.</value>
   </data>

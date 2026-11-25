@@ -7926,6 +7926,15 @@
   <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
     <value>Pokazuje ocenę gwiazdkową, ulubione, etykietę koloru oraz oznaczenia zachowaj i odrzuć na kafelkach paska filmowego w przeglądarce i edytorze.</value>
   </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
+    <value>Pokazuje ocenę gwiazdkową, ulubione i etykietę koloru na kafelkach paska filmowego w przeglądarce i edytorze.</value>
+  </data>
+  <data name="Behalten_und_Verworfen_im_Filmstreifen_kennzeich_a30d9ce0" xml:space="preserve">
+    <value>Oznaczaj zachowane i odrzucone zdjęcia na pasku filmowym</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
+    <value>Pokazuje u góry kafelka paska filmowego zielony kciuk w górę przy zachowanych i czerwony kciuk w dół przy odrzuconych zdjęciach. Odrzucone zdjęcia pozostają przyciemnione także bez znaku.</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Usunąć {0} '{1}' z listy? Sam plik zostanie zachowany.</value>
   </data>

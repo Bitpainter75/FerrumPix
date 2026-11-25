@@ -7926,6 +7926,15 @@
   <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
     <value>แสดงดาวคะแนน รายการโปรด ป้ายสี และเครื่องหมายเก็บไว้และคัดออก บนไทล์ในแถบฟิล์มของตัวแสดงภาพและตัวแก้ไข</value>
   </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
+    <value>แสดงดาวคะแนน รายการโปรด และป้ายสีบนไทล์ในแถบฟิล์มของตัวแสดงภาพและตัวแก้ไข</value>
+  </data>
+  <data name="Behalten_und_Verworfen_im_Filmstreifen_kennzeich_a30d9ce0" xml:space="preserve">
+    <value>แสดงภาพที่เก็บและภาพที่ปฏิเสธในแถบฟิล์ม</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
+    <value>แสดงนิ้วโป้งชี้ขึ้นสีเขียวบนภาพที่เก็บไว้ และนิ้วโป้งชี้ลงสีแดงบนภาพที่ปฏิเสธที่ด้านบนของไทล์ในแถบฟิล์ม ภาพที่ปฏิเสธยังคงหรี่อยู่แม้ไม่มีสัญลักษณ์</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>ลบ {0} '{1}' ออกจากรายการหรือไม่ ตัวไฟล์เองจะยังอยู่</value>
   </data>
