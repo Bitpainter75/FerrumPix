@@ -49,6 +49,10 @@
                                 <TextBlock Grid.Column="1" Text="Favorit ein/aus" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="P" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Als behalten markieren (erneut nimmt es zurück)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="X" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Als verworfen markieren (erneut nimmt es zurück)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
@@ -133,7 +137,7 @@
                                 <TextBlock Grid.Column="1" Text="Exportieren nach" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="STRG+P oder P" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+P" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Auswahl drucken" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
@@ -311,7 +315,7 @@
                                 <TextBlock Grid.Column="1" Text="Anpassungen einfügen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="STRG+P oder P" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+P" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Drucken" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">

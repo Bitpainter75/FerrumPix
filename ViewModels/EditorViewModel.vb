@@ -18551,6 +18551,10 @@ Namespace ViewModels
         Public ReadOnly Property SetRatingCommand As ICommand
         Public ReadOnly Property ToggleFavoriteCommand As ICommand
         Public ReadOnly Property SetColorLabelCommand As ICommand
+        ''' <summary>Behalten fuer das geoeffnete Bild (Kuerzel P). Dasselbe Muster wie beim Verwerfen
+        ''' direkt darunter: der Editor hat keinen eigenen Umschalt-Weg, sondern reicht den Befehl des
+        ''' Info-Panels durch, weil dort der Zustand liegt.</summary>
+        Public ReadOnly Property TogglePickedCommand As ICommand
         ''' <summary>Verwerfen fuer das geoeffnete Bild (Kuerzel X). Kein eigener Umschalt-Weg des
         ''' Editors, sondern der Befehl des Info-Panels: dort liegt der Zustand, und von dort nimmt
         ''' derselbe Knopf noch einmal druecken die Markierung weg - genau das, was X in Galerie und
@@ -19119,9 +19123,10 @@ Namespace ViewModels
             SetColorLabelCommand = ReactiveCommand.Create(Of String)(
                 Sub(hex) InfoPanel.ColorLabel = If(String.Equals(InfoPanel.ColorLabel, If(hex, ""), StringComparison.OrdinalIgnoreCase), "", If(hex, "")))
 
-            ' Behalten und Verwerfen reichen den Befehl des Panels durch: der Knopf in der
-            ' Info-Leiste und das Kuerzel X in der Datei treffen dieselbe Umschaltlogik - nicht eine
-            ' zweite, die den Stand des Panels uebersieht.
+            ' Behalten und Verwerfen reichen den Befehl des Panels durch: die Knopfe in der Info-Leiste
+            ' und die Kuerzel P und X treffen dieselbe Umschaltlogik - nicht eine zweite, die den Stand
+            ' des Panels uebersieht.
+            TogglePickedCommand = ReactiveCommand.Create(Sub() InfoPanel.TogglePickedCommand.Execute(Nothing))
             ToggleRejectedCommand = ReactiveCommand.Create(Sub() InfoPanel.ToggleRejectedCommand.Execute(Nothing))
 
             OpenTagSearchCommand = ReactiveCommand.Create(Of String)(Sub(tag) _mainVm?.OpenTagSearchInGallery(tag))

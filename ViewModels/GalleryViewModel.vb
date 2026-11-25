@@ -2316,6 +2316,8 @@ Namespace ViewModels
         Public ReadOnly Property SetFilterFavoriteCommand As ICommand
         Public ReadOnly Property SetFilterRejectedCommand As ICommand
         Public ReadOnly Property SetFilterEditedCommand As ICommand
+        ' Die zwei Markier-Kuerzel der Galerie: P behalten, X verwerfen (beides blank, siehe MainWindow).
+        Public ReadOnly Property ToggleKeepSelectedCommand As ICommand
         Public ReadOnly Property ToggleRejectSelectedCommand As ICommand
         Public ReadOnly Property RejectRestOfStackCommand As ICommand
         Public ReadOnly Property ExpandAllStacksCommand As ICommand
@@ -2727,6 +2729,7 @@ Namespace ViewModels
             SetFilterFavoriteCommand = ReactiveCommand.Create(Of String)(Sub(v) FilterFavorite = v)
             SetFilterRejectedCommand = ReactiveCommand.Create(Of String)(Sub(v) FilterRejected = v)
             SetFilterEditedCommand = ReactiveCommand.Create(Of String)(Sub(v) FilterEdited = v)
+            ToggleKeepSelectedCommand = ReactiveCommand.Create(Sub() ToggleKeepSelected())
             ToggleRejectSelectedCommand = ReactiveCommand.Create(Sub() ToggleRejectSelected())
             RejectRestOfStackCommand = ReactiveCommand.Create(Sub() RejectRestOfStack())
             ExpandAllStacksCommand = ReactiveCommand.Create(Sub() SetAllStacksExpanded(True))
@@ -12008,6 +12011,24 @@ Namespace ViewModels
                 Case Else : Return "All"
             End Select
         End Function
+
+        ''' <summary>P in der Galerie: markiert die Auswahl als behalten, oder nimmt das Behalten
+        ''' zurueck, wenn schon alles behalten ist. Spiegelbild von ToggleRejectSelected, damit
+        ''' Annehmen und Aussortieren dieselbe Umschaltregel haben.</summary>
+        Public Sub ToggleKeepSelected()
+            ToggleKeepFor(GetSelectedImageItems())
+        End Sub
+
+        Public Sub ToggleKeepFor(items As IEnumerable(Of ImageItem))
+            ' Nur LOKALE Bilder: die Markierung lebt im lokalen Katalog und in der Beistelldatei.
+            ' Ein Serverbild bekaeme sie unter seinem Pseudo-Pfad, der Server erfuehre nichts davon,
+            ' und nach dem Neuladen waere sie weg. Dieselbe Regel wie bei ToggleRejectFor.
+            Dim visible = If(items, Enumerable.Empty(Of ImageItem)()).
+                Where(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso Not i.IsRemoteAsset).ToList()
+            If visible.Count = 0 Then Return
+            Dim target = If(visible.All(Function(i) i.IsPicked), 0, 1)
+            ApplyPickState(WithHiddenPartners(visible), target)
+        End Sub
 
         ''' <summary>X in der Galerie: verwirft die Auswahl, oder nimmt das Verwerfen zurueck, wenn
         ''' schon alles verworfen ist (wie bei den Sternen: dieselbe Taste noch einmal hebt auf).</summary>
