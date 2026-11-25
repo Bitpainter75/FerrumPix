@@ -2190,9 +2190,58 @@ Namespace ViewModels
                     DialogFilterStrength = CInt(ImageAdjustments.DefaultFilterStrength(DialogFilterChoiceName(normalized)))
                 End If
                 Me.RaisePropertyChanged(NameOf(DialogSelectedFilterChoice))
+                Me.RaisePropertyChanged(NameOf(DialogSelectedFilterChoiceRow))
                 Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
             End Set
         End Property
+
+        ''' <summary>Die Vorgaben als Zeilen fuer die Auswahlliste. Bei der Quelle
+        ''' Anpassungsvorlage zeigen sie die Ordner als Hierarchie: Ordner als nicht waehlbare
+        ''' Ueberschriften, darunter eingerueckt ihre Anpassungen (AdjustmentPresetChoiceRow). Jede
+        ''' andere Quelle hat flache Zeilen. Der Schluessel einer Zeile ist ihr Eintrag in
+        ''' <see cref="DialogFilterChoices"/>; gefuehrt wird die Wahl weiter dort.</summary>
+        Public ReadOnly Property DialogFilterChoiceRows As New ObservableCollection(Of AdjustmentPresetChoiceRow)()
+
+        ''' <summary>Die Zeile der gewaehlten Vorgabe. Will die Liste eine Ordner-Ueberschrift
+        ''' waehlen, gilt die naechste Vorgabe in der Richtung des Wegs.</summary>
+        Public Property DialogSelectedFilterChoiceRow As AdjustmentPresetChoiceRow
+            Get
+                Dim chosen = _dialogSelectedFilterChoice
+                If String.IsNullOrEmpty(chosen) Then Return Nothing
+                Return DialogFilterChoiceRows.FirstOrDefault(
+                    Function(r) Not r.IsHeader AndAlso String.Equals(r.Key, chosen, StringComparison.Ordinal))
+            End Get
+            Set(value As AdjustmentPresetChoiceRow)
+                ' Die Liste meldet beim Neuaufbau kurz Nothing; die Wahl setzt danach der Aufbau.
+                If value Is Nothing Then Return
+                Dim resolved = AdjustmentPresetChoiceRow.Resolve(DialogFilterChoiceRows, value, DialogSelectedFilterChoiceRow)
+                If resolved IsNot Nothing AndAlso Not resolved.IsHeader Then DialogSelectedFilterChoice = resolved.Key
+                If resolved IsNot value Then Me.RaisePropertyChanged(NameOf(DialogSelectedFilterChoiceRow))
+            End Set
+        End Property
+
+        ''' <summary>Baut die Zeilen der Auswahlliste aus <see cref="DialogFilterChoices"/> neu.</summary>
+        Private Sub RebuildDialogFilterChoiceRows()
+            DialogFilterChoiceRows.Clear()
+            Dim rows As List(Of AdjustmentPresetChoiceRow)
+            Dim listing = If(IsDialogFilterSourceAdjustmentPreset, AdjustmentPresetStore.Cached, Nothing)
+            If listing IsNot Nothing Then
+                ' Ueber die Kennung: zwei Anpassungen koennen denselben Anzeigepfad tragen, der
+                ' Eintrag der zweiten traegt dann eine Zahl dahinter (DialogPresetChoiceLabels).
+                Dim labelById As New Dictionary(Of String, String)(StringComparer.Ordinal)
+                For Each pair In _dialogFilterChoiceIds
+                    labelById(pair.Value) = pair.Key
+                Next
+                rows = AdjustmentPresetChoiceRow.BuildTree(
+                    listing.Presets.Where(Function(p) labelById.ContainsKey(p.Id)),
+                    Function(p) labelById(p.Id))
+            Else
+                rows = AdjustmentPresetChoiceRow.BuildFlat(DialogFilterChoices)
+            End If
+            For Each row In rows
+                DialogFilterChoiceRows.Add(row)
+            Next
+        End Sub
 
         Public Property DialogFilterStrength As Integer
             Get
@@ -2399,12 +2448,10 @@ Namespace ViewModels
                 ' Liste neu aufgebaut.
                 Dim listing = AdjustmentPresetStore.Cached
                 If listing IsNot Nothing Then
-                    For Each preset In listing.Presets.OrderBy(Function(p) p.DisplayPath, StringComparer.OrdinalIgnoreCase)
-                        Dim label = preset.DisplayPath
-                        If String.IsNullOrWhiteSpace(label) OrElse _dialogFilterChoiceIds.ContainsKey(label) Then Continue For
-                        _dialogFilterChoiceNames(label) = preset.Name
-                        _dialogFilterChoiceIds(label) = preset.Id
-                        DialogFilterChoices.Add(label)
+                    For Each entry In DialogPresetChoiceLabels(listing)
+                        _dialogFilterChoiceNames(entry.Label) = entry.Preset.Name
+                        _dialogFilterChoiceIds(entry.Label) = entry.Preset.Id
+                        DialogFilterChoices.Add(entry.Label)
                     Next
                 End If
             Else
@@ -2423,7 +2470,10 @@ Namespace ViewModels
 
             ' Eine LUT ist ein fertiger Look, kein Effekt mit halber Grundstärke: sie startet voll.
             If Not IsDialogFilterSourceFilter Then DialogFilterStrength = 100
+            RebuildDialogFilterChoiceRows()
             DialogSelectedFilterChoice = If(DialogFilterChoices.Count > 0, DialogFilterChoices(0), "")
+            ' Auch wenn der Eintrag gleich heisst wie vorher: die Zeilen sind neu.
+            Me.RaisePropertyChanged(NameOf(DialogSelectedFilterChoiceRow))
             ' HIER und nicht nur im Setter darüber: der steigt aus, wenn sich der Wert nicht ändert -
             ' und von "keine Auswahl" auf "keine Auswahl" ändert sich nichts, während die LISTE
             ' darunter gewechselt hat. Ohne diese Meldung bliebe der Knopf aus einer früheren Quelle
@@ -2441,6 +2491,33 @@ Namespace ViewModels
         ''' der Lauf findet die Vorlage ueber die Kennung, auch wenn sie inzwischen verschoben oder
         ''' umbenannt wurde.
         Private ReadOnly _dialogFilterChoiceIds As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+
+        ''' <summary>Die Eintraege der Anpassungsvorlagen im Stapeldialog, in der Reihenfolge des
+        ''' Baums, wie die Auswahlliste sie zeigt: der Hauptordner zuerst, dann jeder Ordner vor
+        ''' seinen Unterordnern. Der Eintrag ist der Anzeigepfad.
+        '''
+        ''' JEDE ANPASSUNG BEKOMMT EINEN EIGENEN EINTRAG. Zwei koennen denselben Anzeigepfad tragen
+        ''' ("A / B" im Hauptordner und "B" im Ordner "A", oder zwei Namen, die sich nur in Gross
+        ''' und Klein unterscheiden). Weil der Dialog ueber den Eintrag zur Kennung findet, bekommt
+        ''' die zweite eine Zahl dahinter; sonst liesse sie sich gar nicht waehlen.</summary>
+        Private Shared Function DialogPresetChoiceLabels(listing As AdjustmentPresetListing) As List(Of (Label As String, Preset As AdjustmentPresetFile))
+            Dim result As New List(Of (Label As String, Preset As AdjustmentPresetFile))()
+            Dim used As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            For Each preset In AdjustmentPresetChoiceRow.BuildTree(listing.Presets).
+                                   Where(Function(r) r.Preset IsNot Nothing).Select(Function(r) r.Preset)
+                Dim baseLabel = preset.DisplayPath
+                If String.IsNullOrWhiteSpace(baseLabel) Then Continue For
+                Dim label = baseLabel
+                Dim counter = 2
+                While used.Contains(label)
+                    label = baseLabel & " (" & counter.ToString(Globalization.CultureInfo.InvariantCulture) & ")"
+                    counter += 1
+                End While
+                used.Add(label)
+                result.Add((label, preset))
+            Next
+            Return result
+        End Function
 
         ''' <summary>Die Kennung der gewaehlten Anpassungsvorlage, leer bei jeder anderen Quelle.</summary>
         Private Function DialogFilterChoiceId(label As String) As String
@@ -2460,9 +2537,13 @@ Namespace ViewModels
                 If _dialogKind <> AppDialogKind.BatchFilter AndAlso _dialogKind <> AppDialogKind.ExportTo Then Return
                 Dim listing = AdjustmentPresetStore.Cached
                 If listing Is Nothing Then Return
-                Dim shown = New HashSet(Of String)(_dialogFilterChoiceIds.Values, StringComparer.Ordinal)
-                If shown.SetEquals(listing.Presets.Select(Function(p) p.Id)) AndAlso
-                   listing.Presets.All(Function(p) _dialogFilterChoiceIds.ContainsKey(p.DisplayPath)) Then Return
+                ' Unveraendert, wenn jeder Eintrag noch dieselbe Kennung meint und keiner fehlt oder
+                ' dazukam (umbenannt oder verschoben aendert den Eintrag).
+                Dim fresh = DialogPresetChoiceLabels(listing)
+                Dim existingId As String = Nothing
+                If fresh.Count = _dialogFilterChoiceIds.Count AndAlso
+                   fresh.All(Function(e) _dialogFilterChoiceIds.TryGetValue(e.Label, existingId) AndAlso
+                                         String.Equals(existingId, e.Preset.Id, StringComparison.Ordinal)) Then Return
                 Dim selectedId = DialogFilterChoiceId(_dialogSelectedFilterChoice)
                 RebuildDialogFilterChoices()
                 Dim again = _dialogFilterChoiceIds.FirstOrDefault(Function(pair) String.Equals(pair.Value, selectedId, StringComparison.Ordinal)).Key
@@ -2755,9 +2836,11 @@ Namespace ViewModels
             If String.IsNullOrWhiteSpace(label) Then Return
             If Not _dialogFilterChoicePaths.ContainsKey(label) Then
                 DialogFilterChoices.Insert(0, label)
+                RebuildDialogFilterChoiceRows()
             End If
             _dialogFilterChoicePaths(label) = path
             DialogSelectedFilterChoice = label
+            Me.RaisePropertyChanged(NameOf(DialogSelectedFilterChoiceRow))
         End Sub
 
         ' ── Entrauschen im Stapel ──────────────────────────────────────────────────────────────

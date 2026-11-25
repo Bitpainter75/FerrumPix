@@ -102,47 +102,51 @@
                            TextTrimming="CharacterEllipsis"/>
             </Border>
 
+            <!-- Sterne, Herz, Behalten und Verwerfen liegen AUF dem Foto wie die Zeichen der
+                 Galeriekachel und sind deshalb wie dort icons:ShadowedSvgIcon (vorgerechnetes
+                 Schattenbild, Rand und Hof). Der duenne Abdruck, den ein einfaches SvgIcon den
+                 Statussymbolen in Leisten und Paneelen gibt, traegt auf einem Bild nicht. -->
             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom"
                         HorizontalAlignment="Left" Margin="10,0,0,10">
                 <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
                     <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
                             Tag="1" Click="OnStarClick">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                        Classes="rating-star" Width="18" Height="18"/>
                     </Button>
                     <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
                             Tag="2" Click="OnStarClick">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                        Classes="rating-star" Width="18" Height="18"/>
                     </Button>
                     <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
                             Tag="3" Click="OnStarClick">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                        Classes="rating-star" Width="18" Height="18"/>
                     </Button>
                     <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
                             Tag="4" Click="OnStarClick">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                        Classes="rating-star" Width="18" Height="18"/>
                     </Button>
                     <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
                             Tag="5" Click="OnStarClick">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                        Classes="rating-star" Width="18" Height="18"/>
                     </Button>
                 </StackPanel>
                 <Button Classes="favorite-btn image-favorite-btn" Width="30" Height="30" Padding="0"
                         Click="OnFavoriteClick" ToolTip.Tip="Favorit">
                     <Grid>
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
+                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/heart-bold.svg"
                                        Width="20" Height="20" Classes="fav-heart"
                                        IsVisible="{Binding !IsFavorite}"/>
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
+                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/heart-bold.svg"
                                        Width="20" Height="20" Classes="fav-heart active"
                                        IsVisible="{Binding IsFavorite}"/>
                     </Grid>
@@ -151,26 +155,26 @@
                         Classes.active="{Binding IsPicked}"
                         Tag="1" Click="OnPickClick"
                         ToolTip.Tip="Als behalten markieren (erneut nimmt es zurück)">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-up.svg" Width="18" Height="18"/>
+                    <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-up-bold.svg" Width="18" Height="18"/>
                 </Button>
                 <Button Classes="icon-btn pick-btn pick-reject on-image" Width="30" Height="30" Padding="0"
                         Classes.active="{Binding IsRejected}"
                         Tag="-1" Click="OnPickClick"
                         ToolTip.Tip="Als verworfen markieren (erneut nimmt es zurück)">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-down.svg" Width="18" Height="18"/>
+                    <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-down-bold.svg" Width="18" Height="18"/>
                 </Button>
             </StackPanel>
             <!-- Farbetiketten, wie im Infopanel. -->
             <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,10,10">
-                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F08A1A" Click="OnColorLabelClick" ToolTip.Tip="Orange"><Grid><Ellipse Width="16" Height="16" Fill="#F08A1A"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsColorLabelOrange}"/></Grid></Button>
-                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#E74C3C" Click="OnColorLabelClick" ToolTip.Tip="Rot"><Grid><Ellipse Width="16" Height="16" Fill="#E74C3C"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsColorLabelRed}"/></Grid></Button>
-                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F03B88" Click="OnColorLabelClick" ToolTip.Tip="Pink"><Grid><Ellipse Width="16" Height="16" Fill="#F03B88"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsColorLabelPink}"/></Grid></Button>
-                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#8B5CF6" Click="OnColorLabelClick" ToolTip.Tip="Lila"><Grid><Ellipse Width="16" Height="16" Fill="#8B5CF6"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsColorLabelPurple}"/></Grid></Button>
-                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#3B82F6" Click="OnColorLabelClick" ToolTip.Tip="Blau"><Grid><Ellipse Width="16" Height="16" Fill="#3B82F6"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsColorLabelBlue}"/></Grid></Button>
-                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#0891B2" Click="OnColorLabelClick" ToolTip.Tip="Cyan"><Grid><Ellipse Width="16" Height="16" Fill="#0891B2"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsColorLabelCyan}"/></Grid></Button>
-                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#0F766E" Click="OnColorLabelClick" ToolTip.Tip="Türkis"><Grid><Ellipse Width="16" Height="16" Fill="#0F766E"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsColorLabelTeal}"/></Grid></Button>
-                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#22C55E" Click="OnColorLabelClick" ToolTip.Tip="Grün"><Grid><Ellipse Width="16" Height="16" Fill="#22C55E"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsColorLabelGreen}"/></Grid></Button>
-                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#FACC15" Click="OnColorLabelClick" ToolTip.Tip="Gelb"><Grid><Ellipse Width="16" Height="16" Fill="#FACC15"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsColorLabelYellow}"/></Grid></Button>
+                <Button Classes="ghost label-chip" Tag="#F08A1A" Click="OnColorLabelClick" ToolTip.Tip="Orange"><Grid><Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsColorLabelOrange}"/><Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsColorLabelOrange}"/><Ellipse Width="16" Height="16" Fill="#F08A1A"/></Grid></Button>
+                <Button Classes="ghost label-chip" Tag="#E74C3C" Click="OnColorLabelClick" ToolTip.Tip="Rot"><Grid><Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsColorLabelRed}"/><Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsColorLabelRed}"/><Ellipse Width="16" Height="16" Fill="#E74C3C"/></Grid></Button>
+                <Button Classes="ghost label-chip" Tag="#F03B88" Click="OnColorLabelClick" ToolTip.Tip="Pink"><Grid><Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsColorLabelPink}"/><Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsColorLabelPink}"/><Ellipse Width="16" Height="16" Fill="#F03B88"/></Grid></Button>
+                <Button Classes="ghost label-chip" Tag="#8B5CF6" Click="OnColorLabelClick" ToolTip.Tip="Lila"><Grid><Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsColorLabelPurple}"/><Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsColorLabelPurple}"/><Ellipse Width="16" Height="16" Fill="#8B5CF6"/></Grid></Button>
+                <Button Classes="ghost label-chip" Tag="#3B82F6" Click="OnColorLabelClick" ToolTip.Tip="Blau"><Grid><Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsColorLabelBlue}"/><Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsColorLabelBlue}"/><Ellipse Width="16" Height="16" Fill="#3B82F6"/></Grid></Button>
+                <Button Classes="ghost label-chip" Tag="#0891B2" Click="OnColorLabelClick" ToolTip.Tip="Cyan"><Grid><Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsColorLabelCyan}"/><Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsColorLabelCyan}"/><Ellipse Width="16" Height="16" Fill="#0891B2"/></Grid></Button>
+                <Button Classes="ghost label-chip" Tag="#0F766E" Click="OnColorLabelClick" ToolTip.Tip="Türkis"><Grid><Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsColorLabelTeal}"/><Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsColorLabelTeal}"/><Ellipse Width="16" Height="16" Fill="#0F766E"/></Grid></Button>
+                <Button Classes="ghost label-chip" Tag="#22C55E" Click="OnColorLabelClick" ToolTip.Tip="Grün"><Grid><Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsColorLabelGreen}"/><Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsColorLabelGreen}"/><Ellipse Width="16" Height="16" Fill="#22C55E"/></Grid></Button>
+                <Button Classes="ghost label-chip" Tag="#FACC15" Click="OnColorLabelClick" ToolTip.Tip="Gelb"><Grid><Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsColorLabelYellow}"/><Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsColorLabelYellow}"/><Ellipse Width="16" Height="16" Fill="#FACC15"/></Grid></Button>
             </StackPanel>
         </Grid>
     </Grid>

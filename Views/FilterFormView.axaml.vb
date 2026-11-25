@@ -26,6 +26,23 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ''' <summary>Die Liste steht auf einer Ordner-Ueberschrift (PFEIL HOCH und RUNTER, ein
+        ''' getippter Buchstabe): gewaehlt wird stattdessen die naechste Vorgabe in der Richtung
+        ''' des Wegs, und die Liste bekommt diese Zeile. Die Richtung kommt aus dem Eintrag, den
+        ''' die Liste gerade verlassen hat.</summary>
+        Private Sub OnFilterChoiceSelectionChanged(sender As Object, e As SelectionChangedEventArgs)
+            Dim box = TryCast(sender, ComboBox)
+            Dim vm = TryCast(DataContext, MainWindowViewModel)
+            If box Is Nothing OrElse vm Is Nothing Then Return
+            Dim shown = TryCast(box.SelectedItem, AdjustmentPresetChoiceRow)
+            If shown Is Nothing OrElse Not shown.IsHeader Then Return
+            Dim previous = If(e.RemovedItems IsNot Nothing AndAlso e.RemovedItems.Count > 0,
+                              TryCast(e.RemovedItems(0), AdjustmentPresetChoiceRow), Nothing)
+            Dim target = AdjustmentPresetChoiceRow.Resolve(vm.DialogFilterChoiceRows, shown, previous)
+            If target IsNot Nothing Then vm.DialogSelectedFilterChoiceRow = target
+            box.SelectedItem = vm.DialogSelectedFilterChoiceRow
+        End Sub
+
         ''' Lädt eine Preset-Datei außerhalb der im Editor gespeicherten Vorgaben. Der Filter-Typ hat
         ''' keinen Datei-Button (siehe IsDialogFilterFileVisible) - die eingebauten Filter sind fest.
         Private Async Sub OnBrowseFilterFileClick(sender As Object, e As RoutedEventArgs)

@@ -364,10 +364,13 @@ Namespace ViewModels
         ''' <summary>Die andere Haelfte eines Live Photos zum gezeigten Bild oder Film, oder
         ''' Nothing. Fuer Loeschen und Umbenennen aus dem Betrachter: die Haelfte geht dort mit
         ''' (MainWindowViewModel), und steht sie als eigener Eintrag im Streifen (Stapel aus), muss
-        ''' der Streifen es erfahren. Liest den Ordner; nur auf einen Befehl des Nutzers rufen.</summary>
-        Private Function LivePartnerOfCurrent() As String
-            If _isImmichSession OrElse String.IsNullOrEmpty(_currentImagePath) Then Return Nothing
-            Return LivePhotoService.FindPartnerPath(_currentImagePath)
+        ''' der Streifen es erfahren. Der Pfad wird hier festgehalten, gesucht wird im Hintergrund:
+        ''' die Suche liest den Ordner, fragt den Katalog und im Zweifel beide Dateien, auf einer
+        ''' Netzfreigabe spuerbar.</summary>
+        Private Function LivePartnerOfCurrentAsync() As Task(Of String)
+            If _isImmichSession OrElse String.IsNullOrEmpty(_currentImagePath) Then Return Task.FromResult(Of String)(Nothing)
+            Dim path = _currentImagePath
+            Return Task.Run(Function() LivePhotoService.FindPartnerPath(path))
         End Function
 
         ''' <summary>Nimmt die andere Haelfte aus dem Streifen, wenn sie mit geloescht wurde.</summary>

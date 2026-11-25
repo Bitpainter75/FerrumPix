@@ -278,6 +278,23 @@
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightShadowSoftness, Mode=TwoWay}"
                                              Minimum="0" Maximum="100" />
                 </Grid>
+                <CheckBox Content="Kantenlicht" IsChecked="{Binding LightRimLight}" IsVisible="{Binding LightUseDepth}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          ToolTip.Tip="Das Licht kommt von hinten und zeichnet einen hellen Saum an den Umriss, wo ein Gegenstand vor tieferem Hintergrund steht. Die Lage des Lichts bestimmt die Seite, mit großer Höhe läuft der Saum rundum." />
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" IsVisible="{Binding ShowLightRimControls}">
+                    <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="50" Value="{Binding LightRimStrength}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightRimStrength, Mode=TwoWay}"
+                                             Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" IsVisible="{Binding ShowLightRimControls}">
+                    <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="30" Value="{Binding LightRimWidth}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightRimWidth, Mode=TwoWay}"
+                                             Minimum="0" Maximum="100" />
+                </Grid>
             </StackPanel>
         </Border>
     </StackPanel>

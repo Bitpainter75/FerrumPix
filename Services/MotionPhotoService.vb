@@ -396,6 +396,25 @@ Namespace Services
             Return DetectCached(path).HasVideo
         End Function
 
+        ''' <summary>Fuehrt der Katalog eine Datei, die einen Film traegt, mit einer zur Datei
+        ''' passenden Zeile als etwas anderes, wird die Zeile aus der Datei neu gelesen. Nur
+        ''' aufrufen, wenn die Datei den Film belegt hat (HasVideoInFile); liest die Datei und
+        ''' schreibt in den Katalog: im Hintergrund. Wirft nie.</summary>
+        Friend Shared Sub CorrectCatalogIfWrong(path As String)
+            Try
+                Dim kind As MotionKind
+                Dim ignoredId As String = Nothing
+                If Not LibraryService.Instance.TryGetCurrentMotion(path, kind, ignoredId) OrElse kind = MotionKind.MotionPhoto Then Return
+                DiagnosticLogService.LogAlways("MotionPhoto.CatalogCorrected", $"Katalog fuehrte {IO.Path.GetFileName(path)} als {kind}, die Datei traegt einen Film")
+                ExifService.Invalidate(path)
+                Dim data = ExifService.ReadExif(path)
+                Dim fields = ExifService.ExtractSearchFields(data, path)
+                LibraryService.Instance.SyncExifData(path, fields, ExifService.BuildCatalogSummary(data, fields))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("MotionPhoto.CorrectCatalog", ex)
+            End Try
+        End Sub
+
         ''' <summary>Wo die Datei selbst zuletzt gefragt wurde und seither unveraendert ist, gilt
         ''' diese Antwort vor dem Katalog.</summary>
         Private Shared Function TryGetRemembered(path As String, ByRef info As MotionPhotoInfo) As Boolean

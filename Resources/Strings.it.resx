@@ -12294,35 +12294,8 @@
   <data name="Die_Anpassung_lie_sich_nicht_l_schen_ecd96ecc" xml:space="preserve">
     <value>Non è stato possibile eliminare la regolazione.</value>
   </data>
-  <data name="0_Anpassung_en_importiert_fdc783e6" xml:space="preserve">
-    <value>{0} regolazioni importate</value>
-  </data>
-  <data name="0_schon_vorhanden_68664521" xml:space="preserve">
-    <value>{0} già presenti</value>
-  </data>
-  <data name="0_Datei_en_nicht_lesbar_9653e2bc" xml:space="preserve">
-    <value>{0} file non leggibili</value>
-  </data>
-  <data name="Anpassung_exportiert_0_98d89e68" xml:space="preserve">
-    <value>Regolazione esportata: {0}</value>
-  </data>
-  <data name="Die_Anpassung_lie_sich_nicht_exportieren_53eb4a9a" xml:space="preserve">
-    <value>Non è stato possibile esportare la regolazione.</value>
-  </data>
-  <data name="0_Anpassung_en_exportiert_fd94c88c" xml:space="preserve">
-    <value>{0} regolazioni esportate</value>
-  </data>
   <data name="Einen_Unterordner_im_gew_hlten_Ordner_anlegen_04fa4248" xml:space="preserve">
     <value>Crea una sottocartella nella cartella selezionata</value>
-  </data>
-  <data name="Anpassungen_importieren_838230e9" xml:space="preserve">
-    <value>Importa regolazioni</value>
-  </data>
-  <data name="Ordner_mit_Anpassungen_importieren_9be5ad2e" xml:space="preserve">
-    <value>Importa cartella di regolazioni</value>
-  </data>
-  <data name="Anpassung_exportieren_ecc0fac1" xml:space="preserve">
-    <value>Esporta regolazione</value>
   </data>
   <data name="Einstellungen_ffnen_dd5e857e" xml:space="preserve">
     <value>Apri le impostazioni</value>
@@ -12426,20 +12399,8 @@
   <data name="Den_Ordner_der_Anpassungen_im_Dateimanager_ffnen_b3fce593" xml:space="preserve">
     <value>Apre la cartella delle regolazioni nel file manager</value>
   </data>
-  <data name="Schlie_t_dieses_Fenster_und_ffnet_die_Einstellun_58264913" xml:space="preserve">
-    <value>Chiude questa finestra e apre le impostazioni. La cartella delle regolazioni si imposta lì, alla voce Editor.</value>
-  </data>
-  <data name="Ordner_ndern_6c04e2d7" xml:space="preserve">
-    <value>Cambia cartella</value>
-  </data>
   <data name="Anpassungen_in_allen_Ordnern_nach_ihrem_Namen_su_6edcb468" xml:space="preserve">
     <value>Cerca le regolazioni per nome in tutte le cartelle</value>
-  </data>
-  <data name="Anpassungen_in_den_gew_hlten_Ordner_aufnehmen_65ddf882" xml:space="preserve">
-    <value>Aggiunge regolazioni alla cartella selezionata</value>
-  </data>
-  <data name="Ordner_samt_Unterordnern_91847af9" xml:space="preserve">
-    <value>Cartella con le sue sottocartelle</value>
   </data>
   <data name="Unterordner_zeigen_oder_verbergen_11fab487" xml:space="preserve">
     <value>Mostra o nasconde le sottocartelle</value>
@@ -12447,14 +12408,8 @@
   <data name="Ordner_umbenennen_F2_91a94b55" xml:space="preserve">
     <value>Rinomina cartella (F2)</value>
   </data>
-  <data name="Ordner_samt_Unterordnern_in_ein_Verzeichnis_expo_2a332ad9" xml:space="preserve">
-    <value>Esporta la cartella con le sue sottocartelle in una directory</value>
-  </data>
   <data name="Ordner_l_schen_ENTF_Andere_Dateien_darin_bleiben_190eeb88" xml:space="preserve">
     <value>Elimina cartella (CANC). Gli altri file al suo interno restano.</value>
-  </data>
-  <data name="Klicken_zeigt_was_die_Anpassung_enth_lt_Auf_eine_f063f797" xml:space="preserve">
-    <value>Un clic mostra che cosa contiene la regolazione. Trascinala su una cartella per spostarla.</value>
   </data>
   <data name="Auf_das_im_Editor_ge_ffnete_Bild_anwenden_e8e855ed" xml:space="preserve">
     <value>Applica all'immagine aperta nell'editor</value>
@@ -12464,18 +12419,6 @@
   </data>
   <data name="In_einen_anderen_Ordner_verschieben_66b049c4" xml:space="preserve">
     <value>Sposta in un'altra cartella</value>
-  </data>
-  <data name="Als_Datei_an_einen_anderen_Ort_exportieren_b0632359" xml:space="preserve">
-    <value>Esporta come file in un'altra posizione</value>
-  </data>
-  <data name="L_schen_ENTF_2e101259" xml:space="preserve">
-    <value>Elimina (CANC)</value>
-  </data>
-  <data name="enthalten_7d3b9efe" xml:space="preserve">
-    <value>incluso</value>
-  </data>
-  <data name="Alle_brigen_Regler_werden_auf_den_Neutralwert_ge_926e23af" xml:space="preserve">
-    <value>Tutti gli altri cursori vengono portati al valore neutro.</value>
   </data>
   <data name="L_schen_4b292f16" xml:space="preserve">
     <value>Eliminare?</value>
@@ -12500,5 +12443,29 @@
   </data>
   <data name="Angewendet_45946cda" xml:space="preserve">
     <value>Applicata</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_verschieben_Gibt_es_do_7cdb8df5" xml:space="preserve">
+    <value>Non è stato possibile spostare la cartella. Lì ce n'è già una con lo stesso nome?</value>
+  </data>
+  <data name="Ordner_verschoben_0_eee84cdb" xml:space="preserve">
+    <value>Cartella spostata: {0}</value>
+  </data>
+  <data name="L_schen_ENTF_Der_zweite_Klick_auf_dieselbe_Stell_c26a1c0f" xml:space="preserve">
+    <value>Elimina (CANC). Il secondo clic nello stesso punto elimina.</value>
+  </data>
+  <data name="Kantenlicht_bda38e22" xml:space="preserve">
+    <value>Luce di contorno</value>
+  </data>
+  <data name="Das_Licht_kommt_von_hinten_und_zeichnet_einen_he_ef07b788" xml:space="preserve">
+    <value>La luce arriva da dietro e disegna un bordo chiaro lungo il contorno dove un oggetto sta davanti a uno sfondo più profondo. La posizione della luce decide il lato, con un'altezza grande il bordo gira tutto intorno.</value>
+  </data>
+  <data name="Der_neue_Ordner_liegt_im_bisherigen_oder_der_bis_686676f3" xml:space="preserve">
+    <value>La nuova cartella si trova in quella attuale o quella attuale nella nuova. Non è stato spostato nulla e la cartella resta com'era.</value>
+  </data>
+  <data name="0_davon_gab_es_im_neuen_Ordner_schon_mit_anderem_8559aa84" xml:space="preserve">
+    <value>{0} di essi esistevano già nella nuova cartella con contenuto diverso e ora si trovano accanto come regolazioni a sé</value>
+  </data>
+  <data name="Nichts_wurde_umbenannt_91f18288" xml:space="preserve">
+    <value>Non è stato rinominato nulla.</value>
   </data>
 </root>

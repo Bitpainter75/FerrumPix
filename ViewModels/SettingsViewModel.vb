@@ -7205,7 +7205,10 @@ Namespace ViewModels
                 SetBrush("FP.Bg.Content", "#464B50")
                 SetBrush("FP.Bg.Elevated", "#404649")
                 SetBrush("FP.Bg.Hover", "#5A6065")
-                SetBrush("FP.Bg.Input", "#3E4348")
+                ' Die Feldflaeche liegt deutlich unter der Menueflaeche (Elevated): mit #3E4348
+                ' lag ein Suchfeld im Aufklapper fast auf dessen Farbe und wirkte gesperrt
+                ' (Nutzerbefund). Abstand jetzt wie in den anderen Themen eine klare Stufe.
+                SetBrush("FP.Bg.Input", "#2A2E32")
                 SetBrush("FP.Bg.Active", "#5A6065")
                 SetBrush("FP.Text.Primary", "#F1F2F2")
                 SetBrush("FP.Text.Secondary", "#D7D9DB")

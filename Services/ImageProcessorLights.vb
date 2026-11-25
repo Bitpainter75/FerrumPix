@@ -123,6 +123,33 @@ Namespace Services
             Return map
         End Function
 
+        ''' <summary>Das Kantenlicht bei voller Staerke im Verhaeltnis zum Licht selbst: ein Umriss
+        ''' vor tieferem Hintergrund faengt es als helle Linie.</summary>
+        Private Const RimGainAtFull As Double = 1.6
+        ''' <summary>Der Anteil des Kantenlichts, der als Schein dazukommt statt die Flaeche
+        ''' aufzuhellen: ein Saum aus Gegenlicht steht auch auf dunklem Haar und dunklem Stoff.</summary>
+        Private Const RimGlowShare As Double = 0.04
+
+        ''' <summary>Das Kantenlicht eines Lichts auf der groben Karte, aus dem Zwischenspeicher oder
+        ''' neu gerechnet. Gehalten neben Relief und Schatten, unter eigenem Schluessel.</summary>
+        Private Shared Function LightRimFor(field As DepthField, source As LightSource, light As PreparedLight,
+                                            width As Integer, height As Integer) As Single()
+            Dim key = field.Token & "|rim|" & source.Signature()
+            Dim cached As Single() = Nothing
+            SyncLock _lightDepthLock
+                If _lightModulations.TryGetValue(key, cached) Then Return cached
+            End SyncLock
+            Dim rimWidth = Math.Max(0.0, Math.Min(100.0, source.RimWidth)) / 100.0
+            Dim map = field.RimMap(light, field.LightPosition(light, width, height), rimWidth)
+            SyncLock _lightDepthLock
+                If String.Equals(_lightDepthToken, field.Token, StringComparison.Ordinal) Then
+                    If _lightModulations.Count >= LightModulationLimit Then _lightModulations.Clear()
+                    _lightModulations(key) = map
+                End If
+            End SyncLock
+            Return map
+        End Function
+
         ''' <summary>Liegt fuer dieses Zeichen eine Karte bereit?</summary>
         Public Shared Function HasLightDepthMap(token As String) As Boolean
             SyncLock _lightDepthLock
@@ -216,6 +243,14 @@ Namespace Services
             ''' mit dem das Licht an einer Stelle ankommt (1 = wie ohne, 0 = nichts, ueber 1 auf
             ''' einer dem Licht zugeneigten Flaeche); Nothing ohne beides.</summary>
             Public Modulation As Single()
+            ''' <summary>Rechenweg des geworfenen Schattens (LightSource.ShadowModel), auf die
+            ''' Fassungen begrenzt, die dieser Stand kennt.</summary>
+            Public ShadowModel As Integer
+            ''' <summary>Das Kantenlicht von hinten auf der groben Karte, 0 bis 1 je Stelle; Nothing,
+            ''' wenn das Licht keins zeichnet (ausgeschaltet, Staerke 0, keine Tiefe, Schatten).</summary>
+            Public Rim As Single()
+            ''' <summary>Wie viel das Kantenlicht im Verhaeltnis zum Licht selbst gibt.</summary>
+            Public RimGain As Double
         End Class
 
         Private Shared Function SmoothStep(edge0 As Double, edge1 As Double, x As Double) As Double
@@ -357,7 +392,16 @@ Namespace Services
                 p.DepthSigma = 0.04 + Math.Max(0.0, Math.Min(100.0, light.DepthReach)) / 100.0 * 0.6
                 p.Shading = Math.Max(0.0, Math.Min(100.0, light.Shading)) / 100.0
                 p.ShadowSoft = Math.Max(0.0, Math.Min(100.0, light.ShadowSoftness)) / 100.0
+                ' Eine Fassung aus einem neueren Stand rechnet auf der neuesten, die dieser kennt.
+                p.ShadowModel = Math.Max(0, Math.Min(LightSource.CurrentShadowModel, light.ShadowModel))
                 p.Modulation = LightModulationFor(field, light, p, width, height)
+                ' Kantenlicht: nur fuer Licht, nur eingeschaltet und nur mit Staerke. Sonst bleibt
+                ' Rim Nothing, und die Stufe rechnet genau wie ohne das Feld.
+                Dim rimStrength = Math.Max(0.0, Math.Min(100.0, light.RimStrength)) / 100.0
+                If light.RimLight AndAlso rimStrength > 0 AndAlso p.Ev > 0 Then
+                    p.RimGain = rimStrength * RimGainAtFull
+                    p.Rim = LightRimFor(field, light, p, width, height)
+                End If
             End If
             Return p
         End Function
@@ -556,6 +600,252 @@ Namespace Services
                 Return dst
             End Function
 
+            ''' <summary>Ab diesem Tiefensprung zwischen zwei Nachbarstellen endet ein Gegenstand fuer
+            ''' die Messung seiner Breite (<see cref="ThicknessLevels"/>).</summary>
+            Private Const JumpStep As Single = 0.02F
+            ''' <summary>Dicke eines Gegenstands, der als massiv gilt: mehr als jede Tiefe der Szene.</summary>
+            Private Const Massive As Single = 1.0E+9F
+            Private _thickness As Single()()
+
+            ''' <summary>Wie dick ein Gegenstand an jeder Stelle ist, in Einheiten der langen Seite
+            ''' und in denselben Stufen wie <see cref="Nearest"/>: fuer das Schattenmodell 1.
+            '''
+            ''' Ein Hoehenfeld kennt keine Dicke. Die Annahme: ein Gegenstand ist so dick, wie er an
+            ''' der Stelle schmal ist. Gemessen wird die Breite als Laenge des Laufs durch die Stelle
+            ''' zwischen zwei Umrissen, an denen die Tiefe nach aussen ABFAELLT, waagerecht,
+            ''' senkrecht und in beiden Diagonalen; die kuerzeste zaehlt. Ein Stab, ein Ast, ein
+            ''' Zaundraht ist damit ein Zylinder, eine Kugel eine Kugel. Endet ein Lauf am Bildrand
+            ''' oder an etwas, das davor steht, ist die Breite dort nicht bekannt und der Gegenstand
+            ''' in dieser Richtung massiv: eine Stufe, eine Wand, der Grund bleiben, was sie waren.
+            '''
+            ''' Im Vorbild dieser Regel waechst die Dicke mit der Entfernung von der Kamera (ein
+            ''' fester Sockel plus ein Anteil der Entfernung), weil ein Ding, das weit weg noch zu
+            ''' sehen ist, entsprechend gross ist. Hier gibt es keine Kamera und keine Meter: die
+            ''' Breite im Bild IST die Breite im Raum, also steht sie fuer die Dicke.
+            '''
+            ''' Gebaut beim ersten Schatten der Fassung 1 und danach gehalten; ein Rezept der
+            ''' Fassung 0 baut und liest sie nie.</summary>
+            Private Function ThicknessLevels() As Single()()
+                Dim levels = _thickness
+                If levels IsNot Nothing Then Return levels
+                Dim w = Width, h = Height
+                Dim base(w * h - 1) As Single
+                For i = 0 To base.Length - 1
+                    base(i) = Massive
+                Next
+                MeasureRuns(base, 1, 0)
+                MeasureRuns(base, 0, 1)
+                MeasureRuns(base, 1, 1)
+                MeasureRuns(base, 1, -1)
+                ' Nicht duenner als zwei Stellen: schmaler loest die Karte nichts auf, und ein Draht
+                ' wuerfe sonst gar keinen Schatten.
+                Dim least = CSng(2.0 * Math.Max(CellX, CellY))
+                For i = 0 To base.Length - 1
+                    If base(i) < least Then base(i) = least
+                Next
+                ' Je Stufe die Dicke der Stelle, die dort das Naechste ist: dieselbe, deren Tiefe
+                ' Nearest fuer den Bereich traegt.
+                Dim built(Nearest.Length - 1)() As Single
+                built(0) = base
+                For level = 1 To Nearest.Length - 1
+                    Dim below = Nearest(level - 1)
+                    Dim belowThickness = built(level - 1)
+                    Dim bw = NearestWidth(level - 1), bh = NearestHeight(level - 1)
+                    Dim nw = NearestWidth(level), nh = NearestHeight(level)
+                    Dim current(nw * nh - 1) As Single
+                    For y = 0 To nh - 1
+                        Dim ya = y * 2, yb = Math.Min(bh - 1, y * 2 + 1)
+                        For x = 0 To nw - 1
+                            Dim xa = x * 2, xb = Math.Min(bw - 1, x * 2 + 1)
+                            Dim best = ya * bw + xa
+                            If below(ya * bw + xb) > below(best) Then best = ya * bw + xb
+                            If below(yb * bw + xa) > below(best) Then best = yb * bw + xa
+                            If below(yb * bw + xb) > below(best) Then best = yb * bw + xb
+                            current(y * nw + x) = belowThickness(best)
+                        Next
+                    Next
+                    built(level) = current
+                Next
+                _thickness = built
+                Return built
+            End Function
+
+            ''' <summary>Traegt in <paramref name="target"/> je Stelle die Laenge des Laufs ein, in dem
+            ''' sie entlang der Richtung (<paramref name="ax"/>, <paramref name="ay"/>) liegt, wenn er
+            ''' kuerzer ist als der Wert dort. Ein Lauf endet an einem Tiefensprung ueber
+            ''' <see cref="JumpStep"/>; gezaehlt wird er nur, wenn die Tiefe an BEIDEN Enden nach
+            ''' aussen abfaellt. Am Bildrand und an einem Sprung nach oben (etwas steht davor) ist
+            ''' sein Ende nicht zu sehen.</summary>
+            Private Sub MeasureRuns(target As Single(), ax As Integer, ay As Integer)
+                Dim w = Width, h = Height
+                Dim d = Depth
+                Dim stepLength = Math.Sqrt(ax * CellX * (ax * CellX) + ay * CellY * (ay * CellY))
+                For sy = 0 To h - 1
+                    For sx = 0 To w - 1
+                        ' Nur Anfaenge einer Linie: die Stelle davor liegt ausserhalb des Bildes.
+                        Dim bx = sx - ax, by = sy - ay
+                        If bx >= 0 AndAlso bx < w AndAlso by >= 0 AndAlso by < h Then Continue For
+                        Dim x = sx, y = sy
+                        Dim runX = sx, runY = sy, count = 0
+                        Dim openStart = True
+                        Dim previous = d(sy * w + sx)
+                        While x >= 0 AndAlso x < w AndAlso y >= 0 AndAlso y < h
+                            Dim value = d(y * w + x)
+                            If count > 0 Then
+                                Dim delta = value - previous
+                                If Math.Abs(delta) > JumpStep Then
+                                    ' Der Lauf endet vor dieser Stelle. Faellt die Tiefe hier ab,
+                                    ' ist das sein Umriss; steigt sie, steht etwas davor.
+                                    If Not openStart AndAlso delta < 0 Then
+                                        Dim length = CSng(count * stepLength)
+                                        For k = 0 To count - 1
+                                            Dim i = (runY + k * ay) * w + runX + k * ax
+                                            If length < target(i) Then target(i) = length
+                                        Next
+                                    End If
+                                    ' Der naechste Lauf beginnt hier; sein Anfang ist ein Umriss,
+                                    ' wenn die Stelle davor tiefer liegt.
+                                    openStart = delta < 0
+                                    runX = x : runY = y : count = 0
+                                End If
+                            End If
+                            count += 1
+                            previous = value
+                            x += ax : y += ay
+                        End While
+                    Next
+                Next
+            End Sub
+
+            ''' <summary>Wie weit das Kantenlicht nach einem Umriss sucht, in Stellen der groben Karte.</summary>
+            Private Const RimReach As Integer = 20
+            ''' <summary>In so viele Richtungen sucht jede Stelle nach ihrem Umriss.</summary>
+            Private Const RimDirections As Integer = 16
+            ''' <summary>Ab diesem Tiefensprung zwischen zwei Nachbarstellen gilt ein Umriss als Rand
+            ''' eines Gegenstands vor tieferem Hintergrund. Groesser als fuer die Flaechen: ein
+            ''' Kantenlicht an einer flachen Stufe waere ein Strich quer durch das Motiv.</summary>
+            Private Const RimJump As Single = 0.03F
+            ''' <summary>Breite des Saums an den Enden des Reglers, in Einheiten der langen Seite.</summary>
+            Private Const RimWidthLeast As Double = 0.003
+            Private Const RimWidthMost As Double = 0.03
+            Private _edgeReach As Byte()
+
+            ''' <summary>Je Stelle und Richtung der Weg bis zum eigenen Umriss, in halben Stellen
+            ''' (0 = keiner in Reichweite): die Stelle, ab der die Tiefe nach aussen um mehr als
+            ''' <see cref="RimJump"/> abfaellt. Gesucht wird nur auf dem Gegenstand selbst; steht
+            ''' etwas davor (Sprung nach oben), endet die Suche ohne Fund. Haengt nicht am Licht und
+            ''' wird je Karte einmal gebaut, beim ersten Kantenlicht.</summary>
+            Private Function EdgeReach() As Byte()
+                Dim reach = _edgeReach
+                If reach IsNot Nothing Then Return reach
+                Dim w = Width, h = Height
+                Dim d = Depth
+                Dim built(w * h * RimDirections - 1) As Byte
+                Dim dirX(RimDirections - 1), dirY(RimDirections - 1) As Double
+                For k = 0 To RimDirections - 1
+                    Dim angle = k * 2.0 * Math.PI / RimDirections
+                    dirX(k) = Math.Cos(angle) : dirY(k) = Math.Sin(angle)
+                Next
+                ImageProcessor.ForEachRow(w, h,
+                    Sub(y)
+                        For x = 0 To w - 1
+                            Dim own = d(y * w + x)
+                            For k = 0 To RimDirections - 1
+                                Dim previous = own
+                                For i = 1 To RimReach
+                                    Dim sx = CInt(Math.Round(x + dirX(k) * i)), sy = CInt(Math.Round(y + dirY(k) * i))
+                                    If sx < 0 OrElse sy < 0 OrElse sx >= w OrElse sy >= h Then Exit For
+                                    Dim value = d(sy * w + sx)
+                                    Dim delta = value - previous
+                                    If delta > RimJump Then Exit For
+                                    If delta < -RimJump Then
+                                        built((y * w + x) * RimDirections + k) = CByte(i * 2 - 1)
+                                        Exit For
+                                    End If
+                                    previous = value
+                                Next
+                            Next
+                        Next
+                    End Sub)
+                _edgeReach = built
+                Return built
+            End Function
+
+            ''' <summary>Das Kantenlicht eines Lichts von hinten, 0 bis 1 je Stelle der groben Karte.
+            '''
+            ''' Die Szene ist ein Hoehenfeld ohne Kamera, eine Quelle steht ueber ihr und nie hinter
+            ''' einem Gegenstand. Fuer das Kantenlicht wird sie deshalb als Licht von hinten
+            ''' gelesen: ihr Ort im Bild sagt, von welcher Seite es kommt, ihre Hoehe, wie weit
+            ''' hinten sie steht. Hell wird der Rand eines Gegenstands, hinter dem die Tiefe
+            ''' zurueckspringt (<see cref="EdgeReach"/>), am staerksten am Umriss selbst und nach
+            ''' innen auslaufend, und zwar dort, wo der Umriss zum Licht zeigt. Steht die Quelle
+            ''' im Bild dicht bei der Stelle oder weit hinten (grosse Hoehe), zaehlt jede Richtung:
+            ''' ein Licht genau hinter dem Motiv zeichnet den Saum rundum.
+            '''
+            ''' Kein Saum an einem Gegenstand, der tiefer liegt als der Ort des Lichts: der steht
+            ''' nicht vor dem Licht. Das Streiflicht hat keinen Ort und steht hinter allem.
+            ''' <paramref name="rimWidth"/> ist der Regler Breite, 0 bis 1.</summary>
+            Public Function RimMap(light As PreparedLight,
+                                   pos As (X As Double, Y As Double, Z As Double, Directional As Boolean),
+                                   rimWidth As Double) As Single()
+                Dim w = Width, h = Height
+                Dim result(w * h - 1) As Single
+                Dim reach = EdgeReach()
+                Dim d = Depth
+                Dim widthCells = Math.Min(CDbl(RimReach), (RimWidthLeast + (RimWidthMost - RimWidthLeast) * rimWidth) / Math.Max(CellX, CellY))
+                widthCells = Math.Max(1.5, widthCells)
+                Dim dirX(RimDirections - 1), dirY(RimDirections - 1) As Double
+                For k = 0 To RimDirections - 1
+                    Dim angle = k * 2.0 * Math.PI / RimDirections
+                    dirX(k) = Math.Cos(angle) : dirY(k) = Math.Sin(angle)
+                Next
+                ' Wie weit hinten die Quelle steht: ihre Hoehe ueber der Szene.
+                Dim back = Math.Max(0.0, pos.Z - light.DepthAtLight * Relief)
+                Const Wrap As Double = 0.2
+                ImageProcessor.ForEachRow(w, h,
+                    Sub(y)
+                        For x = 0 To w - 1
+                            Dim i = y * w + x
+                            Dim o = i * RimDirections
+                            Dim tx, ty, side As Double
+                            If pos.Directional Then
+                                Dim flat = Math.Sqrt(pos.X * pos.X + pos.Y * pos.Y)
+                                If flat < 0.000001 Then
+                                    tx = 0 : ty = 0 : side = 0
+                                Else
+                                    tx = pos.X / flat : ty = pos.Y / flat : side = flat
+                                End If
+                            Else
+                                tx = pos.X - (x + 0.5) * CellX : ty = pos.Y - (y + 0.5) * CellY
+                                Dim flat = Math.Sqrt(tx * tx + ty * ty)
+                                If flat < 0.000001 Then
+                                    tx = 0 : ty = 0 : side = 0
+                                Else
+                                    tx /= flat : ty /= flat
+                                    side = flat / Math.Sqrt(flat * flat + back * back)
+                                End If
+                            End If
+                            Dim best = 0.0
+                            For k = 0 To RimDirections - 1
+                                Dim half = CInt(reach(o + k))
+                                If half = 0 Then Continue For
+                                Dim distance = half * 0.5
+                                If distance >= widthCells Then Continue For
+                                Dim toward = Math.Max(0.0, (dirX(k) * tx + dirY(k) * ty + Wrap) / (1.0 + Wrap))
+                                Dim weight = (1.0 - side) + side * toward
+                                Dim inward = 1.0 - distance / widthCells
+                                Dim e = inward * inward * weight
+                                If e > best Then best = e
+                            Next
+                            If best > 0 AndAlso Not pos.Directional Then
+                                best *= SmoothStep(-0.1, -0.02, d(i) - light.DepthAtLight)
+                            End If
+                            result(i) = CSng(best)
+                        Next
+                    End Sub)
+                Return result
+            End Function
+
             ''' <summary>Bilinear, u und v in 0 bis 1.</summary>
             Public Function Sample(map As Single(), u As Double, v As Double) As Double
                 Dim fx = Math.Max(0.0, Math.Min(Width - 1.0, u * Width - 0.5))
@@ -693,7 +983,13 @@ Namespace Services
             ''' gilt er als massiv bis zum Grund, der Schatten haengt an seinem Umriss. Steht sie
             ''' hinter seiner Vorderseite, ist er nur eine Schale von <c>Shell</c> Dicke: ein Strahl,
             ''' der weit hinter ihm durchlaeuft, ist frei. Das Streiflicht hat keinen Ort und steht
-            ''' damit immer davor.</summary>
+            ''' damit immer davor.
+            '''
+            ''' Das gilt fuer die Fassung 0 des Schattenmodells (PreparedLight.ShadowModel). In der
+            ''' Fassung 1 ist ein Gegenstand ausserdem nur so dick, wie er an der Stelle schmal ist
+            ''' (<see cref="ThicknessLevels"/>): massiv bis zum Grund warf ein Stab weit vor dem
+            ''' Hintergrund einen Schatten von seinem Umriss bis dorthin, wo der Schatten seiner
+            ''' Oberkante endet, ein Zaun also eine geschlossene Flaeche.</summary>
             Private Function ShadowMap(light As PreparedLight,
                                        pos As (X As Double, Y As Double, Z As Double, Directional As Boolean)) As Single()
                 Dim w = Width, h = Height
@@ -713,6 +1009,10 @@ Namespace Services
                 ' Licht.
                 Const nearWidth As Double = 0.004
                 Dim spread = 0.02 + light.Soft * 0.2
+                ' Fassung 1: ein Gegenstand ist nur so dick, wie er schmal ist (ThicknessLevels).
+                ' Fassung 0 liest die Dicke nie, ihre Rechnung unten bleibt Schritt fuer Schritt
+                ' dieselbe.
+                Dim thick As Single()() = If(light.ShadowModel >= 1, ThicknessLevels(), Nothing)
                 ImageProcessor.ForEachRow(w, h,
                     Sub(y)
                         For x = 0 To w - 1
@@ -758,6 +1058,31 @@ Namespace Services
                                 If below <= 0 Then Continue For
                                 Dim blocked = Math.Min(1.0, below / (nearWidth + spread * length * t))
                                 If Not pos.Directional AndAlso surface > lampZ Then blocked *= 1.0 - SmoothStep(Shell * 0.6, Shell, below)
+                                If thick IsNot Nothing Then
+                                    ' Die Dicke der Stelle, die hier am naechsten liegt: von ihr
+                                    ' kommt die Oberflaeche, unter der der Strahl laeuft.
+                                    Dim nearest = y0 * lw + x0
+                                    If map(y0 * lw + x1) > map(nearest) Then nearest = y0 * lw + x1
+                                    If map(y1 * lw + x0) > map(nearest) Then nearest = y1 * lw + x0
+                                    If map(y1 * lw + x1) > map(nearest) Then nearest = y1 * lw + x1
+                                    Dim limit = thick(level)(nearest)
+                                    ' Gemessen wird gegen die OBERKANTE dieser Stelle, nicht gegen
+                                    ' die gemittelte Flaeche: am Umriss liegt die gemittelte Flanke
+                                    ' immer irgendwo knapp ueber dem Strahl, und ein Strahl tief
+                                    ' unter dem Gegenstand galt dort als streifend.
+                                    If limit < 1.0F Then
+                                        Dim belowTop = map(nearest) * ShadowRelief - (pz + rz * t)
+                                        ' Ein Strahl mitten durch einen schmalen Gegenstand ist
+                                        ' ganz verdeckt: die Weite, ueber die der Schatten
+                                        ' einsetzt, ist nie groesser als seine halbe Dicke. Mit
+                                        ' der Weite des Strahls allein blieb der Schatten eines
+                                        ' Stabs blass, weil kein Strahl tief genug unter ihm lief.
+                                        Dim onset = Math.Min(nearWidth + spread * length * t, limit * 0.25)
+                                        blocked = Math.Min(1.0, belowTop / onset)
+                                        If Not pos.Directional AndAlso surface > lampZ Then blocked *= 1.0 - SmoothStep(Shell * 0.6, Shell, below)
+                                        blocked *= 1.0 - SmoothStep(limit * 0.85, limit * 1.25, belowTop)
+                                    End If
+                                End If
                                 If 1.0 - blocked < lit Then
                                     lit = 1.0 - blocked
                                     If lit <= 0.002 Then Exit For
@@ -927,6 +1252,9 @@ Namespace Services
                         For li = 0 To prepared.Length - 1
                             Dim light = prepared(li)
                             Dim f = LightShapeAt(light, px, py)
+                            ' Die Form vor Tiefengewicht, Relief und Schatten: das Kantenlicht
+                            ' streift am Rand vorbei und wird von keinem davon gedaempft.
+                            Dim shape = f
                             If light.UseDepth AndAlso f > 0 Then
                                 If depthHere < 0 Then depthHere = field.FineAt(u, v)
                                 Dim z = (depthHere - light.DepthAtLight) / light.DepthSigma
@@ -955,6 +1283,17 @@ Namespace Services
                                     gr += k * (1.5 - 0.5 * light.Cr)
                                     gg += k * (1.5 - 0.5 * light.Cg)
                                     gb += k * (1.5 - 0.5 * light.Cb)
+                                End If
+                            End If
+                            If light.Rim IsNot Nothing AndAlso shape > 0.0005 Then
+                                If depthHere < 0 Then depthHere = field.FineAt(u, v)
+                                Dim rim = field.SampleJoint(light.Rim, u, v, depthHere)
+                                If rim > 0.0005 Then
+                                    touched = True
+                                    Dim k = (Math.Pow(2.0, light.Ev) - 1.0) * shape * rim * light.RimGain
+                                    gr += k * light.Wr : gg += k * light.Wg : gb += k * light.Wb
+                                    Dim glow = k * RimGlowShare
+                                    ar += glow * light.Wr : ag += glow * light.Wg : ab += glow * light.Wb
                                 End If
                             End If
                             If light.HaloStrength > 0 Then

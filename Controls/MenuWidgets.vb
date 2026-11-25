@@ -90,7 +90,7 @@ Namespace Controls
                     button.Classes.Add("compact")
 
                     Dim icon As New SvgIcon With {
-                        .Source = "avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg",
+                        .Source = "avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg",
                         .Width = 18,
                         .Height = 18
                     }
@@ -105,7 +105,7 @@ Namespace Controls
             If toggleFavorite IsNot Nothing Then
                 Dim isSet = isFavorite
                 Dim icon As New SvgIcon With {
-                    .Source = "avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg",
+                    .Source = "avares://FerrumPix/Assets/Icons/phosphor/bold/heart-bold.svg",
                     .Width = 18,
                     .Height = 18
                 }
@@ -132,6 +132,8 @@ Namespace Controls
                         End Sub)
                 }
                 heart.Classes.Add("favorite-btn")
+                ' Ungesetzt in Farbe und Deckkraft der Sterne daneben (Stil im Thema).
+                heart.Classes.Add("beside-stars")
                 ToolTip.SetTip(heart, LocalizationService.T("Favorit"))
                 row.Children.Add(heart)
             End If
@@ -166,7 +168,7 @@ Namespace Controls
                     .Padding = New Thickness(0),
                     .Margin = New Thickness(If(wanted = 1, 4, 0), 0, 0, 0),
                     .Content = New SvgIcon With {
-                        .Source = "avares://FerrumPix/Assets/Icons/phosphor/regular/" & spec.Icon & ".svg",
+                        .Source = "avares://FerrumPix/Assets/Icons/phosphor/bold/" & spec.Icon & "-bold.svg",
                         .Width = 18,
                         .Height = 18
                     },
@@ -181,6 +183,7 @@ Namespace Controls
                 button.Classes.Add("icon-btn")
                 button.Classes.Add("pick-btn")
                 button.Classes.Add(spec.StyleClass)
+                button.Classes.Add("beside-stars")
                 ToolTip.SetTip(button, LocalizationService.T(spec.Tip))
                 buttons.Add((button, wanted))
                 row.Children.Add(button)
@@ -189,14 +192,14 @@ Namespace Controls
         End Sub
 
         ''' <summary>Die Farbetiketten als Kreise; dieselbe Farbe noch einmal entfernt das Etikett.
-        ''' Das gesetzte Etikett traegt einen weissen Ring, und der wandert beim Klick sofort mit - wie bei den Sternen
+        ''' Das gesetzte Etikett traegt einen schwarz-weissen Doppelring, und der wandert beim Klick sofort mit - wie bei den Sternen
         ''' bleibt das Menue dabei offen.</summary>
         Public Shared Function ColorLabelRow(currentLabel As String, setLabel As ICommand) As Control
             If setLabel Is Nothing Then Return Nothing
 
             Dim row = NewRow()
             Dim current = If(currentLabel, "")
-            Dim marks As New Dictionary(Of String, Ellipse)(StringComparer.OrdinalIgnoreCase)
+            Dim marks As New Dictionary(Of String, Panel)(StringComparer.OrdinalIgnoreCase)
 
             Dim showLabel As Action =
                 Sub()
@@ -207,26 +210,31 @@ Namespace Controls
 
             For Each entry In LabelColors
                 Dim hex = entry.Hex
-                ' Das gesetzte Etikett traegt einen Ring in der Akzentfarbe, AUSSEN um den Kreis mit
-                ' etwas Luft: ein weisser Ring verschwand im hellen Erscheinungsbild, und ein Ring auf
-                ' dem Kreis verschwaende beim Etikett in Akzentfarbe. Kreis und Ring liegen deshalb
-                ' in einem Raster uebereinander.
-                Dim mark As New Ellipse With {
+                ' Der Doppelring bleibt bei jeder Etikettfarbe und in jedem Erscheinungsbild sichtbar:
+                ' Schwarz trennt ihn vom hellen Untergrund, Weiss vom dunklen. Beide liegen AUSSEN
+                ' um den Farbkreis, damit die Farbe selbst unverfaelscht bleibt.
+                Dim blackMark As New Ellipse With {
                     .Width = ButtonSize,
                     .Height = ButtonSize,
-                    .StrokeThickness = 2,
-                    .IsVisible = False
+                    .Fill = Brushes.Black
                 }
-                mark.Bind(Shape.StrokeProperty, mark.GetResourceObservable("FP.Accent"))
-                marks(hex) = mark
+                Dim whiteMark As New Ellipse With {
+                    .Width = ButtonSize - 4,
+                    .Height = ButtonSize - 4,
+                    .Fill = Brushes.White
+                }
+                Dim selectionMark As New Panel With {.IsVisible = False}
+                selectionMark.Children.Add(blackMark)
+                selectionMark.Children.Add(whiteMark)
+                marks(hex) = selectionMark
 
                 Dim stack As New Panel()
+                stack.Children.Add(selectionMark)
                 stack.Children.Add(New Ellipse With {
                     .Width = 16,
                     .Height = 16,
                     .Fill = New SolidColorBrush(Color.Parse(hex))
                 })
-                stack.Children.Add(mark)
 
                 Dim button As New Button With {
                     .Padding = New Thickness(0),
@@ -244,6 +252,10 @@ Namespace Controls
                         End Sub)
                 }
                 button.Classes.Add("ghost")
+                ' Derselbe Etikettknopf wie in Info-Leiste und Vollbild (Stil label-chip im Thema).
+                ' Die Masse stehen hier trotzdem selbst: der Doppelring rechnet mit ButtonSize, und
+                ' Knopf und Ring muessen gleich gross bleiben, auch wenn ButtonSize sich aendert.
+                button.Classes.Add("label-chip")
                 ToolTip.SetTip(button, LocalizationService.T(entry.Name))
                 row.Children.Add(button)
             Next
@@ -276,7 +288,7 @@ Namespace Controls
         ''' Abstand. Neun mal <see cref="ButtonSize"/> plus acht mal Abstand plus Rand. Ein
         ''' Kreuz zum Zuruecksetzen gibt es in keiner der beiden Zeilen: derselbe Stern, dieselbe Farbe
         ''' noch einmal nimmt zurueck.</summary>
-        Private Const ButtonSize As Integer = 22
+        Private Const ButtonSize As Integer = 24
         Private Const RowSpacing As Integer = 4
 
         ''' <summary>Seitlich KEIN eigener Rand. Der Kopfbereich eines Menueeintrags polstert schon

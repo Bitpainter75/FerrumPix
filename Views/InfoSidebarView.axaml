@@ -439,117 +439,129 @@
                                 <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
                                         Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
                                         Command="{Binding SetRatingCommand}" CommandParameter="1">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg" Classes="rating-star"
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="rating-star"
                                                    Width="18" Height="18" VerticalAlignment="Center"/>
                                 </Button>
                                 <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
                                         Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
                                         Command="{Binding SetRatingCommand}" CommandParameter="2">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg" Classes="rating-star"
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="rating-star"
                                                    Width="18" Height="18" VerticalAlignment="Center"/>
                                 </Button>
                                 <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
                                         Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
                                         Command="{Binding SetRatingCommand}" CommandParameter="3">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg" Classes="rating-star"
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="rating-star"
                                                    Width="18" Height="18" VerticalAlignment="Center"/>
                                 </Button>
                                 <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
                                         Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
                                         Command="{Binding SetRatingCommand}" CommandParameter="4">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg" Classes="rating-star"
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="rating-star"
                                                    Width="18" Height="18" VerticalAlignment="Center"/>
                                 </Button>
                                 <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
                                         Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
                                         Command="{Binding SetRatingCommand}" CommandParameter="5">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg" Classes="rating-star"
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="rating-star"
                                                    Width="18" Height="18" VerticalAlignment="Center"/>
                                 </Button>
-                                <Button Classes="icon-btn" Width="24" Height="24" VerticalAlignment="Center"
+                                <!-- beside-stars: ungesetzt in Farbe und Deckkraft der Sterne daneben, statt
+                                     in der Symbolfarbe des Themas (Stile im Thema). Gilt dem Herz und
+                                     den beiden Daumen. -->
+                                <Button Classes="icon-btn beside-stars" Width="24" Height="24" VerticalAlignment="Center"
                                         Command="{Binding ToggleFavoriteCommand}" ToolTip.Tip="Favorit" Margin="8,0,0,0">
                                     <Grid Width="20" Height="20">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/heart-bold.svg"
                                                        Width="20" Height="20" Classes="fav-heart" IsVisible="{Binding !IsFavorite}"/>
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/heart-bold.svg"
                                                        Width="20" Height="20" Classes="fav-heart active" IsVisible="{Binding IsFavorite}"/>
                                     </Grid>
                                 </Button>
-                                <Button Classes="icon-btn pick-btn pick-keep" Width="24" Height="24" VerticalAlignment="Center" Margin="4,0,0,0"
+                                <Button Classes="icon-btn pick-btn pick-keep beside-stars" Width="24" Height="24" VerticalAlignment="Center" Margin="4,0,0,0"
                                         Classes.active="{Binding IsPicked}" IsVisible="{Binding CanSetPickState}"
                                         Command="{Binding TogglePickedCommand}"
                                         ToolTip.Tip="Als behalten markieren (erneut nimmt es zurück)">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-up.svg" Width="18" Height="18"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-up-bold.svg" Width="18" Height="18"/>
                                 </Button>
-                                <Button Classes="icon-btn pick-btn pick-reject" Width="24" Height="24" VerticalAlignment="Center"
+                                <Button Classes="icon-btn pick-btn pick-reject beside-stars" Width="24" Height="24" VerticalAlignment="Center"
                                         Classes.active="{Binding IsRejected}" IsVisible="{Binding CanSetPickState}"
                                         Command="{Binding ToggleRejectedCommand}"
                                         ToolTip.Tip="Als verworfen markieren (erneut nimmt es zurück)">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-down.svg" Width="18" Height="18"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-down-bold.svg" Width="18" Height="18"/>
                                 </Button>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="5" IsVisible="{Binding ShowColorLabelSection}">
-                                <Button Classes="ghost" Width="22" Height="22" Padding="0" CornerRadius="11"
+                                <Button Classes="ghost label-chip"
                                         Command="{Binding SetColorLabelCommand}" CommandParameter="#F08A1A" ToolTip.Tip="Orange">
                                     <Grid>
+                                        <Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsColorLabelOrange}"/>
+                                        <Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsColorLabelOrange}"/>
                                         <Ellipse Width="16" Height="16" Fill="#F08A1A"/>
-                                        <Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsColorLabelOrange}"/>
                                     </Grid>
                                 </Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                <Button Classes="ghost label-chip"
                                         Command="{Binding SetColorLabelCommand}" CommandParameter="#E74C3C" ToolTip.Tip="Rot">
                                     <Grid>
+                                        <Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsColorLabelRed}"/>
+                                        <Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsColorLabelRed}"/>
                                         <Ellipse Width="16" Height="16" Fill="#E74C3C"/>
-                                        <Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsColorLabelRed}"/>
                                     </Grid>
                                 </Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                <Button Classes="ghost label-chip"
                                         Command="{Binding SetColorLabelCommand}" CommandParameter="#F03B88" ToolTip.Tip="Pink">
                                     <Grid>
+                                        <Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsColorLabelPink}"/>
+                                        <Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsColorLabelPink}"/>
                                         <Ellipse Width="16" Height="16" Fill="#F03B88"/>
-                                        <Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsColorLabelPink}"/>
                                     </Grid>
                                 </Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                <Button Classes="ghost label-chip"
                                         Command="{Binding SetColorLabelCommand}" CommandParameter="#8B5CF6" ToolTip.Tip="Lila">
                                     <Grid>
+                                        <Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsColorLabelPurple}"/>
+                                        <Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsColorLabelPurple}"/>
                                         <Ellipse Width="16" Height="16" Fill="#8B5CF6"/>
-                                        <Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsColorLabelPurple}"/>
                                     </Grid>
                                 </Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                <Button Classes="ghost label-chip"
                                         Command="{Binding SetColorLabelCommand}" CommandParameter="#3B82F6" ToolTip.Tip="Blau">
                                     <Grid>
+                                        <Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsColorLabelBlue}"/>
+                                        <Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsColorLabelBlue}"/>
                                         <Ellipse Width="16" Height="16" Fill="#3B82F6"/>
-                                        <Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsColorLabelBlue}"/>
                                     </Grid>
                                 </Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                <Button Classes="ghost label-chip"
                                         Command="{Binding SetColorLabelCommand}" CommandParameter="#0891B2" ToolTip.Tip="Cyan">
                                     <Grid>
+                                        <Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsColorLabelCyan}"/>
+                                        <Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsColorLabelCyan}"/>
                                         <Ellipse Width="16" Height="16" Fill="#0891B2"/>
-                                        <Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsColorLabelCyan}"/>
                                     </Grid>
                                 </Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                <Button Classes="ghost label-chip"
                                         Command="{Binding SetColorLabelCommand}" CommandParameter="#0F766E" ToolTip.Tip="Türkis">
                                     <Grid>
+                                        <Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsColorLabelTeal}"/>
+                                        <Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsColorLabelTeal}"/>
                                         <Ellipse Width="16" Height="16" Fill="#0F766E"/>
-                                        <Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsColorLabelTeal}"/>
                                     </Grid>
                                 </Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                <Button Classes="ghost label-chip"
                                         Command="{Binding SetColorLabelCommand}" CommandParameter="#22C55E" ToolTip.Tip="Grün">
                                     <Grid>
+                                        <Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsColorLabelGreen}"/>
+                                        <Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsColorLabelGreen}"/>
                                         <Ellipse Width="16" Height="16" Fill="#22C55E"/>
-                                        <Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsColorLabelGreen}"/>
                                     </Grid>
                                 </Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                <Button Classes="ghost label-chip"
                                         Command="{Binding SetColorLabelCommand}" CommandParameter="#FACC15" ToolTip.Tip="Gelb">
                                     <Grid>
+                                        <Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsColorLabelYellow}"/>
+                                        <Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsColorLabelYellow}"/>
                                         <Ellipse Width="16" Height="16" Fill="#FACC15"/>
-                                        <Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsColorLabelYellow}"/>
                                     </Grid>
                                 </Button>
                             </StackPanel>

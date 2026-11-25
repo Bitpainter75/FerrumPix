@@ -199,12 +199,21 @@ Namespace Services
             Return result
         End Function
 
+        ''' <summary>Fuer die Pruefungen: zaehlt, wie oft die Suche nach der anderen Haelfte auf dem
+        ''' Anzeigefaden lief. Sie liest Ordner und im Zweifel beide Dateien und gehoert in den
+        ''' Hintergrund.</summary>
+        Friend Shared PartnerLookupsOnUiThread As Integer
+
         ''' <summary>Die andere Haelfte eines Live Photos zu diesem Pfad, oder Nothing. Erst der
         ''' Ordner: liegt dort keine Datei gleichen Stamms mit der passenden Endung, ist die Frage
         ''' schon beantwortet, ohne dass eine Datei geoeffnet wird. Liest Ordner und im Zweifel
         ''' Dateien: nicht fuer jede Kachel auf dem Anzeigefaden rufen. Wirft nie.</summary>
         Public Shared Function FindPartnerPath(path As String) As String
             If String.IsNullOrEmpty(path) Then Return Nothing
+            Try
+                If Avalonia.Threading.Dispatcher.UIThread.CheckAccess() Then Threading.Interlocked.Increment(PartnerLookupsOnUiThread)
+            Catch
+            End Try
             Dim wantsVideo = IsImageHalf(path)
             If Not wantsVideo AndAlso Not IsVideoHalf(path) Then Return Nothing
             Try

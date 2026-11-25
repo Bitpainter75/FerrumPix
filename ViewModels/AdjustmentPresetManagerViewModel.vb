@@ -19,6 +19,7 @@ Namespace ViewModels
         Private _isConfirmingDelete As Boolean
         Private _deletePrompt As String = ""
         Private _isDropTarget As Boolean
+        Private _isDragSource As Boolean
 
         ''' Der Pfad relativ zum Wurzelordner; leer ist die Wurzel "Alle Anpassungen".
         Public ReadOnly Property Path As String
@@ -171,6 +172,16 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' Der Ordner wird gerade gezogen.
+        Public Property IsDragSource As Boolean
+            Get
+                Return _isDragSource
+            End Get
+            Friend Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_isDragSource, value)
+            End Set
+        End Property
+
         ' Die Aufschriften der Rueckfrage kommen uebersetzt aus der Zeile: sie entsteht aus einer
         ' Vorlage, nach dem Durchlauf der Uebersetzung.
         Public ReadOnly Property DeleteText As String
@@ -186,33 +197,8 @@ Namespace ViewModels
         End Property
     End Class
 
-    ''' <summary>Ein Regler im aufgeklappten Inhalt einer Anpassung: Beschriftung und Wert.</summary>
-    Public Class AdjustmentPresetDetailLine
-        Public ReadOnly Property Label As String
-        ''' Der Wert aus dem Rezept; bei Eintraegen aus mehreren Feldern "enthalten".
-        Public ReadOnly Property Value As String
-
-        Public Sub New(label As String, value As String)
-            Me.Label = label
-            Me.Value = value
-        End Sub
-    End Class
-
-    ''' <summary>Eine Gruppe im aufgeklappten Inhalt einer Anpassung mit ihren Reglern.</summary>
-    Public Class AdjustmentPresetDetailGroup
-        ''' Der Schluessel der Gruppe wie in AdjustmentEntries.
-        Public ReadOnly Property Key As String
-        Public ReadOnly Property Title As String
-        Public ReadOnly Property Lines As New List(Of AdjustmentPresetDetailLine)()
-
-        Public Sub New(key As String, title As String)
-            Me.Key = key
-            Me.Title = title
-        End Sub
-    End Class
-
     ''' <summary>Eine Anpassung in der Liste der Verwaltung. Wie die Ordnerzeile traegt sie ihren
-    ''' Zustand selbst: im Umbenennen, in der Rueckfrage, aufgeklappt mit ihrem Inhalt.</summary>
+    ''' Zustand selbst: im Umbenennen, vor dem Loeschen, mit ihrem Vorschaubild.</summary>
     Public Class AdjustmentPresetRow
         Inherits ReactiveObject
 
@@ -220,11 +206,10 @@ Namespace ViewModels
         Private _editText As String = ""
         Private _rowMessage As String = ""
         Private _isConfirmingDelete As Boolean
-        Private _isExpanded As Boolean
         Private _isDragSource As Boolean
         Private _canApply As Boolean
-        Private _details As List(Of AdjustmentPresetDetailGroup)
-        Private _detailNote As String = ""
+        Private _showsThumbnail As Boolean
+        Private _thumbnail As Avalonia.Media.Imaging.Bitmap
 
         Public ReadOnly Property Preset As AdjustmentPresetFile
         Public ReadOnly Property Name As String
@@ -239,7 +224,8 @@ Namespace ViewModels
         Public ReadOnly Property CanMove As Boolean
 
         Public Sub New(preset As AdjustmentPresetFile, Optional showFolder As Boolean = False,
-                       Optional canMove As Boolean = True, Optional canApply As Boolean = False)
+                       Optional canMove As Boolean = True, Optional canApply As Boolean = False,
+                       Optional showsThumbnail As Boolean = False)
             Me.Preset = preset
             Name = preset.Name
             Summary = AdjustmentEntries.Describe(preset.Fields).Replace(Environment.NewLine, "; ")
@@ -247,6 +233,7 @@ Namespace ViewModels
             SecondLine = If(showFolder, FolderLabel, Summary)
             Me.CanMove = canMove
             _canApply = canApply
+            _showsThumbnail = showsThumbnail
         End Sub
 
         Public Property IsEditing As Boolean
@@ -285,37 +272,61 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Der Papierkorb ist einmal geklickt und steht als "Löschen?" da; der zweite
+        ''' Klick auf dieselbe Stelle loescht. Die Zeile sieht sonst aus wie immer.</summary>
         Public Property IsConfirmingDelete As Boolean
             Get
                 Return _isConfirmingDelete
             End Get
             Friend Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_isConfirmingDelete, value)
-                Me.RaisePropertyChanged(NameOf(ShowsName))
+                Me.RaisePropertyChanged(NameOf(ShowsDeleteIcon))
             End Set
         End Property
 
-        ''' Name, zweite Zeile und Knoepfe: der gewoehnliche Zustand der Zeile.
+        ''' Der Papierkorb zeigt sein Symbol, solange er nicht fragt.
+        Public ReadOnly Property ShowsDeleteIcon As Boolean
+            Get
+                Return Not _isConfirmingDelete
+            End Get
+        End Property
+
+        ''' Name, zweite Zeile und Knoepfe: der gewoehnliche Zustand der Zeile. Er gilt auch,
+        ''' waehrend der Papierkorb fragt.
         Public ReadOnly Property ShowsName As Boolean
             Get
-                Return Not _isEditing AndAlso Not _isConfirmingDelete
+                Return Not _isEditing
             End Get
         End Property
 
-        ''' Der Inhalt steht aufgeklappt unter der Zeile.
-        Public Property IsExpanded As Boolean
+        ''' <summary>Hat die Zeile links einen Platz fuer ihr Vorschaubild? Nur mit einem
+        ''' geoeffneten Bild; ohne gibt es weder Bild noch leeren Platz.</summary>
+        Public Property ShowsThumbnail As Boolean
             Get
-                Return _isExpanded
+                Return _showsThumbnail
             End Get
             Friend Set(value As Boolean)
-                If value AndAlso _details Is Nothing Then
-                    BuildDetails()
-                    Me.RaisePropertyChanged(NameOf(Details))
-                    Me.RaisePropertyChanged(NameOf(DetailNote))
-                    Me.RaisePropertyChanged(NameOf(HasDetailNote))
-                End If
-                Me.RaiseAndSetIfChanged(_isExpanded, value)
+                Me.RaiseAndSetIfChanged(_showsThumbnail, value)
             End Set
+        End Property
+
+        ''' <summary>Das geoeffnete Foto klein, mit dieser Anpassung. Nothing, solange es rechnet:
+        ''' dann steht der ruhige Platzhalter da. Das Bild gehoert der Verwaltung, sie gibt es
+        ''' frei (AdjustmentPresetManagerViewModel.Release).</summary>
+        Public Property Thumbnail As Avalonia.Media.Imaging.Bitmap
+            Get
+                Return _thumbnail
+            End Get
+            Friend Set(value As Avalonia.Media.Imaging.Bitmap)
+                Me.RaiseAndSetIfChanged(_thumbnail, value)
+                Me.RaisePropertyChanged(NameOf(HasThumbnail))
+            End Set
+        End Property
+
+        Public ReadOnly Property HasThumbnail As Boolean
+            Get
+                Return _thumbnail IsNot Nothing
+            End Get
         End Property
 
         ''' Die Zeile wird gerade gezogen.
@@ -338,64 +349,6 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Welche Regler die Anpassung mit welchen Werten enthaelt, nach Gruppen. Entsteht
-        ''' beim ersten Aufklappen und ist bis dahin Nothing: das Rezept jeder Zeile schon beim
-        ''' Aufbau der Liste zu lesen, waere Arbeit fuer nichts.</summary>
-        Public ReadOnly Property Details As List(Of AdjustmentPresetDetailGroup)
-            Get
-                Return _details
-            End Get
-        End Property
-
-        ''' Der Satz unter den Gruppen einer Anpassung ohne Feldliste; sonst leer.
-        Public ReadOnly Property DetailNote As String
-            Get
-                Return _detailNote
-            End Get
-        End Property
-
-        Public ReadOnly Property HasDetailNote As Boolean
-            Get
-                Return DetailNote.Length > 0
-            End Get
-        End Property
-
-        ''' <summary>Eine Anpassung MIT Feldliste zeigt jeden enthaltenen Regler, auch den auf dem
-        ''' Neutralwert: er ersetzt beim Anwenden. Eine OHNE Liste ersetzt alle Regler; gezeigt
-        ''' werden die, die vom Neutralwert abweichen, und ein Satz sagt, was mit den uebrigen
-        ''' geschieht. Sonst stuenden dort alle Regler der Anwendung.</summary>
-        Private Sub BuildDetails()
-            Dim groups As New List(Of AdjustmentPresetDetailGroup)()
-            Dim note = ""
-            Dim recipe As ImageAdjustments = Nothing
-            Try
-                recipe = FpxService.DeserializeAdjustments(Preset.RecipeJson)
-            Catch
-                recipe = Nothing
-            End Try
-            If recipe Is Nothing Then
-                note = LocalizationService.T("Die Anpassung konnte nicht gelesen werden.")
-            Else
-                Dim entries = If(Preset.Fields Is Nothing,
-                                 AdjustmentEntries.NonNeutralEntries(recipe),
-                                 AdjustmentEntries.EntriesForFields(Preset.Fields))
-                For Each groupKey In AdjustmentEntries.GroupKeys()
-                    Dim members = entries.Where(Function(e) String.Equals(e.GroupKey, groupKey, StringComparison.Ordinal)).ToList()
-                    If members.Count = 0 Then Continue For
-                    Dim group As New AdjustmentPresetDetailGroup(groupKey, LocalizationService.T(AdjustmentEntries.GroupLabel(groupKey)))
-                    For Each entry In members
-                        group.Lines.Add(New AdjustmentPresetDetailLine(
-                            LocalizationService.T(entry.Label),
-                            If(AdjustmentEntries.ValueText(entry, recipe), LocalizationService.T("enthalten"))))
-                    Next
-                    groups.Add(group)
-                Next
-                If Preset.Fields Is Nothing Then note = LocalizationService.T("Alle übrigen Regler werden auf den Neutralwert gesetzt.")
-            End If
-            _details = groups
-            _detailNote = note
-        End Sub
-
         ' Die Aufschriften kommen uebersetzt aus der Zeile: sie entsteht aus einer Vorlage, nach
         ' dem Durchlauf der Uebersetzung.
         Public ReadOnly Property ApplyText As String
@@ -404,21 +357,10 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' Die Aufschrift des Papierkorbs nach dem ersten Klick.
         Public ReadOnly Property DeletePrompt As String
             Get
                 Return LocalizationService.T("Löschen?")
-            End Get
-        End Property
-
-        Public ReadOnly Property DeleteText As String
-            Get
-                Return LocalizationService.T("Löschen")
-            End Get
-        End Property
-
-        Public ReadOnly Property CancelText As String
-            Get
-                Return LocalizationService.T("Abbrechen")
             End Get
         End Property
     End Class
@@ -434,7 +376,7 @@ Namespace ViewModels
     End Enum
 
     ''' <summary>Der Inhalt des Fensters "Anpassungen verwalten": oben die Ablage, darunter Neuer
-    ''' Ordner, Suche und Importieren, links der Ordnerbaum, rechts die Anpassungen.
+    ''' Ordner und Suche, links der Ordnerbaum, rechts die Anpassungen.
     '''
     ''' JEDE ZEILE TRAEGT IHRE AKTIONEN UND IHREN ZUSTAND: umbenannt wird in der Zeile
     ''' (<see cref="BeginRenamePreset"/>, <see cref="CommitEditAsync"/>), die Rueckfrage zum
@@ -450,7 +392,13 @@ Namespace ViewModels
     '''
     ''' JEDER ZUGRIFF AUF DEN ORDNER LAEUFT IM HINTERGRUND; der Ordner kann in einer entfernten
     ''' Ablage liegen. Dateiauswahl, Fokus und Zeigergesten gehoeren der Ansicht, sie reicht nur
-    ''' Pfade und Zeilen herein; so laesst sich alles ohne Fenster messen.</summary>
+    ''' Pfade und Zeilen herein; so laesst sich alles ohne Fenster messen.
+    '''
+    ''' WAS DAS GEOEFFNETE BILD BRAUCHT, KOMMT VOM EDITOR ALS WEG HEREIN und fehlt ohne Bild:
+    ''' Anwenden (<see cref="ApplyHandler"/>), das Vorschaubild je Zeile
+    ''' (<see cref="ThumbnailHandler"/>) und die Vorschau im grossen Bild beim Ueberfahren
+    ''' (<see cref="HoverPreviewHandler"/>). Die Verwaltung selbst kennt weder Bild noch
+    ''' Editor. Wer das Fenster zeigt, ruft danach <see cref="Release"/>.</summary>
     Public Class AdjustmentPresetManagerViewModel
         Inherits ReactiveObject
 
@@ -467,13 +415,18 @@ Namespace ViewModels
         Private _editingPreset As AdjustmentPresetRow
         Private _confirmFolder As AdjustmentPresetFolderNode
         Private _confirmPreset As AdjustmentPresetRow
-        Private _expandedPresetId As String
         Private _draggedPreset As AdjustmentPresetRow
+        Private _draggedFolder As AdjustmentPresetFolderNode
         Private _dropTarget As AdjustmentPresetFolderNode
         ''' Welche Seite zuletzt gewaehlt wurde: an sie gehen F2 und ENTF.
         Private _presetIsActive As Boolean
         Private _committing As Boolean
         Private _applyHandler As Func(Of AdjustmentPresetFile, Boolean)
+        Private _thumbnailHandler As Func(Of IReadOnlyList(Of AdjustmentPresetFile), Action(Of AdjustmentPresetFile, Avalonia.Media.Imaging.Bitmap), Threading.CancellationToken, Task)
+        Private _thumbnailCts As Threading.CancellationTokenSource
+        Private _hoverPreviewHandler As Action(Of AdjustmentPresetFile)
+        Private _hoveredPreset As AdjustmentPresetRow
+        Private _released As Boolean
         Private _settingsRequested As Boolean
 
         ''' Die sichtbaren Zeilen des Baums, die Wurzel zuerst.
@@ -571,7 +524,7 @@ Namespace ViewModels
             Return String.Format(LocalizationService.T("Der Ordner für Anpassungen ist nicht erreichbar: {0}. Er wird in den Einstellungen unter Editor festgelegt."), If(root, ""))
         End Function
 
-        ''' Was Importieren, Exportieren und Verschieben getan haben; eine Zeile unter den Listen.
+        ''' Was Verschieben getan hat; eine Zeile unter den Listen.
         Public Property StatusText As String
             Get
                 Return _statusText
@@ -693,8 +646,7 @@ Namespace ViewModels
         ' ── Lesen und Aufbauen ──────────────────────────────────────────────────────────────
 
         ''' <summary>Liest den Ordner im Hintergrund neu und baut Baum und Liste auf. Der
-        ''' gewaehlte Ordner, die gewaehlte Anpassung, der aufgeklappte Inhalt und eine offene
-        ''' Rueckfrage bleiben, soweit es ihre Zeilen noch gibt.</summary>
+        ''' gewaehlte Ordner, die gewaehlte Anpassung und eine offene Rueckfrage bleiben, soweit es ihre Zeilen noch gibt.</summary>
         ''' <param name="selectFolder">Der Ordner, der danach gewaehlt sein soll.</param>
         ''' <param name="selectPresetId">Die Anpassung, die danach gewaehlt sein soll.</param>
         Public Async Function ReloadAsync(Optional selectFolder As String = Nothing,
@@ -710,6 +662,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(RootDisplayPath))
             IsReachable = listing.Reachable
             Me.RaisePropertyChanged(NameOf(CanApply))
+            Me.RaisePropertyChanged(NameOf(ShowsThumbnails))
 
             ForgetRowStates()
             ' Der gewuenschte Ordner soll sichtbar sein: seine Vorfahren klappen auf.
@@ -772,18 +725,8 @@ Namespace ViewModels
         ''' Unterordnern, Geschwister nach Namen. Eine blosse Sortierung der Pfade reicht dafuer
         ''' nicht: "A B" stuende zwischen "A" und "A/Unter".</summary>
         Private Shared Function OrderAsTree(folders As List(Of String)) As List(Of String)
-            Dim result As New List(Of String)()
-            AppendChildren("", folders, result)
-            Return result
+            Return AdjustmentPresetStore.OrderFoldersAsTree(folders)
         End Function
-
-        Private Shared Sub AppendChildren(parent As String, folders As List(Of String), result As List(Of String))
-            For Each child In folders.Where(Function(f) String.Equals(AdjustmentPresetStore.ParentFolder(f), parent, StringComparison.Ordinal)).
-                                      OrderBy(Function(f) AdjustmentPresetStore.FolderName(f), StringComparer.OrdinalIgnoreCase).ToList()
-                result.Add(child)
-                AppendChildren(child, folders, result)
-            Next
-        End Sub
 
         Private Sub FillPresets(selectPresetId As String)
             ' Die Zeilen entstehen neu: eine Bearbeitung, Rueckfrage oder ein Zug an einer alten
@@ -791,7 +734,20 @@ Namespace ViewModels
             ' mehr sieht.
             _editingPreset = Nothing
             _confirmPreset = Nothing
-            CancelPresetDrag()
+            CancelDrag()
+            ' Die Vorschau im grossen Bild gehoerte einer Zeile, die es gleich nicht mehr gibt.
+            EndHoverPreview()
+            ' Die Vorschaubilder der bisherigen Zeilen: was unveraendert wieder erscheint, behaelt
+            ' seines, alles andere wird unten freigegeben. Ein laufender Durchgang bricht ab.
+            StopThumbnails()
+            Dim kept As New Dictionary(Of String, Avalonia.Media.Imaging.Bitmap)(StringComparer.Ordinal)
+            For Each old In Presets
+                Dim image = old.Thumbnail
+                If image Is Nothing Then Continue For
+                old.Thumbnail = Nothing
+                Dim key = ThumbnailKey(old.Preset)
+                If kept.ContainsKey(key) Then image.Dispose() Else kept(key) = image
+            Next
             Presets.Clear()
             If _isReachable AndAlso _selectedFolder IsNot Nothing Then
                 Dim source As IEnumerable(Of AdjustmentPresetFile)
@@ -809,15 +765,24 @@ Namespace ViewModels
                 End If
                 Dim canMove = _listing.Folders.Count > 0
                 Dim canApply = Me.CanApply
+                Dim showsThumbnails = Me.ShowsThumbnails
                 For Each preset In source.OrderBy(Function(p) p.Name, StringComparer.CurrentCultureIgnoreCase).
                                           ThenBy(Function(p) p.Folder, StringComparer.OrdinalIgnoreCase)
-                    Presets.Add(New AdjustmentPresetRow(preset, showFolder, canMove, canApply))
+                    Dim row As New AdjustmentPresetRow(preset, showFolder, canMove, canApply, showsThumbnails)
+                    Dim image As Avalonia.Media.Imaging.Bitmap = Nothing
+                    If showsThumbnails AndAlso kept.TryGetValue(ThumbnailKey(preset), image) Then
+                        kept.Remove(ThumbnailKey(preset))
+                        row.Thumbnail = image
+                    End If
+                    Presets.Add(row)
                 Next
             End If
+            For Each leftover In kept.Values
+                leftover.Dispose()
+            Next
+            StartThumbnails()
             _selectedPreset = Presets.FirstOrDefault(Function(r) String.Equals(r.Preset.Id, selectPresetId, StringComparison.Ordinal))
             Me.RaisePropertyChanged(NameOf(SelectedPreset))
-            Dim expanded = Presets.FirstOrDefault(Function(r) String.Equals(r.Preset.Id, _expandedPresetId, StringComparison.Ordinal))
-            If expanded IsNot Nothing Then expanded.IsExpanded = True
         End Sub
 
         ' ── Auf- und Zuklappen ──────────────────────────────────────────────────────────────
@@ -836,18 +801,6 @@ Namespace ViewModels
             BuildFolderRows(before)
             If Not String.Equals(SelectedFolderPath, before, StringComparison.Ordinal) Then FillPresets(Nothing)
             RaiseListState()
-        End Sub
-
-        ''' <summary>Den aufgeklappten Inhalt einer Anpassung zeigen oder schliessen. Es ist
-        ''' immer nur eine aufgeklappt.</summary>
-        Public Sub ToggleDetails(row As AdjustmentPresetRow)
-            If row Is Nothing OrElse Not Presets.Contains(row) Then Return
-            Dim open = Not row.IsExpanded
-            For Each other In Presets
-                If other IsNot row AndAlso other.IsExpanded Then other.IsExpanded = False
-            Next
-            row.IsExpanded = open
-            _expandedPresetId = If(open, row.Preset.Id, Nothing)
         End Sub
 
         ' ── Zustand der Zeilen ──────────────────────────────────────────────────────────────
@@ -874,6 +827,7 @@ Namespace ViewModels
             _confirmFolder = Nothing
             _confirmPreset = Nothing
             _draggedPreset = Nothing
+            _draggedFolder = Nothing
             _dropTarget = Nothing
         End Sub
 
@@ -883,7 +837,7 @@ Namespace ViewModels
         Private Sub ClearRowStates()
             CancelEdit()
             CancelDelete()
-            CancelPresetDrag()
+            CancelDrag()
             For Each node In Folders
                 node.RowMessage = ""
             Next
@@ -1046,7 +1000,10 @@ Namespace ViewModels
             _confirmFolder = node
         End Sub
 
-        ''' <summary>Die Zeile der Anpassung wechselt zur Rueckfrage. Geloescht ist damit nichts.</summary>
+        ''' <summary>Der erste Klick auf den Papierkorb einer Anpassung (und ENTF): der Papierkorb
+        ''' wird zu "Löschen?". Geloescht ist damit nichts; das tut erst der zweite Klick auf
+        ''' dieselbe Stelle (<see cref="ClickDeletePresetAsync"/>). Ein Klick woanders, ESC und das
+        ''' Verlassen der Zeile nehmen es zurueck.</summary>
         Public Sub BeginDeletePreset(row As AdjustmentPresetRow)
             If Not _isReachable OrElse row Is Nothing OrElse Not Presets.Contains(row) Then Return
             ClearRowStates()
@@ -1092,6 +1049,197 @@ Namespace ViewModels
             Await ReloadAsync()
             Return True
         End Function
+
+        ''' <summary>Der Klick auf den Papierkorb einer Anpassung. Der erste macht ihn zu
+        ''' "Löschen?", der zweite auf dieselbe Zeile loescht. Fragt gerade eine ANDERE Zeile,
+        ''' ist das dort zurueckgenommen und diese fragt.</summary>
+        ''' <returns>Ob geloescht wurde.</returns>
+        Public Async Function ClickDeletePresetAsync(row As AdjustmentPresetRow) As Task(Of Boolean)
+            If Not _isReachable OrElse row Is Nothing OrElse Not Presets.Contains(row) Then Return False
+            If _confirmPreset Is row Then Return Await ConfirmDeleteAsync()
+            BeginDeletePreset(row)
+            Return False
+        End Function
+
+        ''' <summary>Nimmt das "Löschen?" am Papierkorb einer Anpassung zurueck: ein Klick
+        ''' woanders. Die ausfuehrliche Rueckfrage eines ORDNERS bleibt stehen, sie hat ihren
+        ''' eigenen Knopf Abbrechen.</summary>
+        Public Sub CancelPresetDeleteConfirm()
+            If _confirmPreset Is Nothing Then Return
+            _confirmPreset.IsConfirmingDelete = False
+            _confirmPreset = Nothing
+        End Sub
+
+        ' ── Der Zeiger ueber einer Zeile: Vorschau im grossen Bild ──────────────────────────
+
+        ''' <summary>Der Weg, auf dem das grosse Bild im Editor eine Anpassung vorab zeigt; Nothing
+        ''' als Anpassung beendet die Vorschau. Der Editor setzt ihn, wenn ein Bild offen ist. Am
+        ''' Rezept aendert die Vorschau nichts.</summary>
+        Public Property HoverPreviewHandler As Action(Of AdjustmentPresetFile)
+            Get
+                Return _hoverPreviewHandler
+            End Get
+            Set(value As Action(Of AdjustmentPresetFile))
+                EndHoverPreview()
+                _hoverPreviewHandler = value
+            End Set
+        End Property
+
+        ''' Die Zeile, deren Anpassung gerade vorab im grossen Bild steht.
+        Public ReadOnly Property HoveredPreset As AdjustmentPresetRow
+            Get
+                Return _hoveredPreset
+            End Get
+        End Property
+
+        ''' <summary>Der Zeiger steht auf der Zeile einer Anpassung: das grosse Bild zeigt sie
+        ''' vorab. Nicht waehrend eines Zugs und nicht an einer Zeile, die umbenannt wird oder
+        ''' fragt.</summary>
+        Public Sub HoverPreset(row As AdjustmentPresetRow)
+            If _hoverPreviewHandler Is Nothing OrElse _released Then Return
+            If row Is Nothing OrElse Not Presets.Contains(row) OrElse Not row.ShowsName OrElse IsDragging Then
+                EndHoverPreview()
+                Return
+            End If
+            If row Is _hoveredPreset Then Return
+            _hoveredPreset = row
+            _hoverPreviewHandler(row.Preset)
+        End Sub
+
+        ''' <summary>Der Zeiger hat die Zeile verlassen: die Vorschau im grossen Bild endet, und
+        ''' ein "Löschen?" an ihrem Papierkorb ist zurueckgenommen.</summary>
+        Public Sub LeavePresetRow(row As AdjustmentPresetRow)
+            If row Is Nothing Then Return
+            If _confirmPreset Is row Then CancelPresetDeleteConfirm()
+            If _hoveredPreset Is row Then EndHoverPreview()
+        End Sub
+
+        ''' <summary>Beendet die Vorschau im grossen Bild, falls eine steht.</summary>
+        Public Sub EndHoverPreview()
+            If _hoveredPreset Is Nothing Then Return
+            _hoveredPreset = Nothing
+            _hoverPreviewHandler?.Invoke(Nothing)
+        End Sub
+
+        ' ── Vorschaubild je Zeile ───────────────────────────────────────────────────────────
+
+        ''' <summary>Der Weg, auf dem die Vorschaubilder entstehen: er bekommt die Anpassungen der
+        ''' Liste, liefert je Anpassung ein Bild auf dem Anzeigefaden ab und hoert auf, wenn die
+        ''' Marke abbricht. Der Editor setzt ihn, wenn ein Bild offen ist; ohne ihn haben die
+        ''' Zeilen weder Bild noch Platz dafuer.</summary>
+        Public Property ThumbnailHandler As Func(Of IReadOnlyList(Of AdjustmentPresetFile), Action(Of AdjustmentPresetFile, Avalonia.Media.Imaging.Bitmap), Threading.CancellationToken, Task)
+            Get
+                Return _thumbnailHandler
+            End Get
+            Set(value As Func(Of IReadOnlyList(Of AdjustmentPresetFile), Action(Of AdjustmentPresetFile, Avalonia.Media.Imaging.Bitmap), Threading.CancellationToken, Task))
+                StopThumbnails()
+                _thumbnailHandler = value
+                Me.RaisePropertyChanged(NameOf(ShowsThumbnails))
+                Dim shows = ShowsThumbnails
+                For Each row In Presets
+                    row.ShowsThumbnail = shows
+                    If Not shows Then ReleaseThumbnail(row)
+                Next
+                StartThumbnails()
+            End Set
+        End Property
+
+        Public ReadOnly Property ShowsThumbnails As Boolean
+            Get
+                Return _isReachable AndAlso _thumbnailHandler IsNot Nothing AndAlso Not _released
+            End Get
+        End Property
+
+        ''' Woran ein Vorschaubild haengt: an der Anpassung und an dem, was sie einstellt.
+        Private Shared Function ThumbnailKey(preset As AdjustmentPresetFile) As String
+            Return String.Concat(preset.Id, vbLf, If(preset.Fields Is Nothing, "*", String.Join(",", preset.Fields)), vbLf, preset.RecipeJson)
+        End Function
+
+        Private Shared Sub ReleaseThumbnail(row As AdjustmentPresetRow)
+            Dim image = row.Thumbnail
+            If image Is Nothing Then Return
+            row.Thumbnail = Nothing
+            image.Dispose()
+        End Sub
+
+        ''' <summary>Bricht einen laufenden Durchgang ab. Die schon gezeigten Bilder bleiben.</summary>
+        Private Sub StopThumbnails()
+            Dim cts = _thumbnailCts
+            _thumbnailCts = Nothing
+            If cts Is Nothing Then Return
+            Try
+                cts.Cancel()
+            Catch ex As ObjectDisposedException
+            End Try
+        End Sub
+
+        ''' <summary>Laesst die Vorschaubilder der Zeilen rechnen, die noch keines haben: genau die
+        ''' Zeilen der Liste, also der gewaehlte Ordner oder die Suchtreffer. Ein Durchgang zur
+        ''' Zeit; jeder Wechsel der Liste bricht den laufenden ab.</summary>
+        Private Sub StartThumbnails()
+            StopThumbnails()
+            If Not ShowsThumbnails Then Return
+            Dim missing = Presets.Where(Function(r) r.Thumbnail Is Nothing).Select(Function(r) r.Preset).ToList()
+            If missing.Count = 0 Then Return
+            Dim cts As New Threading.CancellationTokenSource()
+            _thumbnailCts = cts
+            Dim token = cts.Token
+            Dim handler = _thumbnailHandler
+            Dim deliver As Action(Of AdjustmentPresetFile, Avalonia.Media.Imaging.Bitmap) =
+                Sub(preset, image)
+                    If image Is Nothing Then Return
+                    Dim row = If(token.IsCancellationRequested, Nothing,
+                                 Presets.FirstOrDefault(Function(r) r.Preset Is preset))
+                    If row Is Nothing Then
+                        ' Die Liste hat gewechselt: das Bild gehoert niemandem mehr.
+                        image.Dispose()
+                        Return
+                    End If
+                    Dim old = row.Thumbnail
+                    row.Thumbnail = image
+                    old?.Dispose()
+                End Sub
+            RunThumbnails(handler, missing, deliver, token)
+        End Sub
+
+        ' Async Sub: auf die Vorschaubilder wartet niemand, eine Ausnahme dahinter finge sonst
+        ' niemand.
+        Private Async Sub RunThumbnails(handler As Func(Of IReadOnlyList(Of AdjustmentPresetFile), Action(Of AdjustmentPresetFile, Avalonia.Media.Imaging.Bitmap), Threading.CancellationToken, Task),
+                                        presets As List(Of AdjustmentPresetFile),
+                                        deliver As Action(Of AdjustmentPresetFile, Avalonia.Media.Imaging.Bitmap),
+                                        token As Threading.CancellationToken)
+            Try
+                Await handler(presets, deliver, token)
+            Catch ex As OperationCanceledException
+            Catch ex As Exception
+                DiagnosticLogService.LogException("AdjustmentPresets.Thumbnails", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Verwirft alle Vorschaubilder und laesst sie neu rechnen: das Rezept des
+        ''' geoeffneten Bildes hat sich geaendert (Anwenden), jedes Bild zeigte den Stand davor.</summary>
+        Private Sub RefreshThumbnails()
+            StopThumbnails()
+            For Each row In Presets
+                ReleaseThumbnail(row)
+            Next
+            StartThumbnails()
+        End Sub
+
+        ''' <summary>Das Fenster schliesst: ein laufender Durchgang bricht ab, die Vorschaubilder
+        ''' werden freigegeben, und das grosse Bild zeigt wieder das Rezept. Danach rechnet und
+        ''' zeigt die Verwaltung nichts mehr vorab.</summary>
+        Public Sub Release()
+            _released = True
+            StopThumbnails()
+            EndHoverPreview()
+            CancelDrag()
+            For Each row In Presets
+                ReleaseThumbnail(row)
+                row.ShowsThumbnail = False
+            Next
+            Me.RaisePropertyChanged(NameOf(ShowsThumbnails))
+        End Sub
 
         ' ── Verschieben: ueber die Ordnerliste und ueber das Ablegen im Baum ────────────────
 
@@ -1141,21 +1289,67 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' Der Ordner, der gerade gezogen wird.
+        Public ReadOnly Property DraggedFolder As AdjustmentPresetFolderNode
+            Get
+                Return _draggedFolder
+            End Get
+        End Property
+
+        ''' Laeuft gerade ein Zug, mit einer Anpassung oder einem Ordner?
+        Public ReadOnly Property IsDragging As Boolean
+            Get
+                Return _draggedPreset IsNot Nothing OrElse _draggedFolder IsNot Nothing
+            End Get
+        End Property
+
         ''' <summary>Ein Zug mit einer Anpassung beginnt. Nicht aus einer Zeile, die gerade
-        ''' umbenannt wird oder fragt.</summary>
+        ''' umbenannt wird oder fragt, ob sie ueberschrieben werden soll.</summary>
         Public Function BeginPresetDrag(row As AdjustmentPresetRow) As Boolean
-            If Not _isReachable OrElse row Is Nothing OrElse Not Presets.Contains(row) OrElse Not row.ShowsName Then Return False
+            If Not _isReachable OrElse row Is Nothing OrElse Not Presets.Contains(row) OrElse
+               Not row.ShowsName OrElse row.IsConfirmingDelete Then Return False
             ClearRowStates()
+            EndHoverPreview()
             _draggedPreset = row
             row.IsDragSource = True
             Return True
         End Function
 
-        ''' <summary>Kann die gezogene Anpassung auf diesem Ordner abgelegt werden? Nicht auf dem,
-        ''' in dem sie liegt.</summary>
+        ''' <summary>Ein Zug mit einem Ordner beginnt. Nicht mit der Wurzel, nicht mit der
+        ''' vorlaeufigen Zeile eines neuen Ordners und nicht aus einer Zeile, die gerade umbenannt
+        ''' wird oder fragt.</summary>
+        Public Function BeginFolderDrag(node As AdjustmentPresetFolderNode) As Boolean
+            If Not _isReachable OrElse node Is Nothing OrElse Not node.CanChange OrElse
+               Not Folders.Contains(node) OrElse Not node.ShowsName Then Return False
+            ClearRowStates()
+            EndHoverPreview()
+            _draggedFolder = node
+            node.IsDragSource = True
+            Return True
+        End Function
+
+        ''' <summary>Kann, was gerade gezogen wird, auf diesem Ordner abgelegt werden? Eine
+        ''' Anpassung nicht auf dem Ordner, in dem sie liegt. Ein Ordner nicht auf sich selbst,
+        ''' nicht auf einem seiner Unterordner und nicht auf dem Ordner, in dem er schon liegt.</summary>
         Public Function CanDropOn(node As AdjustmentPresetFolderNode) As Boolean
-            If _draggedPreset Is Nothing OrElse node Is Nothing OrElse node.IsNew Then Return False
-            Return Not String.Equals(node.Path, AdjustmentPresetStore.NormalizeFolder(_draggedPreset.Preset.Folder), StringComparison.Ordinal)
+            If node Is Nothing OrElse node.IsNew Then Return False
+            If _draggedPreset IsNot Nothing Then
+                Return Not String.Equals(node.Path, AdjustmentPresetStore.NormalizeFolder(_draggedPreset.Preset.Folder), StringComparison.Ordinal)
+            End If
+            If _draggedFolder IsNot Nothing Then Return CanMoveFolderTo(_draggedFolder.Path, node.Path)
+            Return False
+        End Function
+
+        ''' <summary>Laesst sich der Ordner <paramref name="folder"/> unter
+        ''' <paramref name="targetParent"/> haengen? Nicht in sich selbst, nicht in einen eigenen
+        ''' Unterordner, und dorthin, wo er schon liegt, waere es kein Verschieben.</summary>
+        Public Shared Function CanMoveFolderTo(folder As String, targetParent As String) As Boolean
+            Dim source = AdjustmentPresetStore.NormalizeFolder(folder)
+            Dim target = AdjustmentPresetStore.NormalizeFolder(targetParent)
+            If source.Length = 0 Then Return False
+            If String.Equals(target, source, StringComparison.Ordinal) Then Return False
+            If target.StartsWith(source & "/", StringComparison.Ordinal) Then Return False
+            Return Not String.Equals(target, AdjustmentPresetStore.ParentFolder(source), StringComparison.Ordinal)
         End Function
 
         ''' <summary>Der Zeiger steht waehrend des Zugs ueber dieser Ordnerzeile (oder ueber
@@ -1169,22 +1363,68 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>Der Zug endet ohne Ablegen: ESC, verlorener Zeigergriff.</summary>
-        Public Sub CancelPresetDrag()
+        Public Sub CancelDrag()
             If _dropTarget IsNot Nothing Then _dropTarget.IsDropTarget = False
             If _draggedPreset IsNot Nothing Then _draggedPreset.IsDragSource = False
+            If _draggedFolder IsNot Nothing Then _draggedFolder.IsDragSource = False
             _dropTarget = Nothing
             _draggedPreset = Nothing
+            _draggedFolder = Nothing
         End Sub
 
         ''' <summary>Der Zug endet mit dem Loslassen: steht der Zeiger ueber einem erlaubten
-        ''' Ordner, wird dorthin verschoben, sonst geschieht nichts.</summary>
+        ''' Ordner, wird die Anpassung oder der Ordner dorthin verschoben, sonst geschieht
+        ''' nichts.</summary>
         ''' <returns>Ob verschoben wurde.</returns>
-        Public Async Function CompletePresetDragAsync() As Task(Of Boolean)
+        Public Async Function CompleteDragAsync() As Task(Of Boolean)
             Dim row = _draggedPreset
+            Dim folder = _draggedFolder
             Dim target = _dropTarget
-            CancelPresetDrag()
-            If row Is Nothing OrElse target Is Nothing Then Return False
-            Return Await MovePresetAsync(row, target.Path)
+            CancelDrag()
+            If target Is Nothing Then Return False
+            If row IsNot Nothing Then Return Await MovePresetAsync(row, target.Path)
+            If folder IsNot Nothing Then Return Await MoveFolderAsync(folder, target.Path)
+            Return False
+        End Function
+
+        ''' <summary>Haengt einen Ordner samt Inhalt unter einen anderen. Nicht in sich selbst
+        ''' oder einen eigenen Unterordner, und dorthin, wo er schon liegt, geschieht nichts. Liegt
+        ''' im Ziel schon ein Ordner gleichen Namens, steht die Meldung an der Zeile und nichts
+        ''' wird bewegt. Die Anpassungen darin behalten ihre Kennungen; war der Ordner oder einer
+        ''' darin gewaehlt, ist er es danach an seinem neuen Platz.</summary>
+        ''' <returns>Ob verschoben wurde.</returns>
+        Public Async Function MoveFolderAsync(node As AdjustmentPresetFolderNode, targetParent As String) As Task(Of Boolean)
+            If Not _isReachable OrElse node Is Nothing OrElse Not node.CanChange OrElse Not Folders.Contains(node) Then Return False
+            Dim source = node.Path
+            Dim target = AdjustmentPresetStore.NormalizeFolder(targetParent)
+            If Not CanMoveFolderTo(source, target) Then Return False
+            ClearRowStates()
+            Dim store = Me.Store()
+            Dim destination = AdjustmentPresetStore.CombineFolder(target, AdjustmentPresetStore.FolderName(source))
+            Dim moved As String = Nothing
+            If Not _listing.Folders.Any(Function(f) String.Equals(f, destination, StringComparison.OrdinalIgnoreCase)) Then
+                moved = Await Task.Run(Function() store.MoveFolder(source, target))
+            End If
+            If moved Is Nothing Then
+                node.RowMessage = LocalizationService.T("Der Ordner ließ sich nicht verschieben. Gibt es dort schon einen gleichen Namens?")
+                Return False
+            End If
+            ' Was zugeklappt war, bleibt es an seinem neuen Platz.
+            Dim prefix = source & "/"
+            For Each collapsed In _collapsed.Where(Function(c) String.Equals(c, source, StringComparison.Ordinal) OrElse
+                                                                c.StartsWith(prefix, StringComparison.Ordinal)).ToList()
+                _collapsed.Remove(collapsed)
+                _collapsed.Add(moved & collapsed.Substring(source.Length))
+            Next
+            ' Der gewaehlte Ordner kann der verschobene sein oder darin liegen.
+            Dim selected = SelectedFolderPath
+            Dim selectFolder = selected
+            If String.Equals(selected, source, StringComparison.Ordinal) OrElse selected.StartsWith(prefix, StringComparison.Ordinal) Then
+                selectFolder = moved & selected.Substring(source.Length)
+            End If
+            Await ReloadAsync(selectFolder)
+            StatusText = String.Format(LocalizationService.T("Ordner verschoben: {0}"), New AdjustmentPresetFolderChoice(moved).Label)
+            Return True
         End Function
 
         ' ── Anwenden ────────────────────────────────────────────────────────────────────────
@@ -1215,58 +1455,19 @@ Namespace ViewModels
         Public Function ApplyPreset(row As AdjustmentPresetRow) As Boolean
             If Not CanApply OrElse row Is Nothing OrElse Not Presets.Contains(row) Then Return False
             ClearRowStates()
+            ' Die Vorschau im grossen Bild endet: ab hier steht die Anpassung wirklich im Rezept.
+            EndHoverPreview()
             Dim applied = _applyHandler(row.Preset)
             row.RowMessage = If(applied, LocalizationService.T("Angewendet"),
                                 LocalizationService.T("Die Anpassung konnte nicht gelesen werden."))
+            ' Jedes Vorschaubild zeigte die Anpassung auf dem Rezept von eben.
+            If applied Then RefreshThumbnails()
             Return applied
         End Function
 
-        ' ── Importieren, Exportieren, Zeigen, Ordner aendern ────────────────────────────────
-
-        ''' <summary>Nimmt eine Datei oder einen Ordner samt Unterordnern in den gewaehlten Ordner
-        ''' auf und sagt danach, was geschah.</summary>
-        Public Async Function ImportAsync(sourcePath As String) As Task
-            If String.IsNullOrWhiteSpace(sourcePath) OrElse Not _isReachable Then Return
-            ClearRowStates()
-            Dim store = Me.Store()
-            Dim folder = SelectedFolderPath
-            Dim result = Await Task.Run(Function() store.Import(sourcePath, folder))
-            Await ReloadAsync(folder)
-            Dim parts As New List(Of String) From {
-                String.Format(LocalizationService.T("{0} Anpassung(en) importiert"), result.Imported)}
-            If result.AlreadyPresent > 0 Then parts.Add(String.Format(LocalizationService.T("{0} schon vorhanden"), result.AlreadyPresent))
-            If result.Skipped > 0 Then parts.Add(String.Format(LocalizationService.T("{0} Datei(en) nicht lesbar"), result.Skipped))
-            StatusText = String.Join(", ", parts)
-        End Function
-
-        ''' <summary>Schreibt die Anpassung einer Zeile als Datei an den gewaehlten Ort.</summary>
-        Public Async Function ExportPresetAsync(row As AdjustmentPresetRow, targetFile As String) As Task
-            Dim preset = row?.Preset
-            If preset Is Nothing OrElse String.IsNullOrWhiteSpace(targetFile) Then Return
-            ClearRowStates()
-            Dim store = Me.Store()
-            Dim written = Await Task.Run(Function() store.ExportPreset(preset, targetFile))
-            StatusText = If(written,
-                            String.Format(LocalizationService.T("Anpassung exportiert: {0}"), preset.Name),
-                            LocalizationService.T("Die Anpassung ließ sich nicht exportieren."))
-        End Function
-
-        ''' <summary>Schreibt den Ordner einer Zeile samt Unterordnern in ein Verzeichnis; die
-        ''' Wurzel schreibt den ganzen Bestand.</summary>
-        Public Async Function ExportFolderAsync(node As AdjustmentPresetFolderNode, targetDirectory As String) As Task
-            If node Is Nothing OrElse node.IsNew OrElse String.IsNullOrWhiteSpace(targetDirectory) OrElse Not _isReachable Then Return
-            ClearRowStates()
-            Dim store = Me.Store()
-            Dim folder = node.Path
-            Dim written = Await Task.Run(Function() store.ExportFolder(folder, targetDirectory))
-            StatusText = String.Format(LocalizationService.T("{0} Anpassung(en) exportiert"), written)
-        End Function
-
-        ''' <summary>Der Dateiname, den der Export einer Anpassung vorschlaegt.</summary>
-        Public Shared Function SuggestedExportFileName(row As AdjustmentPresetRow) As String
-            If row Is Nothing Then Return ""
-            Return AdjustmentPresetStore.SafeFileName(row.Preset.Name) & AdjustmentPresetStore.FileExtension
-        End Function
+        ' ── Zeigen, Ordner aendern ──────────────────────────────────────────────────────────
+        ' Einen Import und einen Export gibt es im Fenster nicht: Dateien legt man ueber den
+        ' Dateimanager in die Ablage und holt sie dort heraus.
 
         ''' <summary>Oeffnet die Ablage im Dateimanager.</summary>
         Public Sub ShowInFileManager()
@@ -1274,7 +1475,7 @@ Namespace ViewModels
             ShellOpenService.Open(Store().DirectoryOf(""), "AdjustmentPresets.Folder")
         End Sub
 
-        ''' <summary>True, nachdem "Ordner ändern" oder "Einstellungen öffnen" gewaehlt wurde: wer
+        ''' <summary>True, nachdem "Einstellungen öffnen" (bei nicht erreichbarem Ordner) gewaehlt wurde: wer
         ''' das Fenster gezeigt hat, wechselt nach dem Schliessen in die Einstellungen.</summary>
         Public ReadOnly Property SettingsRequested As Boolean
             Get
@@ -1282,7 +1483,7 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>"Ordner ändern": das Fenster schliesst, danach geht es in die Einstellungen,
+        ''' <summary>"Einstellungen öffnen" beim nicht erreichbaren Ordner: das Fenster schliesst, danach geht es in die Einstellungen,
         ''' wo der Ordner fuer Anpassungen unter Editor festgelegt wird.</summary>
         Public Sub RequestChangeFolder()
             ClearRowStates()
@@ -1302,8 +1503,8 @@ Namespace ViewModels
                                   sourceIsButton As Boolean) As AdjustmentPresetKeyResult
             Select Case key
                 Case Avalonia.Input.Key.Escape
-                    If _draggedPreset IsNot Nothing Then
-                        CancelPresetDrag()
+                    If IsDragging Then
+                        CancelDrag()
                         Return AdjustmentPresetKeyResult.Handled
                     End If
                     If IsEditing Then

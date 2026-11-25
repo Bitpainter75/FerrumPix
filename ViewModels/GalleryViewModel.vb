@@ -14043,6 +14043,35 @@ Namespace ViewModels
             Return result
         End Function
 
+        ''' <summary>Die Ziele eines Stapel-Umbenennens, die belegt sind, in der Reihenfolge des
+        ''' Laufs gedacht: ein Ziel, das eine fruehere Zuordnung desselben Laufs frei macht, gilt
+        ''' als frei; eines, das schon eine fruehere bekommt, als belegt. Dazu eine fremde
+        ''' Begleitdatei am Ziel (ThrowIfTargetSidecarConflict). Liest nur, aendert nichts.</summary>
+        Private Shared Function TakenBatchRenameTargets(mappings As IEnumerable(Of BatchRenameMapping)) As List(Of String)
+            Dim taken As New List(Of String)()
+            Dim vacated As New HashSet(Of String)(PathIdentity.Comparer)
+            Dim claimed As New HashSet(Of String)(PathIdentity.Comparer)
+            For Each mapping In mappings
+                If String.IsNullOrEmpty(mapping.SourcePath) OrElse String.IsNullOrEmpty(mapping.TargetPath) Then Continue For
+                If String.Equals(NormalizePath(mapping.SourcePath), NormalizePath(mapping.TargetPath), PathIdentity.Comparison) Then Continue For
+                Dim target = NormalizePath(mapping.TargetPath)
+                Dim onDisk = File.Exists(mapping.TargetPath) OrElse Directory.Exists(mapping.TargetPath)
+                If claimed.Contains(target) OrElse (onDisk AndAlso Not vacated.Contains(target)) Then
+                    taken.Add(IO.Path.GetFileName(mapping.TargetPath))
+                ElseIf Not onDisk AndAlso File.Exists(mapping.SourcePath) Then
+                    Try
+                        ThrowIfTargetSidecarConflict(mapping.SourcePath, mapping.TargetPath, replaceConfirmed:=False)
+                    Catch ex As TargetSidecarConflictException
+                        taken.Add(ex.Message)
+                    End Try
+                End If
+                claimed.Add(target)
+                vacated.Add(NormalizePath(mapping.SourcePath))
+                claimed.Remove(NormalizePath(mapping.SourcePath))
+            Next
+            Return taken
+        End Function
+
         Private Async Sub BatchRenameSelected()
             Dim paths = GetSelectedPaths().
                 Where(Function(p) FileOperationPolicy.CanRename(p)).
@@ -14082,6 +14111,16 @@ Namespace ViewModels
 
                 Await RunSidecarBatchAsync(
                     Function()
+                        ' ERST ALLE ZIELE PRUEFEN, Bilder UND die Filme, die ihnen folgen, dann
+                        ' umbenennen. Die Vorschau des Dialogs kennt nur die Dateien im Dialog; ist
+                        ' der Name fuer eine nachgezogene Haelfte vergeben, fiel das sonst erst mitten
+                        ' im Lauf auf, und die Bilder waren schon umbenannt, die Filme nicht.
+                        Dim taken = TakenBatchRenameTargets(result.Mappings)
+                        If taken.Count > 0 Then
+                            Throw New IOException(LocalizationService.T("Ein Element mit diesem Namen existiert bereits.") & Environment.NewLine &
+                                                  String.Join(Environment.NewLine, taken) & Environment.NewLine &
+                                                  LocalizationService.T("Nichts wurde umbenannt."))
+                        End If
                         For Each mapping In result.Mappings
                             If String.IsNullOrEmpty(mapping.SourcePath) OrElse String.IsNullOrEmpty(mapping.TargetPath) Then Continue For
                             ' Reines Aendern der Gross-/Kleinschreibung ist auf Linux eine ECHTE Umbenennung
@@ -14697,6 +14736,10 @@ Namespace ViewModels
             If targets.Count = 0 OrElse String.IsNullOrEmpty(_currentFolder) OrElse Not FileOperationPolicy.CanPasteInto(_currentFolder) Then Return
             Dim errorMessage As String = Nothing
             Try
+                ' Live Photos: beide Kopien bekommen denselben Stamm, unter dem beide frei sind
+                ' (ResolveCopyTargetAsync); ohne Lauf gab jede Haelfte ihrer Kopie den Namen fuer sich.
+                Dim run As New TransferRun(targets)
+                Await Task.Run(AddressOf run.FindLivePairs)
                 For Each source In targets
                     ' NEBEN DAS ORIGINAL, nicht in den gewaehlten Ordner. Mit einbezogenen
                     ' Unterordnern (GalleryViewModelSubfolders) liegt ein Bild der Ansicht nicht
@@ -14705,7 +14748,7 @@ Namespace ViewModels
                     Dim sourceFolder = IO.Path.GetDirectoryName(source.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
                     If String.IsNullOrEmpty(sourceFolder) Then sourceFolder = _currentFolder
                     If Not FileOperationPolicy.CanDuplicate(source, sourceFolder) Then Continue For
-                    Await CopyOrMovePathAsync(source, sourceFolder, False, True)
+                    Await CopyOrMovePathAsync(source, sourceFolder, False, True, run)
                 Next
                 SyncFolderItems()
                 RefreshTree()
@@ -16582,7 +16625,10 @@ Namespace ViewModels
                         ' nur die Nachbardatei. Ob das Original ersetzt werden darf, fragt deshalb
                         ' dieser Weg selbst, vor jeder Arbeit: was abgewiesen wird, zaehlt als nicht
                         ' geschrieben und steht so in der Ergebniszeile des Stapels.
-                        If Not ImageProcessor.CanReplaceOriginal(source) Then
+                        ' CanReplaceOriginal fragt nach dem Film zuerst den Katalog; die letzte
+                        ' Sperre fragt die Datei selbst (OriginalCarriesVideo), denn ein Irrtum des
+                        ' Katalogs waere hier ein verlorener Film.
+                        If Not ImageProcessor.CanReplaceOriginal(source) OrElse ImageProcessor.OriginalCarriesVideo(source) Then
                             DiagnosticLogService.LogAlways("Gallery.RewriteInPlace",
                                 $"refused: Original darf nicht ersetzt werden source={IO.Path.GetFileName(source)}")
                             ReportBatchFileDone()
@@ -17931,9 +17977,10 @@ Namespace ViewModels
         ''' neuen Namen (ein freier Name im Lauf, "Kopie", oder "Umbenennen" im Dialog), bekommt die
         ''' andere denselben Stamm, und gewaehlt wird ein Stamm, unter dem BEIDE frei sind. Wird
         ''' eine Haelfte uebersprungen, bleibt auch die andere. Das gilt, solange beide Haelften
-        ''' Quellen des Laufs sind (TransferRun.FindLivePairs) und die andere noch nicht uebertragen
-        ''' ist; stoesst erst die ZWEITE Haelfte auf ein vorhandenes Ziel, entscheidet der Dialog
-        ''' fuer sie allein.</summary>
+        ''' Quellen des Laufs sind (TransferRun.FindLivePairs). Beide Ziele werden aufgeloest, BEVOR
+        ''' die erste Haelfte uebertragen wird: ist nur der Name der anderen belegt, fragt der
+        ''' Dialog schon jetzt fuer sie, und seine Antwort (Ueberschreiben, Umbenennen,
+        ''' Ueberspringen) gilt fuer beide.</summary>
         Private Async Function ResolveCopyTargetAsync(source As String, targetFolder As String, movePath As Boolean,
                                                       duplicate As Boolean,
                                                       Optional run As TransferRun = Nothing) As Task(Of (Path As String, ReplaceConfirmed As Boolean))
@@ -17943,6 +17990,8 @@ Namespace ViewModels
             Dim forced As String = Nothing
             If run.TryGetForcedLiveTarget(source, forced) Then
                 If forced.Length = 0 Then Return (Nothing, False)
+                ' Zum Ueberschreiben freigegeben, als die erste Haelfte aufgeloest wurde.
+                If run.IsForcedReplace(source) AndAlso File.Exists(forced) Then Return (forced, True)
                 If Not File.Exists(forced) AndAlso Not Directory.Exists(forced) AndAlso Not run.IsReserved(forced, source) Then Return (forced, False)
                 ' Belegt (inzwischen von aussen entstanden): dann der gewoehnliche Weg.
             End If
@@ -17953,29 +18002,69 @@ Namespace ViewModels
                 run.ForceLiveTarget(partner, Nothing)
                 Return resolved
             End If
+
+            Dim firstChoice = resolved.Path
+            ' Darf firstChoice selbst belegt sein? Ja, wenn der Nutzer genau dieses Ziel gewaehlt
+            ' oder zum Ueberschreiben freigegeben hat; nein, wenn es aus dem Namen der anderen
+            ' Haelfte abgeleitet ist.
+            Dim firstChoiceChosen = True
             If String.Equals(IO.Path.GetFileNameWithoutExtension(resolved.Path), IO.Path.GetFileNameWithoutExtension(source),
-                             PathIdentity.Comparison) Then Return resolved
+                             PathIdentity.Comparison) Then
+                ' Der Stamm bleibt. Hat die andere Haelfte darunter Platz? Das wird VOR der ersten
+                ' Uebertragung entschieden: sonst stuende das Bild schon am Ziel, wenn sich zeigt,
+                ' dass der Name des Films belegt ist, und jede Antwort trennte das Paar.
+                Dim partnerTarget = LivePhotoService.PartnerTargetFor(partner, resolved.Path)
+                Dim partnerFile = File.Exists(partnerTarget)
+                Dim partnerReserved = Directory.Exists(partnerTarget) OrElse run.IsReserved(partnerTarget, partner)
+                If Not partnerFile AndAlso Not partnerReserved Then Return resolved
+                If partnerFile AndAlso Not partnerReserved Then
+                    ' Eine fremde Datei unter dem Namen der anderen Haelfte: der Dialog fragt fuer sie,
+                    ' und die Antwort gilt fuer beide.
+                    Dim choice = Await ResolveConflictTargetAsync(partnerTarget, partner)
+                    If choice Is Nothing Then
+                        run.ForceLiveTarget(partner, Nothing)
+                        Return (Nothing, False)
+                    End If
+                    If String.Equals(choice, partnerTarget, PathIdentity.Comparison) Then
+                        run.ForceLiveTarget(partner, partnerTarget, replaceConfirmed:=True)
+                        Return resolved
+                    End If
+                    ' Umbenannt: der Stamm, den die andere Haelfte im Dialog bekam, gilt fuer beide.
+                    firstChoice = LivePhotoService.PartnerTargetFor(source, choice)
+                    firstChoiceChosen = False
+                End If
+                ' Im Lauf vergeben: ohne Frage ein Stamm, unter dem beide frei sind.
+            End If
 
             ' Ein neuer Stamm: einer, unter dem auch die andere Haelfte frei ist.
-            Dim firstChoice = resolved.Path
             Dim taken = Function(candidate As String) As Boolean
                             Dim partnerTarget = LivePhotoService.PartnerTargetFor(partner, candidate)
                             If File.Exists(partnerTarget) OrElse Directory.Exists(partnerTarget) OrElse run.IsReserved(partnerTarget, partner) Then Return True
-                            If String.Equals(candidate, firstChoice, PathIdentity.Comparison) Then Return False
+                            If firstChoiceChosen AndAlso String.Equals(candidate, firstChoice, PathIdentity.Comparison) Then Return False
                             Return File.Exists(candidate) OrElse Directory.Exists(candidate) OrElse run.IsReserved(candidate, source)
                         End Function
             Dim common = firstChoice
             If taken(common) Then
-                ' Weitergezaehlt wird am Namen ohne die Nummer, die er schon traegt: aus
-                ' "tour (1).jpg" wird "tour (2).jpg", nicht "tour (1) (1).jpg".
                 Dim folder = If(IO.Path.GetDirectoryName(firstChoice), "")
                 Dim extension = IO.Path.GetExtension(firstChoice)
-                Dim baseName = System.Text.RegularExpressions.Regex.Replace(IO.Path.GetFileNameWithoutExtension(firstChoice), " \(\d{1,6}\)$", "")
-                Dim number = 1
-                Do
-                    common = IO.Path.Combine(folder, $"{baseName} ({number}){extension}")
-                    number += 1
-                Loop While taken(common)
+                If duplicate Then
+                    ' Wie CreateUniquePath: "tour Kopie 2.jpg", "tour Kopie 3.jpg".
+                    Dim sourceStem = IO.Path.GetFileNameWithoutExtension(source)
+                    Dim number = 2
+                    Do
+                        common = IO.Path.Combine(folder, $"{sourceStem} Kopie {number}{extension}")
+                        number += 1
+                    Loop While taken(common)
+                Else
+                    ' Weitergezaehlt wird am Namen ohne die Nummer, die er schon traegt: aus
+                    ' "tour (1).jpg" wird "tour (2).jpg", nicht "tour (1) (1).jpg".
+                    Dim baseName = System.Text.RegularExpressions.Regex.Replace(IO.Path.GetFileNameWithoutExtension(firstChoice), " \(\d{1,6}\)$", "")
+                    Dim number = 1
+                    Do
+                        common = IO.Path.Combine(folder, $"{baseName} ({number}){extension}")
+                        number += 1
+                    Loop While taken(common)
+                End If
             End If
             run.ForceLiveTarget(partner, LivePhotoService.PartnerTargetFor(partner, common))
             Return (common, False)
@@ -18342,6 +18431,8 @@ Namespace ViewModels
             ' Stamm bekam; leer, wenn die andere uebersprungen wurde.
             ' Hinter dem Lauf steht EIN Faden nach dem anderen (die Schleife wartet je Quelle).
             Private ReadOnly _forcedLiveTargets As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+            ' Live Photo: Haelften, deren erzwungenes Ziel zum Ueberschreiben freigegeben ist.
+            Private ReadOnly _forcedLiveReplace As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
             ' Quellen, die schon uebertragen sind.
             Private ReadOnly _done As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
 
@@ -18392,9 +18483,16 @@ Namespace ViewModels
 
             ''' <summary>Legt fest, wohin die andere Haelfte eines Live Photos muss; ein leeres Ziel
             ''' heisst: nicht uebertragen, ihre Haelfte wurde uebersprungen.</summary>
-            Public Sub ForceLiveTarget(source As String, target As String)
+            ''' <param name="replaceConfirmed">Der Nutzer hat genau dieses Ziel zum Ueberschreiben
+            ''' freigegeben (der Dialog fragte fuer diese Haelfte, bevor die erste uebertragen wurde).</param>
+            Public Sub ForceLiveTarget(source As String, target As String, Optional replaceConfirmed As Boolean = False)
                 _forcedLiveTargets(Key(source)) = If(target, "")
+                If replaceConfirmed Then _forcedLiveReplace.Add(Key(source)) Else _forcedLiveReplace.Remove(Key(source))
             End Sub
+
+            Public Function IsForcedReplace(source As String) As Boolean
+                Return _forcedLiveReplace.Contains(Key(source))
+            End Function
 
             Public Function TryGetForcedLiveTarget(source As String, ByRef target As String) As Boolean
                 Return _forcedLiveTargets.TryGetValue(Key(source), target)

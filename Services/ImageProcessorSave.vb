@@ -1577,6 +1577,18 @@ Namespace Services
             Return Not MotionPhotoService.HasVideo(originalPath)
         End Function
 
+        ''' <summary>Die letzte Sperre vor dem Darueberlegen: traegt die Datei SELBST einen Film?
+        ''' CanReplaceOriginal fragt zuerst den Katalog und oeffnet die Datei nur, wo er nichts
+        ''' weiss; fuehrt er ein Motion Photo faelschlich als "ohne Film", ginge der Film verloren.
+        ''' Hier antwortet immer die Datei (MotionPhotoService.HasVideoInFile, gemerkt je Pfad mit
+        ''' Laenge und Aenderungszeit), und ein Irrtum des Katalogs wird gleich richtiggestellt.
+        ''' Liest die Datei: im Hintergrund rufen.</summary>
+        Friend Shared Function OriginalCarriesVideo(originalPath As String) As Boolean
+            If String.IsNullOrWhiteSpace(originalPath) OrElse Not MotionPhotoService.HasVideoInFile(originalPath) Then Return False
+            MotionPhotoService.CorrectCatalogIfWrong(originalPath)
+            Return True
+        End Function
+
         ''' <summary>Wie lange <see cref="CopyOverOriginal"/> auf einen Leser wartet.</summary>
         Private Const CopyOverOriginalWaitMs As Integer = 3000
 
@@ -1592,8 +1604,17 @@ Namespace Services
         ''' "Bild konnte nicht gespeichert werden", obwohl ein Augenblick spaeter alles frei war.
         ''' Versucht wird deshalb wiederholt, bis die Frist um ist; danach fliegt der letzte Fehler
         ''' weiter wie bisher, und das Original ist unangetastet. Blockiert so lange den Faden, der
-        ''' ruft: nicht vom Oberflaechenfaden aus.</summary>
+        ''' ruft: nicht vom Oberflaechenfaden aus.
+        '''
+        ''' NIE UEBER EIN BILD MIT FILM. Die Aufrufer fragen vorher <see cref="OriginalCarriesVideo"/>
+        ''' und nehmen fuer so ein Bild ihren eigenen Weg; kommt doch eines hier an, fliegt ein
+        ''' Fehler, und das Original bleibt unangetastet.</summary>
         Friend Shared Sub CopyOverOriginal(writtenPath As String, originalPath As String)
+            If OriginalCarriesVideo(originalPath) Then
+                DiagnosticLogService.LogAlways("ImageProcessor.CopyOverOriginal",
+                    $"refused: Bild mit angehaengtem Film wird nicht ueberschrieben target={IO.Path.GetFileName(originalPath)}")
+                Throw New IOException(LocalizationService.T("Bild konnte nicht gespeichert werden"))
+            End If
             Dim deadline = Environment.TickCount64 + CopyOverOriginalWaitMs
             While True
                 Try

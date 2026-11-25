@@ -56,11 +56,43 @@
                        Foreground="{DynamicResource FP.Text.Secondary}"/>
             <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8"
                   IsVisible="{Binding IsDialogFilterChoiceVisible}">
-                <ComboBox ItemsSource="{Binding DialogFilterChoices}"
-                          SelectedItem="{Binding DialogSelectedFilterChoice, Mode=TwoWay}"
+                <!-- Die Vorgaben als Zeilen (AdjustmentPresetChoiceRow). Bei der Quelle
+                     Anpassungsvorlage zeigt die Liste die Ordner als Hierarchie wie im Editor:
+                     Ordner als gesperrte Ueberschriften, darunter eingerueckt ihre Anpassungen;
+                     das geschlossene Feld zeigt die gewaehlte mit Ordnerpfad. Die Texte sind
+                     schon uebersetzt oder Namen des Nutzers, deshalb no-translate. -->
+                <ComboBox x:Name="FilterChoiceBox"
+                          ItemsSource="{Binding DialogFilterChoiceRows}"
+                          SelectedItem="{Binding DialogSelectedFilterChoiceRow, Mode=TwoWay}"
+                          SelectionChanged="OnFilterChoiceSelectionChanged"
                           PlaceholderText="Keine Vorgabe gespeichert"
                           MinHeight="36"
-                          HorizontalAlignment="Stretch"/>
+                          HorizontalAlignment="Stretch">
+                    <ComboBox.Styles>
+                        <Style Selector="ComboBoxItem">
+                            <Setter Property="IsEnabled" Value="{Binding IsSelectable}"/>
+                        </Style>
+                        <Style Selector="TextBlock.choice-header">
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+                        </Style>
+                    </ComboBox.Styles>
+                    <ComboBox.SelectionBoxItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Classes="no-translate" Text="{Binding ClosedText}"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </DataTemplate>
+                    </ComboBox.SelectionBoxItemTemplate>
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Classes="no-translate"
+                                       Classes.choice-header="{Binding IsHeader}"
+                                       Text="{Binding Text}"
+                                       Margin="{Binding Indent}"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
                 <Button Grid.Column="1"
                         Classes="icon-btn"
                         Width="38"
