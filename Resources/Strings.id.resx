@@ -2298,8 +2298,8 @@
   <data name="Raster_4e92822e" xml:space="preserve">
     <value>Kisi</value>
   </data>
-  <data name="Raster_ein_oder_ausblenden_Gr_e_Einstellungen_Ed_6fa9b5f3" xml:space="preserve">
-    <value>Tampilkan atau sembunyikan kisi (ukurannya: Pengaturan, Penyunting)</value>
+  <data name="Raster_ein_oder_ausblenden_a0094407" xml:space="preserve">
+    <value>Tampilkan atau sembunyikan kisi</value>
   </data>
   <data name="Rastergr_e_cb478cbb" xml:space="preserve">
     <value>Ukuran kisi</value>
@@ -4539,9 +4539,6 @@
   <data name="Die_gew_hlte_Anpassung_auf_dieses_Bild_anwenden_b40e940c" xml:space="preserve">
     <value>Terapkan penyesuaian terpilih ke gambar ini</value>
   </data>
-  <data name="Die_aktuellen_Regler_unter_diesem_Namen_merken_e_28792148" xml:space="preserve">
-    <value>Ingat penggeser yang sekarang dengan nama ini - entri dengan nama yang sama akan diganti</value>
-  </data>
   <data name="Standardformat_1c812c8e" xml:space="preserve">
     <value>Format bawaan</value>
   </data>
@@ -4553,9 +4550,6 @@
   </data>
   <data name="Anpassung_gespeichert_0_55443bca" xml:space="preserve">
     <value>Penyesuaian disimpan: {0}</value>
-  </data>
-  <data name="Anpassung_gel_scht_0_1f26438b" xml:space="preserve">
-    <value>Penyesuaian dihapus: {0}</value>
   </data>
   <data name="Anpassung_angewendet_0_25f50909" xml:space="preserve">
     <value>Penyesuaian diterapkan: {0}</value>
@@ -12226,5 +12220,338 @@
   </data>
   <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
     <value>Area tajam ditempatkan di sekitar kedalaman yang diklik</value>
+  </data>
+  <data name="Fokusfelder_ein_aus_6fcc8715" xml:space="preserve">
+    <value>Titik fokus aktif/nonaktif</value>
+  </data>
+  <data name="Diese_Aufnahme_enth_lt_keine_Fokusangabe_0f44cb44" xml:space="preserve">
+    <value>Foto ini tidak memuat informasi fokus</value>
+  </data>
+  <data name="Die_Kamera_hat_f_r_diese_Aufnahme_kein_Fokusfeld_f627b6ee" xml:space="preserve">
+    <value>Kamera tidak melaporkan titik fokus untuk foto ini</value>
+  </data>
+  <data name="Die_Fokusangabe_dieser_Kamera_nennt_keine_Lage_i_8e520fea" xml:space="preserve">
+    <value>Informasi fokus kamera ini tidak menyebutkan posisi dalam gambar</value>
+  </data>
+  <data name="Die_Fokusangabe_passt_nicht_zum_gezeigten_Bildfo_1d7a3a71" xml:space="preserve">
+    <value>Informasi fokus tidak sesuai dengan format gambar yang ditampilkan</value>
+  </data>
+  <data name="Das_Fokusfeld_liegt_au_erhalb_des_gezeigten_Auss_ce87a97a" xml:space="preserve">
+    <value>Titik fokus berada di luar potongan yang ditampilkan</value>
+  </data>
+  <data name="Zwischen_100_Prozent_und_Einpassen_wechseln_bei__f9add5f1" xml:space="preserve">
+    <value>Beralih antara 100 persen dan paskan, dengan titik fokus di tengah saat titik fokus ditampilkan</value>
+  </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>Tampilkan ubin galeri selama penampil mengembangkan</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>Langsung menampilkan ubin dari galeri di penampil dan layar penuh sampai pengembangan selesai, sebagai ganti area kosong. Ubin lebih kecil daripada gambar sehingga sesaat tampak kurang tajam.</value>
+  </data>
+  <data name="RGB_df447551" xml:space="preserve">
+    <value>RGB</value>
+  </data>
+  <data name="Anpassung_speichern_d3939482" xml:space="preserve">
+    <value>Simpan penyesuaian</value>
+  </data>
+  <data name="Die_Anpassung_enth_lt_nur_was_hier_angehakt_ist__aa9b735b" xml:space="preserve">
+    <value>Penyesuaian hanya berisi yang dicentang di sini. Saat diterapkan, penyesuaian ini mengganti tepat penggeser tersebut, semua yang lain pada gambar tetap seperti adanya.</value>
+  </data>
+  <data name="Alle_Regler_in_die_Anpassung_aufnehmen_e1fadf41" xml:space="preserve">
+    <value>Sertakan semua penggeser dalam penyesuaian</value>
+  </data>
+  <data name="Alle_Haken_entfernen_66c06e2d" xml:space="preserve">
+    <value>Hapus semua centang</value>
+  </data>
+  <data name="Regler_einzeln_w_hlen_0955bd5d" xml:space="preserve">
+    <value>Pilih penggeser satu per satu</value>
+  </data>
+  <data name="Enth_lt_6b3bfaa9" xml:space="preserve">
+    <value>Berisi:</value>
+  </data>
+  <data name="Alle_Anpassungen_a5e8d6b6" xml:space="preserve">
+    <value>Semua penyesuaian</value>
+  </data>
+  <data name="Keine_Anpassungen_0d4d900e" xml:space="preserve">
+    <value>Tidak ada penyesuaian</value>
+  </data>
+  <data name="Die_aktuellen_Regler_als_Anpassung_speichern_mit_e97298b3" xml:space="preserve">
+    <value>Simpan penggeser yang sekarang sebagai penyesuaian dan pilih penggeser mana yang dimuatnya</value>
+  </data>
+  <data name="Bild_anheften_Die_n_chsten_Bilder_werden_daneben_9ba609d9" xml:space="preserve">
+    <value>Sematkan gambar. Gambar-gambar berikutnya ditampilkan di sebelahnya untuk dibandingkan</value>
+  </data>
+  <data name="Ausschnitt_aller_Bilder_koppeln_Ausgeschaltet_l__a91f6308" xml:space="preserve">
+    <value>Menautkan bagian yang terlihat dari semua foto. Jika dimatikan, setiap foto dapat digerakkan sendiri</value>
+  </data>
+  <data name="Vergleich_mit_zwei_oder_vier_Feldern_f243d3be" xml:space="preserve">
+    <value>Perbandingan dengan dua atau empat bidang</value>
+  </data>
+  <data name="Bezugsbild_wechseln_Bei_zwei_Feldern_wird_das_re_78856c36" xml:space="preserve">
+    <value>Ganti foto acuan. Dengan dua bidang, foto kanan menjadi yang baru disematkan; dengan empat, foto pada bidang aktif</value>
+  </data>
+  <data name="Kein_Bild_in_diesem_Feld_c325cb67" xml:space="preserve">
+    <value>Tidak ada foto di bidang ini</value>
+  </data>
+  <data name="Bei_zwei_Feldern_bl_ttert_die_rechte_Fl_che_bei__66e81d0e" xml:space="preserve">
+    <value>Dengan dua bidang, sisi kanan yang berpindah halaman; dengan empat, sisi yang aktif. Foto yang disematkan tetap di tempatnya</value>
+  </data>
+  <data name="Ausschnitt_verschieben_gekoppelt_ziehen_die_ande_1d8abfbd" xml:space="preserve">
+    <value>Pindahkan bagian yang terlihat; bila tertaut, sisi-sisi lain ikut</value>
+  </data>
+  <data name="Zoomen_Ein_Wert_gilt_f_r_alle_Fl_chen_b33077fc" xml:space="preserve">
+    <value>Zoom. Satu nilai berlaku untuk semua sisi</value>
+  </data>
+  <data name="Aktives_Feld_wechseln_mit_SHIFT_r_ckw_rts_70e7e5e2" xml:space="preserve">
+    <value>Ganti bidang aktif, mundur dengan SHIFT</value>
+  </data>
+  <data name="Bei_vier_Feldern_mit_24_Megapixeln_belegt_der_Ve_f9e3b1bd" xml:space="preserve">
+    <value>Dengan empat bidang beresolusi 24 megapiksel, perbandingan memakai sekitar 100 MB pada setengah resolusi dan sekitar 380 MB pada resolusi penuh.</value>
+  </data>
+  <data name="TAB_38d4aa69" xml:space="preserve">
+    <value>TAB</value>
+  </data>
+  <data name="ALT_1_bis_ALT_4_68193d8c" xml:space="preserve">
+    <value>ALT+1 sampai ALT+4</value>
+  </data>
+  <data name="Dieses_Feld_direkt_aktiv_machen_6a8d2c76" xml:space="preserve">
+    <value>Langsung aktifkan bidang ini</value>
+  </data>
+  <data name="In_diesen_Ordner_wird_die_Anpassung_gespeichert__1506e780" xml:space="preserve">
+    <value>Penyesuaian disimpan ke folder ini. Folder dibuat di jendela pengelolaan.</value>
+  </data>
+  <data name="Hauptordner_93a2f3f0" xml:space="preserve">
+    <value>Folder utama</value>
+  </data>
+  <data name="Der_Ordner_f_r_Anpassungen_ist_nicht_erreichbar__c8899bfd" xml:space="preserve">
+    <value>Folder untuk penyesuaian tidak dapat dijangkau: {0}. Folder ini ditentukan di pengaturan pada bagian Penyunting.</value>
+  </data>
+  <data name="Bitte_einen_Namen_eingeben_79e2b03f" xml:space="preserve">
+    <value>Silakan masukkan sebuah nama.</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_anlegen_Gibt_es_ihn_sc_c47f51e0" xml:space="preserve">
+    <value>Folder tidak dapat dibuat. Apakah folder itu sudah ada?</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_umbenennen_Gibt_es_den_12fb5f51" xml:space="preserve">
+    <value>Folder tidak dapat diganti namanya. Apakah nama itu sudah ada?</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_umbenennen_Gibt_es__0fd26f4f" xml:space="preserve">
+    <value>Penyesuaian tidak dapat diganti namanya. Apakah nama itu sudah ada di folder ini?</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_verschieben_Gibt_es_8db30dc2" xml:space="preserve">
+    <value>Penyesuaian tidak dapat dipindahkan. Apakah di sana sudah ada penyesuaian dengan nama yang sama?</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_l_schen_fc8f1e99" xml:space="preserve">
+    <value>Folder tidak dapat dihapus.</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_l_schen_ecd96ecc" xml:space="preserve">
+    <value>Penyesuaian tidak dapat dihapus.</value>
+  </data>
+  <data name="0_Anpassung_en_importiert_fdc783e6" xml:space="preserve">
+    <value>{0} penyesuaian diimpor</value>
+  </data>
+  <data name="0_schon_vorhanden_68664521" xml:space="preserve">
+    <value>{0} sudah ada</value>
+  </data>
+  <data name="0_Datei_en_nicht_lesbar_9653e2bc" xml:space="preserve">
+    <value>{0} berkas tidak dapat dibaca</value>
+  </data>
+  <data name="Anpassung_exportiert_0_98d89e68" xml:space="preserve">
+    <value>Penyesuaian diekspor: {0}</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_exportieren_53eb4a9a" xml:space="preserve">
+    <value>Penyesuaian tidak dapat diekspor.</value>
+  </data>
+  <data name="0_Anpassung_en_exportiert_fd94c88c" xml:space="preserve">
+    <value>{0} penyesuaian diekspor</value>
+  </data>
+  <data name="Einen_Unterordner_im_gew_hlten_Ordner_anlegen_04fa4248" xml:space="preserve">
+    <value>Buat subfolder di folder yang dipilih</value>
+  </data>
+  <data name="Anpassungen_importieren_838230e9" xml:space="preserve">
+    <value>Impor penyesuaian</value>
+  </data>
+  <data name="Ordner_mit_Anpassungen_importieren_9be5ad2e" xml:space="preserve">
+    <value>Impor folder berisi penyesuaian</value>
+  </data>
+  <data name="Anpassung_exportieren_ecc0fac1" xml:space="preserve">
+    <value>Ekspor penyesuaian</value>
+  </data>
+  <data name="Einstellungen_ffnen_dd5e857e" xml:space="preserve">
+    <value>Buka pengaturan</value>
+  </data>
+  <data name="Verwalten_d0d41dd9" xml:space="preserve">
+    <value>Kelola</value>
+  </data>
+  <data name="Anpassungen_in_Ordnern_ordnen_umbenennen_verschi_87e5728e" xml:space="preserve">
+    <value>Menata penyesuaian dalam folder, mengganti nama, memindahkan, menghapus, mengimpor, dan mengekspornya</value>
+  </data>
+  <data name="Einf_gen_mit_Auswahl_4c235020" xml:space="preserve">
+    <value>Tempel dengan pilihan</value>
+  </data>
+  <data name="Aus_den_kopierten_Anpassungen_w_hlen_welche_Regl_bc4e7b97" xml:space="preserve">
+    <value>Pilih penggeser mana dari penyesuaian yang disalin yang akan ditempelkan</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_speichern_d315a955" xml:space="preserve">
+    <value>Penyesuaian tidak dapat disimpan.</value>
+  </data>
+  <data name="Eingef_gt_wird_nur_was_hier_angehakt_ist_Diese_R_6f35b039" xml:space="preserve">
+    <value>Hanya yang dicentang di sini yang ditempelkan. Penggeser ini menggantikan penggeser gambar, semua yang lain tetap seperti adanya.</value>
+  </data>
+  <data name="Anpassungen_verwalten_360f5bee" xml:space="preserve">
+    <value>Kelola penyesuaian</value>
+  </data>
+  <data name="Jede_Anpassung_ist_eine_Datei_jeder_Ordner_ein_e_cd4fd224" xml:space="preserve">
+    <value>Setiap penyesuaian adalah satu berkas, setiap folder adalah folder sungguhan. Untuk membagikannya, cukup salin berkas atau sebuah folder.</value>
+  </data>
+  <data name="Ordner_f_r_Anpassungen_a11c8c84" xml:space="preserve">
+    <value>Folder untuk penyesuaian</value>
+  </data>
+  <data name="Hier_liegen_die_im_Editor_gespeicherten_Anpassun_89b2f8b3" xml:space="preserve">
+    <value>Di sini tersimpan penyesuaian yang disimpan di penyunting, masing-masing sebagai berkas tersendiri, setiap folder sebagai folder sungguhan. Folder sendiri, misalnya di penyimpanan awan, membuatnya tersedia di beberapa komputer. Jika folder itu tidak dapat dijangkau, daftarnya tetap kosong.</value>
+  </data>
+  <data name="Wieder_den_Ordner_im_Datenordner_der_Anwendung_v_67a35185" xml:space="preserve">
+    <value>Gunakan kembali folder di dalam folder data aplikasi</value>
+  </data>
+  <data name="Ordner_f_r_Anpassungen_w_hlen_79bdb005" xml:space="preserve">
+    <value>Pilih folder untuk penyesuaian</value>
+  </data>
+  <data name="Im_bisherigen_Ordner_liegen_0_Anpassung_en_Solle_20cdd6ce" xml:space="preserve">
+    <value>Di folder sebelumnya ada {0} penyesuaian. Apakah penyesuaian itu ikut dipindahkan ke folder baru? Jika tidak, penyesuaian itu tetap berada di folder sebelumnya dan tidak lagi muncul di daftar.</value>
+  </data>
+  <data name="Mitziehen_b1307569" xml:space="preserve">
+    <value>Ikut pindahkan</value>
+  </data>
+  <data name="Dort_lassen_d8c7764f" xml:space="preserve">
+    <value>Biarkan di sana</value>
+  </data>
+  <data name="0_Anpassung_en_in_den_neuen_Ordner_verschoben_efb3edec" xml:space="preserve">
+    <value>{0} penyesuaian dipindahkan ke folder baru</value>
+  </data>
+  <data name="0_lie_en_sich_nicht_verschieben_und_liegen_weite_74250764" xml:space="preserve">
+    <value>{0} tidak dapat dipindahkan dan tetap berada di folder sebelumnya</value>
+  </data>
+  <data name="Bewegtbild_f306457a" xml:space="preserve">
+    <value>Gambar bergerak</value>
+  </data>
+  <data name="Motion_Photo_Film_in_der_Datei_254d738f" xml:space="preserve">
+    <value>Motion Photo, video di dalam berkas</value>
+  </data>
+  <data name="Live_Photo_Bild_4f903725" xml:space="preserve">
+    <value>Live Photo, gambar</value>
+  </data>
+  <data name="Live_Photo_Film_7c876762" xml:space="preserve">
+    <value>Live Photo, video</value>
+  </data>
+  <data name="Motion_Photo_an_diesem_Bild_h_ngt_ein_kurzer_Fil_7b0b12c8" xml:space="preserve">
+    <value>Motion Photo: gambar ini membawa video pendek</value>
+  </data>
+  <data name="Live_Photo_zu_diesem_Bild_geh_rt_ein_kurzer_Film_19de2886" xml:space="preserve">
+    <value>Live Photo: gambar ini memiliki video pendek</value>
+  </data>
+  <data name="Live_Photo_der_Film_zu_einem_Bild_0aa4441a" xml:space="preserve">
+    <value>Live Photo: video milik sebuah gambar</value>
+  </data>
+  <data name="Film_zu_diesem_Bild_abspielen_e6390328" xml:space="preserve">
+    <value>Putar video gambar ini</value>
+  </data>
+  <data name="Film_anhalten_und_zum_Bild_zur_ck_0f3d9659" xml:space="preserve">
+    <value>Hentikan video dan kembali ke gambar</value>
+  </data>
+  <data name="Der_Film_zu_diesem_Bild_ist_nicht_mehr_da_28434c71" xml:space="preserve">
+    <value>Video gambar ini sudah tidak ada</value>
+  </data>
+  <data name="Der_Film_zu_diesem_Bild_lie_sich_nicht_abspielen_55dff2c2" xml:space="preserve">
+    <value>Video gambar ini tidak dapat diputar</value>
+  </data>
+  <data name="Zu_diesem_Live_Photo_geh_rt_0_Der_Name_1_ist_daf_2c7e82bc" xml:space="preserve">
+    <value>{0} termasuk dalam Live Photo ini. Nama {1} sudah dipakai untuknya.</value>
+  </data>
+  <data name="Die_gespeicherten_Anpassungen_fehlen_deshalb_in__fda49589" xml:space="preserve">
+    <value>Karena itu penyesuaian tersimpan tidak ada dalam cadangan.</value>
+  </data>
+  <data name="Die_gespeicherten_Anpassungen_lassen_sich_deshal_a30cd08a" xml:space="preserve">
+    <value>Karena itu penyesuaian tersimpan tidak dapat dipulihkan, tidak ada yang diubah.</value>
+  </data>
+  <data name="Ablage_c411bce3" xml:space="preserve">
+    <value>Lokasi:</value>
+  </data>
+  <data name="Den_Ordner_der_Anpassungen_im_Dateimanager_ffnen_b3fce593" xml:space="preserve">
+    <value>Buka folder penyesuaian di pengelola berkas</value>
+  </data>
+  <data name="Schlie_t_dieses_Fenster_und_ffnet_die_Einstellun_58264913" xml:space="preserve">
+    <value>Menutup jendela ini dan membuka pengaturan. Folder untuk penyesuaian ditentukan di sana pada bagian Penyunting.</value>
+  </data>
+  <data name="Ordner_ndern_6c04e2d7" xml:space="preserve">
+    <value>Ganti folder</value>
+  </data>
+  <data name="Anpassungen_in_allen_Ordnern_nach_ihrem_Namen_su_6edcb468" xml:space="preserve">
+    <value>Cari penyesuaian di semua folder menurut namanya</value>
+  </data>
+  <data name="Anpassungen_in_den_gew_hlten_Ordner_aufnehmen_65ddf882" xml:space="preserve">
+    <value>Masukkan penyesuaian ke folder yang dipilih</value>
+  </data>
+  <data name="Ordner_samt_Unterordnern_91847af9" xml:space="preserve">
+    <value>Folder beserta subfoldernya</value>
+  </data>
+  <data name="Unterordner_zeigen_oder_verbergen_11fab487" xml:space="preserve">
+    <value>Tampilkan atau sembunyikan subfolder</value>
+  </data>
+  <data name="Ordner_umbenennen_F2_91a94b55" xml:space="preserve">
+    <value>Ganti nama folder (F2)</value>
+  </data>
+  <data name="Ordner_samt_Unterordnern_in_ein_Verzeichnis_expo_2a332ad9" xml:space="preserve">
+    <value>Ekspor folder beserta subfoldernya ke sebuah direktori</value>
+  </data>
+  <data name="Ordner_l_schen_ENTF_Andere_Dateien_darin_bleiben_190eeb88" xml:space="preserve">
+    <value>Hapus folder (DEL). Berkas lain di dalamnya tetap ada.</value>
+  </data>
+  <data name="Klicken_zeigt_was_die_Anpassung_enth_lt_Auf_eine_f063f797" xml:space="preserve">
+    <value>Klik untuk melihat isi penyesuaian. Seret ke sebuah folder untuk memindahkannya.</value>
+  </data>
+  <data name="Auf_das_im_Editor_ge_ffnete_Bild_anwenden_e8e855ed" xml:space="preserve">
+    <value>Terapkan pada gambar yang terbuka di penyunting</value>
+  </data>
+  <data name="Umbenennen_F2_89b3b3ba" xml:space="preserve">
+    <value>Ganti nama (F2)</value>
+  </data>
+  <data name="In_einen_anderen_Ordner_verschieben_66b049c4" xml:space="preserve">
+    <value>Pindahkan ke folder lain</value>
+  </data>
+  <data name="Als_Datei_an_einen_anderen_Ort_exportieren_b0632359" xml:space="preserve">
+    <value>Ekspor sebagai berkas ke tempat lain</value>
+  </data>
+  <data name="L_schen_ENTF_2e101259" xml:space="preserve">
+    <value>Hapus (DEL)</value>
+  </data>
+  <data name="enthalten_7d3b9efe" xml:space="preserve">
+    <value>termasuk</value>
+  </data>
+  <data name="Alle_brigen_Regler_werden_auf_den_Neutralwert_ge_926e23af" xml:space="preserve">
+    <value>Semua penggeser lainnya diatur ke nilai netral.</value>
+  </data>
+  <data name="L_schen_4b292f16" xml:space="preserve">
+    <value>Hapus?</value>
+  </data>
+  <data name="Anpassungen_in_0_cd658125" xml:space="preserve">
+    <value>Penyesuaian di {0}</value>
+  </data>
+  <data name="Keine_Anpassung_mit_diesem_Namen_gefunden_0faef088" xml:space="preserve">
+    <value>Tidak ditemukan penyesuaian dengan nama ini.</value>
+  </data>
+  <data name="Links_einen_Ordner_w_hlen_8b9dbf96" xml:space="preserve">
+    <value>Pilih folder di sebelah kiri.</value>
+  </data>
+  <data name="In_diesem_Ordner_liegt_keine_Anpassung_Gespeiche_ee81a890" xml:space="preserve">
+    <value>Tidak ada penyesuaian di folder ini. Penyesuaian disimpan di penyunting pada Penyesuaian tersimpan.</value>
+  </data>
+  <data name="L_schen_0_Anpassung_en_und_1_Unterordner_gehen_m_fd2cb752" xml:space="preserve">
+    <value>Hapus? {0} penyesuaian dan {1} subfolder ikut terhapus.</value>
+  </data>
+  <data name="Anpassung_verschoben_0_99bf71a4" xml:space="preserve">
+    <value>Penyesuaian dipindahkan: {0}</value>
+  </data>
+  <data name="Angewendet_45946cda" xml:space="preserve">
+    <value>Diterapkan</value>
   </data>
 </root>

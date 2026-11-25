@@ -2299,8 +2299,8 @@
   <data name="Raster_4e92822e" xml:space="preserve">
     <value>Grade</value>
   </data>
-  <data name="Raster_ein_oder_ausblenden_Gr_e_Einstellungen_Ed_6fa9b5f3" xml:space="preserve">
-    <value>Mostrar ou ocultar a grade (tamanho: Configurações, Editor)</value>
+  <data name="Raster_ein_oder_ausblenden_a0094407" xml:space="preserve">
+    <value>Mostrar ou ocultar a grade</value>
   </data>
   <data name="Rastergr_e_cb478cbb" xml:space="preserve">
     <value>Tamanho da grade</value>
@@ -4540,9 +4540,6 @@
   <data name="Die_gew_hlte_Anpassung_auf_dieses_Bild_anwenden_b40e940c" xml:space="preserve">
     <value>Aplicar o ajuste selecionado a esta imagem</value>
   </data>
-  <data name="Die_aktuellen_Regler_unter_diesem_Namen_merken_e_28792148" xml:space="preserve">
-    <value>Guardar os controlos atuais com este nome — uma entrada com o mesmo nome é substituída</value>
-  </data>
   <data name="Standardformat_1c812c8e" xml:space="preserve">
     <value>Formato padrão</value>
   </data>
@@ -4554,9 +4551,6 @@
   </data>
   <data name="Anpassung_gespeichert_0_55443bca" xml:space="preserve">
     <value>Ajuste guardado: {0}</value>
-  </data>
-  <data name="Anpassung_gel_scht_0_1f26438b" xml:space="preserve">
-    <value>Ajuste eliminado: {0}</value>
   </data>
   <data name="Anpassung_angewendet_0_25f50909" xml:space="preserve">
     <value>Ajuste aplicado: {0}</value>
@@ -12181,5 +12175,338 @@
   </data>
   <data name="Scharfer_Bereich_auf_die_angeklickte_Tiefe_geleg_756ce070" xml:space="preserve">
     <value>Zona nítida colocada em torno da profundidade clicada</value>
+  </data>
+  <data name="Fokusfelder_ein_aus_6fcc8715" xml:space="preserve">
+    <value>Pontos de foco ativar/desativar</value>
+  </data>
+  <data name="Diese_Aufnahme_enth_lt_keine_Fokusangabe_0f44cb44" xml:space="preserve">
+    <value>Esta foto não contém informações de foco</value>
+  </data>
+  <data name="Die_Kamera_hat_f_r_diese_Aufnahme_kein_Fokusfeld_f627b6ee" xml:space="preserve">
+    <value>A câmera não informou nenhum ponto de foco para esta foto</value>
+  </data>
+  <data name="Die_Fokusangabe_dieser_Kamera_nennt_keine_Lage_i_8e520fea" xml:space="preserve">
+    <value>As informações de foco desta câmera não indicam uma posição na imagem</value>
+  </data>
+  <data name="Die_Fokusangabe_passt_nicht_zum_gezeigten_Bildfo_1d7a3a71" xml:space="preserve">
+    <value>As informações de foco não correspondem ao formato de imagem exibido</value>
+  </data>
+  <data name="Das_Fokusfeld_liegt_au_erhalb_des_gezeigten_Auss_ce87a97a" xml:space="preserve">
+    <value>O ponto de foco fica fora do recorte exibido</value>
+  </data>
+  <data name="Zwischen_100_Prozent_und_Einpassen_wechseln_bei__f9add5f1" xml:space="preserve">
+    <value>Alternar entre 100 por cento e ajustar, com o ponto de foco no centro quando os pontos de foco estão visíveis</value>
+  </data>
+  <data name="Galerie_Kachel_zeigen_solange_im_Viewer_entwicke_32c9fd82" xml:space="preserve">
+    <value>Mostrar a miniatura da galeria enquanto o visualizador revela</value>
+  </data>
+  <data name="Zeigt_im_Viewer_und_im_Vollbild_sofort_die_Kache_7abe38d4" xml:space="preserve">
+    <value>Mostra de imediato no visualizador e em ecrã inteiro a miniatura da galeria até a revelação terminar, em vez de uma área vazia. A miniatura é menor do que a imagem e por isso parece pouco nítida por um instante.</value>
+  </data>
+  <data name="RGB_df447551" xml:space="preserve">
+    <value>RGB</value>
+  </data>
+  <data name="Anpassung_speichern_d3939482" xml:space="preserve">
+    <value>Guardar ajuste</value>
+  </data>
+  <data name="Die_Anpassung_enth_lt_nur_was_hier_angehakt_ist__aa9b735b" xml:space="preserve">
+    <value>O ajuste contém apenas o que está marcado aqui. Ao ser aplicado, substitui exatamente estes controlos; todos os outros da imagem ficam como estão.</value>
+  </data>
+  <data name="Alle_Regler_in_die_Anpassung_aufnehmen_e1fadf41" xml:space="preserve">
+    <value>Incluir todos os controlos no ajuste</value>
+  </data>
+  <data name="Alle_Haken_entfernen_66c06e2d" xml:space="preserve">
+    <value>Remover todas as marcas</value>
+  </data>
+  <data name="Regler_einzeln_w_hlen_0955bd5d" xml:space="preserve">
+    <value>Escolher os controlos um a um</value>
+  </data>
+  <data name="Enth_lt_6b3bfaa9" xml:space="preserve">
+    <value>Contém:</value>
+  </data>
+  <data name="Alle_Anpassungen_a5e8d6b6" xml:space="preserve">
+    <value>Todos os ajustes</value>
+  </data>
+  <data name="Keine_Anpassungen_0d4d900e" xml:space="preserve">
+    <value>Nenhum ajuste</value>
+  </data>
+  <data name="Die_aktuellen_Regler_als_Anpassung_speichern_mit_e97298b3" xml:space="preserve">
+    <value>Guardar os controlos atuais como ajuste e escolher que controlos contém</value>
+  </data>
+  <data name="Bild_anheften_Die_n_chsten_Bilder_werden_daneben_9ba609d9" xml:space="preserve">
+    <value>Fixar a imagem. As seguintes são mostradas ao lado para comparação</value>
+  </data>
+  <data name="Ausschnitt_aller_Bilder_koppeln_Ausgeschaltet_l__a91f6308" xml:space="preserve">
+    <value>Vincular o enquadramento visível de todas as fotos. Desativado, cada foto move-se separadamente</value>
+  </data>
+  <data name="Vergleich_mit_zwei_oder_vier_Feldern_f243d3be" xml:space="preserve">
+    <value>Comparação com dois ou quatro campos</value>
+  </data>
+  <data name="Bezugsbild_wechseln_Bei_zwei_Feldern_wird_das_re_78856c36" xml:space="preserve">
+    <value>Trocar a foto de referência. Com dois campos, a foto da direita passa a ser a fixada; com quatro, a do campo ativo</value>
+  </data>
+  <data name="Kein_Bild_in_diesem_Feld_c325cb67" xml:space="preserve">
+    <value>Nenhuma foto neste campo</value>
+  </data>
+  <data name="Bei_zwei_Feldern_bl_ttert_die_rechte_Fl_che_bei__66e81d0e" xml:space="preserve">
+    <value>Com dois campos avança o lado direito; com quatro, o ativo. A foto fixada permanece no lugar</value>
+  </data>
+  <data name="Ausschnitt_verschieben_gekoppelt_ziehen_die_ande_1d8abfbd" xml:space="preserve">
+    <value>Mover o enquadramento; se vinculados, os outros lados acompanham</value>
+  </data>
+  <data name="Zoomen_Ein_Wert_gilt_f_r_alle_Fl_chen_b33077fc" xml:space="preserve">
+    <value>Zoom. Um valor vale para todos os lados</value>
+  </data>
+  <data name="Aktives_Feld_wechseln_mit_SHIFT_r_ckw_rts_70e7e5e2" xml:space="preserve">
+    <value>Trocar o campo ativo, para trás com SHIFT</value>
+  </data>
+  <data name="Bei_vier_Feldern_mit_24_Megapixeln_belegt_der_Ve_f9e3b1bd" xml:space="preserve">
+    <value>Com quatro campos de 24 megapixels, a comparação ocupa cerca de 100 MB em meia resolução e cerca de 380 MB em resolução total.</value>
+  </data>
+  <data name="TAB_38d4aa69" xml:space="preserve">
+    <value>TAB</value>
+  </data>
+  <data name="ALT_1_bis_ALT_4_68193d8c" xml:space="preserve">
+    <value>ALT+1 a ALT+4</value>
+  </data>
+  <data name="Dieses_Feld_direkt_aktiv_machen_6a8d2c76" xml:space="preserve">
+    <value>Ativar diretamente este campo</value>
+  </data>
+  <data name="In_diesen_Ordner_wird_die_Anpassung_gespeichert__1506e780" xml:space="preserve">
+    <value>O ajuste é guardado nesta pasta. As pastas criam-se em Gerir ajustes.</value>
+  </data>
+  <data name="Hauptordner_93a2f3f0" xml:space="preserve">
+    <value>Pasta principal</value>
+  </data>
+  <data name="Der_Ordner_f_r_Anpassungen_ist_nicht_erreichbar__c8899bfd" xml:space="preserve">
+    <value>A pasta dos ajustes está inacessível: {0}. Ela é definida nas Configurações, em Editor.</value>
+  </data>
+  <data name="Bitte_einen_Namen_eingeben_79e2b03f" xml:space="preserve">
+    <value>Introduza um nome.</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_anlegen_Gibt_es_ihn_sc_c47f51e0" xml:space="preserve">
+    <value>Não foi possível criar a pasta. Será que já existe?</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_umbenennen_Gibt_es_den_12fb5f51" xml:space="preserve">
+    <value>Não foi possível renomear a pasta. Será que o nome já existe?</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_umbenennen_Gibt_es__0fd26f4f" xml:space="preserve">
+    <value>Não foi possível renomear o ajuste. Será que o nome já existe nesta pasta?</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_verschieben_Gibt_es_8db30dc2" xml:space="preserve">
+    <value>Não foi possível mover o ajuste. Será que já existe lá um com o mesmo nome?</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_l_schen_fc8f1e99" xml:space="preserve">
+    <value>Não foi possível excluir a pasta.</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_l_schen_ecd96ecc" xml:space="preserve">
+    <value>Não foi possível excluir o ajuste.</value>
+  </data>
+  <data name="0_Anpassung_en_importiert_fdc783e6" xml:space="preserve">
+    <value>{0} ajuste(s) importado(s)</value>
+  </data>
+  <data name="0_schon_vorhanden_68664521" xml:space="preserve">
+    <value>{0} já existente(s)</value>
+  </data>
+  <data name="0_Datei_en_nicht_lesbar_9653e2bc" xml:space="preserve">
+    <value>{0} ficheiro(s) ilegível(is)</value>
+  </data>
+  <data name="Anpassung_exportiert_0_98d89e68" xml:space="preserve">
+    <value>Ajuste exportado: {0}</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_exportieren_53eb4a9a" xml:space="preserve">
+    <value>Não foi possível exportar o ajuste.</value>
+  </data>
+  <data name="0_Anpassung_en_exportiert_fd94c88c" xml:space="preserve">
+    <value>{0} ajuste(s) exportado(s)</value>
+  </data>
+  <data name="Einen_Unterordner_im_gew_hlten_Ordner_anlegen_04fa4248" xml:space="preserve">
+    <value>Criar uma subpasta na pasta selecionada</value>
+  </data>
+  <data name="Anpassungen_importieren_838230e9" xml:space="preserve">
+    <value>Importar ajustes</value>
+  </data>
+  <data name="Ordner_mit_Anpassungen_importieren_9be5ad2e" xml:space="preserve">
+    <value>Importar pasta com ajustes</value>
+  </data>
+  <data name="Anpassung_exportieren_ecc0fac1" xml:space="preserve">
+    <value>Exportar ajuste</value>
+  </data>
+  <data name="Einstellungen_ffnen_dd5e857e" xml:space="preserve">
+    <value>Abrir as configurações</value>
+  </data>
+  <data name="Verwalten_d0d41dd9" xml:space="preserve">
+    <value>Gerir</value>
+  </data>
+  <data name="Anpassungen_in_Ordnern_ordnen_umbenennen_verschi_87e5728e" xml:space="preserve">
+    <value>Organizar ajustes em pastas, renomear, mover, excluir, importar e exportar</value>
+  </data>
+  <data name="Einf_gen_mit_Auswahl_4c235020" xml:space="preserve">
+    <value>Colar com seleção</value>
+  </data>
+  <data name="Aus_den_kopierten_Anpassungen_w_hlen_welche_Regl_bc4e7b97" xml:space="preserve">
+    <value>Escolher, entre os ajustes copiados, os controlos a colar</value>
+  </data>
+  <data name="Die_Anpassung_lie_sich_nicht_speichern_d315a955" xml:space="preserve">
+    <value>Não foi possível guardar o ajuste.</value>
+  </data>
+  <data name="Eingef_gt_wird_nur_was_hier_angehakt_ist_Diese_R_6f35b039" xml:space="preserve">
+    <value>Só é colado o que estiver assinalado aqui. Estes controlos substituem os da imagem; todos os outros ficam como estão.</value>
+  </data>
+  <data name="Anpassungen_verwalten_360f5bee" xml:space="preserve">
+    <value>Gerir ajustes</value>
+  </data>
+  <data name="Jede_Anpassung_ist_eine_Datei_jeder_Ordner_ein_e_cd4fd224" xml:space="preserve">
+    <value>Cada ajuste é um ficheiro e cada pasta é uma pasta verdadeira. Para os partilhar, basta copiar ficheiros ou uma pasta.</value>
+  </data>
+  <data name="Ordner_f_r_Anpassungen_a11c8c84" xml:space="preserve">
+    <value>Pasta dos ajustes</value>
+  </data>
+  <data name="Hier_liegen_die_im_Editor_gespeicherten_Anpassun_89b2f8b3" xml:space="preserve">
+    <value>Aqui ficam os ajustes guardados no editor, cada um num ficheiro próprio e cada pasta como pasta verdadeira. Uma pasta à sua escolha, por exemplo num armazenamento na nuvem, torna-os disponíveis em vários computadores. Se ela estiver inacessível, a lista fica vazia.</value>
+  </data>
+  <data name="Wieder_den_Ordner_im_Datenordner_der_Anwendung_v_67a35185" xml:space="preserve">
+    <value>Voltar a usar a pasta na pasta de dados da aplicação</value>
+  </data>
+  <data name="Ordner_f_r_Anpassungen_w_hlen_79bdb005" xml:space="preserve">
+    <value>Escolher a pasta dos ajustes</value>
+  </data>
+  <data name="Im_bisherigen_Ordner_liegen_0_Anpassung_en_Solle_20cdd6ce" xml:space="preserve">
+    <value>A pasta anterior contém {0} ajuste(s). Quer levá-los para a nova pasta? Caso contrário, ficam na pasta anterior e deixam de aparecer na lista.</value>
+  </data>
+  <data name="Mitziehen_b1307569" xml:space="preserve">
+    <value>Levar junto</value>
+  </data>
+  <data name="Dort_lassen_d8c7764f" xml:space="preserve">
+    <value>Deixar lá</value>
+  </data>
+  <data name="0_Anpassung_en_in_den_neuen_Ordner_verschoben_efb3edec" xml:space="preserve">
+    <value>{0} ajuste(s) movido(s) para a nova pasta</value>
+  </data>
+  <data name="0_lie_en_sich_nicht_verschieben_und_liegen_weite_74250764" xml:space="preserve">
+    <value>Não foi possível mover {0}; continuam na pasta anterior</value>
+  </data>
+  <data name="Bewegtbild_f306457a" xml:space="preserve">
+    <value>Imagem em movimento</value>
+  </data>
+  <data name="Motion_Photo_Film_in_der_Datei_254d738f" xml:space="preserve">
+    <value>Motion Photo, vídeo dentro do arquivo</value>
+  </data>
+  <data name="Live_Photo_Bild_4f903725" xml:space="preserve">
+    <value>Live Photo, imagem</value>
+  </data>
+  <data name="Live_Photo_Film_7c876762" xml:space="preserve">
+    <value>Live Photo, vídeo</value>
+  </data>
+  <data name="Motion_Photo_an_diesem_Bild_h_ngt_ein_kurzer_Fil_7b0b12c8" xml:space="preserve">
+    <value>Motion Photo: há um vídeo curto anexado a esta imagem</value>
+  </data>
+  <data name="Live_Photo_zu_diesem_Bild_geh_rt_ein_kurzer_Film_19de2886" xml:space="preserve">
+    <value>Live Photo: um vídeo curto pertence a esta imagem</value>
+  </data>
+  <data name="Live_Photo_der_Film_zu_einem_Bild_0aa4441a" xml:space="preserve">
+    <value>Live Photo: o vídeo de uma imagem</value>
+  </data>
+  <data name="Film_zu_diesem_Bild_abspielen_e6390328" xml:space="preserve">
+    <value>Reproduzir o vídeo desta imagem</value>
+  </data>
+  <data name="Film_anhalten_und_zum_Bild_zur_ck_0f3d9659" xml:space="preserve">
+    <value>Parar o vídeo e voltar à imagem</value>
+  </data>
+  <data name="Der_Film_zu_diesem_Bild_ist_nicht_mehr_da_28434c71" xml:space="preserve">
+    <value>O vídeo desta imagem já não existe</value>
+  </data>
+  <data name="Der_Film_zu_diesem_Bild_lie_sich_nicht_abspielen_55dff2c2" xml:space="preserve">
+    <value>Não foi possível reproduzir o vídeo desta imagem</value>
+  </data>
+  <data name="Zu_diesem_Live_Photo_geh_rt_0_Der_Name_1_ist_daf_2c7e82bc" xml:space="preserve">
+    <value>{0} pertence a este Live Photo. O nome {1} já está ocupado para ele.</value>
+  </data>
+  <data name="Die_gespeicherten_Anpassungen_fehlen_deshalb_in__fda49589" xml:space="preserve">
+    <value>Por isso, os ajustes guardados faltam na cópia.</value>
+  </data>
+  <data name="Die_gespeicherten_Anpassungen_lassen_sich_deshal_a30cd08a" xml:space="preserve">
+    <value>Por isso, não é possível repor os ajustes guardados, nada foi alterado.</value>
+  </data>
+  <data name="Ablage_c411bce3" xml:space="preserve">
+    <value>Local:</value>
+  </data>
+  <data name="Den_Ordner_der_Anpassungen_im_Dateimanager_ffnen_b3fce593" xml:space="preserve">
+    <value>Abrir a pasta dos ajustes no gerenciador de arquivos</value>
+  </data>
+  <data name="Schlie_t_dieses_Fenster_und_ffnet_die_Einstellun_58264913" xml:space="preserve">
+    <value>Fecha esta janela e abre as configurações. A pasta dos ajustes é definida lá, em Editor.</value>
+  </data>
+  <data name="Ordner_ndern_6c04e2d7" xml:space="preserve">
+    <value>Mudar de pasta</value>
+  </data>
+  <data name="Anpassungen_in_allen_Ordnern_nach_ihrem_Namen_su_6edcb468" xml:space="preserve">
+    <value>Procurar ajustes pelo nome em todas as pastas</value>
+  </data>
+  <data name="Anpassungen_in_den_gew_hlten_Ordner_aufnehmen_65ddf882" xml:space="preserve">
+    <value>Incluir ajustes na pasta selecionada</value>
+  </data>
+  <data name="Ordner_samt_Unterordnern_91847af9" xml:space="preserve">
+    <value>Pasta com as subpastas</value>
+  </data>
+  <data name="Unterordner_zeigen_oder_verbergen_11fab487" xml:space="preserve">
+    <value>Mostrar ou ocultar as subpastas</value>
+  </data>
+  <data name="Ordner_umbenennen_F2_91a94b55" xml:space="preserve">
+    <value>Renomear pasta (F2)</value>
+  </data>
+  <data name="Ordner_samt_Unterordnern_in_ein_Verzeichnis_expo_2a332ad9" xml:space="preserve">
+    <value>Exportar a pasta com as subpastas para um diretório</value>
+  </data>
+  <data name="Ordner_l_schen_ENTF_Andere_Dateien_darin_bleiben_190eeb88" xml:space="preserve">
+    <value>Excluir pasta (DEL). Os outros ficheiros que ela contém são mantidos.</value>
+  </data>
+  <data name="Klicken_zeigt_was_die_Anpassung_enth_lt_Auf_eine_f063f797" xml:space="preserve">
+    <value>Clique para ver o que o ajuste contém. Arraste para uma pasta para o mover.</value>
+  </data>
+  <data name="Auf_das_im_Editor_ge_ffnete_Bild_anwenden_e8e855ed" xml:space="preserve">
+    <value>Aplicar à imagem aberta no editor</value>
+  </data>
+  <data name="Umbenennen_F2_89b3b3ba" xml:space="preserve">
+    <value>Renomear (F2)</value>
+  </data>
+  <data name="In_einen_anderen_Ordner_verschieben_66b049c4" xml:space="preserve">
+    <value>Mover para outra pasta</value>
+  </data>
+  <data name="Als_Datei_an_einen_anderen_Ort_exportieren_b0632359" xml:space="preserve">
+    <value>Exportar como ficheiro para outro local</value>
+  </data>
+  <data name="L_schen_ENTF_2e101259" xml:space="preserve">
+    <value>Excluir (DEL)</value>
+  </data>
+  <data name="enthalten_7d3b9efe" xml:space="preserve">
+    <value>incluído</value>
+  </data>
+  <data name="Alle_brigen_Regler_werden_auf_den_Neutralwert_ge_926e23af" xml:space="preserve">
+    <value>Todos os outros controlos são postos no valor neutro.</value>
+  </data>
+  <data name="L_schen_4b292f16" xml:space="preserve">
+    <value>Excluir?</value>
+  </data>
+  <data name="Anpassungen_in_0_cd658125" xml:space="preserve">
+    <value>Ajustes em {0}</value>
+  </data>
+  <data name="Keine_Anpassung_mit_diesem_Namen_gefunden_0faef088" xml:space="preserve">
+    <value>Nenhum ajuste encontrado com este nome.</value>
+  </data>
+  <data name="Links_einen_Ordner_w_hlen_8b9dbf96" xml:space="preserve">
+    <value>Escolha uma pasta à esquerda.</value>
+  </data>
+  <data name="In_diesem_Ordner_liegt_keine_Anpassung_Gespeiche_ee81a890" xml:space="preserve">
+    <value>Não há nenhum ajuste nesta pasta. Os ajustes são guardados no editor, em Ajustes guardados.</value>
+  </data>
+  <data name="L_schen_0_Anpassung_en_und_1_Unterordner_gehen_m_fd2cb752" xml:space="preserve">
+    <value>Excluir? {0} ajuste(s) e {1} subpasta(s) também serão excluídos.</value>
+  </data>
+  <data name="Anpassung_verschoben_0_99bf71a4" xml:space="preserve">
+    <value>Ajuste movido: {0}</value>
+  </data>
+  <data name="Angewendet_45946cda" xml:space="preserve">
+    <value>Aplicado</value>
   </data>
 </root>

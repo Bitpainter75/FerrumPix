@@ -379,6 +379,27 @@ Namespace Views
 
         End Sub
 
+        ''' <summary>Ordner waehlen fuer die gespeicherten Anpassungen; der Wechsel samt Frage nach
+        ''' dem Mitziehen liegt im ViewModel (ChangeAdjustmentPresetFolderAsync).</summary>
+        Friend Async Sub OnBrowseAdjustmentPresetFolderClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, SettingsViewModel)
+            If vm Is Nothing Then Return
+            e.Handled = True
+            Try
+                Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
+                If topLevel Is Nothing Then Return
+                Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
+                    .Title = LocalizationService.T("Ordner für Anpassungen wählen"),
+                    .AllowMultiple = False,
+                    .SuggestedStartLocation = Await FolderPickerStart.ForPathAsync(topLevel, vm.AdjustmentPresetFolderText)
+                })
+                Dim path = folders?.FirstOrDefault()?.Path.LocalPath
+                If Not String.IsNullOrWhiteSpace(path) Then Await vm.ChangeAdjustmentPresetFolderAsync(path)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.BrowseAdjustmentPresetFolder", ex)
+            End Try
+        End Sub
+
         Friend Async Sub OnBrowseGalleryStartupFolderClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, SettingsViewModel)
             If vm Is Nothing Then Return

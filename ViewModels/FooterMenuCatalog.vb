@@ -135,6 +135,10 @@ Namespace ViewModels
             Return Build("Anpassungen einfügen", "clipboard-text", c)
         End Function
 
+        Public Shared Function PasteAdjustmentsWithChoice(c As ICommand) As AppAction
+            Return Build("Einfügen mit Auswahl", "list-checks", c)
+        End Function
+
         ''' <summary>Das Untermenue "Varianten": die Varianten der Aufnahme, darunter Anlegen,
         ''' Umbenennen und Loeschen.</summary>
         Public Shared Function Variants(children As IReadOnlyList(Of Object)) As AppAction

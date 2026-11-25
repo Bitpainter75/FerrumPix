@@ -98,9 +98,18 @@
                             Classes.active="{Binding IsImagePinned}"
                             IsEnabled="{Binding CanPinForCompare}"
                             Click="OnTogglePinClick"
-                            ToolTip.Tip="Bild anheften – das nächste Bild wird daneben zum Vergleich gezeigt">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/push-pin.svg"
-                               Width="20" Height="20"/>
+                            ToolTip.Tip="Bild anheften. Die nächsten Bilder werden daneben zum Vergleich gezeigt">
+                        <!-- Die kleine Ziffer sagt, mit wie vielen Feldern der Vergleich laeuft (2 oder
+                             4); ohne Vergleich ist sie leer und nimmt keinen Platz. -->
+                        <Panel>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/push-pin.svg"
+                                   Width="20" Height="20"/>
+                            <TextBlock Text="{Binding CompareFieldCountBadge}" Classes="no-translate"
+                                       IsVisible="{Binding IsCompareMode}"
+                                       FontSize="9" FontWeight="Bold"
+                                       HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                       Margin="0,0,-5,-4" IsHitTestVisible="False"/>
+                        </Panel>
                     </Button>
 
                     <!-- Ausschnitt koppeln. Bewusst ein EIGENER Schalter und keine dritte Stufe am
@@ -111,9 +120,26 @@
                             IsVisible="{Binding IsCompareMode}"
                             Classes.active="{Binding IsCompareViewportLinked}"
                             Click="OnToggleCompareViewportLinkClick"
-                            ToolTip.Tip="Ausschnitt beider Bilder koppeln - ausgeschaltet lässt sich jede Seite für sich verschieben">
+                            ToolTip.Tip="Ausschnitt aller Bilder koppeln. Ausgeschaltet lässt sich jedes Bild für sich verschieben">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/link.svg"
                                Width="20" Height="20"/>
+                    </Button>
+
+                    <!-- Zwei oder vier Felder. Ein EIGENER Knopf neben dem Kettenknopf und nur im
+                         Vergleich sichtbar: die Stecknadel bleibt Ein und Aus. Das Symbol zeigt,
+                         was gerade gilt (zwei Spalten oder vier Quadrate); die Wahl wird gemerkt. -->
+                    <Button Classes="icon-btn" Width="34" Height="34"
+                            IsVisible="{Binding IsCompareMode}"
+                            Command="{Binding ToggleCompareFieldCountCommand}"
+                            ToolTip.Tip="Vergleich mit zwei oder vier Feldern">
+                        <Panel>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/columns.svg"
+                                           Width="20" Height="20"
+                                           IsVisible="{Binding IsCompareWithTwoFields}"/>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/squares-four.svg"
+                                           Width="20" Height="20"
+                                           IsVisible="{Binding IsCompareWithFourFields}"/>
+                        </Panel>
                     </Button>
 
 
@@ -210,6 +236,14 @@
                         <TextBlock Text="Wähle ein Bild aus der Galerie" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
                     </StackPanel>
 
+                    <!-- Die Galerie-Kachel, solange das Bild noch entwickelt wird (Einstellung, ab
+                         Werk aus). Steht sie da, entfaellt die Ladeanzeige darunter. -->
+                    <Image Source="{Binding TransitionImage, Converter={x:Static icons:ColorManagedBitmapConverter.Instance}}"
+                           IsVisible="{Binding ShowTransitionImage}"
+                           IsHitTestVisible="False"
+                           Stretch="Uniform"
+                           RenderOptions.BitmapInterpolationMode="MediumQuality" />
+
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12"
                                 IsVisible="{Binding ShowBitmapLoading}">
                         <ProgressBar Width="220" Height="4" IsIndeterminate="True" />
@@ -277,12 +311,13 @@
                                            RenderOptions.BitmapInterpolationMode="MediumQuality" />
                                 </Panel>
                             </Border>
-                            <!-- GESICHTSRAHMEN: neben dem Bild statt in seiner Huelle, damit die Namen
-                                 beim Drehen und Spiegeln des Betrachters lesbar bleiben. Die Lage
-                                 rechnet der Code ueber TranslatePoint durch dieselbe Huelle
-                                 (UpdateFaceFramePositions), sie folgt also Zoom, Drehung und Spiegeln. -->
-                            <Canvas Name="FaceFrameCanvas" IsHitTestVisible="False"
-                                    IsVisible="{Binding ShowFaceFrames}"/>
+                            <!-- MARKIERUNGEN UEBER DEM BILD (Gesichtsrahmen, Fokusfelder): neben dem Bild
+                                 statt in seiner Huelle, damit die Namen beim Drehen und Spiegeln des
+                                 Betrachters lesbar bleiben und kein Strich mit dem Zoom dicker wird.
+                                 Die Lage rechnet der Code ueber TranslatePoint durch dieselbe Huelle
+                                 (UpdateImageMarkPositions), sie folgt also Zoom, Drehung und Spiegeln. -->
+                            <Canvas Name="ImageMarkCanvas" IsHitTestVisible="False"
+                                    IsVisible="{Binding ShowImageMarks}"/>
                             <Canvas Name="CropSelectionCanvas" IsHitTestVisible="False">
                                 <Border Name="CropSelectionRect"
                                         IsVisible="False"
@@ -307,235 +342,34 @@
                         </Panel>
                     </ScrollViewer>
 
-                    <!-- Vergleichsbuehne: zwei Flaechen, EIN Zoom (beide rechnen mit vm.ZoomLevel),
-                         Ausschnitt gespiegelt (Code-behind). Die fokussierte Flaeche traegt den
-                         Akzentrahmen, und das Infopanel zeigt ihre Daten. -->
-                    <Grid Name="CompareStage" ColumnDefinitions="*,6,*" IsVisible="{Binding IsCompareMode}">
-                        <Border Grid.Column="0" BorderThickness="2" CornerRadius="3"
-                                BorderBrush="{DynamicResource FP.Accent}"
-                                IsVisible="{Binding IsCompareLeftFocused}" ZIndex="1"
-                                IsHitTestVisible="False" />
-                        <ScrollViewer Grid.Column="0" Name="CompareLeftScroll"
-                                      HorizontalScrollBarVisibility="Auto"
-                                      VerticalScrollBarVisibility="Auto"
-                                      SizeChanged="OnCompareViewportSizeChanged"
-                                      PointerPressed="OnComparePanePressed" Tag="0"
-                                      DoubleTapped="OnComparePaneDoubleTapped"
-                                      PointerMoved="OnComparePaneMoved"
-                                      PointerReleased="OnComparePaneReleased"
-                                      PointerCaptureLost="OnComparePaneReleased">
-                            <Image Name="CompareLeftImage" Source="{Binding CompareLeftImage, Converter={x:Static icons:ColorManagedBitmapConverter.Instance}}"
-                                   Stretch="Uniform"
-                                   RenderOptions.BitmapInterpolationMode="HighQuality" />
-                        </ScrollViewer>
+                    <!-- Vergleichsbuehne: zwei Flaechen nebeneinander oder vier als 2 mal 2, EIN Zoom
+                         (alle rechnen mit vm.ZoomLevel), Ausschnitt gespiegelt (Code-behind). Jede
+                         Flaeche ist ein ComparePaneView an ihrer ComparePaneViewModel; die aktive
+                         traegt den Akzentrahmen, und das Infopanel zeigt ihre Daten. Bei zwei
+                         Feldern nimmt der Code der zweiten Zeile und ihrem Steg die Hoehe
+                         (ApplyCompareStageLayout). -->
+                    <Grid Name="CompareStage" ColumnDefinitions="*,6,*" RowDefinitions="*,6,*" IsVisible="{Binding IsCompareMode}">
+                        <views:ComparePaneView Name="ComparePane0" Grid.Row="0" Grid.Column="0"
+                                               DataContext="{Binding ComparePanes[0]}"/>
+                        <views:ComparePaneView Name="ComparePane1" Grid.Row="0" Grid.Column="2"
+                                               DataContext="{Binding ComparePanes[1]}"/>
+                        <views:ComparePaneView Name="ComparePane2" Grid.Row="2" Grid.Column="0"
+                                               DataContext="{Binding ComparePanes[2]}"
+                                               IsVisible="{Binding IsVisible}"/>
+                        <views:ComparePaneView Name="ComparePane3" Grid.Row="2" Grid.Column="2"
+                                               DataContext="{Binding ComparePanes[3]}"
+                                               IsVisible="{Binding IsVisible}"/>
 
-                        <!-- Marken der linken Flaeche. Dauerhaft sichtbar und AUF dem Bild: nur so ist
-                             ablesbar, welches der beiden Bilder ein Knopf meint. Alles am linken Rand,
-                             damit der Blick beim Vergleichen nur eine Kante absuchen muss. -->
-                        <Grid Grid.Column="0" ZIndex="2" IsVisible="{Binding IsCompareMode}">
-                            <StackPanel Orientation="Horizontal" Spacing="6"
-                                        HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,10,0,0">
-                                <Button Classes="gallery-overlay-btn" Width="30" Height="30" Padding="0"
-                                        Tag="0" Click="OnCompareEditClick" ToolTip.Tip="Anpassen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plus-minus.svg"
-                                                   Width="18" Height="18" IconBrush="White"/>
-                                </Button>
-                                <Button Classes="gallery-overlay-btn danger" Width="30" Height="30" Padding="0"
-                                        Tag="0" Click="OnCompareDeleteClick" ToolTip.Tip="Löschen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
-                                                   Width="18" Height="18" IconBrush="White"/>
-                                </Button>
-                            </StackPanel>
-
-                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom"
-                                        HorizontalAlignment="Left" Margin="10,0,0,10">
-                                <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
-                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
-                                            Classes.active="{Binding CompareLeftRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
-                                            Tag="0:1" Click="OnCompareStarClick">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
-                                                       Classes="rating-star" Width="18" Height="18"/>
-                                    </Button>
-                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
-                                            Classes.active="{Binding CompareLeftRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
-                                            Tag="0:2" Click="OnCompareStarClick">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
-                                                       Classes="rating-star" Width="18" Height="18"/>
-                                    </Button>
-                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
-                                            Classes.active="{Binding CompareLeftRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
-                                            Tag="0:3" Click="OnCompareStarClick">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
-                                                       Classes="rating-star" Width="18" Height="18"/>
-                                    </Button>
-                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
-                                            Classes.active="{Binding CompareLeftRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
-                                            Tag="0:4" Click="OnCompareStarClick">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
-                                                       Classes="rating-star" Width="18" Height="18"/>
-                                    </Button>
-                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
-                                            Classes.active="{Binding CompareLeftRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
-                                            Tag="0:5" Click="OnCompareStarClick">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
-                                                       Classes="rating-star" Width="18" Height="18"/>
-                                    </Button>
-                                </StackPanel>
-                                <Button Classes="favorite-btn image-favorite-btn" Width="30" Height="30" Padding="0"
-                                        Tag="0" Click="OnCompareFavoriteClick" ToolTip.Tip="Favorit">
-                                    <Grid>
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
-                                                       Width="20" Height="20" Classes="fav-heart"
-                                                       IsVisible="{Binding !CompareLeftIsFavorite}"/>
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
-                                                       Width="20" Height="20" Classes="fav-heart active"
-                                                       IsVisible="{Binding CompareLeftIsFavorite}"/>
-                                    </Grid>
-                                </Button>
-                                <Button Classes="icon-btn pick-btn pick-keep on-image" Width="30" Height="30" Padding="0"
-                                        Classes.active="{Binding IsCompareLeftPicked}"
-                                        Tag="0:1" Click="OnComparePickClick"
-                                        ToolTip.Tip="Als behalten markieren (erneut nimmt es zurück)">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-up.svg" Width="18" Height="18"/>
-                                </Button>
-                                <Button Classes="icon-btn pick-btn pick-reject on-image" Width="30" Height="30" Padding="0"
-                                        Classes.active="{Binding IsCompareLeftRejected}"
-                                        Tag="0:-1" Click="OnComparePickClick"
-                                        ToolTip.Tip="Als verworfen markieren (erneut nimmt es zurück)">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-down.svg" Width="18" Height="18"/>
-                                </Button>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,10,10">
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F08A1A" Click="OnCompareLeftColorLabelClick" ToolTip.Tip="Orange"><Grid><Ellipse Width="16" Height="16" Fill="#F08A1A"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsCompareLeftColorLabelOrange}"/></Grid></Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#E74C3C" Click="OnCompareLeftColorLabelClick" ToolTip.Tip="Rot"><Grid><Ellipse Width="16" Height="16" Fill="#E74C3C"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsCompareLeftColorLabelRed}"/></Grid></Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F03B88" Click="OnCompareLeftColorLabelClick" ToolTip.Tip="Pink"><Grid><Ellipse Width="16" Height="16" Fill="#F03B88"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsCompareLeftColorLabelPink}"/></Grid></Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#8B5CF6" Click="OnCompareLeftColorLabelClick" ToolTip.Tip="Lila"><Grid><Ellipse Width="16" Height="16" Fill="#8B5CF6"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsCompareLeftColorLabelPurple}"/></Grid></Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#3B82F6" Click="OnCompareLeftColorLabelClick" ToolTip.Tip="Blau"><Grid><Ellipse Width="16" Height="16" Fill="#3B82F6"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsCompareLeftColorLabelBlue}"/></Grid></Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#0891B2" Click="OnCompareLeftColorLabelClick" ToolTip.Tip="Cyan"><Grid><Ellipse Width="16" Height="16" Fill="#0891B2"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsCompareLeftColorLabelCyan}"/></Grid></Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#0F766E" Click="OnCompareLeftColorLabelClick" ToolTip.Tip="Türkis"><Grid><Ellipse Width="16" Height="16" Fill="#0F766E"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsCompareLeftColorLabelTeal}"/></Grid></Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#22C55E" Click="OnCompareLeftColorLabelClick" ToolTip.Tip="Grün"><Grid><Ellipse Width="16" Height="16" Fill="#22C55E"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsCompareLeftColorLabelGreen}"/></Grid></Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#FACC15" Click="OnCompareLeftColorLabelClick" ToolTip.Tip="Gelb"><Grid><Ellipse Width="16" Height="16" Fill="#FACC15"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsCompareLeftColorLabelYellow}"/></Grid></Button>
-                            </StackPanel>
-                        </Grid>
-
-                        <Border Grid.Column="2" BorderThickness="2" CornerRadius="3"
-                                BorderBrush="{DynamicResource FP.Accent}"
-                                IsVisible="{Binding IsCompareRightFocused}" ZIndex="1"
-                                IsHitTestVisible="False" />
-                        <ScrollViewer Grid.Column="2" Name="CompareRightScroll"
-                                      HorizontalScrollBarVisibility="Auto"
-                                      VerticalScrollBarVisibility="Auto"
-                                      PointerPressed="OnComparePanePressed" Tag="1"
-                                      DoubleTapped="OnComparePaneDoubleTapped"
-                                      PointerMoved="OnComparePaneMoved"
-                                      PointerReleased="OnComparePaneReleased"
-                                      PointerCaptureLost="OnComparePaneReleased">
-                            <Image Name="CompareRightImage" Source="{Binding CompareRightImage, Converter={x:Static icons:ColorManagedBitmapConverter.Instance}}"
-                                   Stretch="Uniform"
-                                   RenderOptions.BitmapInterpolationMode="HighQuality" />
-                        </ScrollViewer>
-
-                        <!-- Marken der rechten Flaeche. Dauerhaft sichtbar und AUF dem Bild: nur so ist
-                             ablesbar, welches der beiden Bilder ein Knopf meint. Alles am linken Rand,
-                             damit der Blick beim Vergleichen nur eine Kante absuchen muss. -->
-                        <Grid Grid.Column="2" ZIndex="2" IsVisible="{Binding IsCompareMode}">
-                            <StackPanel Orientation="Horizontal" Spacing="6"
-                                        HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,10,0,0">
-                                <Button Classes="gallery-overlay-btn" Width="30" Height="30" Padding="0"
-                                        Tag="1" Click="OnCompareEditClick" ToolTip.Tip="Anpassen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plus-minus.svg"
-                                                   Width="18" Height="18" IconBrush="White"/>
-                                </Button>
-                                <Button Classes="gallery-overlay-btn danger" Width="30" Height="30" Padding="0"
-                                        Tag="1" Click="OnCompareDeleteClick" ToolTip.Tip="Löschen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
-                                                   Width="18" Height="18" IconBrush="White"/>
-                                </Button>
-                            </StackPanel>
-
-                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom"
-                                        HorizontalAlignment="Left" Margin="10,0,0,10">
-                                <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
-                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
-                                            Classes.active="{Binding CompareRightRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
-                                            Tag="1:1" Click="OnCompareStarClick">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
-                                                       Classes="rating-star" Width="18" Height="18"/>
-                                    </Button>
-                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
-                                            Classes.active="{Binding CompareRightRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
-                                            Tag="1:2" Click="OnCompareStarClick">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
-                                                       Classes="rating-star" Width="18" Height="18"/>
-                                    </Button>
-                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
-                                            Classes.active="{Binding CompareRightRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
-                                            Tag="1:3" Click="OnCompareStarClick">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
-                                                       Classes="rating-star" Width="18" Height="18"/>
-                                    </Button>
-                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
-                                            Classes.active="{Binding CompareRightRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
-                                            Tag="1:4" Click="OnCompareStarClick">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
-                                                       Classes="rating-star" Width="18" Height="18"/>
-                                    </Button>
-                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="1,0"
-                                            Classes.active="{Binding CompareRightRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
-                                            Tag="1:5" Click="OnCompareStarClick">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
-                                                       Classes="rating-star" Width="18" Height="18"/>
-                                    </Button>
-                                </StackPanel>
-                                <Button Classes="favorite-btn image-favorite-btn" Width="30" Height="30" Padding="0"
-                                        Tag="1" Click="OnCompareFavoriteClick" ToolTip.Tip="Favorit">
-                                    <Grid>
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
-                                                       Width="20" Height="20" Classes="fav-heart"
-                                                       IsVisible="{Binding !CompareRightIsFavorite}"/>
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
-                                                       Width="20" Height="20" Classes="fav-heart active"
-                                                       IsVisible="{Binding CompareRightIsFavorite}"/>
-                                    </Grid>
-                                </Button>
-                                <Button Classes="icon-btn pick-btn pick-keep on-image" Width="30" Height="30" Padding="0"
-                                        Classes.active="{Binding IsCompareRightPicked}"
-                                        Tag="1:1" Click="OnComparePickClick"
-                                        ToolTip.Tip="Als behalten markieren (erneut nimmt es zurück)">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-up.svg" Width="18" Height="18"/>
-                                </Button>
-                                <Button Classes="icon-btn pick-btn pick-reject on-image" Width="30" Height="30" Padding="0"
-                                        Classes.active="{Binding IsCompareRightRejected}"
-                                        Tag="1:-1" Click="OnComparePickClick"
-                                        ToolTip.Tip="Als verworfen markieren (erneut nimmt es zurück)">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-down.svg" Width="18" Height="18"/>
-                                </Button>
-                            </StackPanel>
-                            <!-- Farbetiketten fuer das rechte Wechselbild, entsprechend dem Infopanel. -->
-                            <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,10,10">
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F08A1A" Click="OnCompareRightColorLabelClick" ToolTip.Tip="Orange"><Grid><Ellipse Width="16" Height="16" Fill="#F08A1A"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsCompareRightColorLabelOrange}"/></Grid></Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#E74C3C" Click="OnCompareRightColorLabelClick" ToolTip.Tip="Rot"><Grid><Ellipse Width="16" Height="16" Fill="#E74C3C"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsCompareRightColorLabelRed}"/></Grid></Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F03B88" Click="OnCompareRightColorLabelClick" ToolTip.Tip="Pink"><Grid><Ellipse Width="16" Height="16" Fill="#F03B88"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsCompareRightColorLabelPink}"/></Grid></Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#8B5CF6" Click="OnCompareRightColorLabelClick" ToolTip.Tip="Lila"><Grid><Ellipse Width="16" Height="16" Fill="#8B5CF6"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsCompareRightColorLabelPurple}"/></Grid></Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#3B82F6" Click="OnCompareRightColorLabelClick" ToolTip.Tip="Blau"><Grid><Ellipse Width="16" Height="16" Fill="#3B82F6"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsCompareRightColorLabelBlue}"/></Grid></Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#0891B2" Click="OnCompareRightColorLabelClick" ToolTip.Tip="Cyan"><Grid><Ellipse Width="16" Height="16" Fill="#0891B2"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsCompareRightColorLabelCyan}"/></Grid></Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#0F766E" Click="OnCompareRightColorLabelClick" ToolTip.Tip="Türkis"><Grid><Ellipse Width="16" Height="16" Fill="#0F766E"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsCompareRightColorLabelTeal}"/></Grid></Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#22C55E" Click="OnCompareRightColorLabelClick" ToolTip.Tip="Grün"><Grid><Ellipse Width="16" Height="16" Fill="#22C55E"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsCompareRightColorLabelGreen}"/></Grid></Button>
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#FACC15" Click="OnCompareRightColorLabelClick" ToolTip.Tip="Gelb"><Grid><Ellipse Width="16" Height="16" Fill="#FACC15"/><Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsCompareRightColorLabelYellow}"/></Grid></Button>
-                            </StackPanel>
-                        </Grid>
-
-
-                        <!-- Tauschen sitzt zwischen den Flaechen: es gehoert zu BEIDEN, nicht zu
-                             einer. Rund, damit es sich von den eckigen Marken der Flaechen
-                             unterscheidet und nicht als deren dritter Knopf gelesen wird. -->
-                        <Button Grid.Column="0" Grid.ColumnSpan="3" ZIndex="3"
+                        <!-- Tauschen sitzt zwischen den Flaechen, in der Mitte der Buehne: es gehoert
+                             zu allen, nicht zu einer. Rund, damit es sich von den eckigen Marken der
+                             Flaechen unterscheidet und nicht als deren dritter Knopf gelesen wird. -->
+                        <Button Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="0" Grid.RowSpan="3" ZIndex="3"
                                 Classes="video-play-badge"
                                 Width="46" Height="46" CornerRadius="23"
                                 HorizontalAlignment="Center" VerticalAlignment="Center"
                                 IsEnabled="{Binding CanSwapComparePanes}"
                                 Click="OnSwapComparePanesClick"
-                                ToolTip.Tip="Seiten tauschen - das rechte Bild wird das neue angeheftete">
+                                ToolTip.Tip="Bezugsbild wechseln. Bei zwei Feldern wird das rechte Bild das neue angeheftete, bei vier das des aktiven Felds">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrows-left-right.svg"
                                            Width="22" Height="22"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -812,6 +646,34 @@
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/scan-smiley.svg"
                                            Width="18" Height="18"/>
                         </ToggleButton>
+                        <!-- FOKUSFELDER aus den Aufnahmedaten ueber dem Bild, gemerkt in den
+                             Einstellungen (ViewerFocusPoints). IMMER da, auch bei Bildern ohne
+                             Angabe: der Hinweistext nennt dann den Grund (FocusPointHint), sonst
+                             saehe ein Knopf, der mal da ist und mal nicht, wie ein Fehler aus. -->
+                        <ToggleButton Classes="icon-btn" Width="28" Height="28"
+                                      Margin="-5,0,0,0"
+                                      IsChecked="{Binding ShowFocusPoints, Mode=TwoWay}"
+                                      ToolTip.Tip="{Binding FocusPointHint}">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/scan.svg"
+                                           Width="18" Height="18"/>
+                        </ToggleButton>
+                        <!-- BEWEGTBILD: spielt den kurzen Film eines Live Photos oder Motion Photos
+                             einmal ab, ein zweiter Druck haelt ihn an. Nur da, wenn zum gezeigten Bild
+                             ein Film gehoert (HasMotionClip), nicht in der Diashow und nicht im
+                             Vergleich. Der Hinweis kommt uebersetzt aus dem ViewModel. -->
+                        <Button Classes="icon-btn" Width="28" Height="28"
+                                Margin="-5,0,0,0"
+                                IsVisible="{Binding HasMotionClip}"
+                                Classes.active="{Binding IsMotionPlaying}"
+                                Command="{Binding PlayMotionCommand}"
+                                ToolTip.Tip="{Binding MotionButtonTip}">
+                            <Panel>
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/play-circle.svg"
+                                               Width="18" Height="18" IsVisible="{Binding !IsMotionPlaying}"/>
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/stop.svg"
+                                               Width="18" Height="18" IsVisible="{Binding IsMotionPlaying}"/>
+                            </Panel>
+                        </Button>
                         <!-- Dateiname steht jetzt als Fenstertitel oben in der Mitte. -->
                         <TextBlock Text="{Binding StatusInfo}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
@@ -847,6 +709,12 @@
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Right">
                         <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
+                            <!-- Warum keine Fokusfelder zu sehen sind, nach dem Einschalten von Hand.
+                                 Der Text kommt uebersetzt aus dem ViewModel, deshalb no-translate. -->
+                            <TextBlock Classes="no-translate"
+                                       Text="{Binding FocusPointNotice}" Margin="0,0,20,0"
+                                       IsVisible="{Binding FocusPointNotice, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
+                                       Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding MousePositionText}" Margin="0,0,20,0"
                                        IsVisible="{Binding MousePositionText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
                                        Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
@@ -935,6 +803,12 @@
               PointerMoved="OnFullscreenViewportPointerMoved"
               PointerReleased="OnFullscreenViewportPointerReleased"
               IsVisible="{Binding IsFullscreenMode}">
+            <!-- Auch im Vollbild fuellt die Kachel die Flaeche, bis das Bild entwickelt ist. -->
+            <Image Source="{Binding TransitionImage, Converter={x:Static icons:ColorManagedBitmapConverter.Instance}}"
+                   IsVisible="{Binding ShowTransitionImage}"
+                   IsHitTestVisible="False"
+                   Stretch="Uniform"
+                   RenderOptions.BitmapInterpolationMode="MediumQuality" />
             <Border Name="FullscreenImageBackgroundBorder"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
@@ -1003,6 +877,14 @@
                             Command="{Binding NextCommand}"
                             ToolTip.Tip="Nächstes Bild">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/caret-right.svg" Width="18" Height="18" IconBrush="White"/>
+                    </Button>
+                    <!-- Bewegtbild im Vollbild: derselbe Knopf wie in der Fussleiste. Solange der
+                         Film laeuft, steht hier die Leiste des Videos. -->
+                    <Button Classes="icon-btn" Width="36" Height="36"
+                            IsVisible="{Binding HasMotionClip}"
+                            Command="{Binding PlayMotionCommand}"
+                            ToolTip.Tip="{Binding MotionButtonTip}">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/play-circle.svg" Width="18" Height="18" IconBrush="White"/>
                     </Button>
                     <Button Classes="icon-btn bar-toggle" Width="36" Height="36"
                             Command="{Binding ToggleSlideshowShuffleCommand}"
@@ -1232,7 +1114,7 @@
               Margin="88,0,80,0"
               Background="Black"
               ClipToBounds="True"
-              IsVisible="{Binding IsVideoFile}"
+              IsVisible="{Binding ShowsVideoStage}"
               RowDefinitions="*,Auto">
             <!-- Zwei Ausgabewege, immer nur einer sichtbar: die native Fläche für Windows und
                  Linux, die abholende Fläche für macOS. Welcher gilt, entscheidet der Spieler

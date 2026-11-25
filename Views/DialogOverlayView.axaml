@@ -301,6 +301,18 @@
                                                          DataContext="{Binding DialogMetadataCompare}"
                                                          IsVisible="{Binding $parent[UserControl].DataContext.DialogShowsCompareMetadata}"/>
 
+                        <!-- Anpassung speichern (Editor): Name und Auswahl der Regler. -->
+                        <views:AdjustmentPresetSaveDialogView Grid.Row="3"
+                                                              Margin="0,14,0,0"
+                                                              DataContext="{Binding DialogAdjustmentPresetSave}"
+                                                              IsVisible="{Binding $parent[UserControl].DataContext.DialogShowsAdjustmentPresetSave}"/>
+
+                        <!-- Anpassungen verwalten: Ordnerbaum und Anpassungen des Ordners. -->
+                        <views:AdjustmentPresetManagerView Grid.Row="3"
+                                                           Margin="0,14,0,0"
+                                                           DataContext="{Binding DialogAdjustmentPresetManager}"
+                                                           IsVisible="{Binding $parent[UserControl].DataContext.DialogShowsAdjustmentPresetManager}"/>
+
                         <!-- Katalog und Dateien: welche Angaben uebertragen werden. Die Wahl fuer
                              Stichwoerter gibt es nur in Richtung Katalog. -->
                         <StackPanel Grid.Row="3"

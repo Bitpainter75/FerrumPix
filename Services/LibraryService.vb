@@ -42,6 +42,10 @@ Namespace Services
         Public Property Lens As String = ""
         ''' Einzelbild oder Serie laut Kamera (siehe ExifService.GetCaptureMode).
         Public Property CaptureMode As CaptureMode
+        ''' Motion Photo, Bild oder Film eines Live Photos (siehe LivePhotoService.Identify).
+        Public Property MotionKind As MotionKind
+        ''' Die Kennung eines Live Photos, an der Bild und Film zusammengehoeren; sonst leer.
+        Public Property MotionId As String = ""
         Public Property Aperture As Double?
         Public Property FocalLengthMm As Double?
         Public Property Iso As Integer?
@@ -554,7 +558,9 @@ Namespace Services
             ("Credit", "TEXT"),
             ("Copyright", "TEXT"),
             ("ClearedCopies", "TEXT"),
-            ("DateTakenOffset", "TEXT")
+            ("DateTakenOffset", "TEXT"),
+            ("MotionKind", "INTEGER NOT NULL DEFAULT 0"),
+            ("MotionId", "TEXT")
         }
 
         ''' <summary>Spalten, die spaeter zur Gesichtstabelle dazugekommen sind. Bestehende
@@ -1751,6 +1757,8 @@ Namespace Services
                    String.Equals(existing.Camera, If(exif.Camera, ""), StringComparison.Ordinal) AndAlso
                    String.Equals(existing.Lens, If(exif.Lens, ""), StringComparison.Ordinal) AndAlso
                    existing.CaptureMode = exif.CaptureMode AndAlso
+                   existing.MotionKind = exif.MotionKind AndAlso
+                   String.Equals(existing.MotionId, If(exif.MotionId, ""), StringComparison.Ordinal) AndAlso
                    NullableEquals(existing.Aperture, exif.Aperture) AndAlso
                    NullableEquals(existing.FocalLengthMm, exif.FocalLengthMm) AndAlso
                    NullableEquals(existing.Iso, exif.Iso) AndAlso
@@ -1868,8 +1876,8 @@ Namespace Services
                 conn.Open()
                 Using cmd = conn.CreateCommand()
                     cmd.CommandText =
-                        "INSERT INTO ImageMeta(FilePath,DateTaken,DateModifiedExif,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight,FileCreatedAt,HasExifMetadata,HasIptcMetadata,HasXmpMetadata,ScannedSourceModifiedAt,ScannedSidecarModifiedAt,ExifSummary,IptcSummary,XmpSummary,IccSummary,SummaryFormat,HasIccProfile,City,Country,CountryCode,CaptureMode,Title,Headline,Description,Creator,Credit,Copyright,DateTakenOffset) " &
-                        "VALUES($p,$dateTaken,$dateModifiedExif,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height,$fileCreatedAt,$hasExifMetadata,$hasIptcMetadata,$hasXmpMetadata,$scannedSourceModifiedAt,$scannedSidecarModifiedAt,$exifSummary,$iptcSummary,$xmpSummary,$iccSummary,$summaryFormat,$hasIccProfile,$city,$country,$countryCode,$captureMode,$title,$headline,$description,$creator,$credit,$copyright,$dateTakenOffset) " &
+                        "INSERT INTO ImageMeta(FilePath,DateTaken,DateModifiedExif,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight,FileCreatedAt,HasExifMetadata,HasIptcMetadata,HasXmpMetadata,ScannedSourceModifiedAt,ScannedSidecarModifiedAt,ExifSummary,IptcSummary,XmpSummary,IccSummary,SummaryFormat,HasIccProfile,City,Country,CountryCode,CaptureMode,Title,Headline,Description,Creator,Credit,Copyright,DateTakenOffset,MotionKind,MotionId) " &
+                        "VALUES($p,$dateTaken,$dateModifiedExif,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height,$fileCreatedAt,$hasExifMetadata,$hasIptcMetadata,$hasXmpMetadata,$scannedSourceModifiedAt,$scannedSidecarModifiedAt,$exifSummary,$iptcSummary,$xmpSummary,$iccSummary,$summaryFormat,$hasIccProfile,$city,$country,$countryCode,$captureMode,$title,$headline,$description,$creator,$credit,$copyright,$dateTakenOffset,$motionKind,$motionId) " &
                         "ON CONFLICT(FilePath) DO UPDATE SET " &
                         "DateTaken=excluded.DateTaken, DateTakenOffset=excluded.DateTakenOffset, DateModifiedExif=excluded.DateModifiedExif, Camera=excluded.Camera, Lens=excluded.Lens, " &
                         "Aperture=excluded.Aperture, FocalLengthMm=excluded.FocalLengthMm, Iso=excluded.Iso, " &
@@ -1883,6 +1891,7 @@ Namespace Services
                         "ExifSummary=excluded.ExifSummary, IptcSummary=excluded.IptcSummary, XmpSummary=excluded.XmpSummary, " &
                         "IccSummary=excluded.IccSummary, SummaryFormat=excluded.SummaryFormat, " &
                         "HasIccProfile=excluded.HasIccProfile, CaptureMode=excluded.CaptureMode, " &
+                        "MotionKind=excluded.MotionKind, MotionId=excluded.MotionId, " &
                         MaskedAssignment("City", "Place", "''") & ", " & MaskedAssignment("Country", "Place", "''") & ", " &
                         MaskedAssignment("CountryCode", "Place", "''") & ", " &
                         MaskedAssignment("Title", "Title", "''") & ", " & MaskedAssignment("Headline", "Headline", "''") & ", " &
@@ -1897,6 +1906,8 @@ Namespace Services
                     cmd.Parameters.AddWithValue("$credit", description.Credit)
                     cmd.Parameters.AddWithValue("$copyright", If(exif.Copyright, ""))
                     cmd.Parameters.AddWithValue("$captureMode", CInt(exif.CaptureMode))
+                    cmd.Parameters.AddWithValue("$motionKind", CInt(exif.MotionKind))
+                    cmd.Parameters.AddWithValue("$motionId", If(exif.MotionId, ""))
                     cmd.Parameters.AddWithValue("$dateTaken", If(exif.DateTaken, ""))
                     cmd.Parameters.AddWithValue("$dateTakenOffset", If(exif.DateTakenOffset, ""))
                     cmd.Parameters.AddWithValue("$dateModifiedExif", If(exif.DateModifiedExif, ""))
@@ -1933,7 +1944,7 @@ Namespace Services
         ''' ACHTUNG: ReadMetaRow greift über SPALTENNUMMERN zu - neue Spalten gehören ans Ende, sonst
         ''' verschieben sich alle folgenden Indizes stillschweigend auf die falschen Werte.
         Private Const MetaColumnList As String =
-            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat, ColorLabel, ScannedSidecarModifiedAt, City, Country, CountryCode, PickState, CaptureMode, Title, Headline, Description, Creator, Credit, Copyright, ClearedCopies, DateTakenOffset"
+            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat, ColorLabel, ScannedSidecarModifiedAt, City, Country, CountryCode, PickState, CaptureMode, Title, Headline, Description, Creator, Credit, Copyright, ClearedCopies, DateTakenOffset, MotionKind, MotionId"
 
         Private Shared Function ReadMetaRow(reader As SqliteDataReader) As LibraryImageMeta
             Return New LibraryImageMeta With {
@@ -1978,8 +1989,52 @@ Namespace Services
                 .Credit = If(reader.IsDBNull(38), "", reader.GetString(38)),
                 .Copyright = If(reader.IsDBNull(39), "", reader.GetString(39)),
                 .ClearedCopies = If(reader.IsDBNull(40), "", reader.GetString(40)),
-                .DateTakenOffset = If(reader.IsDBNull(41), "", reader.GetString(41))
+                .DateTakenOffset = If(reader.IsDBNull(41), "", reader.GetString(41)),
+                .MotionKind = If(reader.IsDBNull(42), MotionKind.None, NormalizeMotionKind(reader.GetInt32(42))),
+                .MotionId = If(reader.IsDBNull(43), "", reader.GetString(43))
             }
+        End Function
+
+        ''' <summary>Ein Wert der Spalte MotionKind als Art. Was keine der vier ist (eine Zeile aus
+        ''' einer spaeteren Fassung, ein von Hand veraenderter Katalog), zaehlt als keins.</summary>
+        Private Shared Function NormalizeMotionKind(value As Integer) As MotionKind
+            If value < CInt(MotionKind.None) OrElse value > CInt(MotionKind.LivePhotoVideo) Then Return MotionKind.None
+            Return CType(value, MotionKind)
+        End Function
+
+        ''' <summary>Art und Kennung des Bewegtbilds aus dem Katalog, aber nur, wenn die Zeile zur
+        ''' Datei auf der Platte passt: gelesen mit der heutigen Lesefassung, und die Datei seither
+        ''' nicht geaendert. Sonst False, und der Aufrufer fragt die Datei selbst. Damit muss die
+        ''' Frage nach einem angehaengten Film die Datei nicht oeffnen, wo der EXIF-Lauf sie schon
+        ''' beantwortet hat (MotionPhotoService.HasVideo, LivePhotoService.IdentityOf).</summary>
+        Public Function TryGetCurrentMotion(filePath As String, ByRef kind As MotionKind, ByRef motionId As String) As Boolean
+            kind = MotionKind.None
+            motionId = ""
+            If String.IsNullOrWhiteSpace(filePath) Then Return False
+            Dim modifiedAt As String
+            Try
+                Dim info = New FileInfo(filePath)
+                If Not info.Exists Then Return False
+                modifiedAt = info.LastWriteTime.ToString("o")
+            Catch
+                Return False
+            End Try
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT ScannedSourceModifiedAt, SummaryFormat, MotionKind, MotionId FROM ImageMeta WHERE FilePath = $p"
+                    cmd.Parameters.AddWithValue("$p", PathKey(filePath))
+                    Using reader = cmd.ExecuteReader()
+                        If Not reader.Read() Then Return False
+                        If reader.IsDBNull(0) OrElse Not String.Equals(reader.GetString(0), modifiedAt, StringComparison.Ordinal) Then Return False
+                        If reader.IsDBNull(1) OrElse
+                           Not String.Equals(reader.GetString(1), ExifService.CurrentSummaryFormatFor(filePath), StringComparison.Ordinal) Then Return False
+                        kind = If(reader.IsDBNull(2), MotionKind.None, NormalizeMotionKind(reader.GetInt32(2)))
+                        motionId = If(reader.IsDBNull(3), "", reader.GetString(3))
+                        Return True
+                    End Using
+                End Using
+            End Using
         End Function
 
         ''' <summary>Nur die drei Stempel, an denen der Katalogindex erkennt, ob eine Datei erneut

@@ -64,6 +64,9 @@
         <CheckBox IsChecked="{Binding DialogBackupSearches, Mode=TwoWay}" IsEnabled="{Binding CanChooseBackupSearches}">
             <TextBlock Text="Gespeicherte Suchen" TextWrapping="Wrap"/>
         </CheckBox>
+        <CheckBox IsChecked="{Binding DialogBackupAdjustmentPresets, Mode=TwoWay}" IsEnabled="{Binding CanChooseBackupAdjustmentPresets}">
+            <TextBlock Text="Gespeicherte Anpassungen" TextWrapping="Wrap"/>
+        </CheckBox>
 
         <!-- PFADANFAENGE: fuer das Zurueckholen auf einem anderen Rechner. Links der Anfang aus der
              Sicherung mit seiner Bildzahl, rechts der neue. -->

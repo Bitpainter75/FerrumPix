@@ -6,8 +6,9 @@ Imports FerrumPix.Models
 
 Namespace Services
 
-    ''' <summary>Eine Aufnahme: eine Datei, oder ein RAW mit dem JPEG, das die Kamera daneben
-    ''' geschrieben hat. Die erste Datei fuehrt (beim Paar das RAW).</summary>
+    ''' <summary>Eine Aufnahme: eine Datei, ein RAW mit dem JPEG, das die Kamera daneben
+    ''' geschrieben hat, oder das Bild eines Live Photos mit seinem Film. Die erste Datei fuehrt
+    ''' (beim Paar das RAW, beim Live Photo das Bild).</summary>
     Public NotInheritable Class StackShot
         Public ReadOnly Property Files As New List(Of ImageItem)()
 
@@ -109,15 +110,50 @@ Namespace Services
                    Not String.IsNullOrEmpty(item.FilePath)
         End Function
 
+        ''' <summary>Der Film eines Live Photos: die einzige Videodatei, die in einen Stapel darf,
+        ''' und nur HINTER ihr Bild (<see cref="AttachLiveVideos"/>). Eine Aufnahme fuer sich ist
+        ''' sie nie, also auch kein Glied einer Serie.</summary>
+        Private Shared Function IsLiveVideo(item As ImageItem) As Boolean
+            Return item IsNot Nothing AndAlso item.IsVideoFile AndAlso item.MotionKind = MotionKind.LivePhotoVideo AndAlso
+                   LivePhotoService.IsPairCandidate(item)
+        End Function
+
+        ''' <summary>Haengt jeden Film eines Live Photos hinter die Aufnahme seines Bildes: gleicher
+        ''' Ordner, gleicher Stamm, gleiche Kennung (LivePhotoService.PairItems). Das Bild fuehrt,
+        ''' der Film liegt dahinter, bei RAW+JPEG mit Film als dritte Datei. Ein Film ohne Bild
+        ''' bleibt, was er war: eine eigene Videokachel ausserhalb aller Stapel.</summary>
+        Private Shared Sub AttachLiveVideos(items As IEnumerable(Of ImageItem), shots As List(Of StackShot))
+            Dim videos = items.Where(AddressOf IsLiveVideo).ToList()
+            If videos.Count = 0 Then Return
+            Dim partners = LivePhotoService.PairItems(items)
+            If partners.Count = 0 Then Return
+            Dim shotOf As New Dictionary(Of ImageItem, StackShot)()
+            For Each shot In shots
+                For Each file In shot.Files
+                    shotOf(file) = shot
+                Next
+            Next
+            For Each video In videos
+                Dim image As ImageItem = Nothing
+                Dim target As StackShot = Nothing
+                If Not partners.TryGetValue(video, image) OrElse Not shotOf.TryGetValue(image, target) Then Continue For
+                target.Files.Add(video)
+            Next
+        End Sub
+
         ''' <summary>Die Stapel einer Liste. Mit <paramref name="acrossFolders"/> zeigt die Liste
         ''' einen Ordner samt allem darunter: Serien und Paare entstehen dann auch aus Dateien
         ''' verschiedener Ordner. Eine Kopie derselben Aufnahme (gleicher Dateiname, gleiche
         ''' Groesse) ist dabei keine zweite Ausloesung und kommt nicht in die Serie ihres
         ''' Originals.</summary>
         Public Shared Function Build(items As IEnumerable(Of ImageItem), Optional acrossFolders As Boolean = False) As List(Of ImageStack)
-            Dim candidates = items.Where(AddressOf IsStackable).ToList()
+            Dim all = items.ToList()
+            Dim candidates = all.Where(AddressOf IsStackable).ToList()
             Dim standalone As New HashSet(Of StackShot)()
             Dim shots = BuildShots(candidates, standalone, acrossFolders)
+            ' Live Photo: der Film kommt hinter sein Bild, bevor Serien und Paare gebildet werden.
+            ' Eine Aufnahme mit Film zaehlt damit als Paar und in einer Serie als EINE Aufnahme.
+            AttachLiveVideos(all, shots)
             Dim stacks As New List(Of ImageStack)()
 
             ' Serien je Ordner und Kamera; zwei Gehaeuse, die in derselben Sekunde ausloesen, sind
@@ -174,8 +210,13 @@ Namespace Services
         ''' muss ein Paar als die EINE Kachel beurteilen, die es danach ist.</summary>
         Public Shared Function PairPartners(items As IEnumerable(Of ImageItem), Optional acrossFolders As Boolean = False) As Dictionary(Of ImageItem, ImageItem)
             Dim result As New Dictionary(Of ImageItem, ImageItem)()
-            Dim candidates = items.Where(AddressOf IsStackable).ToList()
-            For Each shot In BuildShots(candidates, New HashSet(Of StackShot)(), acrossFolders)
+            Dim all = items.ToList()
+            Dim candidates = all.Where(AddressOf IsStackable).ToList()
+            Dim shots = BuildShots(candidates, New HashSet(Of StackShot)(), acrossFolders)
+            ' Bild und Film eines Live Photos sind ebenso EINE Kachel. Liegt der Film hinter einem
+            ' RAW+JPEG-Paar, bleibt es hier beim Paar: die Liste kennt je Datei einen Partner.
+            AttachLiveVideos(all, shots)
+            For Each shot In shots
                 If Not shot.IsPair Then Continue For
                 result(shot.Files(0)) = shot.Files(1)
                 result(shot.Files(1)) = shot.Files(0)

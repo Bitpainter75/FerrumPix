@@ -5108,12 +5108,24 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' Kantenlänge einer Rasterzelle in Bildpixeln (Einstellungen -> Editor).
-        Public ReadOnly Property EditorGridSize As Integer
+        ''' <summary>Kantenlaenge einer Rasterzelle in Bildpixeln. Derselbe Wert wie in den
+        ''' Einstellungen (Editor); gesetzt wird er auch aus dem Aufklapper am Rasterknopf. Klemmen,
+        ''' Speichern und Melden besorgt die Einstellung (SettingsViewModel.EditorGridSize), sie
+        ''' meldet ueber MainWindowViewModel.RefreshLayoutBindings auch diese Eigenschaft.
+        '''
+        ''' Wer die Groesse HIER aendert, schaltet das Raster ein: bei ausgeschaltetem Raster saehe
+        ''' man sonst nicht, was man stellt.</summary>
+        Public Property EditorGridSize As Integer
             Get
                 If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return 50
                 Return _mainVm.Settings.EditorGridSize
             End Get
+            Set(value As Integer)
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
+                If AppSettingsService.NormalizeEditorGridSize(value) = _mainVm.Settings.EditorGridSize Then Return
+                _mainVm.Settings.EditorGridSize = value
+                If Not EditorShowGrid Then EditorShowGrid = True
+            End Set
         End Property
 
         Public Property EditorShowRulers As Boolean
@@ -5446,6 +5458,8 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(CanSaveInPlace))
                 Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
                 Me.RaisePropertyChanged(NameOf(HasDocument))
+                Me.RaisePropertyChanged(NameOf(CanSaveAdjustmentPreset))
+                Me.RaisePropertyChanged(NameOf(CanApplyAdjustmentPreset))
                 Me.RaisePropertyChanged(NameOf(ShowEditorEmptyState))
                 ' Das Panel erfaehrt den Pfad hier schon; Aufnahmedaten und Histogramm laufen erst
                 ' im Ladeweg nach. Ohne das haengen Histogramm-Block und Reiterleiste in der
@@ -18274,12 +18288,26 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Haengt an der offenen Datei ein Film (Motion Photo, MotionPhotoService.HasVideo)?
+        ''' Dann darf kein Weg das Original durch das neu kodierte Bild ersetzen, auch nicht auf dem
+        ''' Server: der Film waere dort fort. Lokal geht "Speichern" ins Rezept daneben
+        ''' (RawSidecarService.SavesRecipeBeside); an der Arbeitskopie eines Serverbildes, fuer die
+        ''' es diesen Weg nicht gibt, bleibt "Speichern unter", und dabei entsteht ein neues Asset
+        ''' bzw. eine neue Datei.</summary>
+        Private ReadOnly Property CurrentImageCarriesVideo As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(_currentImagePath) AndAlso MotionPhotoService.HasVideo(_currentImagePath)
+            End Get
+        End Property
+
         ''' <summary>True, wenn "Speichern" das Immich-Quell-Asset ersetzt statt eine lokale Datei zu
         ''' schreiben (Einstellung "Vorhandene Assets aktualisieren"). Ohne die Einstellung bleibt bei
-        ''' Immich-Bildern nur "Speichern unter" - dann entsteht immer ein neues Asset.</summary>
+        ''' Immich-Bildern nur "Speichern unter" - dann entsteht immer ein neues Asset. Dasselbe fuer
+        ''' ein Bild mit angehaengtem Film, siehe <see cref="CurrentImageCarriesVideo"/>.</summary>
         Private ReadOnly Property SavesBackToImmich As Boolean
             Get
-                Return CurrentImmichAssetId() IsNot Nothing AndAlso AppSettingsService.Load().ImmichUpdateExistingAssets
+                Return CurrentImmichAssetId() IsNot Nothing AndAlso AppSettingsService.Load().ImmichUpdateExistingAssets AndAlso
+                       Not CurrentImageCarriesVideo
             End Get
         End Property
 
@@ -18294,14 +18322,18 @@ Namespace ViewModels
         '''   Rohdatei wäre kein Speichern, sondern ein Verlust.
         ''' - ein geöffnetes .fpx-Projekt: es hat sein eigenes Ziel, das Bündel selbst.
         ''' - Formate, die wir nicht schreiben können (.tiff, .gif, .heic): sonst lägen JPEG-Bytes
-        '''   unter fremder Endung auf dem Server. Dieselbe Regel wie beim Immich-Ersetzen.</summary>
+        '''   unter fremder Endung auf dem Server. Dieselbe Regel wie beim Immich-Ersetzen.
+        '''
+        ''' Und ein Bild mit angehaengtem Film (<see cref="CurrentImageCarriesVideo"/>): der Film
+        ''' ginge beim Ersetzen verloren.</summary>
         Private ReadOnly Property SavesBackToNextcloud As Boolean
             Get
                 Return Not String.IsNullOrEmpty(_nextcloudSourcePath) AndAlso
                        Not IsCurrentImageSidecarFormat AndAlso
                        String.IsNullOrEmpty(_currentFpxPath) AndAlso
                        ImageProcessor.CanEncodeToTargetExtension(_nextcloudSourcePath) AndAlso
-                       AppSettingsService.Load().NextcloudReplaceOriginal
+                       AppSettingsService.Load().NextcloudReplaceOriginal AndAlso
+                       Not CurrentImageCarriesVideo
             End Get
         End Property
 
@@ -18614,8 +18646,13 @@ Namespace ViewModels
         Public ReadOnly Property RenameVariantCommand As ICommand
         Public ReadOnly Property DeleteVariantCommand As ICommand
         Public ReadOnly Property SaveAdjustmentPresetCommand As ICommand
-        Public ReadOnly Property DeleteAdjustmentPresetCommand As ICommand
+        ''' Das Fenster "Anpassungen verwalten".
+        Public ReadOnly Property ManageAdjustmentPresetsCommand As ICommand
+        ''' Fuehrt vom Hinweis "Ordner nicht erreichbar" in die Einstellungen.
+        Public ReadOnly Property OpenAdjustmentPresetSettingsCommand As ICommand
         Public ReadOnly Property ApplyAdjustmentPresetCommand As ICommand
+        ''' Die Ablage einfuegen, vorher waehlen, welche Regler.
+        Public ReadOnly Property PasteAdjustmentsWithChoiceCommand As ICommand
 
         ''' <summary>Liegt etwas zum Einfuegen bereit? Steuert den Knopf; die Ablage ueberlebt den
         ''' Programmstart, deshalb wird sie gelesen statt gemerkt.</summary>
@@ -18636,122 +18673,316 @@ Namespace ViewModels
 
         ' ── Vorlagen für Anpassungen ──────────────────────────────────────────────────────────
         ' Dieselbe Sache wie die Kopier-Ablage, nur unter einem NAMEN und beliebig oft: die Ablage
-        ' hält genau einen Stand und wird beim nächsten Kopieren überschrieben. Aufbau bewusst wie
-        ' bei den Wasserzeichen-Vorlagen (Auswahlliste + Namensfeld + Speichern/Löschen), damit man
-        ' die Bedienung nicht zweimal lernen muss. Gespeichert wird in den Einstellungen.
+        ' hält genau einen Stand und wird beim nächsten Kopieren überschrieben. Jede Vorlage ist eine
+        ' Datei im Ordner der Anpassungen, jeder Ordner dort ein echter Ordner
+        ' (AdjustmentPresetStore).
+        '
+        ' DER BEREICH BLEIBT SCHLANK: die Auswahlliste mit Ordnerpfad, Anwenden, Speichern und
+        ' "Verwalten". Umbenennen, Verschieben, Loeschen, Import und Export stehen im eigenen
+        ' Fenster (AdjustmentPresetManagerViewModel).
+        '
+        ' GELESEN WIRD BEIM BETRETEN DES BEREICHS UND NACH EINER AENDERUNG, nicht bei jedem Bild,
+        ' und immer im Hintergrund: der Ordner kann in einer entfernten Ablage liegen. Dazwischen
+        ' gilt die gelesene Liste (AdjustmentPresetStore.Cached); ob sie noch stimmt, sagt
+        ' AdjustmentPresetStore.Version.
+        '
+        ' IST DER ORDNER NICHT ERREICHBAR, bleibt die Liste leer, und eine Zeile sagt es mit dem
+        ' Weg zur Einstellung. Es wird nicht auf den Datenordner ausgewichen.
+        '
+        ' EINE VORLAGE TRAEGT, WAS BEIM SPEICHERN GEWAEHLT WURDE: "Speichern" oeffnet einen Dialog
+        ' mit dem Namen und je Reglergruppe einem Haken, aufgeklappt je Regler einem
+        ' (AdjustmentPresetSaveDialogViewModel, die Tabelle dazu ist AdjustmentEntries). Beim
+        ' Anwenden ersetzt sie nur das Gewaehlte, alles andere am Bild bleibt. Eine Vorlage ohne
+        ' Liste (alle von vor dieser Auswahl) enthaelt alles und wirkt wie bisher.
 
-        Public ReadOnly Property AdjustmentPresetNames As ObservableCollection(Of String) = New ObservableCollection(Of String)()
-        Private _selectedAdjustmentPresetName As String = ""
+        ''' Die Anpassungen des Ordners mit allen Unterordnern; die Liste zeigt sie mit Ordnerpfad
+        ''' (AdjustmentPresetFile.DisplayPath).
+        Public ReadOnly Property AdjustmentPresetChoices As ObservableCollection(Of AdjustmentPresetFile) = New ObservableCollection(Of AdjustmentPresetFile)()
+        Private _selectedAdjustmentPreset As AdjustmentPresetFile
         Private _adjustmentPresetNameDraft As String = ""
+        Private _adjustmentPresetFolders As New List(Of String)()
+        Private _adjustmentPresetRoot As String = ""
+        Private _adjustmentPresetFolderUnreachable As Boolean
+        ''' Der Stand von AdjustmentPresetStore.Version, zu dem die Liste gehoert; -1 vor dem ersten Lesen.
+        Private _adjustmentPresetVersion As Integer = -1
+        Private _adjustmentPresetLoad As Task = Task.CompletedTask
 
-        Public Property SelectedAdjustmentPresetName As String
+        ''' <summary>Die gewaehlte Anpassung. Gemerkt wird sie ueber ihre Kennung, zwei gleichen
+        ''' Namens in verschiedenen Ordnern bleiben also auseinander.</summary>
+        Public Property SelectedAdjustmentPreset As AdjustmentPresetFile
             Get
-                Return _selectedAdjustmentPresetName
+                Return _selectedAdjustmentPreset
             End Get
-            Set(value As String)
-                Dim normalized = If(value, "").Trim()
-                If normalized = _selectedAdjustmentPresetName Then Return
-                Me.RaiseAndSetIfChanged(_selectedAdjustmentPresetName, normalized)
-                ' Der Name wandert ins Eingabefeld: „Speichern" auf einer ausgewählten Vorlage soll
+            Set(value As AdjustmentPresetFile)
+                If value Is _selectedAdjustmentPreset Then Return
+                ' Die Liste meldet beim Neuaufbau kurz Nothing; die Wahl setzt danach der Aufbau.
+                If value Is Nothing AndAlso AdjustmentPresetChoices.Count > 0 Then Return
+                Me.RaiseAndSetIfChanged(_selectedAdjustmentPreset, value)
+                ' Der Name wandert in den Vorschlag: „Speichern" auf einer ausgewählten Vorlage soll
                 ' sie ersetzen, nicht eine namenlose zweite anlegen.
-                If Not String.IsNullOrWhiteSpace(normalized) Then
-                    _adjustmentPresetNameDraft = normalized
+                If value IsNot Nothing Then
+                    _adjustmentPresetNameDraft = value.Name
                     Me.RaisePropertyChanged(NameOf(AdjustmentPresetNameDraft))
-                    AppSettingsService.SaveLastAdjustmentPresetName(normalized)
+                    AppSettingsService.SaveLastAdjustmentPreset(value.Id, value.Name)
                 End If
-                Me.RaisePropertyChanged(NameOf(CanApplyAdjustmentPreset))
+                RaiseAdjustmentPresetSelectionState()
             End Set
         End Property
 
+        ''' <summary>Der Name der gewaehlten Anpassung. Setzen waehlt die erste dieses Namens, der
+        ''' Wurzelordner zuerst.</summary>
+        Public Property SelectedAdjustmentPresetName As String
+            Get
+                Return If(_selectedAdjustmentPreset?.Name, "")
+            End Get
+            Set(value As String)
+                Dim normalized = If(value, "").Trim()
+                Dim found = AdjustmentPresetChoices.FirstOrDefault(
+                    Function(p) String.Equals(p.Name, normalized, StringComparison.OrdinalIgnoreCase))
+                If found IsNot Nothing Then SelectedAdjustmentPreset = found
+            End Set
+        End Property
+
+        Private Sub RaiseAdjustmentPresetSelectionState()
+            Me.RaisePropertyChanged(NameOf(SelectedAdjustmentPresetName))
+            Me.RaisePropertyChanged(NameOf(CanApplyAdjustmentPreset))
+            Me.RaisePropertyChanged(NameOf(SelectedAdjustmentPresetSummary))
+        End Sub
+
+        ''' <summary>True, wenn der Ordner der Anpassungen nicht erreichbar ist. Die Liste ist dann
+        ''' leer, und <see cref="AdjustmentPresetFolderHint"/> nennt den Ordner und den Weg zur
+        ''' Einstellung.</summary>
+        Public ReadOnly Property IsAdjustmentPresetFolderUnreachable As Boolean
+            Get
+                Return _adjustmentPresetFolderUnreachable
+            End Get
+        End Property
+
+        Public ReadOnly Property AdjustmentPresetFolderHint As String
+            Get
+                If Not _adjustmentPresetFolderUnreachable Then Return ""
+                Return AdjustmentPresetManagerViewModel.UnreachableMessage(_adjustmentPresetRoot)
+            End Get
+        End Property
+
+        ''' <summary>Der Name, den der Dialog "Anpassung speichern" vorschlaegt: der der gewaehlten
+        ''' Vorlage, damit Speichern sie ersetzt. <see cref="SaveCurrentAdjustmentPreset"/> speichert
+        ''' unter ihm ohne Dialog.</summary>
         Public Property AdjustmentPresetNameDraft As String
             Get
                 Return _adjustmentPresetNameDraft
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_adjustmentPresetNameDraft, If(value, ""))
-                Me.RaisePropertyChanged(NameOf(CanSaveAdjustmentPreset))
             End Set
         End Property
 
+        ''' Der Name steht im Dialog; der Knopf braucht ein Bild und einen erreichbaren Ordner.
         Public ReadOnly Property CanSaveAdjustmentPreset As Boolean
             Get
-                Return HasDocument AndAlso Not String.IsNullOrWhiteSpace(_adjustmentPresetNameDraft)
+                Return HasDocument AndAlso Not _adjustmentPresetFolderUnreachable
+            End Get
+        End Property
+
+        ''' <summary>Der Kurzhinweis an der Auswahlliste: was die gewaehlte Vorlage enthaelt
+        ''' (AdjustmentEntries.Describe). Nothing, wenn keine gewaehlt ist: dann gibt es keinen
+        ''' Kurzhinweis statt eines leeren.</summary>
+        Public ReadOnly Property SelectedAdjustmentPresetSummary As String
+            Get
+                Dim preset = _selectedAdjustmentPreset
+                If preset Is Nothing Then Return Nothing
+                Return LocalizationService.T("Enthält:") & Environment.NewLine & AdjustmentEntries.Describe(preset.Fields)
             End Get
         End Property
 
         Public ReadOnly Property CanApplyAdjustmentPreset As Boolean
             Get
-                Return HasDocument AndAlso Not String.IsNullOrWhiteSpace(_selectedAdjustmentPresetName)
+                Return HasDocument AndAlso _selectedAdjustmentPreset IsNot Nothing
             End Get
         End Property
 
-        Private Sub LoadAdjustmentPresetNames()
+        ''' <summary>Setzt einen gelesenen Stand in die Liste. Gewaehlt ist danach
+        ''' <paramref name="selectId"/>, sonst die bisher gewaehlte, sonst die zuletzt benutzte
+        ''' (ueber die Kennung, bei Einstellungen von frueher ueber den Namen), sonst die erste.</summary>
+        Private Sub ApplyAdjustmentPresetListing(listing As AdjustmentPresetListing, version As Integer,
+                                                 Optional selectId As String = Nothing)
+            If listing Is Nothing Then Return
             Dim settings = AppSettingsService.Load()
-            AdjustmentPresetNames.Clear()
-            For Each preset In settings.AdjustmentPresets
-                AdjustmentPresetNames.Add(preset.Name)
+            Dim wanted = If(selectId, If(_selectedAdjustmentPreset?.Id, settings.LastAdjustmentPresetId))
+            _adjustmentPresetVersion = version
+            _adjustmentPresetRoot = listing.Root
+            _adjustmentPresetFolderUnreachable = Not listing.Reachable
+            _adjustmentPresetFolders = listing.Folders.ToList()
+            ' Erst die Wahl loesen, dann die Liste leeren: sonst schreibt die Auswahlliste beim
+            ' Leeren ihr Nothing zurueck.
+            _selectedAdjustmentPreset = Nothing
+            AdjustmentPresetChoices.Clear()
+            For Each preset In listing.Presets.OrderBy(Function(p) p.DisplayPath, StringComparer.OrdinalIgnoreCase)
+                AdjustmentPresetChoices.Add(preset)
             Next
-            Dim zuletzt = If(settings.LastAdjustmentPresetName, "").Trim()
-            If Not AdjustmentPresetNames.Contains(zuletzt) Then zuletzt = If(AdjustmentPresetNames.FirstOrDefault(), "")
-            _selectedAdjustmentPresetName = zuletzt
-            If Not String.IsNullOrWhiteSpace(zuletzt) Then _adjustmentPresetNameDraft = zuletzt
+            _selectedAdjustmentPreset = If(listing.Find(wanted, If(selectId Is Nothing, settings.LastAdjustmentPresetName, Nothing)),
+                                           AdjustmentPresetChoices.FirstOrDefault())
+            If _selectedAdjustmentPreset IsNot Nothing Then _adjustmentPresetNameDraft = _selectedAdjustmentPreset.Name
             ' NICHT "name": seit es eine Eigenschaft Name gibt, loest VB den Namen dorthin auf.
-            For Each propertyName In {NameOf(SelectedAdjustmentPresetName), NameOf(AdjustmentPresetNameDraft),
-                                      NameOf(CanSaveAdjustmentPreset), NameOf(CanApplyAdjustmentPreset)}
+            For Each propertyName In {NameOf(SelectedAdjustmentPreset), NameOf(SelectedAdjustmentPresetName),
+                                      NameOf(AdjustmentPresetNameDraft),
+                                      NameOf(CanSaveAdjustmentPreset), NameOf(CanApplyAdjustmentPreset),
+                                      NameOf(SelectedAdjustmentPresetSummary),
+                                      NameOf(IsAdjustmentPresetFolderUnreachable), NameOf(AdjustmentPresetFolderHint)}
                 Me.RaisePropertyChanged(propertyName)
             Next
         End Sub
 
-        Public Sub SaveCurrentAdjustmentPreset()
-            If Not HasDocument Then Return
-            Dim name = If(_adjustmentPresetNameDraft, "").Trim()
-            If String.IsNullOrWhiteSpace(name) Then
-                StatusText = LocalizationService.T("Bitte einen Namen für die Anpassung eingeben.")
-                Return
+        ''' <summary>Liest den Ordner der Anpassungen im Hintergrund neu und setzt die Liste.</summary>
+        ''' <param name="selectId">Die Anpassung, die danach gewaehlt sein soll.</param>
+        Public Async Function RefreshAdjustmentPresetsAsync(Optional selectId As String = Nothing) As Task
+            Dim listing = Await Task.Run(Function() AdjustmentPresetStore.LoadCurrent())
+            ApplyAdjustmentPresetListing(listing, AdjustmentPresetStore.Version, selectId)
+        End Function
+
+        ''' <summary>Sorgt dafuer, dass die Liste zum Bestand passt, wenn der Bereich betreten
+        ''' wird: stimmt der gelesene Stand noch, geschieht nichts; liegt ein neuerer gemerkt vor,
+        ''' wird er ohne Plattenzugriff gesetzt; sonst wird im Hintergrund gelesen.</summary>
+        Public Function EnsureAdjustmentPresetsLoadedAsync() As Task
+            Dim version = AdjustmentPresetStore.Version
+            If _adjustmentPresetVersion = version Then Return _adjustmentPresetLoad
+            Dim cached = AdjustmentPresetStore.Cached
+            If cached IsNot Nothing Then
+                ApplyAdjustmentPresetListing(cached, version)
+                Return Task.CompletedTask
             End If
-            Dim recipe = FpxService.SerializeAdjustments(GetCurrentAdjustments().ExtractTransferableAdjustments())
-            If String.IsNullOrWhiteSpace(recipe) Then Return
+            If Not _adjustmentPresetLoad.IsCompleted Then Return _adjustmentPresetLoad
+            _adjustmentPresetLoad = RefreshAdjustmentPresetsAsync()
+            Return _adjustmentPresetLoad
+        End Function
 
-            AppSettingsService.SaveAdjustmentPreset(name, recipe)
-            LoadAdjustmentPresetNames()
-            SelectedAdjustmentPresetName = name
-            StatusText = String.Format(LocalizationService.T("Anpassung gespeichert: {0}"), name)
-        End Sub
+        ''' <summary>Speichert ALLE Anpassungen des Bildes unter dem vorgeschlagenen Namen in den
+        ''' Wurzelordner, ohne Dialog. Der Knopf nimmt den Weg mit Auswahl
+        ''' (<see cref="SaveAdjustmentPresetWithChoiceAsync"/>).</summary>
+        Public Function SaveCurrentAdjustmentPresetAsync() As Task(Of Boolean)
+            Return SaveAdjustmentPresetAsync(_adjustmentPresetNameDraft, Nothing)
+        End Function
 
-        Public Sub DeleteSelectedAdjustmentPreset()
-            Dim name = If(_selectedAdjustmentPresetName, "").Trim()
-            If String.IsNullOrWhiteSpace(name) Then Return
-            AppSettingsService.DeleteAdjustmentPreset(name)
-            LoadAdjustmentPresetNames()
-            StatusText = String.Format(LocalizationService.T("Anpassung gelöscht: {0}"), name)
-        End Sub
+        ''' <summary>Speichert die Anpassungen des Bildes als Vorlage. <paramref name="entries"/>
+        ''' sind die enthaltenen Eintraege; Nothing oder alle heisst die ganze Vorlage ohne Liste.
+        ''' Das gespeicherte Rezept traegt nur das Gewaehlte, alles andere steht darin auf dem
+        ''' Neutralwert. Eine gleichnamige im selben Ordner wird ersetzt und behaelt ihre
+        ''' Kennung.</summary>
+        ''' <param name="folder">Der Ordner relativ zum Wurzelordner; leer ist der Wurzelordner.</param>
+        ''' <returns>Ob gespeichert wurde.</returns>
+        Public Async Function SaveAdjustmentPresetAsync(presetName As String, entries As IEnumerable(Of AdjustmentEntry),
+                                                        Optional folder As String = "") As Task(Of Boolean)
+            If Not HasDocument Then Return False
+            Dim cleanName = If(presetName, "").Trim()
+            If String.IsNullOrWhiteSpace(cleanName) Then
+                StatusText = LocalizationService.T("Bitte einen Namen für die Anpassung eingeben.")
+                Return False
+            End If
+            Dim transferable = GetCurrentAdjustments().ExtractTransferableAdjustments()
+            Dim fields As List(Of String) = Nothing
+            If entries IsNot Nothing Then
+                Dim chosen = entries.ToList()
+                ' Ohne Rahmen am Bild bietet der Dialog den Eintrag nicht an; "alles" ist dann
+                ' alles Angebotene.
+                Dim hasFrame = transferable.Annotations.Any(AddressOf ImageAdjustments.IsFrameAnnotation)
+                Dim offered = AdjustmentEntries.All.Where(Function(e) hasFrame OrElse Not e.IsFrame).ToList()
+                If Not offered.All(Function(e) chosen.Contains(e)) Then
+                    transferable = AdjustmentEntries.Extract(transferable, chosen)
+                    fields = AdjustmentEntries.FieldsOf(chosen)
+                End If
+            End If
+            Dim recipe = FpxService.SerializeAdjustments(transferable)
+            If String.IsNullOrWhiteSpace(recipe) Then Return False
 
-        ''' <summary>Wendet die gewählte Vorlage an - denselben Weg wie das Einfügen der Ablage, also
-        ''' die Pixel-Anpassungen auf dem aktuellen Stand ersetzen und einen mitgebrachten Rahmen
-        ''' setzen.</summary>
+            Dim saved = Await Task.Run(Function() AdjustmentPresetStore.Current().Save(folder, cleanName, recipe, fields))
+            If saved Is Nothing Then
+                Await RefreshAdjustmentPresetsAsync()
+                StatusText = If(_adjustmentPresetFolderUnreachable,
+                                AdjustmentPresetFolderHint,
+                                LocalizationService.T("Die Anpassung ließ sich nicht speichern."))
+                Return False
+            End If
+            Await RefreshAdjustmentPresetsAsync(saved.Id)
+            AppSettingsService.SaveLastAdjustmentPreset(saved.Id, saved.Name)
+            StatusText = String.Format(LocalizationService.T("Anpassung gespeichert: {0}"), cleanName)
+            Return True
+        End Function
+
+        ''' <summary>Der Inhalt des Dialogs "Anpassung speichern" fuer das geoeffnete Bild: der
+        ''' vorgeschlagene Name und die Regler, vorbelegt mit denen, die vom Neutralwert abweichen
+        ''' (AdjustmentEntries.NonNeutralEntries). Die Gruppe Rahmen gibt es nur, wenn das Bild einen
+        ''' uebertragbaren Rahmen traegt.</summary>
+        Public Function CreateAdjustmentPresetSaveDialog() As AdjustmentPresetSaveDialogViewModel
+            Dim transferable = GetCurrentAdjustments().ExtractTransferableAdjustments()
+            Dim hasFrame = transferable.Annotations.Any(AddressOf ImageAdjustments.IsFrameAnnotation)
+            ' Vorbelegt ist der Ordner der gewaehlten Anpassung: wer in einem Ordner arbeitet,
+            ' speichert meist wieder dorthin.
+            Return New AdjustmentPresetSaveDialogViewModel(_adjustmentPresetNameDraft,
+                                                           AdjustmentEntries.NonNeutralEntries(transferable), hasFrame,
+                                                           _adjustmentPresetFolders,
+                                                           If(_selectedAdjustmentPreset?.Folder, ""))
+        End Function
+
+        ''' <summary>Der Knopf "Speichern": der Dialog mit Name, Ordner und Auswahl, danach das
+        ''' Speichern dessen, was gewaehlt ist. Ohne Anwendungsrahmen (Pruefstand) geschieht
+        ''' nichts.</summary>
+        Public Async Function SaveAdjustmentPresetWithChoiceAsync() As Task
+            If Not HasDocument OrElse _mainVm Is Nothing Then Return
+            ' Die Ordner im Dialog sollen die von jetzt sein.
+            Await EnsureAdjustmentPresetsLoadedAsync()
+            Dim dialog = CreateAdjustmentPresetSaveDialog()
+            If Not Await _mainVm.ShowAdjustmentPresetSaveAsync(dialog) Then Return
+            Await SaveAdjustmentPresetFromDialogAsync(dialog)
+        End Function
+
+        ''' <summary>Speichert, was im bestaetigten Dialog steht.</summary>
+        Public Async Function SaveAdjustmentPresetFromDialogAsync(dialog As AdjustmentPresetSaveDialogViewModel) As Task(Of Boolean)
+            If dialog Is Nothing OrElse dialog.IsPaste OrElse Not dialog.CanConfirm Then Return False
+            Return Await SaveAdjustmentPresetAsync(dialog.Name, dialog.SelectedEntries(), dialog.FolderPath)
+        End Function
+
+        ''' <summary>Der Knopf "Verwalten": das Fenster mit Ordnerbaum und Anpassungen. Danach
+        ''' wird die Liste neu gesetzt, falls sich dort etwas geaendert hat.</summary>
+        Public Async Function ManageAdjustmentPresetsAsync() As Task
+            If _mainVm Is Nothing Then Return
+            Dim manager As New AdjustmentPresetManagerViewModel()
+            ' "Anwenden" im Fenster gibt es nur mit einem geoeffneten Bild; es nimmt denselben Weg
+            ' wie der Knopf im Bereich.
+            If HasDocument Then manager.ApplyHandler = Function(preset) ApplyAdjustmentPreset(preset)
+            Await manager.ReloadAsync(If(_selectedAdjustmentPreset?.Folder, ""), _selectedAdjustmentPreset?.Id)
+            Await _mainVm.ShowAdjustmentPresetManagerAsync(manager)
+            Await EnsureAdjustmentPresetsLoadedAsync()
+            ' "Ordner ändern" im Fenster: erst nach dem Schliessen, die Anwendung zeigt nur einen
+            ' Dialog zur Zeit, und der Wechsel fragt womoeglich nach ungespeicherten Aenderungen.
+            If manager.SettingsRequested Then _mainVm.OpenSettings()
+        End Function
+
+        ''' <summary>Wendet die gewählte Vorlage an (<see cref="ApplyAdjustmentPreset"/>).</summary>
         Public Sub ApplySelectedAdjustmentPreset()
-            If Not HasDocument Then Return
-            Dim name = If(_selectedAdjustmentPresetName, "").Trim()
-            If String.IsNullOrWhiteSpace(name) Then Return
-            Dim preset = AppSettingsService.Load().AdjustmentPresets.
-                FirstOrDefault(Function(p) String.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase))
-            If preset Is Nothing Then Return
+            ApplyAdjustmentPreset(_selectedAdjustmentPreset)
+        End Sub
 
-            Dim gespeichert As ImageAdjustments = Nothing
-            Try
-                gespeichert = FpxService.DeserializeAdjustments(preset.RecipeJson)
-            Catch
-                gespeichert = Nothing
-            End Try
+        ''' <summary>Wendet eine Vorlage auf das geoeffnete Bild an, als ein Schritt in der
+        ''' Historie. Eine Vorlage ohne Liste nimmt denselben Weg wie das
+        ''' Einfügen der Ablage, ersetzt also die Pixel-Anpassungen auf dem aktuellen Stand und setzt
+        ''' einen mitgebrachten Rahmen. Eine Vorlage mit Liste ersetzt nur ihre Eintraege, auch mit
+        ''' dem Neutralwert; alles andere am Bild bleibt (AdjustmentEntries.ApplyPreset). Der Knopf
+        ''' im Bereich und "Anwenden" in der Verwaltung nehmen beide diesen Weg.</summary>
+        ''' <returns>Ob angewendet wurde.</returns>
+        Public Function ApplyAdjustmentPreset(preset As AdjustmentPresetFile) As Boolean
+            If Not HasDocument Then Return False
+            If preset Is Nothing Then Return False
+            Dim name = preset.Name
+
+            Dim gespeichert = AdjustmentEntries.LoadPresetLook(preset)
             If gespeichert Is Nothing Then
                 StatusText = LocalizationService.T("Die Anpassung konnte nicht gelesen werden.")
-                Return
+                Return False
             End If
 
             PushUndo()
             Dim target = GetCurrentAdjustments()
-            target.CopyPixelAdjustmentsFrom(gespeichert)
-            target.ApplyTransferredFrameFrom(gespeichert)
+            AdjustmentEntries.ApplyPreset(target, gespeichert, preset.Fields)
             ' Der Graufarbausgleich der Vorlage gehoert ihrem Quellbild; dieses misst seinen eigenen.
             target.ForgetTransferredNegativeGrayBalance(gespeichert)
             ApplyAdjustments(target)
@@ -18762,18 +18993,51 @@ Namespace ViewModels
             NameHistoryStep(LocalizationService.T("Anpassung angewendet"))
             SchedulePreviewUpdate()
             StatusText = String.Format(LocalizationService.T("Anpassung angewendet: {0}"), name)
-        End Sub
+            Return True
+        End Function
 
-        Public Sub PasteCopiedAdjustments()
-            If Not HasDocument Then Return
-            Dim gespeichert As ImageAdjustments = Nothing
+        ''' <summary>Die Ablage als Rezept, oder Nothing, wenn sie leer oder beschaedigt ist (von
+        ''' Hand bearbeitete Einstellungsdatei): lieber nichts tun als mit halb gelesenen Werten
+        ''' ins Bild gehen.</summary>
+        Private Shared Function ReadCopiedAdjustments() As ImageAdjustments
             Try
-                gespeichert = FpxService.DeserializeAdjustments(AppSettingsService.Load().CopiedAdjustments)
+                Return FpxService.DeserializeAdjustments(AppSettingsService.Load().CopiedAdjustments)
             Catch
-                ' Beschaedigte Ablage (von Hand editierte Einstellungsdatei): lieber nichts tun als
-                ' mit halb gelesenen Werten ins Bild gehen.
-                gespeichert = Nothing
+                Return Nothing
             End Try
+        End Function
+
+        ''' <summary>Der Inhalt des Dialogs "Einfügen mit Auswahl": derselbe wie beim Speichern
+        ''' einer Anpassung, ohne Name und Ordner. Vorbelegt sind die Eintraege, die in der ABLAGE
+        ''' vom Neutralwert abweichen; den Rahmen gibt es nur, wenn die Ablage einen traegt.
+        ''' Nothing, wenn nichts kopiert ist.</summary>
+        Public Shared Function CreatePasteAdjustmentsDialog() As AdjustmentPresetSaveDialogViewModel
+            Dim copied = ReadCopiedAdjustments()
+            If copied Is Nothing Then Return Nothing
+            Dim hasFrame = copied.Annotations IsNot Nothing AndAlso copied.Annotations.Any(AddressOf ImageAdjustments.IsFrameAnnotation)
+            Return New AdjustmentPresetSaveDialogViewModel("", AdjustmentEntries.NonNeutralEntries(copied), hasFrame, isPaste:=True)
+        End Function
+
+        ''' <summary>Der Befehl "Einfügen mit Auswahl": fragt, welche Regler aus der Ablage kommen,
+        ''' und fuegt nur die ein. Ohne Anwendungsrahmen (Pruefstand) geschieht nichts.</summary>
+        Public Async Function PasteCopiedAdjustmentsWithChoiceAsync() As Task
+            If Not HasDocument Then Return
+            Dim dialog = CreatePasteAdjustmentsDialog()
+            If dialog Is Nothing Then
+                StatusText = LocalizationService.T("Es sind keine Anpassungen kopiert")
+                Return
+            End If
+            If _mainVm Is Nothing OrElse Not Await _mainVm.ShowAdjustmentPresetSaveAsync(dialog) Then Return
+            PasteCopiedAdjustments(dialog.SelectedEntries())
+        End Function
+
+        ''' <summary>Fuegt die Ablage ein. Ohne <paramref name="entries"/> alles, wie bisher: die
+        ''' Pixel-Anpassungen des Bildes werden ersetzt. Mit <paramref name="entries"/> nur diese
+        ''' Eintraege (AdjustmentEntries.Apply): ein gewaehlter ersetzt auch mit dem Neutralwert,
+        ''' jeder nicht gewaehlte Regler des Bildes bleibt bitgleich.</summary>
+        Public Sub PasteCopiedAdjustments(Optional entries As IEnumerable(Of AdjustmentEntry) = Nothing)
+            If Not HasDocument Then Return
+            Dim gespeichert = ReadCopiedAdjustments()
             If gespeichert Is Nothing Then
                 StatusText = LocalizationService.T("Es sind keine Anpassungen kopiert")
                 Return
@@ -18784,10 +19048,18 @@ Namespace ViewModels
             ' Objekte und Masken dieses Bildes bleiben damit unangetastet. Einzig ein mitgebrachter
             ' Rahmen tritt an die Stelle des vorhandenen.
             Dim target = GetCurrentAdjustments()
-            target.CopyPixelAdjustmentsFrom(gespeichert)
-            target.ApplyTransferredFrameFrom(gespeichert)
+            Dim chosen = entries?.ToList()
+            If chosen Is Nothing Then
+                target.CopyPixelAdjustmentsFrom(gespeichert)
+                target.ApplyTransferredFrameFrom(gespeichert)
+            Else
+                AdjustmentEntries.Apply(target, gespeichert, chosen)
+            End If
             ' Der Graufarbausgleich der Ablage gehoert ihrem Quellbild; dieses misst seinen eigenen.
-            target.ForgetTransferredNegativeGrayBalance(gespeichert)
+            ' Nur wenn das Filmnegativ mit eingefuegt wurde: sonst ist es der eigene des Bildes.
+            If chosen Is Nothing OrElse chosen.Any(Function(e) e.Fields.Contains("NegativeGrayBalance")) Then
+                target.ForgetTransferredNegativeGrayBalance(gespeichert)
+            End If
             ApplyAdjustments(target)
             MeasurePendingFilmNegativeGrayBalance()
             _hasChanges = True
@@ -19093,7 +19365,12 @@ Namespace ViewModels
             ' Die viertausend Symbole NICHT hier: der Editor entsteht beim Programmstart, auch wenn
             ' die Anwendung in der Galerie beginnt (siehe EnsureShapeIconsLoaded).
             LoadWatermarkPresets()
-            LoadAdjustmentPresetNames()
+            ' Die Anpassungen NICHT von der Platte: der Ordner kann entfernt liegen. Hier nur der
+            ' schon gemerkte Stand; gelesen wird beim Betreten des Bereichs
+            ' (EnsureAdjustmentPresetsLoadedAsync).
+            If AdjustmentPresetStore.Cached IsNot Nothing Then
+                ApplyAdjustmentPresetListing(AdjustmentPresetStore.Cached, AdjustmentPresetStore.Version)
+            End If
             LoadSavedXmpPresets()
             LoadSavedLutPresets()
             _previewTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(PreviewDebounceMs)}
@@ -19243,13 +19520,15 @@ Namespace ViewModels
                                                          End Function)
             CopyAdjustmentsCommand = ReactiveCommand.Create(Sub() CopyCurrentAdjustments())
             PasteAdjustmentsCommand = ReactiveCommand.Create(Sub() PasteCopiedAdjustments())
+            PasteAdjustmentsWithChoiceCommand = ReactiveCommand.CreateFromTask(Function() PasteCopiedAdjustmentsWithChoiceAsync())
             SwitchVariantCommand = ReactiveCommand.CreateFromTask(Of Object)(Function(parameter) ShowVariantAsync(TryCast(parameter, String)))
             NewVariantCommand = ReactiveCommand.CreateFromTask(Function() ChangeVariantCurrentAsync(GalleryViewModel.VariantAction.AddFromCurrent))
             NewVariantFromStartValuesCommand = ReactiveCommand.CreateFromTask(Function() ChangeVariantCurrentAsync(GalleryViewModel.VariantAction.AddFromStartValues))
             RenameVariantCommand = ReactiveCommand.CreateFromTask(Function() ChangeVariantCurrentAsync(GalleryViewModel.VariantAction.Rename))
             DeleteVariantCommand = ReactiveCommand.CreateFromTask(Function() ChangeVariantCurrentAsync(GalleryViewModel.VariantAction.Delete))
-            SaveAdjustmentPresetCommand = ReactiveCommand.Create(Sub() SaveCurrentAdjustmentPreset())
-            DeleteAdjustmentPresetCommand = ReactiveCommand.Create(Sub() DeleteSelectedAdjustmentPreset())
+            SaveAdjustmentPresetCommand = ReactiveCommand.CreateFromTask(Function() SaveAdjustmentPresetWithChoiceAsync())
+            ManageAdjustmentPresetsCommand = ReactiveCommand.CreateFromTask(Function() ManageAdjustmentPresetsAsync())
+            OpenAdjustmentPresetSettingsCommand = ReactiveCommand.Create(Sub() _mainVm?.OpenSettings())
             ApplyAdjustmentPresetCommand = ReactiveCommand.Create(Sub() ApplySelectedAdjustmentPreset())
             ApplyCropCommand = ReactiveCommand.Create(Async Function() As Task
                                                           Await ApplyCropAsync()
@@ -20151,6 +20430,7 @@ Namespace ViewModels
                                                     .ApplyFilter = ApplyFilterCurrentCommand,
                                                     .CopyAdjustments = CopyAdjustmentsCommand,
                                                     .PasteAdjustments = PasteAdjustmentsCommand,
+                                                    .PasteAdjustmentsWithChoice = PasteAdjustmentsWithChoiceCommand,
                                                     .AdjustmentsFromOpenDocument = True,
                                                     .SwitchVariant = SwitchVariantCommand,
                                                     .NewVariant = NewVariantCommand,
@@ -24985,8 +25265,11 @@ Namespace ViewModels
                     ' beim Speichern-unter, ob ein neues Asset entsteht oder das Original
                     ' ueberschrieben wird); ohne Immich-Quelle oder mit ausgeschaltetem Setting
                     ' entsteht wie bisher ein neues Asset.
+                    ' Ein Bild mit angehaengtem Film wird nie ersetzt (CurrentImageCarriesVideo): es
+                    ' entsteht ein neues Asset, das Original behaelt seinen Film.
                     Dim replaceAssetId = CurrentImmichAssetId()
-                    If Not String.IsNullOrEmpty(replaceAssetId) AndAlso AppSettingsService.Load().ImmichUpdateExistingAssets Then
+                    If Not String.IsNullOrEmpty(replaceAssetId) AndAlso AppSettingsService.Load().ImmichUpdateExistingAssets AndAlso
+                       Not CurrentImageCarriesVideo Then
                         StatusText = LocalizationService.T("Immich-Asset wird aktualisiert…")
                         Dim newAssetId = Await ImmichService.ReplaceAssetAsync(replaceAssetId, targetPath)
                         Try : IO.File.Delete(targetPath) : Catch : End Try
@@ -33457,6 +33740,9 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowEffectsAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowFrameAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowFilterAdjustments))
+            ' Der Bereich der gespeicherten Anpassungen wird betreten: jetzt, und nicht bei jedem
+            ' Bild, wird die Liste mit dem Ordner abgeglichen.
+            If ShowFilterAdjustments Then EnsureAdjustmentPresetsLoadedAsync()
             Me.RaisePropertyChanged(NameOf(ShowExtensionAdjustments))
             ' Das Analysebild im Anpassungspanel haengt an genau diesen fuenf Schaltern - und mit
             ' ihm der Rechenweg: wer vom Zuschneiden zu den Reglern wechselt, macht es erst

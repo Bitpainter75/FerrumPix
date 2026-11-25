@@ -122,6 +122,11 @@ Namespace Services
         Public Property Id As String = Guid.NewGuid().ToString("N")
         Public Property Name As String = ""
         Public Property RecipeJson As String = ""
+        ''' <summary>Was die Vorlage enthaelt: die Feldnamen von ImageAdjustments, beim Rahmen der
+        ''' Platzhalter AdjustmentEntries.FrameField. Nothing heisst ALLES, so wirken die Vorlagen
+        ''' von vor dieser Liste unveraendert. Beim Anwenden ersetzt die Vorlage nur diese Felder
+        ''' (AdjustmentEntries.ApplyPreset), und der Stapel liest nur sie (LoadPresetLook).</summary>
+        Public Property Fields As List(Of String) = Nothing
     End Class
 
     ''' <summary>Eine von Hand gesetzte Objektiv-Zuordnung: der Name aus dem EXIF und der Eintrag
@@ -730,6 +735,14 @@ Namespace Services
         ''' Entwicklung statt der Kamera-Vorschau sehen will, schaltet diesen hier ein - er wirkt
         ''' unabhaengig vom Rezept-Schalter und kostet je Bild einen vollen Decode.
         Public Property DevelopRawInViewerWithoutRecipe As Boolean = False
+        ''' Solange der Betrachter ein Bild entwickelt, die Galerie-Kachel als Uebergangsbild
+        ''' zeigen (Standard AUS, dann bleibt die Flaeche wie bisher leer bis zum fertigen Bild).
+        Public Property ViewerTransitionTile As Boolean = False
+        ''' Wie viele Felder der Bildvergleich des Betrachters zeigt, wenn er ueber die Stecknadel
+        ''' beginnt: 2 nebeneinander (Standard) oder 4 als 2 mal 2. Jede Umschaltung von Hand wird
+        ''' hier gemerkt; beim Oeffnen aus der Galerie bestimmt die Zahl der gewaehlten Bilder die
+        ''' Feldzahl, ohne diesen Wert zu aendern. Jeder andere Wert gilt als 2.
+        Public Property CompareFieldCount As Integer = 2
         ''' RAWs im Bildvergleich in voller Sensoraufloesung entwickeln (Standard AUS). Ausgeschaltet
         ''' entwickelt der Vergleich ueber half_size: halbe Kantenlaenge, rund siebenmal schneller,
         ''' und fuer eine Flaeche von halber Fensterbreite genug. Erst beim Hineinzoomen fehlt
@@ -746,6 +759,10 @@ Namespace Services
         ''' Gesichtsrahmen mit Namen ueber dem Bild im Betrachter (Schalter in der Fusszeile).
         ''' Gemerkt wie das Fokus-Peaking: wer Gesichter durchsieht, will es fuer viele Bilder.
         Public Property ViewerFaceFrames As Boolean = False
+        ''' Fokusfelder aus den Aufnahmedaten ueber dem Bild im Betrachter (Schalter in der
+        ''' Fusszeile). Gemerkt wie die beiden darueber: wer eine Serie auf Schaerfe durchsieht,
+        ''' will sie bei jedem Bild.
+        Public Property ViewerFocusPoints As Boolean = False
         ''' RAWs OHNE .fpxmp-Rezept auch in den Stapelfunktionen voll entwickeln (Demosaic in
         ''' Sensoraufloesung) statt ihre eingebettete JPEG-Vorschau zu nehmen. Mit Rezept wird
         ''' IMMER entwickelt - dort waere die Vorschau schlicht das falsche Bild.
@@ -1174,6 +1191,15 @@ Namespace Services
         ''' AdjustmentPresetSettings) und der Name der zuletzt benutzten.
         Public Property AdjustmentPresets As New List(Of AdjustmentPresetSettings)()
         Public Property LastAdjustmentPresetName As String = ""
+        ''' Die Kennung der zuletzt benutzten Anpassung. Seit jede Anpassung eine Datei ist
+        ''' (AdjustmentPresetStore), duerfen zwei in verschiedenen Ordnern gleich heissen; der Name
+        ''' darueber bleibt als Rueckfall fuer Einstellungen von frueher.
+        Public Property LastAdjustmentPresetId As String = ""
+        ''' Der Ordner, in dem die Anpassungen als Dateien liegen. Leer heisst die Vorgabe
+        ''' (AdjustmentPresetStore.DefaultRoot, "presets" im Datenordner). Ist ein eigener Ordner
+        ''' gesetzt und nicht erreichbar, bleibt die Liste leer; es wird NICHT auf die Vorgabe
+        ''' ausgewichen, sonst entstuenden zwei Bestaende.
+        Public Property AdjustmentPresetFolder As String = ""
         ' Der Name bleibt so: er ist der Schluessel in der settings.json. Umbenennen hiesse,
         ' dass bereits gespeicherte Presets bei vorhandenen Installationen verschwinden.
         ''' <summary>Objektivkorrektur (Verzeichnung, Farbquerfehler, Vignettierung) als
@@ -2756,23 +2782,34 @@ Namespace Services
                 result.Add(New AdjustmentPresetSettings With {
                     .Id = If(String.IsNullOrWhiteSpace(preset.Id), Guid.NewGuid().ToString("N"), preset.Id),
                     .Name = name,
-                    .RecipeJson = recipe
+                    .RecipeJson = recipe,
+                    .Fields = NormalizeAdjustmentPresetFields(preset.Fields)
                 })
             Next
             Return result.OrderBy(Function(p) p.Name, StringComparer.OrdinalIgnoreCase).ToList()
         End Function
 
+        ''' <summary>Die Feldliste einer Vorlage ohne Leeres und ohne Doppel. Nothing bleibt Nothing:
+        ''' keine Liste heisst alles, und das darf beim Normieren nicht zu einer leeren Liste
+        ''' werden, die nichts mehr enthielte.</summary>
+        Public Shared Function NormalizeAdjustmentPresetFields(value As List(Of String)) As List(Of String)
+            If value Is Nothing Then Return Nothing
+            Return value.Where(Function(f) Not String.IsNullOrWhiteSpace(f)).
+                Select(Function(f) f.Trim()).Distinct(StringComparer.Ordinal).ToList()
+        End Function
+
         ''' <summary>Legt eine Vorlage an oder ERSETZT die gleichnamige - so wie bei den
         ''' Wasserzeichen-Vorlagen. Zwei Einträge mit demselben Namen wären in der Auswahlliste
-        ''' nicht auseinanderzuhalten.</summary>
-        Public Shared Sub SaveAdjustmentPreset(name As String, recipeJson As String)
+        ''' nicht auseinanderzuhalten. <paramref name="fields"/> ist die Liste dessen, was die
+        ''' Vorlage traegt (AdjustmentPresetSettings.Fields); ohne sie traegt sie alles.</summary>
+        Public Shared Sub SaveAdjustmentPreset(name As String, recipeJson As String, Optional fields As List(Of String) = Nothing)
             Dim sauber = If(name, "").Trim()
             Dim recipe = If(recipeJson, "").Trim()
             If String.IsNullOrWhiteSpace(sauber) OrElse String.IsNullOrWhiteSpace(recipe) Then Return
             Update(Sub(s)
                        Dim items = If(s.AdjustmentPresets, New List(Of AdjustmentPresetSettings)())
                        items.RemoveAll(Function(p) p IsNot Nothing AndAlso String.Equals(p.Name, sauber, StringComparison.OrdinalIgnoreCase))
-                       items.Add(New AdjustmentPresetSettings With {.Name = sauber, .RecipeJson = recipe})
+                       items.Add(New AdjustmentPresetSettings With {.Name = sauber, .RecipeJson = recipe, .Fields = fields})
                        s.AdjustmentPresets = NormalizeAdjustmentPresets(items)
                        s.LastAdjustmentPresetName = sauber
                    End Sub)
@@ -2793,6 +2830,36 @@ Namespace Services
 
         Public Shared Sub SaveLastAdjustmentPresetName(value As String)
             Update(Sub(s) s.LastAdjustmentPresetName = If(value, "").Trim())
+        End Sub
+
+        ''' <summary>Merkt die zuletzt benutzte Anpassung mit Kennung und Name.</summary>
+        Public Shared Sub SaveLastAdjustmentPreset(id As String, name As String)
+            Dim cleanId = If(id, "").Trim()
+            Dim cleanName = If(name, "").Trim()
+            Dim current = Load()
+            If String.Equals(current.LastAdjustmentPresetId, cleanId, StringComparison.Ordinal) AndAlso
+               String.Equals(current.LastAdjustmentPresetName, cleanName, StringComparison.Ordinal) Then Return
+            Update(Sub(s)
+                       s.LastAdjustmentPresetId = cleanId
+                       s.LastAdjustmentPresetName = cleanName
+                   End Sub)
+        End Sub
+
+        ''' <summary>Legt den Ordner der Anpassungen fest; leer heisst die Vorgabe im Datenordner.</summary>
+        Public Shared Sub SaveAdjustmentPresetFolder(value As String)
+            Update(Sub(s) s.AdjustmentPresetFolder = NormalizeFolderPath(value))
+        End Sub
+
+        ''' <summary>Nimmt die Vorlagen mit diesen Kennungen aus den Einstellungen: sie liegen
+        ''' belegt als Dateien im Ordner der Anpassungen (AdjustmentPresetStore.
+        ''' MigrateFromSettings).</summary>
+        Public Shared Sub RemoveMigratedAdjustmentPresets(ids As IEnumerable(Of String))
+            Dim gone As New HashSet(Of String)(If(ids, Enumerable.Empty(Of String)()), StringComparer.Ordinal)
+            If gone.Count = 0 Then Return
+            Update(Sub(s)
+                       s.AdjustmentPresets = If(s.AdjustmentPresets, New List(Of AdjustmentPresetSettings)()).
+                           Where(Function(p) p IsNot Nothing AndAlso Not gone.Contains(If(p.Id, ""))).ToList()
+                   End Sub)
         End Sub
 
         Public Shared Function NormalizeWatermarkPresets(value As List(Of WatermarkPresetSettings)) As List(Of WatermarkPresetSettings)

@@ -1021,6 +1021,18 @@ Namespace Views
             UpdateGridOverlay()
         End Sub
 
+        ''' <summary>Eine feste Stufe der Rastergroesse aus dem Aufklapper am Rasterknopf; der Wert
+        ''' steht im Tag des Knopfs.</summary>
+        Public Sub OnGridSizePresetClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim size As Integer
+            If vm Is Nothing OrElse Not Integer.TryParse(TryCast(TryCast(sender, Button)?.Tag, String), size) Then Return
+            vm.EditorGridSize = size
+            ' Die Stufe, die schon eingestellt ist, aendert die Groesse nicht und schaltete das
+            ' Raster deshalb nicht ein: der Knopf wirkte bei ausgeschaltetem Raster tot.
+            If Not vm.EditorShowGrid Then vm.EditorShowGrid = True
+        End Sub
+
         ''' Für jeden Editor-Besuch wird eine neue EditorView gebaut (siehe HandleDataContextChanged) -
         ''' Lineale und Raster kämen sonst jedes Mal ausgeschaltet zurück.
         Private Sub RestoreRulerAndGridState()
@@ -2081,6 +2093,15 @@ Namespace Views
                     UpdateAdjustmentsPanelSide()
                 Case NameOf(EditorViewModel.EditorGridSize)
                     UpdateGridOverlay()
+                Case NameOf(EditorViewModel.EditorShowGrid)
+                    ' Der Schalter kann auch von aussen umgelegt werden: die Groesse aus dem
+                    ' Aufklapper schaltet das Raster ein, und die Einstellungen tragen denselben.
+                    Dim gridVm = TryCast(DataContext, EditorViewModel)
+                    If gridVm IsNot Nothing AndAlso gridVm.EditorShowGrid <> _showGrid Then
+                        _showGrid = gridVm.EditorShowGrid
+                        ApplyGridState()
+                        UpdateGridOverlay()
+                    End If
                 Case NameOf(EditorViewModel.LightOverlayVersion), NameOf(EditorViewModel.ShowLightControls)
                     UpdateLightOverlay()
                 Case NameOf(EditorViewModel.AnnotationText),

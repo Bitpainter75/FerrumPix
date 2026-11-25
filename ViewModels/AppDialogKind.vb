@@ -46,6 +46,13 @@ Namespace ViewModels
         ''' <summary>Das Ende der Protokolldatei zum Markieren und Kopieren
         ''' (MainWindowViewModelDiagnosticLog.vb).</summary>
         DiagnosticLog
+        ''' <summary>"Anpassung speichern" im Editor: Name und Auswahl der Regler, die die Vorlage
+        ''' enthaelt (AdjustmentPresetSaveDialogViewModel).</summary>
+        AdjustmentPresetSave
+        ''' <summary>"Anpassungen verwalten": Ordnerbaum und Anpassungen des Ordners mit Anlegen,
+        ''' Umbenennen, Verschieben, Loeschen, Import und Export
+        ''' (AdjustmentPresetManagerViewModel).</summary>
+        AdjustmentPresetManager
     End Enum
 
     ''' <summary>Wo "Metadaten entfernen" wirkt. Jede Stelle fuer sich waehlbar.</summary>
@@ -126,9 +133,12 @@ Namespace ViewModels
         Public Property AutoEnhance As Boolean
         ''' <summary>"" = kein Look; sonst BatchFilterDialogResult.SourceFilter/SourceAdjustmentPreset/
         ''' SourceXmpPreset/SourceLut. Bei einer Anpassungsvorlage bleibt LookPath leer - sie wird
-        ''' über LookName in den Einstellungen gefunden.</summary>
+        ''' über LookId im Ordner der Anpassungen gefunden, ohne Kennung über LookName.</summary>
         Public Property LookKind As String = ""
         Public Property LookName As String = ""
+        ''' <summary>Die Kennung der Anpassungsvorlage; leer bei jeder anderen Quelle und bei
+        ''' einem Auftrag von frueher, der nur den Namen kennt.</summary>
+        Public Property LookId As String = ""
         Public Property LookPath As String = ""
         Public Property LookStrength As Integer = 100
         ''' <summary>Name der Wasserzeichen-Vorgabe; leer = kein Wasserzeichen.</summary>

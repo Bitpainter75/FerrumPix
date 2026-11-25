@@ -20,9 +20,10 @@ Namespace ViewModels
         Public Const SourceFilter As String = "Filter"
         Public Const SourceXmpPreset As String = "XmpPreset"
         Public Const SourceLut As String = "Lut"
-        ''' <summary>Eine im Anpassen-Werkzeug gespeicherte Regler-Zusammenstellung. Sie steckt nicht
-        ''' in einer Datei, sondern unter ihrem NAMEN in den Einstellungen - PresetPath bleibt leer,
-        ''' gefunden wird sie über DisplayName.</summary>
+        ''' <summary>Eine im Anpassen-Werkzeug gespeicherte Regler-Zusammenstellung. Sie liegt als
+        ''' Datei im Ordner der Anpassungen (AdjustmentPresetStore) und wird über ihre KENNUNG
+        ''' gefunden (<see cref="PresetId"/>), ohne Kennung über DisplayName; PresetPath bleibt
+        ''' leer.</summary>
         Public Const SourceAdjustmentPreset As String = "AdjustmentPreset"
         ''' <summary>Automatische Bildverbesserung: keine Vorgabe-Datei, sondern die Messung des
         ''' Editors ("Auto") - die Reglerwerte werden PRO BILD gemessen, nicht aus einer Vorlage.</summary>
@@ -42,6 +43,12 @@ Namespace ViewModels
         ''' <summary>Pfad der .xmp-/.cube-Datei; leer bei eingebauten Filtern und bei
         ''' Anpassungsvorlagen (die stehen in den Einstellungen, nicht in einer Datei).</summary>
         Public Property PresetPath As String = ""
+
+        ''' <summary>Die Kennung der Anpassungsvorlage. Über sie findet der Lauf die Vorlage auch
+        ''' nach dem Verschieben oder Umbenennen, und zwei gleichen Namens in verschiedenen Ordnern
+        ''' bleiben auseinander. Leer bei jeder anderen Quelle und bei einem Auftrag von früher;
+        ''' dann gilt DisplayName.</summary>
+        Public Property PresetId As String = ""
 
         ''' <summary>Wirkung in Prozent. Nur für Filter und LUT - ein XMP-Preset und eine
         ''' Anpassungsvorlage sind Sammlungen einzelner Regler und kennen keinen gemeinsamen

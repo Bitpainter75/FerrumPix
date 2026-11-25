@@ -1185,6 +1185,20 @@ Namespace Views
                 End If
 
                 If vm.IsDialogOpen Then
+                    ' Anpassungen verwalten: ESC schliesst erst eine offene Bearbeitung oder
+                    ' Rueckfrage in einer Zeile, EINGABE uebernimmt den Namen im Feld, F2 und ENTF
+                    ' gelten der gewaehlten Zeile. Dieser Handler laeuft im Tunnel und kaeme den
+                    ' Zeilen sonst zuvor: ESC schloesse das ganze Fenster, EINGABE ebenso.
+                    Dim presetManager = If(vm.DialogShowsAdjustmentPresetManager, vm.DialogAdjustmentPresetManager, Nothing)
+                    If presetManager IsNot Nothing Then
+                        Select Case presetManager.HandleKey(e.Key, TypeOf e.Source Is TextBox, TypeOf e.Source Is Button)
+                            Case AdjustmentPresetKeyResult.Handled
+                                e.Handled = True
+                                Return
+                            Case AdjustmentPresetKeyResult.PassThrough
+                                Return
+                        End Select
+                    End If
                     Select Case e.Key
                         Case Key.Escape
                             vm.CancelDialog()

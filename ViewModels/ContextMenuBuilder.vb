@@ -63,9 +63,13 @@ Namespace ViewModels
             ' Ein Pseudo-Pfad scheitert dort - geprueft wird deshalb auf JEDE Serverquelle und
             ' nicht nur auf Immich. Vorher boten zwei markierte Nextcloud-Bilder den Eintrag an,
             ' und der Klick lief ins Leere.
-            Dim showCompare = entries.Count = 2 AndAlso
+            ' Ab ZWEI Bildern: zwei stehen nebeneinander, ab drei sind es vier Felder, bei mehr als
+            ' vier wird durch die Auswahl geblaettert. Videos in der Auswahl stoeren nicht, der
+            ' Vergleich nimmt nur die Bilder; ein Ordner oder ein Serverelement nimmt den Eintrag weg.
+            Dim showCompare = entries.Count >= 2 AndAlso
                                  entries.All(Function(i) i.IsImage AndAlso Not i.IsRemoteAsset AndAlso
-                                                        Not String.IsNullOrEmpty(i.FilePath))
+                                                        Not String.IsNullOrEmpty(i.FilePath)) AndAlso
+                                 entries.Where(Function(i) Not i.IsVideoFile).Take(2).Count() = 2
             ' Umbenennen: bei Mehrfachauswahl muessen ALLE koennen, bei Einzelauswahl nur das eine.
             Dim showRename = Not isVirtual AndAlso Not isParentEntry AndAlso entries.Count > 0 AndAlso
                                   If(entries.Count > 1,
@@ -200,6 +204,8 @@ Namespace ViewModels
                 If commands.PasteAdjustments IsNot Nothing AndAlso GalleryViewModel.HasCopiedAdjustments AndAlso
                    (commands.AdjustmentsFromOpenDocument OrElse images.Any(AddressOf GalleryViewModel.CanPasteAdjustments)) Then
                     AddIfOffered(adjustmentChildren, commands.PasteAdjustments, FooterMenuCatalog.PasteAdjustments(commands.PasteAdjustments))
+                    ' Unter denselben Bedingungen: dieselbe Ablage, nur mit der Frage davor.
+                    AddIfOffered(adjustmentChildren, commands.PasteAdjustmentsWithChoice, FooterMenuCatalog.PasteAdjustmentsWithChoice(commands.PasteAdjustmentsWithChoice))
                 End If
                 AddIfOffered(adjustmentChildren, commands.ApplyWatermark, FooterMenuCatalog.ApplyWatermark(commands.ApplyWatermark))
                 AddGroup(list, adjustmentChildren, AddressOf FooterMenuCatalog.Adjustments)

@@ -50,6 +50,17 @@ Namespace ViewModels
                                   Optional cancelText As String = "Abbrechen") As Task(Of Boolean)
         Function ShowSaveChangesAsync(titleText As String,
                                       messageText As String) As Task(Of SaveChangesDialogResult)
+        ''' <summary>Der Dialog "Anpassung speichern": Name, Ordner und Auswahl der Regler, die die
+        ''' Vorlage enthalten soll; mit dialog.IsPaste derselbe Dialog als "Einfügen mit Auswahl".
+        ''' Den Inhalt baut der Aufrufer, der Rahmen zeigt ihn nur. True heisst bestaetigt; was dann
+        ''' gilt, steht in <paramref name="dialog"/>.</summary>
+        Function ShowAdjustmentPresetSaveAsync(dialog As AdjustmentPresetSaveDialogViewModel) As Task(Of Boolean)
+        ''' <summary>Das Fenster "Anpassungen verwalten". Den Inhalt baut der Editor, der Rahmen
+        ''' zeigt ihn, bis er geschlossen wird.</summary>
+        Function ShowAdjustmentPresetManagerAsync(manager As AdjustmentPresetManagerViewModel) As Task
+        ''' <summary>Wechselt in die Einstellungen; vom Hinweis, dass der Ordner der Anpassungen
+        ''' nicht erreichbar ist.</summary>
+        Sub OpenSettings()
         ''' <summary>Die Frage, wenn "Speichern" ins Rezept neben dem Bild gehen soll, die Bearbeitung
         ''' aber nicht hineinpasst (Pinsel, Retusche, gerasterte Ebenen, Objekte): als Projekt neben
         ''' dem Bild, als neue Datei ueber "Speichern unter", oder abbrechen. Steht an Stelle eines

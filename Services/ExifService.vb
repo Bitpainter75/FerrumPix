@@ -58,6 +58,14 @@ Namespace Services
         ''' derselben Sekunde von einer Serie.</summary>
         Public Property CaptureMode As CaptureMode
 
+        ''' <summary>Motion Photo, Bild oder Film eines Live Photos, sonst keins (siehe
+        ''' LivePhotoService.Identify).</summary>
+        Public Property MotionKind As MotionKind
+
+        ''' <summary>Die Kennung eines Live Photos, an der Bild und Film zusammengehoeren; leer bei
+        ''' allem anderen.</summary>
+        Public Property MotionId As String = ""
+
         ''' <summary>Titel, Ueberschrift, Beschreibung, Urheber und Quellenangabe, wie sie an der
         ''' Datei gelten (siehe ImageDescriptionService). Sie stehen im Katalog, damit Suche und
         ''' Suchlisten sie finden.</summary>
@@ -158,6 +166,10 @@ Namespace Services
         End Property
         Public Property Lens As String = ""
         Public Property CaptureMode As CaptureMode
+        ''' Motion Photo, Bild oder Film eines Live Photos (siehe LivePhotoService.Identify).
+        Public Property MotionKind As MotionKind
+        ''' Die Kennung eines Live Photos; leer bei allem anderen.
+        Public Property MotionId As String = ""
         Public Property FocalLength As String = ""
         ''' Kleinbild-Äquivalent (EXIF-Tag "FocalLengthIn35mmFilm"). Bei Handykameras ist die echte
         ''' Brennweite (4,2 mm) für sich genommen nichtssagend - erst der Äquivalentwert (28 mm) ist
@@ -548,6 +560,8 @@ Namespace Services
                 .CameraModel = source.CameraModel,
                 .Lens = source.Lens,
                 .CaptureMode = source.CaptureMode,
+                .MotionKind = source.MotionKind,
+                .MotionId = source.MotionId,
                 .FocalLength = source.FocalLength,
                 .FocalLength35mm = source.FocalLength35mm,
                 .Aperture = source.Aperture,
@@ -650,6 +664,14 @@ Namespace Services
                 data.ColorSpace = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagColorSpace)
                 data.Lens = GetLensDescription(captureDirectories)
                 data.CaptureMode = GetCaptureMode(captureDirectories)
+                ' Bewegtbild: Motion Photo, Bild oder Film eines Live Photos. Aus denselben
+                ' Verzeichnissen; nur bei einem JPEG, dessen XMP einen Film behauptet, kommen ein
+                ' Sprung und zwoelf Bytes dazu. Ein Projektbuendel ist keins von beiden.
+                If Not isFpx Then
+                    Dim motion = LivePhotoService.Identify(imagePath, metaDirectories)
+                    data.MotionKind = motion.Kind
+                    data.MotionId = motion.Id
+                End If
                 Dim make = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagMake)
                 Dim model = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagModel)
                 ' Ein Video traegt kein IFD0; Telefone und manche Kameras schreiben Hersteller und
@@ -988,6 +1010,8 @@ Namespace Services
             result.Camera = data.Camera
             result.Lens = data.Lens
             result.CaptureMode = data.CaptureMode
+            result.MotionKind = data.MotionKind
+            result.MotionId = If(data.MotionId, "")
             result.ShutterSpeed = data.ShutterSpeed
             result.Aperture = ParseLeadingDouble(data.Aperture)
             ' Die Kachel, der Katalog und die Brennweiten-Suche meinen die tatsaechliche
@@ -1098,9 +1122,16 @@ Namespace Services
         '''
         ''' heif 1: EXIF aus dem Container, wenn MetadataExtractor an einem fremden Eintrag scheitert
         ''' (Huawei, <see cref="ReadHeifMetadataDirectories"/>). Ohne die Erhoehung blieb die Kamera
-        ''' unter der Kachel leer, waehrend das Infopanel sie frisch las (#100).</summary>
+        ''' unter der Kachel leer, waehrend das Infopanel sie frisch las (#100).
+        '''
+        ''' heif 2, jpeg 1, mov 1: Art und Kennung eines Bewegtbilds (Spalten MotionKind und
+        ''' MotionId, <see cref="LivePhotoService.Identify"/>). Nur diese drei Familien koennen eines
+        ''' sein; ohne die Erhoehung bliebe ein schon eingelesenes Live Photo oder Motion Photo
+        ''' ohne Abzeichen, und Bild und Film faenden nicht zusammen.</summary>
         Private Shared ReadOnly ReaderVersions As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase) From {
-            {".heic", "heif1"}, {".heif", "heif1"}, {".hif", "heif1"}, {".avif", "heif1"}
+            {".heic", "heif2"}, {".heif", "heif2"}, {".hif", "heif2"}, {".avif", "heif1"},
+            {".jpg", "jpeg1"}, {".jpeg", "jpeg1"}, {".jpe", "jpeg1"}, {".jfif", "jpeg1"},
+            {".mov", "mov1"}
         }
 
         ''' <summary>Der Formatstempel fuer eine bestimmte Datei: <see cref="CurrentSummaryFormat"/>,

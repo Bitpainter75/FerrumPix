@@ -1400,6 +1400,27 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Die Zeile "Bewegtbild": nur bei einem Motion Photo und bei Bild oder Film eines
+        ''' Live Photos. Ohne eigenen Haken in den Einstellungen: sie steht nur da, wo die Datei
+        ''' mehr ist als ein Bild, und sagt dann, was ihr Abzeichen an der Kachel bedeutet.</summary>
+        Public ReadOnly Property ShowMotionRow As Boolean
+            Get
+                Return _exifInfo.MotionKind <> MotionKind.None
+            End Get
+        End Property
+
+        ''' <summary>Der Wert der Zeile "Bewegtbild", in der Sprache der Oberflaeche.</summary>
+        Public ReadOnly Property MotionKindText As String
+            Get
+                Select Case _exifInfo.MotionKind
+                    Case MotionKind.MotionPhoto : Return LocalizationService.T("Motion Photo, Film in der Datei")
+                    Case MotionKind.LivePhotoImage : Return LocalizationService.T("Live Photo, Bild")
+                    Case MotionKind.LivePhotoVideo : Return LocalizationService.T("Live Photo, Film")
+                    Case Else : Return ""
+                End Select
+            End Get
+        End Property
+
         ' Die beschreibenden Felder. Wie Ort und Urheberrecht nur mit Wert und nur, wenn der Haken
         ' gesetzt ist (ab Werk aus, siehe AppSettings). Der Wert kommt aus ExifInfo.Description,
         ' also aus derselben Rangfolge wie Dialog und Katalog.
@@ -1563,6 +1584,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowFolderPathRow))
             Me.RaisePropertyChanged(NameOf(ShowPlaceRow))
             Me.RaisePropertyChanged(NameOf(ShowCopyrightRow))
+            Me.RaisePropertyChanged(NameOf(ShowMotionRow))
+            Me.RaisePropertyChanged(NameOf(MotionKindText))
             Me.RaisePropertyChanged(NameOf(ShowTitleRow))
             Me.RaisePropertyChanged(NameOf(ShowHeadlineRow))
             Me.RaisePropertyChanged(NameOf(ShowDescriptionRow))

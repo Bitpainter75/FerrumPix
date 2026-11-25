@@ -236,6 +236,12 @@
                                     <TextBlock Text="Farbraum"/>
                                     <TextBlock Text="{Binding ExifInfo.ColorSpace}"/>
                                 </icons:LabelValuePanel>
+                                <!-- Nur bei einem Motion Photo oder einem Live Photo. Der Wert kommt
+                                     uebersetzt aus dem ViewModel, deshalb no-translate. -->
+                                <icons:LabelValuePanel IsVisible="{Binding ShowMotionRow}">
+                                    <TextBlock Text="Bewegtbild"/>
+                                    <TextBlock Text="{Binding MotionKindText}" Classes="no-translate"/>
+                                </icons:LabelValuePanel>
                                 <icons:LabelValuePanel IsVisible="{Binding ShowFileSizeRow}">
                                     <TextBlock Text="Dateigröße"/>
                                     <TextBlock Text="{Binding ExifInfo.FileSize}"/>

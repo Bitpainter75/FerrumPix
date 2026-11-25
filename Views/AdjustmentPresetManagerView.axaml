@@ -1,0 +1,442 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Views.AdjustmentPresetManagerView">
+
+    <!-- Anpassungen verwalten (AdjustmentPresetManagerViewModel): oben die Ablage, darunter Neuer
+         Ordner, Suche und Importieren, links der Ordnerbaum, rechts die Anpassungen.
+
+         JEDE ZEILE TRAEGT IHRE EIGENEN KNOEPFE UND IHREN EIGENEN ZUSTAND. Umbenannt wird im
+         Textfeld an der Stelle des Namens, die Rueckfrage zum Loeschen und jede Meldung stehen
+         in der Zeile; einen Bereich darunter gibt es nicht.
+
+         Ordner- und Anpassungsnamen sind Namen des Nutzers, alles Uebrige in den Zeilen kommt
+         uebersetzt aus dem ViewModel, deshalb no-translate. Die Zeilen entstehen aus Vorlagen,
+         nach dem Durchlauf der Uebersetzung; ihre Kurzhinweise zieht
+         OnLocalizedItemAttachedToVisualTree nach. -->
+    <UserControl.Styles>
+        <!-- Die Zeile fuellt ihren Listeneintrag ganz: die Hervorhebung beim Ablegen soll die
+             ganze Zeile treffen, der Abstand sitzt deshalb an der Zeile und nicht am Eintrag. -->
+        <Style Selector="ListBox.preset-manager ListBoxItem">
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="2,1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Cursor" Value="Arrow"/>
+        </Style>
+        <!-- Das Thema laesst den gewaehlten Eintrag durchsichtig; hier ist die Wahl das, woran
+             F2 und ENTF haengen, und muss zu sehen sein. -->
+        <Style Selector="ListBox.preset-manager ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource FP.Sel.Bg}"/>
+        </Style>
+        <!-- Die Symbolknoepfe der Ordnerzeile stehen nur an der gewaehlten und an der
+             ueberfahrenen Zeile. Die Zeile hat eine feste Mindesthoehe, das Ein- und Ausblenden
+             aendert also nur die Breite des Namens. -->
+        <Style Selector="ListBox.preset-manager StackPanel.row-actions">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+        <Style Selector="ListBox.preset-manager ListBoxItem:pointerover StackPanel.row-actions">
+            <Setter Property="IsVisible" Value="True"/>
+        </Style>
+        <Style Selector="ListBox.preset-manager ListBoxItem:selected StackPanel.row-actions">
+            <Setter Property="IsVisible" Value="True"/>
+        </Style>
+        <!-- Das Ziel beim Ablegen: NUR Farbe. Eine Randstaerke vermaesse die Zeile neu, das
+             Element unter dem Zeiger wechselte und die Hervorhebung wanderte. -->
+        <Style Selector="Border.preset-folder-row.drop-target">
+            <Setter Property="Background" Value="{DynamicResource FP.Accent.Dim}"/>
+        </Style>
+        <Style Selector="Border.preset-row.drag-source">
+            <Setter Property="Opacity" Value="0.5"/>
+        </Style>
+    </UserControl.Styles>
+
+    <StackPanel Spacing="10">
+        <!-- Die Ablage: wo die Anpassungen liegen. Der Pfad ist gekuerzt, der volle steht im
+             Kurzhinweis. -->
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+            <TextBlock Text="Ablage:" VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <TextBlock Grid.Column="1" Classes="no-translate"
+                       Text="{Binding RootDisplayPath}"
+                       ToolTip.Tip="{Binding RootPath}"
+                       TextTrimming="CharacterEllipsis"
+                       VerticalAlignment="Center"/>
+            <Button Grid.Column="2" Classes="ghost" Padding="10,5"
+                    IsEnabled="{Binding IsReachable}"
+                    Command="{Binding ShowInFileManagerCommand}"
+                    ToolTip.Tip="Den Ordner der Anpassungen im Dateimanager öffnen">
+                <TextBlock Text="Im Dateimanager zeigen" FontSize="{DynamicResource FP.Font.Small}"/>
+            </Button>
+            <Button Grid.Column="3" Classes="ghost" Padding="10,5"
+                    Command="{Binding ChangeFolderCommand}"
+                    ToolTip.Tip="Schließt dieses Fenster und öffnet die Einstellungen. Der Ordner für Anpassungen steht dort unter Editor.">
+                <TextBlock Text="Ordner ändern" FontSize="{DynamicResource FP.Font.Small}"/>
+            </Button>
+        </Grid>
+
+        <!-- Der Ordner ist nicht erreichbar: statt Baum und Liste der Hinweis mit dem Weg zur
+             Einstellung. Es wird nicht auf den Datenordner ausgewichen. -->
+        <StackPanel Spacing="8" IsVisible="{Binding IsUnreachable}">
+            <TextBlock Classes="no-translate"
+                       Text="{Binding UnreachableText}"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <Button Classes="ghost" Padding="10,5" HorizontalAlignment="Left"
+                    Command="{Binding ChangeFolderCommand}">
+                <TextBlock Text="Einstellungen öffnen" FontSize="{DynamicResource FP.Font.Small}"/>
+            </Button>
+        </StackPanel>
+
+        <!-- Neuer Ordner, Suche ueber alle Ordner, Importieren. -->
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" IsVisible="{Binding IsReachable}">
+            <Button Classes="ghost" Padding="10,5" Height="34"
+                    Command="{Binding NewFolderCommand}"
+                    ToolTip.Tip="Einen Unterordner im gewählten Ordner anlegen">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-plus.svg"
+                                   Width="16" Height="16" VerticalAlignment="Center"/>
+                    <TextBlock Text="Neuer Ordner" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Border Grid.Column="1"
+                    Background="{DynamicResource FP.Bg.Input}"
+                    BorderBrush="{DynamicResource FP.Border.Normal}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="12,0"
+                    Height="34">
+                <!-- Das Kreuz zum Leeren bringt die Klasse search-input mit, sobald etwas im Feld
+                     steht. -->
+                <Grid ColumnDefinitions="Auto,*">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/magnifying-glass.svg"
+                                   Width="16" Height="16" VerticalAlignment="Center" Opacity="0.65"/>
+                    <TextBox x:Name="PresetSearchBox" Grid.Column="1"
+                             Classes="search-input no-translate"
+                             Text="{Binding SearchText, Mode=TwoWay}"
+                             BorderThickness="0"
+                             Padding="0"
+                             Margin="10,0,0,0"
+                             PlaceholderText="Suchen"
+                             ToolTip.Tip="Anpassungen in allen Ordnern nach ihrem Namen suchen"
+                             VerticalAlignment="Center"
+                             VerticalContentAlignment="Center"/>
+                </Grid>
+            </Border>
+            <Button Grid.Column="2" Classes="ghost" Padding="10,5" Height="34"
+                    ToolTip.Tip="Anpassungen in den gewählten Ordner aufnehmen">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/tray-arrow-down.svg"
+                                   Width="16" Height="16" VerticalAlignment="Center"/>
+                    <TextBlock Text="Importieren" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center"/>
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/caret-down.svg"
+                                   Width="12" Height="12" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Button.Flyout>
+                    <MenuFlyout Opened="OnImportMenuOpened" Placement="BottomEdgeAlignedRight">
+                        <MenuItem Header="Datei" Click="OnImportFileClick"/>
+                        <MenuItem Header="Ordner samt Unterordnern" Click="OnImportFolderClick"/>
+                    </MenuFlyout>
+                </Button.Flyout>
+            </Button>
+        </Grid>
+
+        <Grid ColumnDefinitions="300,*" ColumnSpacing="14" IsVisible="{Binding IsReachable}">
+            <!-- Links der Baum. Die Liste traegt die SICHTBAREN Zeilen; was zugeklappt ist,
+                 steht nicht darin. -->
+            <StackPanel Spacing="6">
+                <TextBlock Text="Ordner" FontWeight="SemiBold" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                <Border BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="1" CornerRadius="6">
+                    <ListBox x:Name="FolderList" Classes="preset-manager"
+                             ItemsSource="{Binding Folders}"
+                             SelectedItem="{Binding SelectedFolder, Mode=TwoWay}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             Height="420">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Classes="preset-folder-row"
+                                        Classes.drop-target="{Binding IsDropTarget}"
+                                        Background="Transparent"
+                                        CornerRadius="6"
+                                        Padding="6,2"
+                                        AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
+                                    <StackPanel Spacing="4" Margin="{Binding Indent}">
+                                        <Grid ColumnDefinitions="22,Auto,*,Auto,Auto" MinHeight="30">
+                                            <Button Classes="icon-btn" Width="22" Height="22" Padding="0"
+                                                    VerticalAlignment="Center"
+                                                    IsVisible="{Binding HasChildren}"
+                                                    Click="OnFolderToggleClick"
+                                                    ToolTip.Tip="Unterordner zeigen oder verbergen">
+                                                <Panel>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/caret-right.svg"
+                                                                   Width="14" Height="14"
+                                                                   IsVisible="{Binding ShowsCollapsed}"/>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/caret-down.svg"
+                                                                   Width="14" Height="14"
+                                                                   IsVisible="{Binding ShowsExpanded}"/>
+                                                </Panel>
+                                            </Button>
+                                            <icons:SvgIcon Grid.Column="1"
+                                                           Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-simple.svg"
+                                                           Width="16" Height="16" Margin="2,0,6,0" VerticalAlignment="Center"/>
+                                            <!-- Name, Eingabefeld und Rueckfrage teilen sich die Zelle; es
+                                                 gilt immer genau einer der drei Zustaende der Zeile. -->
+                                            <TextBlock Grid.Column="2" Classes="no-translate"
+                                                       Text="{Binding Name}"
+                                                       IsVisible="{Binding ShowsName}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBox Grid.Column="2" Grid.ColumnSpan="3" Classes="no-translate"
+                                                     Text="{Binding EditText, Mode=TwoWay}"
+                                                     IsVisible="{Binding IsEditing}"
+                                                     PlaceholderText="Name"
+                                                     Padding="7,3"
+                                                     MinHeight="28"
+                                                     VerticalAlignment="Center"
+                                                     VerticalContentAlignment="Center"
+                                                     LostFocus="OnEditLostFocus"/>
+                                            <TextBlock Grid.Column="2" Grid.ColumnSpan="3" Classes="no-translate"
+                                                       Text="{Binding DeletePrompt}"
+                                                       IsVisible="{Binding IsConfirmingDelete}"
+                                                       TextWrapping="Wrap"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="3" Classes="no-translate"
+                                                       Text="{Binding Count}"
+                                                       IsVisible="{Binding ShowsName}"
+                                                       Margin="6,0,2,0"
+                                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       FontSize="{DynamicResource FP.Font.Small}"
+                                                       VerticalAlignment="Center"/>
+                                            <Panel Grid.Column="4" IsVisible="{Binding ShowsName}">
+                                                <StackPanel Classes="row-actions" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Button Classes="icon-btn" Width="26" Height="26" Padding="0"
+                                                            IsVisible="{Binding CanChange}"
+                                                            Click="OnFolderRenameClick"
+                                                            ToolTip.Tip="Ordner umbenennen (F2)">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/pencil-simple.svg"
+                                                                       Width="15" Height="15"/>
+                                                    </Button>
+                                                    <Button Classes="icon-btn" Width="26" Height="26" Padding="0"
+                                                            Click="OnFolderExportClick"
+                                                            ToolTip.Tip="Ordner samt Unterordnern in ein Verzeichnis exportieren">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/export.svg"
+                                                                       Width="15" Height="15"/>
+                                                    </Button>
+                                                    <Button Classes="icon-btn" Width="26" Height="26" Padding="0"
+                                                            IsVisible="{Binding CanChange}"
+                                                            Click="OnFolderDeleteClick"
+                                                            ToolTip.Tip="Ordner löschen (ENTF). Andere Dateien darin bleiben erhalten.">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
+                                                                       Width="15" Height="15"/>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Panel>
+                                        </Grid>
+                                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="24,0,0,4"
+                                                    IsVisible="{Binding IsConfirmingDelete}">
+                                            <Button Classes="accent" Padding="10,4" Click="OnConfirmDeleteClick">
+                                                <TextBlock Classes="no-translate" Text="{Binding DeleteText}"
+                                                           FontSize="{DynamicResource FP.Font.Small}"/>
+                                            </Button>
+                                            <Button Classes="ghost" Padding="10,4" Click="OnCancelDeleteClick">
+                                                <TextBlock Classes="no-translate" Text="{Binding CancelText}"
+                                                           FontSize="{DynamicResource FP.Font.Small}"/>
+                                            </Button>
+                                        </StackPanel>
+                                        <TextBlock Classes="no-translate"
+                                                   Text="{Binding RowMessage}"
+                                                   IsVisible="{Binding HasRowMessage}"
+                                                   TextWrapping="Wrap"
+                                                   Margin="24,0,0,4"
+                                                   Foreground="{DynamicResource FP.Text.Accent}"
+                                                   FontSize="{DynamicResource FP.Font.Small}"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+            </StackPanel>
+
+            <!-- Rechts die Anpassungen des gewaehlten Ordners; waehrend gesucht wird, die Treffer
+                 aus allen Ordnern. -->
+            <StackPanel Grid.Column="1" Spacing="6">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Classes="no-translate" Text="{Binding ListHeader}"
+                               FontWeight="SemiBold" Foreground="{DynamicResource FP.Text.Secondary}"
+                               TextTrimming="CharacterEllipsis" MaxWidth="560"/>
+                    <TextBlock Classes="no-translate" Text="{Binding ListCountText}"
+                               Foreground="{DynamicResource FP.Text.Secondary}"/>
+                </StackPanel>
+                <Border BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="1" CornerRadius="6">
+                    <Panel Height="420">
+                        <ListBox x:Name="PresetList" Classes="preset-manager"
+                                 ItemsSource="{Binding Presets}"
+                                 SelectedItem="{Binding SelectedPreset, Mode=TwoWay}"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Classes="preset-row"
+                                            Classes.drag-source="{Binding IsDragSource}"
+                                            Background="Transparent"
+                                            CornerRadius="6"
+                                            Padding="10,5"
+                                            PointerPressed="OnPresetRowPointerPressed"
+                                            PointerMoved="OnPresetRowPointerMoved"
+                                            AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
+                                        <StackPanel Spacing="4">
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" MinHeight="40">
+                                                <!-- Name mit zweiter Zeile, Eingabefeld und Rueckfrage teilen
+                                                     sich die Zelle; es gilt immer genau einer der drei
+                                                     Zustaende der Zeile. Ein Klick auf den Namen klappt den
+                                                     Inhalt auf. -->
+                                                <StackPanel Spacing="2" VerticalAlignment="Center"
+                                                            Background="Transparent"
+                                                            IsVisible="{Binding ShowsName}"
+                                                            Tapped="OnPresetNameTapped"
+                                                            ToolTip.Tip="Klicken zeigt, was die Anpassung enthält. Auf einen Ordner ziehen verschiebt sie.">
+                                                    <TextBlock Classes="no-translate" Text="{Binding Name}" FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Classes="no-translate" Text="{Binding SecondLine}"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                                               FontSize="{DynamicResource FP.Font.Small}"/>
+                                                </StackPanel>
+                                                <TextBox Classes="no-translate"
+                                                         Text="{Binding EditText, Mode=TwoWay}"
+                                                         IsVisible="{Binding IsEditing}"
+                                                         PlaceholderText="Name"
+                                                         Padding="7,4"
+                                                         MinHeight="30"
+                                                         VerticalAlignment="Center"
+                                                         VerticalContentAlignment="Center"
+                                                         LostFocus="OnEditLostFocus"/>
+                                                <TextBlock Classes="no-translate"
+                                                           Text="{Binding DeletePrompt}"
+                                                           IsVisible="{Binding IsConfirmingDelete}"
+                                                           FontWeight="SemiBold"
+                                                           VerticalAlignment="Center"/>
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2"
+                                                            VerticalAlignment="Center"
+                                                            IsVisible="{Binding ShowsName}">
+                                                    <Button Classes="ghost" Padding="10,4" Margin="0,0,4,0"
+                                                            IsVisible="{Binding CanApply}"
+                                                            Click="OnPresetApplyClick"
+                                                            ToolTip.Tip="Auf das im Editor geöffnete Bild anwenden">
+                                                        <TextBlock Classes="no-translate" Text="{Binding ApplyText}"
+                                                                   FontSize="{DynamicResource FP.Font.Small}"/>
+                                                    </Button>
+                                                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                                                            Click="OnPresetRenameClick"
+                                                            ToolTip.Tip="Umbenennen (F2)">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/pencil-simple.svg"
+                                                                       Width="16" Height="16"/>
+                                                    </Button>
+                                                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                                                            IsEnabled="{Binding CanMove}"
+                                                            Click="OnPresetMoveClick"
+                                                            ToolTip.Tip="In einen anderen Ordner verschieben">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-square-right.svg"
+                                                                       Width="16" Height="16"/>
+                                                    </Button>
+                                                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                                                            Click="OnPresetExportClick"
+                                                            ToolTip.Tip="Als Datei an einen anderen Ort exportieren">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/export.svg"
+                                                                       Width="16" Height="16"/>
+                                                    </Button>
+                                                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                                                            Click="OnPresetDeleteClick"
+                                                            ToolTip.Tip="Löschen (ENTF)">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
+                                                                       Width="16" Height="16"/>
+                                                    </Button>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                                                            VerticalAlignment="Center"
+                                                            IsVisible="{Binding IsConfirmingDelete}">
+                                                    <Button Classes="accent" Padding="10,4" Click="OnConfirmDeleteClick">
+                                                        <TextBlock Classes="no-translate" Text="{Binding DeleteText}"
+                                                                   FontSize="{DynamicResource FP.Font.Small}"/>
+                                                    </Button>
+                                                    <Button Classes="ghost" Padding="10,4" Click="OnCancelDeleteClick">
+                                                        <TextBlock Classes="no-translate" Text="{Binding CancelText}"
+                                                                   FontSize="{DynamicResource FP.Font.Small}"/>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                            <TextBlock Classes="no-translate"
+                                                       Text="{Binding RowMessage}"
+                                                       IsVisible="{Binding HasRowMessage}"
+                                                       TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource FP.Text.Accent}"
+                                                       FontSize="{DynamicResource FP.Font.Small}"/>
+                                            <!-- Der aufgeklappte Inhalt: je Gruppe ihre Regler mit Wert, in
+                                                 Spalten fester Breite, die umbrechen. -->
+                                            <StackPanel Spacing="6" Margin="0,2,0,4" IsVisible="{Binding IsExpanded}">
+                                                <ItemsControl ItemsSource="{Binding Details}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <StackPanel Spacing="2" Margin="0,0,0,6">
+                                                                <TextBlock Classes="no-translate" Text="{Binding Title}"
+                                                                           FontWeight="SemiBold"
+                                                                           FontSize="{DynamicResource FP.Font.Small}"/>
+                                                                <ItemsControl ItemsSource="{Binding Lines}">
+                                                                    <ItemsControl.ItemsPanel>
+                                                                        <ItemsPanelTemplate>
+                                                                            <WrapPanel/>
+                                                                        </ItemsPanelTemplate>
+                                                                    </ItemsControl.ItemsPanel>
+                                                                    <ItemsControl.ItemTemplate>
+                                                                        <DataTemplate>
+                                                                            <Grid Width="190" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,12,0">
+                                                                                <TextBlock Classes="no-translate" Text="{Binding Label}"
+                                                                                           TextTrimming="CharacterEllipsis"
+                                                                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                                                                           FontSize="{DynamicResource FP.Font.Small}"/>
+                                                                                <TextBlock Grid.Column="1" Classes="no-translate" Text="{Binding Value}"
+                                                                                           FontSize="{DynamicResource FP.Font.Small}"/>
+                                                                            </Grid>
+                                                                        </DataTemplate>
+                                                                    </ItemsControl.ItemTemplate>
+                                                                </ItemsControl>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <TextBlock Classes="no-translate"
+                                                           Text="{Binding DetailNote}"
+                                                           IsVisible="{Binding HasDetailNote}"
+                                                           TextWrapping="Wrap"
+                                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                                           FontSize="{DynamicResource FP.Font.Small}"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <!-- Die leere Liste erklaert sich: kein Ordner gewaehlt, Ordner leer, keine
+                             Treffer. -->
+                        <TextBlock Classes="no-translate"
+                                   Text="{Binding EmptyText}"
+                                   IsVisible="{Binding HasEmptyText}"
+                                   IsHitTestVisible="False"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   MaxWidth="440"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+                    </Panel>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <!-- Was Importieren, Exportieren und Verschieben getan haben. -->
+        <TextBlock Classes="no-translate"
+                   Text="{Binding StatusText}"
+                   IsVisible="{Binding HasStatusText}"
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource FP.Text.Secondary}"
+                   FontSize="{DynamicResource FP.Font.Small}"/>
+    </StackPanel>
+</UserControl>

@@ -1124,6 +1124,7 @@ Namespace Models
             ExifDateModified = scanned.ExifDateModified
             ExifCamera = scanned.ExifCamera
             CaptureMode = scanned.CaptureMode
+            SetMotion(scanned.MotionKind, scanned.MotionId)
             ExifIso = scanned.ExifIso
             ExifAperture = scanned.ExifAperture
             ExifLens = scanned.ExifLens
@@ -1254,6 +1255,78 @@ Namespace Models
         ''' <summary>Einzelbild oder Serie laut Kamera, aus dem Katalog gespiegelt. Nur fuer das
         ''' Bilden der Stapel (ImageStackService); keine Anzeige, deshalb ohne Benachrichtigung.</summary>
         Public Property CaptureMode As Services.CaptureMode
+
+        Private _motionKind As Services.MotionKind
+        ''' <summary>Motion Photo, Bild oder Film eines Live Photos, aus dem Katalog gespiegelt
+        ''' (LivePhotoService.Identify). Gesetzt ueber <see cref="SetMotion"/>.</summary>
+        Public ReadOnly Property MotionKind As Services.MotionKind
+            Get
+                Return _motionKind
+            End Get
+        End Property
+
+        Private _motionId As String = ""
+        ''' <summary>Die Kennung eines Live Photos, an der Bild und Film zusammengehoeren; leer bei
+        ''' allem anderen.</summary>
+        Public ReadOnly Property MotionId As String
+            Get
+                Return _motionId
+            End Get
+        End Property
+
+        ''' <summary>Art und Kennung des Bewegtbilds, wie Katalog oder EXIF-Lauf sie liefern.</summary>
+        Public Sub SetMotion(kind As Services.MotionKind, motionId As String)
+            motionId = If(motionId, "")
+            If _motionKind = kind AndAlso String.Equals(_motionId, motionId, StringComparison.Ordinal) Then Return
+            _motionKind = kind
+            _motionId = motionId
+            RaiseMotionChanged()
+        End Sub
+
+        Private _livePartner As ImageItem
+        ''' <summary>Die andere Haelfte eines Live Photos (zum Bild der Film, zum Film das Bild),
+        ''' oder Nothing. Die Galerie setzt das bei jedem Filterlauf aus dem ungefilterten Bestand
+        ''' (GalleryViewModel.ApplyLivePairs), unabhaengig davon, ob Stapel eingeschaltet sind:
+        ''' Loeschen, Verschieben und Kopieren nehmen sie immer mit.</summary>
+        Public Property LivePartner As ImageItem
+            Get
+                Return _livePartner
+            End Get
+            Set(value As ImageItem)
+                If _livePartner Is value Then Return
+                _livePartner = value
+                RaiseMotionChanged()
+            End Set
+        End Property
+
+        Private Sub RaiseMotionChanged()
+            RaisePropertyChanged(NameOf(HasMotionBadge))
+            RaisePropertyChanged(NameOf(MotionBadgeTip))
+        End Sub
+
+        ''' <summary>Traegt die Kachel das Abzeichen fuer ein Bewegtbild? Ein Motion Photo immer
+        ''' (der Film haengt an der Datei), Bild und Film eines Live Photos nur, wenn die andere
+        ''' Haelfte daneben liegt: ein Bild, dessen Film fehlt, ist ein gewoehnliches Bild.</summary>
+        Public ReadOnly Property HasMotionBadge As Boolean
+            Get
+                Return _motionKind = Services.MotionKind.MotionPhoto OrElse _livePartner IsNot Nothing
+            End Get
+        End Property
+
+        ''' <summary>Der Hinweis am Abzeichen, in der Sprache der Oberflaeche; Nothing ohne Abzeichen.</summary>
+        Public ReadOnly Property MotionBadgeTip As String
+            Get
+                If Not HasMotionBadge Then Return Nothing
+                Select Case _motionKind
+                    Case Services.MotionKind.MotionPhoto
+                        Return LocalizationService.T("Motion Photo: an diesem Bild hängt ein kurzer Film")
+                    Case Services.MotionKind.LivePhotoVideo
+                        Return LocalizationService.T("Live Photo: der Film zu einem Bild")
+                    Case Else
+                        Return LocalizationService.T("Live Photo: zu diesem Bild gehört ein kurzer Film")
+                End Select
+            End Get
+        End Property
 
         ' Schlanke EXIF-Sortierfelder, aus dem Katalog gespiegelt (siehe GalleryViewModel.LoadFolderImages/
         ' QueueBackgroundMetaRefresh) - vermeidet DB-Zugriffe live während des Sortierens.
@@ -2284,6 +2357,7 @@ Namespace Models
             ExifDateModified = ExifService.ParseExifDateTime(meta.DateModifiedExif)
             ExifCamera = meta.Camera
             CaptureMode = meta.CaptureMode
+            SetMotion(meta.MotionKind, meta.MotionId)
             ExifIso = meta.Iso
             ExifAperture = meta.Aperture
             ExifLens = meta.Lens

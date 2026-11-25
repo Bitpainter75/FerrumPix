@@ -49,8 +49,21 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Galerie-Kachel zeigen, solange im Viewer entwickelt wird" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt im Viewer und im Vollbild sofort die Kachel aus der Galerie, bis die Entwicklung fertig ist, statt einer leeren Fläche. Die Kachel ist kleiner als das Bild und wirkt deshalb kurz unscharf." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ViewerTransitionTile}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="RAWs im Vergleich in voller Auflösung entwickeln" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Ausgeschaltet entwickelt der Bildvergleich RAWs in halber Auflösung. Das geht um ein Vielfaches schneller und reicht für die Ansicht im Fenster. Eingeschaltet bleibt beim Hineinzoomen die volle Schärfe erhalten, dafür dauert jedes Bild deutlich länger." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Bei vier Feldern mit 24 Megapixeln belegt der Vergleich in halber Auflösung rund 100 MB, in voller rund 380 MB." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding CompareRawFullResolution}"

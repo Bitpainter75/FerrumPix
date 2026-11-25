@@ -733,6 +733,18 @@ Namespace Services
                 workingFull?.Dispose()
                 Return False
             End If
+            ' Ein JPEG mit angehaengtem Film (Motion Photo) wird nie ueber sich selbst geschrieben:
+            ' kodiert wird nur das Bild, der Film dahinter waere weg, und das uebernommene XMP
+            ' behauptete ihn weiter. Die Aufrufer leiten so eine Datei vorher ins Rezept daneben
+            ' (RawSidecarService.SavesRecipeBeside, CanReplaceOriginal); das hier ist die letzte
+            ' Sperre fuer einen Weg, der daran vorbeikommt. Sie fragt die Datei selbst und nicht den
+            ' Katalog: hier kostet das eine Datei je Speichern.
+            If PathIdentity.AreSame(sourcePath, targetPath) AndAlso MotionPhotoService.HasVideoInFile(targetPath) Then
+                DiagnosticLogService.LogAlways("ImageProcessor.Save",
+                    $"refused: Bild mit angehaengtem Film wird nicht ueberschrieben target={IO.Path.GetFileName(targetPath)}")
+                workingFull?.Dispose()
+                Return False
+            End If
             ' Dasselbe fuer ein ANDERES, schon vorhandenes TIFF als Ziel ("Speichern unter" mit
             ' Ueberschreiben): ersetzt wird es nur, wenn es nicht mehr traegt, als wir schreiben -
             ' sonst wuerde aus einem mehrseitigen oder 16-Bit-TIFF still ein 8-Bit-Einzelbild.
@@ -1209,6 +1221,10 @@ Namespace Services
             If Not JxlEncodeService.CanTranscodeJpeg OrElse Not File.Exists(sourcePath) Then Return False
             If PathIdentity.AreSame(sourcePath, targetPath) Then Return False
             If RawSidecarService.HasRecipeBeside(sourcePath) Then Return False
+            ' Ein JPEG, dessen XMP einen angehaengten Film behauptet, wird nicht umgepackt: die
+            ' Segmente gingen unveraendert mit, die neue Datei kuendigte also einen Film an, den sie
+            ' so nicht traegt. Der gewoehnliche Weg kodiert neu und laesst die Felder weg.
+            If MotionPhotoService.IsClaimed(sourcePath) Then Return False
             If Not JxlDecodeService.CanReplaceExisting(targetPath) Then Return False
             Try
                 Dim jpeg = File.ReadAllBytes(sourcePath)
@@ -1547,12 +1563,49 @@ Namespace Services
         ''' JPEG, PNG, WebP), und nie fuer die Arbeitskopie eines Serverbildes (Immich, Nextcloud): was
         ''' dort landet, geht nicht zum Server und ist beim naechsten Aufraeumen fort. Die Serverwege,
         ''' die das Ergebnis wirklich hochladen, legen es nicht ueber die Arbeitskopie und fragen hier
-        ''' deshalb nicht.</summary>
+        ''' deshalb nicht.
+        '''
+        ''' Und nie fuer ein JPEG mit angehaengtem Film (MotionPhotoService.HasVideo): die
+        ''' Nachbardatei traegt nur das neu kodierte Bild, der Film waere nach dem Darueberlegen
+        ''' fort. Die Bearbeitung so einer Datei geht ins Rezept daneben
+        ''' (RawSidecarService.SavesRecipeBeside); ein Stapel, der Bildpunkte schreiben muesste,
+        ''' laesst sie aus und zaehlt sie als nicht geschrieben.</summary>
         Public Shared Function CanReplaceOriginal(originalPath As String) As Boolean
             If String.IsNullOrWhiteSpace(originalPath) Then Return False
             If LibraryService.IsServerTempPath(originalPath) Then Return False
-            Return IsRewritableInPlace(originalPath)
+            If Not IsRewritableInPlace(originalPath) Then Return False
+            Return Not MotionPhotoService.HasVideo(originalPath)
         End Function
+
+        ''' <summary>Wie lange <see cref="CopyOverOriginal"/> auf einen Leser wartet.</summary>
+        Private Const CopyOverOriginalWaitMs As Integer = 3000
+
+        ''' <summary>Legt die fertig geschriebene Nachbardatei ueber das Original, der zweite Schritt
+        ''' des Wegs "neue Datei, dann ueber das Original" (Drehen im Betrachter, Stapel mit
+        ''' Ueberschreiben).
+        '''
+        ''' WARTET AUF EINEN LESER, statt sofort aufzugeben. Das Kopieren oeffnet das Original
+        ''' allein fuer sich; haelt in dem Augenblick jemand die Datei zum Lesen offen, wirft es
+        ''' "wird von einem anderen Prozess verwendet". Das sind meist wir selbst: nach dem Oeffnen
+        ''' eines Bildes lesen Aufnahmedaten, Vorschau und Markierungen die Datei im Hintergrund,
+        ''' jeder fuer Millisekunden. Wer gleich nach dem Oeffnen dreht und speichert, bekam dann
+        ''' "Bild konnte nicht gespeichert werden", obwohl ein Augenblick spaeter alles frei war.
+        ''' Versucht wird deshalb wiederholt, bis die Frist um ist; danach fliegt der letzte Fehler
+        ''' weiter wie bisher, und das Original ist unangetastet. Blockiert so lange den Faden, der
+        ''' ruft: nicht vom Oberflaechenfaden aus.</summary>
+        Friend Shared Sub CopyOverOriginal(writtenPath As String, originalPath As String)
+            Dim deadline = Environment.TickCount64 + CopyOverOriginalWaitMs
+            While True
+                Try
+                    File.Copy(writtenPath, originalPath, True)
+                    Return
+                Catch ex As IOException When Environment.TickCount64 < deadline AndAlso
+                                             File.Exists(writtenPath) AndAlso File.Exists(originalPath)
+                    ' Beide Dateien sind da, also ist es kein fehlendes Ziel: jemand liest gerade.
+                    Threading.Thread.Sleep(40)
+                End Try
+            End While
+        End Sub
 
         ' Je Faden: der Schreiber eines Stapels laeuft synchron auf dem Faden, der ihn ruft.
         <ThreadStatic> Private Shared _replacingSourceDepth As Integer
@@ -2190,25 +2243,34 @@ Namespace Services
         '''
         ''' GRENZE: ein KOMPRIMIERT abgelegtes XMP (PNG kann das) bleibt unangetastet. Die Felder
         ''' stehen dort nicht im Klartext, also findet der Ausdruck nichts und die Datei geht
-        ''' unveraendert weiter - schlechter als vorher ist sie damit nicht.</summary>
+        ''' unveraendert weiter - schlechter als vorher ist sie damit nicht.
+        '''
+        ''' AN DERSELBEN STELLE ENTFALLEN DIE FELDER EINES ANGEHAENGTEN FILMS (Motion Photo,
+        ''' MotionPhotoService.StripMotionFields), aus demselben Grund: was hier durchlaeuft, gehoert
+        ''' zu einem neu kodierten Bild, und der Film reist dabei nie mit. Blieben die Felder
+        ''' stehen, kuendigte die neue Datei einen Film mit einer Laenge an, zu der es keine Bytes
+        ''' gibt. Jeder Weg, der das XMP der Quelle uebernimmt (JPEG, PNG, WebP, JPEG XL, PSD),
+        ''' kommt hier vorbei.</summary>
         Private Shared Function StripXmpColorFields(xmp As Byte()) As Byte()
             If xmp Is Nothing OrElse xmp.Length = 0 Then Return Nothing
             Try
                 ' NICHT "text" nennen: der Name verdeckt den Namensraum Text, und die Zeile
                 ' darunter kaeme dann nicht mehr an Text.Encoding heran.
                 Dim xmpText = Text.Encoding.UTF8.GetString(xmp)
-                If xmpText.IndexOf("ICCProfile", StringComparison.OrdinalIgnoreCase) < 0 AndAlso
-                   xmpText.IndexOf("ColorSpace", StringComparison.OrdinalIgnoreCase) < 0 Then Return Nothing
 
                 Dim cleaned = xmpText
-                For Each field In {"photoshop:ICCProfile", "exif:ColorSpace"}
-                    ' Als Attribut, in beiden Anfuehrungsarten, und als eigenes Element.
-                    cleaned = Regex.Replace(cleaned, "\s*" & Regex.Escape(field) & "\s*=\s*""[^""]*""", "")
-                    cleaned = Regex.Replace(cleaned, "\s*" & Regex.Escape(field) & "\s*=\s*'[^']*'", "")
-                    cleaned = Regex.Replace(cleaned, "\s*<" & Regex.Escape(field) & "(\s[^>]*)?/>", "")
-                    cleaned = Regex.Replace(cleaned, "\s*<" & Regex.Escape(field) & "(\s[^>]*)?>.*?</" & Regex.Escape(field) & ">", "",
-                                            RegexOptions.Singleline)
-                Next
+                If xmpText.IndexOf("ICCProfile", StringComparison.OrdinalIgnoreCase) >= 0 OrElse
+                   xmpText.IndexOf("ColorSpace", StringComparison.OrdinalIgnoreCase) >= 0 Then
+                    For Each field In {"photoshop:ICCProfile", "exif:ColorSpace"}
+                        ' Als Attribut, in beiden Anfuehrungsarten, und als eigenes Element.
+                        cleaned = Regex.Replace(cleaned, "\s*" & Regex.Escape(field) & "\s*=\s*""[^""]*""", "")
+                        cleaned = Regex.Replace(cleaned, "\s*" & Regex.Escape(field) & "\s*=\s*'[^']*'", "")
+                        cleaned = Regex.Replace(cleaned, "\s*<" & Regex.Escape(field) & "(\s[^>]*)?/>", "")
+                        cleaned = Regex.Replace(cleaned, "\s*<" & Regex.Escape(field) & "(\s[^>]*)?>.*?</" & Regex.Escape(field) & ">", "",
+                                                RegexOptions.Singleline)
+                    Next
+                End If
+                cleaned = MotionPhotoService.StripMotionFields(cleaned)
 
                 If String.Equals(cleaned, xmpText, StringComparison.Ordinal) Then Return Nothing
                 Return Text.Encoding.UTF8.GetBytes(cleaned)

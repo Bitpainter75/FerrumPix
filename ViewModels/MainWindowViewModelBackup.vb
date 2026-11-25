@@ -23,6 +23,7 @@ Namespace ViewModels
         Private _dialogBackupSettings As Boolean = True
         Private _dialogBackupFavorites As Boolean = True
         Private _dialogBackupSearches As Boolean = True
+        Private _dialogBackupAdjustmentPresets As Boolean = True
         Private _dialogBackupSecrets As Boolean
         Private _dialogRestoreManifest As BackupManifest
         Private _dialogRestoreProblem As String = ""
@@ -119,6 +120,17 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Die im Editor gespeicherten Anpassungen, ein Ordnerbaum aus Dateien.</summary>
+        Public Property DialogBackupAdjustmentPresets As Boolean
+            Get
+                Return _dialogBackupAdjustmentPresets
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_dialogBackupAdjustmentPresets, value)
+                RaiseBackupDialog()
+            End Set
+        End Property
+
         ''' <summary>Die Zugangsdaten gibt es nur zusammen mit den Einstellungen.</summary>
         Public Property DialogBackupSecrets As Boolean
             Get
@@ -156,6 +168,11 @@ Namespace ViewModels
                 Return PartAvailable(BackupParts.Searches)
             End Get
         End Property
+        Public ReadOnly Property CanChooseBackupAdjustmentPresets As Boolean
+            Get
+                Return PartAvailable(BackupParts.AdjustmentPresets)
+            End Get
+        End Property
         Public ReadOnly Property CanChooseBackupSecrets As Boolean
             Get
                 Return _dialogBackupSettings AndAlso PartAvailable(BackupParts.Secrets)
@@ -187,6 +204,7 @@ Namespace ViewModels
             If _dialogBackupSettings AndAlso PartAvailable(BackupParts.Settings) Then parts = parts Or BackupParts.Settings
             If _dialogBackupFavorites AndAlso PartAvailable(BackupParts.Favorites) Then parts = parts Or BackupParts.Favorites
             If _dialogBackupSearches AndAlso PartAvailable(BackupParts.Searches) Then parts = parts Or BackupParts.Searches
+            If _dialogBackupAdjustmentPresets AndAlso PartAvailable(BackupParts.AdjustmentPresets) Then parts = parts Or BackupParts.AdjustmentPresets
             If _dialogBackupSecrets AndAlso CanChooseBackupSecrets Then parts = parts Or BackupParts.Secrets
             Return parts
         End Function
@@ -217,6 +235,7 @@ Namespace ViewModels
         Private Sub RaiseBackupDialog()
             For Each name In {NameOf(CanChooseBackupCatalog), NameOf(CanChooseBackupServerIndexes), NameOf(CanChooseBackupSettings),
                               NameOf(CanChooseBackupFavorites), NameOf(CanChooseBackupSearches), NameOf(CanChooseBackupSecrets),
+                              NameOf(CanChooseBackupAdjustmentPresets),
                               NameOf(DialogRestoreSummary), NameOf(IsDialogPrimaryEnabled), NameOf(HasDialogRestoreRemaps)}
                 Me.RaisePropertyChanged(name)
             Next
@@ -228,6 +247,7 @@ Namespace ViewModels
             _dialogBackupSettings = True
             _dialogBackupFavorites = True
             _dialogBackupSearches = True
+            _dialogBackupAdjustmentPresets = True
             _dialogBackupSecrets = False
             _dialogRestoreManifest = Nothing
             _dialogRestoreProblem = ""
@@ -235,7 +255,7 @@ Namespace ViewModels
             _dialogBackupPath = If(path, "")
             For Each name In {NameOf(DialogBackupCatalog), NameOf(DialogBackupServerIndexes), NameOf(DialogBackupSettings),
                               NameOf(DialogBackupFavorites), NameOf(DialogBackupSearches), NameOf(DialogBackupSecrets),
-                              NameOf(DialogBackupPath)}
+                              NameOf(DialogBackupAdjustmentPresets), NameOf(DialogBackupPath)}
                 Me.RaisePropertyChanged(name)
             Next
         End Sub
@@ -269,9 +289,16 @@ Namespace ViewModels
                 Await ShowMessageAsync(LocalizationService.T("Sichern fehlgeschlagen"), errorText)
                 Return
             End If
-            Await ShowMessageAsync(LocalizationService.T("Gesichert"),
-                                   String.Format(LocalizationService.T("Die Sicherung liegt unter {0}. Im Katalog: {1} Bilder, {2} benannte Personen."),
-                                                 target, manifest.ImageCount, manifest.PersonCount))
+            Await ShowMessageAsync(LocalizationService.T("Gesichert"), BackupDoneText(target, manifest))
+        End Function
+
+        ''' <summary>Die Meldung nach dem Sichern. Fehlen die Anpassungen, weil ihr Ordner nicht
+        ''' erreichbar war, steht das dahinter: die Sicherung ist gelungen, aber nicht vollstaendig.</summary>
+        Friend Shared Function BackupDoneText(target As String, manifest As BackupManifest) As String
+            Dim text = String.Format(LocalizationService.T("Die Sicherung liegt unter {0}. Im Katalog: {1} Bilder, {2} benannte Personen."),
+                                     target, manifest.ImageCount, manifest.PersonCount)
+            Dim hint = CatalogBackupService.AdjustmentPresetHint(manifest)
+            Return If(hint.Length > 0, text & " " & hint, text)
         End Function
 
         ''' <summary>Wiederherstellen: Dialog, Bereitlegen samt Sicherung des jetzigen Stands, dann

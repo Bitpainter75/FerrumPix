@@ -97,14 +97,20 @@ Namespace Services
         '''
         ''' Arbeitskopien vom Server bleiben dabei, wie sie waren (nur RAW und PSD): ihre Begleitdatei
         ''' laege im Temp-Ordner und waere beim naechsten Aufraeumen fort. Den Weg zum Server kennt
-        ''' fuer andere Formate noch niemand.</summary>
+        ''' fuer andere Formate noch niemand.
+        '''
+        ''' UNABHAENGIG VON DER EINSTELLUNG auch fuer ein JPEG mit angehaengtem Film (Motion Photo,
+        ''' MotionPhotoService.HasVideo): neu kodiert wuerde nur das Bild, der Film dahinter ginge
+        ''' still verloren. Gefragt wird die Datei selbst, zuletzt und nur, wenn die Einstellung
+        ''' nicht ohnehin Ja sagt.</summary>
         Public Shared Function SavesRecipeBeside(path As String) As Boolean
             If Not IsRecipeFormat(path) Then Return False
             If IsReadOnlyFormat(path) Then Return True
             Dim file = VariantKey.FileOf(path)
             If ImmichService.IsImmichTempPath(file) OrElse NextcloudService.IsNextcloudTempPath(file) Then Return False
             If Not ImageProcessor.CanEncodeToTargetExtension(file) Then Return True
-            Return AppSettingsService.Load().SaveEditsBesideOriginal
+            If AppSettingsService.Load().SaveEditsBesideOriginal Then Return True
+            Return MotionPhotoService.HasVideo(file)
         End Function
 
         ''' <summary>Die Frage der "leichten" Schreiber, die eine Bearbeitung auf eine Datei legen,
@@ -1003,6 +1009,7 @@ Namespace Services
             CarryModelDenoiseFile(sourcePath, targetPath, moveFile:=True, failed:=failed)
             CarryXmpCompanions(sourcePath, targetPath, moveFiles:=True, failed:=failed)
             CarryRrdataFiles(sourcePath, targetPath, moveFiles:=True, failed:=failed)
+            CarryEditList(sourcePath, targetPath, moveFiles:=True, failed:=failed)
             Return failed
         End Function
 
@@ -1020,8 +1027,91 @@ Namespace Services
             CarryModelDenoiseFile(sourcePath, targetPath, moveFile:=False, failed:=failed)
             CarryXmpCompanions(sourcePath, targetPath, moveFiles:=False, failed:=failed)
             CarryRrdataFiles(sourcePath, targetPath, moveFiles:=False, failed:=failed)
+            CarryEditList(sourcePath, targetPath, moveFiles:=False, failed:=failed)
             Return failed
         End Function
+
+        ''' <summary>Die Bearbeitungsliste eines Telefons zu diesem Bild ("IMG_0001.AAE" neben
+        ''' "IMG_0001.HEIC"), in der Schreibweise, in der sie daliegt, oder Nothing. Sie traegt den
+        ''' Stamm des Bildes und gehoert, wie die Stamm-XMP, allen Dateien dieses Stamms: beim Live
+        ''' Photo dem Bild und seinem Film. Im Stapel aus der Liste des Ordners. Ist der Ordner
+        ''' nicht lesbar, fliegt die Ausnahme weiter, und der Aufrufer meldet die Datei.</summary>
+        Friend Shared Function ExistingEditList(imagePath As String) As String
+            If String.IsNullOrWhiteSpace(imagePath) Then Return Nothing
+            Dim folder = Path.GetDirectoryName(imagePath)
+            Dim stem = Path.GetFileNameWithoutExtension(imagePath)
+            If String.IsNullOrEmpty(folder) OrElse String.IsNullOrEmpty(stem) Then Return Nothing
+            ' Die Liste selbst hat keine.
+            If String.Equals(Path.GetExtension(imagePath), LivePhotoService.EditListExtension, StringComparison.OrdinalIgnoreCase) Then Return Nothing
+            Dim sameStem As IEnumerable(Of String)
+            Dim scope = _currentStemScope.Value
+            If scope Is Nothing Then
+                If Not Directory.Exists(folder) Then Return Nothing
+                sameStem = Directory.EnumerateFiles(folder, stem & ".*")
+            Else
+                SyncLock scope.TargetListings
+                    Dim listing As StemListing = Nothing
+                    If Not scope.TargetListings.TryGetValue(folder, listing) OrElse listing.IsStale Then
+                        listing = StemListing.Read(folder)
+                        scope.TargetListings(folder) = listing
+                    End If
+                    sameStem = listing.WithStem(stem)
+                End SyncLock
+            End If
+            Return sameStem.
+                Where(Function(candidate) String.Equals(Path.GetFileNameWithoutExtension(candidate), stem, PathIdentity.Comparison) AndAlso
+                                          String.Equals(Path.GetExtension(candidate), LivePhotoService.EditListExtension, StringComparison.OrdinalIgnoreCase)).
+                OrderBy(Function(candidate) candidate, StringComparer.Ordinal).
+                FirstOrDefault()
+        End Function
+
+        ''' <summary>Die Bearbeitungsliste eines Telefons geht mit ihrem Bild, nach den Regeln der
+        ''' Stamm-XMP: sie kann mehreren Dateien gehoeren (Bild und Film eines Live Photos). Beim
+        ''' Verschieben geht sie deshalb erst, wenn keine andere Datei desselben Stamms am alten Ort
+        ''' bleibt; solange eine bleibt, bekommt das Ziel eine Kopie. Im Stapel entscheidet erst
+        ''' dessen Ende, mit frisch gelesenem Ordner. Eine vorhandene am Ziel wird nie
+        ''' ueberschrieben: ist sie bytegleich, ist nichts zu tun, sonst wird die Quelle gemeldet.
+        ''' Bewegt wird nur die Datei, gelesen und ausgewertet wird ihr Inhalt nicht.</summary>
+        Private Shared Sub CarryEditList(sourcePath As String, targetPath As String, moveFiles As Boolean,
+                                         failed As List(Of String))
+            Dim source As String
+            Try
+                source = ExistingEditList(sourcePath)
+            Catch ex As Exception
+                ' Ordner nicht lesbar: ob eine daliegt, laesst sich nicht sagen, also gemeldet.
+                DiagnosticLogService.LogException("Sidecar.CarryEditList", ex)
+                failed.Add(Path.ChangeExtension(sourcePath, LivePhotoService.EditListExtension))
+                Return
+            End Try
+            If source Is Nothing Then Return
+            Try
+                Dim target = Path.Combine(If(Path.GetDirectoryName(targetPath), ""),
+                                          Path.GetFileNameWithoutExtension(targetPath) & Path.GetExtension(source))
+                If String.Equals(source, target, PathIdentity.Comparison) Then Return
+                Dim scope = _currentStemScope.Value
+                If File.Exists(target) Then
+                    If Not File.ReadAllBytes(source).AsSpan().SequenceEqual(File.ReadAllBytes(target)) Then
+                        DiagnosticLogService.LogAlways("Sidecar.Accompany",
+                            $"Bearbeitungsliste am Ziel vorhanden, nicht ueberschrieben: {Path.GetFileName(target)}")
+                        failed.Add(source)
+                        Return
+                    End If
+                    ' Dieselbe Datei liegt schon da: die andere Haelfte des Paars zog vorher um.
+                Else
+                    StagedFileTransfer.CarryFile(source, target, moveFile:=False)
+                    NoteInBatch(target, added:=True)
+                End If
+                If Not moveFiles Then Return
+                If scope IsNot Nothing Then
+                    AddPending(scope, New PendingStemRemoval With {.StemXmp = source, .ImagePath = sourcePath, .CopyAt = target})
+                ElseIf Not HasStemSibling(sourcePath) Then
+                    DeleteExisting(source)
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Sidecar.CarryEditList", ex)
+                failed.Add(source)
+            End Try
+        End Sub
 
         ''' <summary>Die .rrdata eines anderen Entwicklers geht mit wie die .fpxmp, die des Originals
         ''' und jede virtuelle Kopie (RrdataSidecarService.BelongsTo), unabhaengig davon, ob die
@@ -1162,6 +1252,23 @@ Namespace Services
             Catch ex As Exception
                 DiagnosticLogService.LogException("Sidecar.AccompanyDelete", ex)
                 failed.Add(RrdataSidecarService.PathFor(rawPath))
+            End Try
+            ' Die Bearbeitungsliste eines Telefons, nach der Regel der Stamm-XMP: sie geht erst mit
+            ' der letzten Datei ihres Stamms (beim Live Photo mit Bild UND Film).
+            Try
+                Dim editList = ExistingEditList(rawPath)
+                If editList IsNot Nothing Then
+                    Dim scope = _currentStemScope.Value
+                    If scope IsNot Nothing Then
+                        AddPending(scope, New PendingStemRemoval With {
+                            .StemXmp = editList, .ImagePath = rawPath, .UseTrash = useTrash, .MoveToTrash = moveToTrash})
+                    ElseIf Not HasStemSibling(rawPath) Then
+                        companions.Add(editList)
+                    End If
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Sidecar.AccompanyDelete", ex)
+                failed.Add(Path.ChangeExtension(rawPath, LivePhotoService.EditListExtension))
             End Try
             For Each listed In companions
                 Dim companion = listed
@@ -1715,8 +1822,10 @@ Namespace Services
                 If String.Equals(candidate, imagePath, PathIdentity.Comparison) Then Continue For
                 If Not String.Equals(Path.GetFileNameWithoutExtension(candidate), stem, PathIdentity.Comparison) Then Continue For
                 Dim ext = Path.GetExtension(candidate)
+                ' Auch die Bearbeitungsliste eines Telefons ist ein Begleiter und kein Bild.
                 If String.Equals(ext, ".xmp", StringComparison.OrdinalIgnoreCase) OrElse
-                   String.Equals(ext, Extension, StringComparison.OrdinalIgnoreCase) Then Continue For
+                   String.Equals(ext, Extension, StringComparison.OrdinalIgnoreCase) OrElse
+                   String.Equals(ext, LivePhotoService.EditListExtension, StringComparison.OrdinalIgnoreCase) Then Continue For
                 Return True
             Next
             Return False

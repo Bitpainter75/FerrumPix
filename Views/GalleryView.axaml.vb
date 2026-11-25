@@ -3038,6 +3038,7 @@ Namespace Views
                 .ApplyFilter = vm.ApplyFilterSelectedCommand,
                 .CopyAdjustments = vm.CopyAdjustmentsCommand,
                 .PasteAdjustments = vm.PasteAdjustmentsCommand,
+                .PasteAdjustmentsWithChoice = vm.PasteAdjustmentsWithChoiceCommand,
                 .NewVariant = vm.NewVariantCommand,
                 .NewVariantFromStartValues = vm.NewVariantFromStartValuesCommand,
                 .RenameVariant = vm.RenameVariantCommand,

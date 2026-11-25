@@ -421,6 +421,9 @@ Public Class App
             ' diese Sitzung fest, welche Funktionen es gibt; was fehlt, blendet die Oberflaeche aus.
             ' Vor dem ViewModel, damit dessen Bindungen schon den richtigen Stand sehen.
             AiModelService.CheckInventory()
+            ' Der aus einem Motion Photo herausgeschriebene Film einer Sitzung, die nicht ordentlich
+            ' endete, liegt noch im Cache der Anwendung: weg damit, im Hintergrund.
+            System.Threading.Tasks.Task.Run(Sub() Services.MotionPhotoService.ClearClipCache())
             Dim vm = New MainWindowViewModel(initialImagePath, initialFolderPath)
             Dim win = New MainWindow()
             win.DataContext = vm
