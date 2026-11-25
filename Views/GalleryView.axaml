@@ -3547,13 +3547,34 @@
                                                             </StackPanel>
                                                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/heart-bold.svg" Width="18" Height="18" IconBrush="White"
                                                                            IsVisible="{Binding IsFavorite}"/>
-                                                            <!-- Behalten und Verworfen, dieselben Symbole wie an der Kachel. -->
-                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-up-bold.svg" Width="18" Height="18" IconBrush="White"
-                                                                           IsVisible="{Binding IsPicked}"/>
-                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-down-bold.svg" Width="18" Height="18" IconBrush="White"
-                                                                           IsVisible="{Binding IsRejected}"/>
                                                         </StackPanel>
                                                     </Border>
+                                                    <!-- BEHALTEN und VERWORFEN oben links: dieselbe Pille wie im
+                                                    Filmstreifen von Betrachter und Editor, in Lage und Groesse
+                                                    (eigene Einstellung des Filmstreifens, ab Werk an). Kein Knopf: ein
+                                                    Klick auf eine Kachel waehlt sie. -->
+                                                    <Panel IsVisible="{Binding DataContext.ShowFilmstripPickBadge, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                                        <Border Classes="filmstrip-pick-badge reject" IsVisible="{Binding IsRejected}">
+                                                            <Border.Effect>
+                                                                <DropShadowEffect Color="#D0000000" BlurRadius="4" OffsetX="0" OffsetY="1"/>
+                                                            </Border.Effect>
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-down-bold.svg"
+                                                                           Width="14" Height="14"
+                                                                           IconBrush="White"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <Border Classes="filmstrip-pick-badge keep" IsVisible="{Binding IsPicked}">
+                                                            <Border.Effect>
+                                                                <DropShadowEffect Color="#D0000000" BlurRadius="4" OffsetX="0" OffsetY="1"/>
+                                                            </Border.Effect>
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-up-bold.svg"
+                                                                           Width="14" Height="14"
+                                                                           IconBrush="White"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </Panel>
                                                     <!-- BEARBEITET wie an der Galeriekachel (Einstellung des Filmstreifens). -->
                                                     <Panel IsVisible="{Binding DataContext.ShowFilmstripEditedBadge, RelativeSource={RelativeSource AncestorType=UserControl}}">
                                                         <Border Classes="filmstrip-edited-badge" IsVisible="{Binding IsEdited}">

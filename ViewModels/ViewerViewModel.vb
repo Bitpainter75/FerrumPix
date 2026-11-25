@@ -1522,6 +1522,15 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Die Pillen fuer behalten und verworfen oben auf den Kacheln des
+        ''' Filmstreifens, genau wie an der Galeriekachel (eigene Einstellung, ab Werk an).</summary>
+        Public ReadOnly Property ShowFilmstripPickBadge As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       _mainVm.Settings.FilmstripPickBadge
+            End Get
+        End Property
+
         ''' <summary>Das Zeichen "bearbeitet" auf den Kacheln des Filmstreifens.</summary>
         Public ReadOnly Property ShowFilmstripEditedBadge As Boolean
             Get
@@ -4962,7 +4971,11 @@ Namespace ViewModels
         ''' deshalb keine Katalogwerte mit. Die optionalen Badges laden sie gesammelt in EINER
         ''' Abfrage nach; pro Kachel drei Datenbankzugriffe würden bei großen Ordnern ruckeln.</summary>
         Public Sub RefreshFilmstripItemBadges()
-            If Not ShowFilmstripItemBadges OrElse FilmstripItems Is Nothing Then Return
+            ' Die Pillen fuer behalten und verworfen haengen an einer EIGENEN Einstellung. Wer nur
+            ' sie will, laesst die Markierreihe aus; ohne diesen Oder-Zweig waeren die Daumen auf
+            ' dem Streifen nie zu sehen, weil ihr Wert hier gar nicht erst geladen wuerde.
+            If Not (ShowFilmstripItemBadges OrElse ShowFilmstripPickBadge) OrElse
+               FilmstripItems Is Nothing Then Return
 
             Dim localPaths = FilmstripItems.
                 Where(Function(item) item IsNot Nothing AndAlso Not item.IsRemoteAsset).

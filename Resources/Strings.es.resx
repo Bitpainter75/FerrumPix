@@ -7877,8 +7877,14 @@
   <data name="Markierungen_im_Filmstreifen_anzeigen_ec895448" xml:space="preserve">
     <value>Mostrar indicadores en la tira de imágenes</value>
   </data>
-  <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
-    <value>Muestra la valoración por estrellas, favorito, etiqueta de color y las marcas de conservar y descartar en las miniaturas de la tira de imágenes del visor y editor.</value>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
+    <value>Muestra la valoración por estrellas, favorito y etiqueta de color en las miniaturas de la tira de imágenes del visor y editor.</value>
+  </data>
+  <data name="Behalten_und_Verworfen_im_Filmstreifen_kennzeich_a30d9ce0" xml:space="preserve">
+    <value>Señalar fotos conservadas y descartadas en la tira de imágenes</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
+    <value>Muestra en la parte superior de la miniatura de la tira de imágenes un pulgar verde hacia arriba en las conservadas y uno rojo hacia abajo en las descartadas. Las descartadas siguen atenuadas aunque no se muestre la señal.</value>
   </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>¿Quitar {0} '{1}' de la lista? El archivo se conservará.</value>

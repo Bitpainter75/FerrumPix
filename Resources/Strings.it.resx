@@ -7877,8 +7877,14 @@
   <data name="Markierungen_im_Filmstreifen_anzeigen_ec895448" xml:space="preserve">
     <value>Mostra indicatori nella striscia di miniature</value>
   </data>
-  <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
-    <value>Mostra valutazione a stelle, preferito, etichetta colore e i contrassegni conserva e scarta sulle miniature della striscia nel visualizzatore e nell’editor.</value>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
+    <value>Mostra valutazione a stelle, preferito ed etichetta colore sulle miniature della striscia nel visualizzatore e nell’editor.</value>
+  </data>
+  <data name="Behalten_und_Verworfen_im_Filmstreifen_kennzeich_a30d9ce0" xml:space="preserve">
+    <value>Segnala le foto tenute e scartate nella striscia di miniature</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
+    <value>Mostra in alto sulla miniatura della striscia un pollice verde in su per le foto tenute e un pollice rosso in giù per quelle scartate. Le foto scartate restano attenuate anche senza il segno.</value>
   </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Rimuovere {0} '{1}' dall’elenco? Il file verrà conservato.</value>

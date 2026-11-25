@@ -7875,8 +7875,14 @@
   <data name="Markierungen_im_Filmstreifen_anzeigen_ec895448" xml:space="preserve">
     <value>在胶片条中显示标记</value>
   </data>
-  <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
-    <value>在查看器和编辑器的胶片条缩略图上显示星级评分、收藏、颜色标签以及保留和排除标记。</value>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
+    <value>在查看器和编辑器的胶片条缩略图上显示星级评分、收藏和颜色标签。</value>
+  </data>
+  <data name="Behalten_und_Verworfen_im_Filmstreifen_kennzeich_a30d9ce0" xml:space="preserve">
+    <value>在胶片条中标记保留和拒绝的照片</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
+    <value>在胶片条缩略图顶部为保留的照片显示绿色竖拇指，为拒绝的照片显示红色倒拇指。即使不显示标记，被拒绝的照片仍保持变暗。</value>
   </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>要从列表中移除{0}“{1}”吗？文件本身将保留。</value>

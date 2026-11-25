@@ -7917,8 +7917,14 @@
   <data name="Markierungen_im_Filmstreifen_anzeigen_ec895448" xml:space="preserve">
     <value>फ़िल्मपट्टी में चिह्न दिखाएँ</value>
   </data>
-  <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
-    <value>दर्शक और संपादक की फ़िल्मपट्टी की टाइलों पर तारे, पसंदीदा, रंग लेबल तथा रखें और अस्वीकार के चिह्न दिखाता है।</value>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
+    <value>दर्शक और संपादक की फ़िल्मपट्टी की टाइलों पर तारे, पसंदीदा और रंग लेबल दिखाता है।</value>
+  </data>
+  <data name="Behalten_und_Verworfen_im_Filmstreifen_kennzeich_a30d9ce0" xml:space="preserve">
+    <value>फ़िल्मपट्टी में रखी और अस्वीकृत तस्वीरें चिह्नित करें</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
+    <value>फ़िल्मपट्टी की टाइल के ऊपर रखी गई तस्वीरों पर हरा अंगूठा ऊपर और अस्वीकृत तस्वीरों पर लाल अंगूठा नीचे दिखाता है। अस्वीकृत तस्वीरें चिह्न के बिना भी धुंधली रहती हैं।</value>
   </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>सूची से {0} '{1}' हटाएँ? फ़ाइल स्वयं बनी रहेगी।</value>

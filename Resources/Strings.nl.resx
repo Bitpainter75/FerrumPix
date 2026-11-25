@@ -7917,8 +7917,14 @@
   <data name="Markierungen_im_Filmstreifen_anzeigen_ec895448" xml:space="preserve">
     <value>Markeringen in de filmstrip weergeven</value>
   </data>
-  <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
-    <value>Toont sterbeoordeling, favoriet, kleurlabel en de markeringen behouden en afwijzen op filmstriptegels in de viewer en editor.</value>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
+    <value>Toont sterbeoordeling, favoriet en kleurlabel op filmstriptegels in de viewer en editor.</value>
+  </data>
+  <data name="Behalten_und_Verworfen_im_Filmstreifen_kennzeich_a30d9ce0" xml:space="preserve">
+    <value>Bewaarde en afgewezen foto's in de filmstrip aanduiden</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
+    <value>Toont bovenaan de filmstriptegel een groene duim omhoog bij bewaarde en een rode duim omlaag bij afgewezen foto's. Afgewezen foto's blijven ook zonder het teken gedimd.</value>
   </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>{0} '{1}' uit de lijst verwijderen? Het bestand zelf blijft behouden.</value>

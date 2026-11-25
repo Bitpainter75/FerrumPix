@@ -1420,6 +1420,7 @@ Namespace ViewModels
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.FilmstripTileMargin))
             Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.FilmstripImageCornerRadius))
             Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.ShowFilmstripItemBadges))
+            Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.ShowFilmstripPickBadge))
             Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.ShowFilmstripEditedBadge))
             Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.ShowFilmstripEditedBadge))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ShowFilmstripEditedBadge))
@@ -1437,6 +1438,7 @@ Namespace ViewModels
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.FilmstripPosition))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsFilmstripVertical))
             Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.ShowFilmstripItemBadges))
+            Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.ShowFilmstripPickBadge))
             Viewer?.RefreshFilmstripItemBadges()
             Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.ShowFooter))
             ' Haengt an BEIDEN Schaltern darueber - jeder von ihnen kann den unteren Rand als
@@ -1449,6 +1451,7 @@ Namespace ViewModels
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsBottomBarVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ShowFilmstrip))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ShowFilmstripItemBadges))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ShowFilmstripPickBadge))
             Editor?.RefreshFilmstripItemBadges()
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsInfoSidebarVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsLayersPanelVisible))

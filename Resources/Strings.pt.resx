@@ -7876,8 +7876,14 @@
   <data name="Markierungen_im_Filmstreifen_anzeigen_ec895448" xml:space="preserve">
     <value>Mostrar marcadores na tira de filmes</value>
   </data>
-  <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
-    <value>Mostra a classificação por estrelas, favorito, etiqueta de cor e as marcas de manter e rejeitar nas miniaturas da tira de filmes no visualizador e editor.</value>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
+    <value>Mostra a classificação por estrelas, favorito e etiqueta de cor nas miniaturas da tira de filmes no visualizador e editor.</value>
+  </data>
+  <data name="Behalten_und_Verworfen_im_Filmstreifen_kennzeich_a30d9ce0" xml:space="preserve">
+    <value>Assinalar fotos mantidas e rejeitadas na tira de filmes</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
+    <value>Mostra no topo da miniatura da tira de filmes um polegar verde para cima nas mantidas e um polegar vermelho para baixo nas rejeitadas. As rejeitadas continuam escuras mesmo sem a marca.</value>
   </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Remover {0} '{1}' da lista? O próprio ficheiro será mantido.</value>
