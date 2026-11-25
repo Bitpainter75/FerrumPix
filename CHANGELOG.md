@@ -20,6 +20,10 @@
   button next to the chain. Paging changes only the picture you clicked, zoom and position stay
   in step across all of them, and focus points and focus peaking now work in the comparison too.
 
+- Kept and rejected pictures are marked in the filmstrip of the viewer, the editor and the map
+  with a green or red thumb at the top of the tile. A new setting for the filmstrip switches the
+  marks off.
+
 - The size of the grid in the editor can be set right there: a small arrow next to the grid button
   opens a slider and a few fixed sizes.
 

@@ -112,6 +112,37 @@
 
   <releases>
 
+    <release version="0.9.91-1" date="2026-11-25">
+      <description>
+        <p>This update introduces side-by-side comparison of up to four photos, more flexible adjustment presets with selective application, support for Live Photos and Motion Photos, and a significantly more accurate depth model:</p>
+        <p xml:lang="de">Dieses Update bringt den direkten Vergleich von bis zu vier Fotos, flexiblere Anpassungsvorgaben mit gezielter Anwendung, Unterstützung für Live Photos und Motion Photos sowie ein deutlich genaueres Tiefenmodell:</p>
+        <ul>
+          <li>The viewer can now compare up to four photos at once. When navigating between photos, only the selected photo changes, while zoom and image position remain synchronised across all views. Focus points and focus peaking are also available in comparison mode.</li>
+          <li xml:lang="de">Im Betrachter kannst du jetzt bis zu vier Fotos gleichzeitig vergleichen. Beim Blättern wechselt nur das ausgewählte Foto, während Zoom und Bildausschnitt in allen Ansichten synchron bleiben. Auch Fokuspunkte und Fokus-Peaking stehen im Vergleichsmodus zur Verfügung.</li>
+
+          <li>The viewer can now highlight detected faces with a frame and the person's name, and display the camera's focus point. Pressing Z zooms to 100 percent, centred directly on that focus point.</li>
+          <li xml:lang="de">Der Betrachter kann jetzt erkannte Gesichter mit einem Rahmen und dem Namen der jeweiligen Person kennzeichnen und anzeigen, auf welchen Punkt die Kamera fokussiert hat. Mit der Taste Z zoomst du direkt an dieser Stelle auf 100 Prozent.</li>
+
+          <li>When saving adjustments as a preset, you can now choose which settings to include. Applying the preset changes only those settings, leaving other adjustments untouched. Presets can be organised into folders and managed in a new window that previews their effect on your current photo. Selective pasting also lets you choose exactly which adjustments to transfer.</li>
+          <li xml:lang="de">Beim Speichern von Anpassungen als Vorgabe kannst du jetzt auswählen, welche Einstellungen enthalten sein sollen. Beim Anwenden werden nur diese Einstellungen geändert, während alle anderen Anpassungen erhalten bleiben. Vorgaben lassen sich in Ordnern organisieren und in einem neuen Fenster verwalten, das ihre Wirkung direkt auf deinem aktuellen Foto als Vorschau zeigt. Auch beim Einfügen mit Auswahl kannst du gezielt festlegen, welche Anpassungen übertragen werden.</li>
+
+          <li>Live Photos and Motion Photos captured with smartphones are now recognised, marked with an indicator on their gallery tiles and can be played once in the viewer. The photo and its associated video stay together when deleting, moving, copying or renaming files. Saving a Motion Photo also preserves its embedded video.</li>
+          <li xml:lang="de">Mit Smartphones aufgenommene Live Photos und Motion Photos werden jetzt erkannt, mit einem Symbol auf ihren Galeriekacheln gekennzeichnet und können im Betrachter einmal abgespielt werden. Beim Löschen, Verschieben, Kopieren und Umbenennen bleiben Foto und zugehöriges Video zusammen. Auch beim Speichern eines Motion Photos bleibt das eingebettete Video erhalten.</li>
+
+          <li>Depth Mask, Depth Blur and Depth Fog now use a significantly more accurate depth estimation model that better distinguishes fine structures such as fences and branches, as well as people, from the background. The new model is available as an update in the settings. Depth Blur and Depth Mask also feature a new eyedropper for selecting the subject directly in the photo.</li>
+          <li xml:lang="de">Tiefenmaske, Tiefenunschärfe und Tiefennebel nutzen jetzt ein deutlich genaueres Modell zur Tiefenschätzung, das feine Strukturen wie Zäune und Äste sowie Personen besser vom Hintergrund unterscheidet. Das neue Modell steht in den Einstellungen als Aktualisierung zur Verfügung. Tiefenunschärfe und Tiefenmaske bieten außerdem eine neue Pipette, mit der du das Motiv direkt im Foto auswählen kannst.</li>
+
+          <li>Lights in the editor can now create a rim lighting effect along the outline of a subject. Shadow rendering also handles thin objects more realistically, and depth-based lighting produces cleaner transitions around object edges.</li>
+          <li xml:lang="de">Lichtquellen im Editor können jetzt ein Konturlicht entlang der Umrisse eines Motivs erzeugen. Bei der Schattenberechnung werden dünne Objekte realistischer berücksichtigt, und die tiefenbasierte Beleuchtung sorgt für sauberere Übergänge an Objektkanten.</li>
+
+          <li>Several smaller improvements: the gallery grid size can now be adjusted directly next to the grid button; the viewer can display the gallery thumbnail while the photo is being developed; picked and rejected photos are marked in the filmstrip; the settings include a link to the manual; and exported JPEG files now contain an embedded sRGB colour profile.</li>
+          <li xml:lang="de">Weitere Verbesserungen: Die Rastergröße der Galerie lässt sich jetzt direkt neben der Raster-Schaltfläche einstellen. Der Betrachter kann während der Bildentwicklung das Vorschaubild aus der Galerie anzeigen. Als ausgewählt oder abgelehnt markierte Fotos sind auch im Filmstreifen entsprechend gekennzeichnet. Die Einstellungen enthalten einen Link zum Handbuch, und exportierte JPEG-Dateien erhalten ein eingebettetes sRGB-Farbprofil.</li>
+
+          <li>Fixed several issues: Depth Blur no longer causes colours from the subject to bleed into the background; the white balance eyedropper ignores clipped highlights; seeking within videos works reliably; switching to fullscreen from comparison mode displays the active photo; and processing automatically continues on the CPU if the graphics card runs out of memory.</li>
+          <li xml:lang="de">Mehrere Fehler wurden behoben: Bei der Tiefenunschärfe laufen die Farben des Motivs nicht mehr in den Hintergrund hinein. Die Weißabgleich-Pipette ignoriert ausgefressene Lichter. Das Springen zu anderen Wiedergabepositionen in Videos funktioniert zuverlässig. Beim Wechsel vom Vergleichsmodus in die Vollbildansicht wird das aktive Foto angezeigt. Und wenn der Grafikkartenspeicher nicht ausreicht, wird die Berechnung automatisch auf dem Prozessor fortgesetzt.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.90-1" date="2026-11-23">
       <description>
         <p>This update makes FerrumPix significantly faster on multi-core processors, improves lens profile matching and enables file operations on network shares:</p>
