@@ -2532,9 +2532,11 @@
     <Style Selector="TextBox.combo-like:focus /template/ Border#PART_BorderElement">
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
+    <!-- Dieselbe Regel fuer das Zahlenfeld: beim Ueberfahren nur der Rahmen, die Flaeche bleibt
+         die des Felds. Sonst zeigte es unter dem Zeiger eine zweite Flaeche. -->
     <Style Selector="NumericUpDown.combo-like:pointerover">
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
-        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
     </Style>
     <Style Selector="NumericUpDown.combo-like:focus">
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
