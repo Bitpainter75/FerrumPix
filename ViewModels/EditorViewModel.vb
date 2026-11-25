@@ -18287,9 +18287,22 @@ Namespace ViewModels
         ''' bzw. eine neue Datei.</summary>
         Private ReadOnly Property CurrentImageCarriesVideo As Boolean
             Get
-                Return Not String.IsNullOrEmpty(_currentImagePath) AndAlso MotionPhotoService.HasVideo(_currentImagePath)
+                Dim path = _currentImagePath
+                If String.IsNullOrEmpty(path) Then Return False
+                ' Je Pfad einmal gefragt: die Eigenschaft steckt in Gettern, die Bindungen auf dem
+                ' Anzeigefaden auswerten, und HasVideo oeffnet dafuer den Katalog oder die Datei.
+                ' Die letzte Sperre vor dem Ueberschreiben fragt ohnehin die Datei selbst
+                ' (MotionPhotoService.HasVideoInFile in SaveImage).
+                If Not String.Equals(path, _carriesVideoPath, StringComparison.Ordinal) Then
+                    _carriesVideo = MotionPhotoService.HasVideo(path)
+                    _carriesVideoPath = path
+                End If
+                Return _carriesVideo
             End Get
         End Property
+
+        Private _carriesVideoPath As String
+        Private _carriesVideo As Boolean
 
         ''' <summary>True, wenn "Speichern" das Immich-Quell-Asset ersetzt statt eine lokale Datei zu
         ''' schreiben (Einstellung "Vorhandene Assets aktualisieren"). Ohne die Einstellung bleibt bei

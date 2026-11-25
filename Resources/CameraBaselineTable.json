@@ -771,6 +771,15 @@
       "blueSaturation": -11,
       "shadowTint": 0
     },
+    "NIKONZF": {
+      "redHue": -11,
+      "redSaturation": 10,
+      "greenHue": 8,
+      "greenSaturation": 6,
+      "blueHue": 2,
+      "blueSaturation": -30,
+      "shadowTint": 1
+    },
     "OLYMPUSE5": {
       "redHue": -3,
       "redSaturation": -4,

@@ -129,6 +129,13 @@ Namespace Services
 
         Private Shared ReadOnly JpegExtensions As String() = {".jpg", ".jpeg", ".jpe", ".jfif"}
 
+        ''' <summary>Traegt der Pfad eine JPEG-Endung? Nur solche Dateien gelten hier als Motion
+        ''' Photo; die Erkennung im EXIF-Lauf (LivePhotoService.Identify) fragt dasselbe.</summary>
+        Friend Shared Function IsJpegPath(path As String) As Boolean
+            If String.IsNullOrEmpty(path) Then Return False
+            Return JpegExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant())
+        End Function
+
         ' ── Schritt 1: was das XMP behauptet ──────────────────────────────────────
 
         ''' <summary>Liest die Behauptung aus den Verzeichnissen des Metadatenlesers (dieselben, die

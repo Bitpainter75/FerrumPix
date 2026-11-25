@@ -2583,6 +2583,10 @@ Namespace ViewModels
         Private Sub SetPaneEntry(pane As ComparePaneViewModel, entry As String)
             entry = If(entry, "")
             pane.FocusToken += 1
+            ' Die Peaking-Ebene gehoerte zum vorigen Bild: weg, bis das neue entwickelt ist, und
+            ' eine noch laufende Rechnung fuer das alte landet nicht mehr.
+            pane.PeakingToken += 1
+            pane.SetFocusPeakingImage(Nothing)
             pane.SetEntry(entry, EntryName(entry))
             Dim tile As Bitmap = Nothing
             If entry.Length > 0 Then
@@ -2727,7 +2731,8 @@ Namespace ViewModels
                 If value < 0 OrElse value >= _compareFieldCount Then Return
                 If _comparePanes(value).IsEmpty Then Return
                 If _focusedComparePane = value Then Return
-                Me.RaiseAndSetIfChanged(_focusedComparePane, value)
+                ' Gemeldet wird in AfterComparePaneFocusChanged, wie bei jedem anderen Wechsel.
+                _focusedComparePane = value
                 AfterComparePaneFocusChanged()
                 ShowDataOfFocusedPane()
             End Set
@@ -2752,6 +2757,9 @@ Namespace ViewModels
         ''' Feldern, die Stelle im Filmstreifen ziehen mit (dort blaettert die aktive Flaeche).</summary>
         Private Sub AfterComparePaneFocusChanged()
             SyncComparePaneState()
+            ' Auch die Wege, die das Feld direkt setzen (Feldzahl umschalten, Loeschen, Tauschen),
+            ' melden den Wechsel; sonst hielte die Ansicht den alten Index.
+            Me.RaisePropertyChanged(NameOf(FocusedComparePane))
             Me.RaisePropertyChanged(NameOf(IsCompareLeftFocused))
             Me.RaisePropertyChanged(NameOf(IsCompareRightFocused))
             Me.RaisePropertyChanged(NameOf(CanSwapComparePanes))
@@ -2981,7 +2989,7 @@ Namespace ViewModels
             SyncComparePaneState()
             RaiseCompareFieldCountChanged()
             LoadCompareMarkers()
-            For Each n In {NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
+            For Each n In {NameOf(FocusedComparePane), NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
                            NameOf(IsImagePinned), NameOf(PinnedFileName),
                            NameOf(CanDeleteCurrent), NameOf(CanSwapComparePanes),
                            NameOf(HasNoMedia)}
@@ -3551,7 +3559,7 @@ Namespace ViewModels
             ' zurueck in den Vergleich - und zwar mit dem Ordner des alten angehefteten Bildes,
             ' weil dessen Neuoeffnen den Filmstreifen mitzieht.
             SetPinnedPath("")
-            For Each n In {NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
+            For Each n In {NameOf(FocusedComparePane), NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
                            NameOf(IsImagePinned), NameOf(PinnedFileName),
                            NameOf(CanDeleteCurrent), NameOf(CanSwapComparePanes),
                            NameOf(HasNoMedia)}
