@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="FerrumPix.Views.ShortcutsView">
     <!-- Die Liste der Tasten- und Mausbelegung. EINE Liste fuer zwei Orte: die Einstellungen
@@ -47,6 +47,10 @@
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="STRG+Q" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Favorit ein/aus" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="X" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Als verworfen markieren (erneut nimmt es zurück)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                         </StackPanel>
 
@@ -103,10 +107,6 @@
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="STRG+SHIFT+V" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Anpassungen einfügen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </Grid>
-                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="X" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                                <TextBlock Grid.Column="1" Text="Als verworfen markieren (erneut nimmt es zurück)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="SHIFT+X" Tag="Shift" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>

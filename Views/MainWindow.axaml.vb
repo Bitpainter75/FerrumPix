@@ -1135,6 +1135,24 @@ Namespace Views
             Return True
         End Function
 
+        ''' <summary>X: verwirft das aktuelle Bild bzw. die Galerie-Auswahl; dasselbe Kürzel noch
+        ''' einmal hebt das Verwerfen auf. Dasselbe Muster wie bei Bewertung, Etikett und Favorit:
+        ''' der Modus entscheidet, welche Ansicht ihr Bild markiert - nicht der Fokus. Ein Modus ohne
+        ''' eigene Markierung (Einstellungen, Personen) wirft die Taste ausdrücklich zurück, statt
+        ''' sie still zu schlucken.</summary>
+        Private Shared Function TryToggleRejected(vm As MainWindowViewModel) As Boolean
+            If vm.IsFullscreen OrElse vm.CurrentMode = AppMode.Viewer Then
+                vm.Viewer?.ToggleRejectedCommand.Execute(Nothing)
+            ElseIf vm.CurrentMode = AppMode.Gallery Then
+                vm.Gallery?.ToggleRejectSelectedCommand.Execute(Nothing)
+            ElseIf vm.CurrentMode = AppMode.Editor Then
+                vm.Editor?.ToggleRejectedCommand.Execute(Nothing)
+            Else
+                Return False
+            End If
+            Return True
+        End Function
+
         Private Async Sub OnWindowKeyDown(sender As Object, e As KeyEventArgs)
             Try
                 Dim vm = TryCast(DataContext, MainWindowViewModel)
@@ -1308,19 +1326,25 @@ Namespace Views
                     End Select
                 End If
 
-                ' X VERWIRFT in der Galerie die Auswahl, ein zweites X nimmt es zurueck; SHIFT+X
-                ' verwirft in einer Serie alles ausser der gewaehlten Aufnahme. Nur blank oder mit
-                ' SHIFT: mit Strg ist X das Ausschneiden (Zweig weiter unten).
-                If e.Key = Key.X AndAlso vm.CurrentMode = AppMode.Gallery AndAlso
-                   Not PlatformShortcutService.IsInputFieldSource(e.Source) AndAlso
-                   (e.KeyModifiers = KeyModifiers.None OrElse e.KeyModifiers = KeyModifiers.Shift) Then
+                ' X VERWIRFT: in der Galerie die Auswahl, im Betrachter und im Editor das gezeigte
+                ' bzw. geoeffnete Bild; ein zweites X nimmt es zurueck. Früher kannte nur die Galerie
+                ' das Kürzel - wer ein Bild gross sieht, will es gerade dort aussortieren, ohne vorher
+                ' in die Liste zurückzukehren. Nur blank oder mit SHIFT: mit Strg ist X das
+                ' Ausschneiden (Zweig weiter unten).
+                '
+                ' SHIFT+X bleibt ein Galerie-Kürzel: Serien und Stapel, deren Rest man damit verwirft,
+                ' gibt es nur dort - im Betrachter und im Editor liegt immer genau ein Bild vor.
+                If e.Key = Key.X AndAlso Not PlatformShortcutService.IsInputFieldSource(e.Source) Then
                     If e.KeyModifiers = KeyModifiers.Shift Then
-                        vm.Gallery?.RejectRestOfStackCommand.Execute(Nothing)
-                    Else
-                        vm.Gallery?.ToggleRejectSelectedCommand.Execute(Nothing)
+                        If vm.CurrentMode = AppMode.Gallery Then
+                            vm.Gallery?.RejectRestOfStackCommand.Execute(Nothing)
+                            e.Handled = True
+                            Return
+                        End If
+                    ElseIf e.KeyModifiers = KeyModifiers.None AndAlso TryToggleRejected(vm) Then
+                        e.Handled = True
+                        Return
                     End If
-                    e.Handled = True
-                    Return
                 End If
 
                 ' Dieselbe Bauart wie Strg+R darueber, fuer die drei Stapel-Ablaeufe: in der Galerie
