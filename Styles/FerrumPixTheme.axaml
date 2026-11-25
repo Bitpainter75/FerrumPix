@@ -911,7 +911,10 @@
         <Setter Property="Padding" Value="10,0"/>
         <Setter Property="Height" Value="36"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
-        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <!-- Rechtsbuendig, und das ist der Grund, warum in jeder Zeile der Text VOR dem Symbol
+             steht: das Symbol ist damit das rechte Kind und sitzt immer an derselben Kante.
+             Faellt der Text weg (eng) oder ist eine Uebersetzung breiter, ruehrt es sich nicht. -->
+        <Setter Property="HorizontalContentAlignment" Value="Right"/>
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>

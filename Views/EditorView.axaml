@@ -16,17 +16,18 @@
              KeyUp="OnKeyUp"
              PointerReleased="OnGlobalPointerReleased">
 
-    <!-- Erste Spalte Auto statt fest 190: die Breite kommt aus ToolSidebarWidth, damit die
-         Werkzeugleiste auf Symbolbreite einklappen kann (Zustand in den Einstellungen).
-
-         Die 380 der dritten Spalte ist die Vorgabe des Anpassungspanels und muss dieselbe Zahl sein
+    <!-- Vier Spalten: Bildflaeche, Anpassungspanel, Ebenenpanel, Infopanel. Die Werkzeugleiste hat
+         keine eigene Spalte mehr, sondern liegt wie der Filmstreifen UEBER der Bildflaeche (Begruendung
+         bei Controls/FilmstripPlacement.vb); die Bildflaeche rueckt sie per Rand ein.
+    
+         Die 380 der zweiten Spalte ist die Vorgabe des Anpassungspanels und muss dieselbe Zahl sein
          wie AdjustmentsPanelWidth im Codebehind: liegt das Panel links, setzt UpdateAdjustmentsPanelSide
-         sie auf die zweite Spalte um.
-
-         Die beiden letzten Spalten: erst das Ebenenpanel (Index 3), ganz rechts das Infopanel
-         (Index 4), wie in Galerie und Betrachter, wo das Infopanel ebenfalls am rechten Rand
+         die Nummern um.
+    
+         Die beiden letzten Spalten: erst das Ebenenpanel (Index 2), ganz rechts das Infopanel
+         (Index 3), wie in Galerie und Betrachter, wo das Infopanel ebenfalls am rechten Rand
          steht. Die Nummern stehen im Codebehind als LayersPanelColumn und InfoSidebarColumn. -->
-    <Grid x:Name="EditorRootGrid" RowDefinitions="52,*,Auto" ColumnDefinitions="Auto,*,380,300,320">
+    <Grid x:Name="EditorRootGrid" RowDefinitions="52,*,Auto" ColumnDefinitions="*,380,300,320">
 
         <!-- EIN Kontextmenue fuer Filmstreifen und Fusszeile. Sonst nirgends im Editor: weder auf
              der Buehne noch in den Panels rechts (siehe OnContextRequested). -->
@@ -76,7 +77,7 @@
              gerade hier stehen die Knoepfe, die am meisten anrichten: Rueckgaengig und
              Speichern greifen auf ein Bild zu, das in diesem Augenblick Kachel fuer Kachel
              neu geschrieben wird. -->
-        <Border Grid.Row="0" Grid.ColumnSpan="5" Classes="toolbar" Height="52" Padding="16,0"
+        <Border Grid.Row="0" Grid.ColumnSpan="4" Classes="toolbar" Height="52" Padding="16,0"
                 IsEnabled="{Binding IsInteractionAllowed}">
             <!-- EINE SPALTE, drei Ausrichtungen. Mit "*,Auto,*" sass die Mitte NICHT in der Mitte:
                  eine Sternspalte wird nie schmaler als ihr Inhalt, und die breitere Seite schob die
@@ -315,11 +316,13 @@
             </Grid>
         </Border>
 
-        <!-- MITTIG ZUR BUEHNE, nicht zum Fenster. Deshalb steht diese Gruppe im Wurzelraster in
-             Spalte 1 (der Buehne) und nicht in der Leiste darueber: die Leiste geht ueber alle
-             Spalten, die Buehne nicht. Die Spalten rechts fallen beim Abschalten ihres Panels auf
-             Breite 0 (UpdateInfoSidebarLayoutState, UpdateLayersPanelLayout) - die Gruppe wandert
-             dadurch von selbst mit, ohne dass hier etwas gerechnet wird.
+        <!-- MITTIG ZUR BUEHNE, nicht zum Fenster. Deshalb steht diese Gruppe in derselben Spalte wie
+             die Buehne und nicht in der Leiste darueber: die Leiste geht ueber alle Spalten, die
+             Buehne nicht. Die Spalten rechts fallen beim Abschalten ihres Panels auf Breite 0
+             (UpdateInfoSidebarLayoutState, UpdateLayersPanelLayout) - die Gruppe wandert dadurch von
+             selbst mit, ohne dass hier etwas gerechnet wird. Der seitliche Rand gegen die
+             Werkzeugleiste kommt aus ApplyToolSelectorLayout: ohne sie waere die Gruppe mittig ueber
+             der ganzen Spalte statt mittig ueber dem Bild.
 
              NACH der Leiste im Baum, liegt also darueber. Das IsEnabled der Leiste muss sie selbst
              mitbringen, sonst bliebe sie bedienbar, waehrend der Rest gesperrt ist.
@@ -327,7 +330,7 @@
              Wandert die Buehne auf die andere Spalte (Anpassungspanel links), wandert diese Gruppe
              mit - UpdateAdjustmentsPanelSide setzt beide zusammen um. -->
         <StackPanel x:Name="StageHeaderButtons"
-                    Grid.Row="0" Grid.Column="1"
+                    Grid.Row="0" Grid.Column="0"
                     Orientation="Horizontal" Spacing="8"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     IsEnabled="{Binding IsInteractionAllowed}">
@@ -493,11 +496,26 @@
             </Button>
         </StackPanel>
 
-        <!-- GESPERRT, solange ein langer Vorgang laeuft - genau wie die Regler rechts. Ein
+        <!-- Die Werkzeugleiste steht in DERSELBEN Spalte wie die Buehne und liegt UEBER ihrem Bild,
+             nicht in einer eigenen Spalte des Wurzelrasters - genau wie der seitliche Filmstreifen
+             (siehe FilmstripPlacement). Eine eigene Spalte haette jede Spaltenangabe der Ansicht
+             verschoben, auch die im Code.
+
+             Das ist kein Trick, sondern der halbe Zweck der neuen Lage: beim Aufklappen ueber das
+             Bild aendert sich an der Bildflaeche, am Zoom, am Einpassen, an der Pan-Stand und an den
+             Panels rechts ueberhaupt nichts. Nur die Leiste selbst wird breiter. Was sie reserviert,
+             rueckt ApplyToolSelectorLayout als Rand der Buehne ein; die Leiste waechst von dort nach
+             links ueber das Bild hinaus, und die rechte Kante der Leiste steht die ganze Zeit still.
+
+             Der ZIndex: im Baum steht diese Leiste VOR der Buehne. Ohne die Zahl laege die Buehne
+             darueber, und die Leiste waere unsichtbar und unbedienbar.
+
+             GESPERRT, solange ein langer Vorgang laeuft - genau wie die Regler rechts. Ein
              Werkzeugwechsel mitten im Entrauschen fuehrt sonst zu einem Bild, dessen Zustand
              niemand mehr erklaeren kann. -->
-        <Border Grid.Row="1" Grid.Column="0" Classes="sidebar" Padding="8,8" Width="{Binding ToolSidebarWidth}"
-                IsEnabled="{Binding IsInteractionAllowed}">
+        <Border x:Name="ToolSelectorBorder" Grid.Row="1" Grid.Column="0" Classes="sidebar" Padding="8,8"
+                Width="{Binding ToolSidebarWidth}"
+                ZIndex="20" IsEnabled="{Binding IsInteractionAllowed}">
             <!-- Keine Bildlaufleiste: sie lag 13 Punkte breit ueber den Knoepfen, in der
                  eingeklappten Leiste ueber einem Drittel jedes Symbols. Reicht die Hoehe nicht,
                  scrollt das Mausrad, und oben und unten steht je ein Pfeil, solange in seine
@@ -524,29 +542,40 @@
                          Gruppe oben steht, sagt die Einstellung (Zeilennummer je Gruppe). Ein
                          gestapeltes Panel könnte das nicht - eine Reihenfolge lässt sich nicht
                          binden, eine Zeilennummer schon. -->
-                    <!-- RowSpacing hält die Knöpfe über die Gruppengrenze hinweg im selben Abstand
-                         wie innerhalb einer Gruppe (dort kommt er aus Spacing="2" der Gruppe). Ohne
-                         das stiessen zwei Gruppen unmittelbar aneinander: in der eingeklappten
-                         Leiste sind die Überschriften ausgeblendet, und ein ausgeblendetes Kind
-                         zaehlt im StackPanel auch nicht für den Abstand - genau dort sassen die
-                         Symbole je Gruppenwechsel 2 px enger als sonst. -->
+                     <!-- RowSpacing hält die Knöpfe über die Gruppengrenze hinweg im selben Abstand
+                          wie innerhalb einer Gruppe (dort kommt er aus Spacing="2" der Gruppe). Ohne
+                          das stiessen zwei Gruppen unmittelbar aneinander.
+                          Das zusammen hält die Symbole auf genau einem Bildpunkt, obwohl die Leiste
+                          zwei Breiten hat: die Ueberschriften sind nicht ausgeblendet, sondern nur
+                          durchsichtig, und in jeder Zeile steht der Text vor dem Symbol. Ein
+                          ausgeblendetes Kind nimmt naemlich keine Hoehe mehr weg - die Symbole
+                          einer Gruppe rueckten nach oben, und der Abstand an der Gruppengrenze
+                          fiele ganz weg. Rechtsbuendiger Inhalt (tool-btn-row) ausserdem: das
+                          Symbol sitzt immer am rechten Rand und rueckt auch dann nicht, wenn sein
+                          Text fehlt oder eine Uebersetzung breiter ist.
+                          Der Preis ist vertikal toter Raum je Gruppe, solange eng ist. Ohne ihn
+                          waere der Preis, dass beim Auf- und Zuklappen alle Symbole springen. -->
                     <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="2">
                     <StackPanel Grid.Row="{Binding ToolGroupRowTransform}" Spacing="2">
-                    <TextBlock Text="TRANSFORMIEREN" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
-                               FontWeight="SemiBold" Margin="10,10,0,4" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                    <Panel Margin="10,10,0,4">
+                        <TextBlock Text="TRANSFORMIEREN" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
+                                   FontWeight="SemiBold" Opacity="{Binding ToolGroupHeadingOpacity}" />
+                        <Border Height="1" VerticalAlignment="Center" Background="{DynamicResource FP.Border.Strong}"
+                                IsVisible="{Binding AreToolGroupSeparatorsVisible}" />
+                    </Panel>
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Transformieren"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Transform"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Transform}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Transformieren" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <!-- Der Rahmen steht fuer das ganze Werkzeug: Zuschneiden, Drehen,
                                  Ausrichten und Spiegeln. Die Schere allein zeigte nur die
                                  Haelfte, seit das Drehen hier steht. Das Zuschneiden selbst
                                  behaelt sein eigenes Symbol im Aufklappbereich. -->
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/crop.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Transformieren" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -555,9 +584,9 @@
                             CommandParameter="Resize"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Resize}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Bildgröße" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/frame-corners.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Bildgröße" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -566,16 +595,20 @@
                             CommandParameter="Warp"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Warp}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Verzerren" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/perspective.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Verzerren" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     </StackPanel>
 
                     <StackPanel Grid.Row="{Binding ToolGroupRowAdjust}" Spacing="2">
-                    <TextBlock Text="ANPASSUNGEN" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
-                               FontWeight="SemiBold" Margin="10,10,0,4" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                    <Panel Margin="10,10,0,4">
+                        <TextBlock Text="ANPASSUNGEN" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
+                                   FontWeight="SemiBold" Opacity="{Binding ToolGroupHeadingOpacity}" />
+                        <Border Height="1" VerticalAlignment="Center" Background="{DynamicResource FP.Border.Strong}"
+                                IsVisible="{Binding AreToolGroupSeparatorsVisible}" />
+                    </Panel>
                     <!-- KOMPAKTMODUS (Einstellung EditorCompactAdjustments): ein Werkzeug statt der fuenf
                          darunter, die dann ausgeblendet sind (ShowsToolAdjust und die anderen). -->
                     <Button Classes="tool-btn-row"
@@ -585,9 +618,9 @@
                             CommandParameter="AllAdjustments"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=AllAdjustments}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Anpassungen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sliders.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Anpassungen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -597,9 +630,9 @@
                             CommandParameter="Adjust"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Adjust}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Licht" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sun.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Licht" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -609,9 +642,9 @@
                             CommandParameter="Color"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Color}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Farbe" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/intersect-three.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Farbe" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
 
@@ -622,9 +655,9 @@
                             CommandParameter="Details"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Details}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Details" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sliders-horizontal.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Details" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -634,9 +667,9 @@
                             CommandParameter="Effects"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Effects}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Effekte" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sparkle.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Effekte" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -646,9 +679,9 @@
                             CommandParameter="Filters"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Filters}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Anpassungen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/palette.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Anpassungen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <!-- Nur mit mindestens einer geladenen Erweiterung (Einstellungen, Erweiterungen). -->
@@ -659,9 +692,9 @@
                             CommandParameter="Extensions"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Extensions}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Erweiterungen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/puzzle-piece.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Erweiterungen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     </StackPanel>
@@ -670,8 +703,12 @@
                     <!-- Die Werkzeuge stehen hier einzeln, statt hinter den Sammelknöpfen "Text und Bild"
                          und "Malen" zu liegen: ein Klick wählt direkt das Werkzeug, mit dem gearbeitet
                          wird. Die zugehörigen Panels rechts zeigen nur noch dessen Einstellungen. -->
-                    <TextBlock Text="WERKZEUGE" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
-                               FontWeight="SemiBold" Margin="10,10,0,4" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                    <Panel Margin="10,10,0,4">
+                        <TextBlock Text="WERKZEUGE" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
+                                   FontWeight="SemiBold" Opacity="{Binding ToolGroupHeadingOpacity}" />
+                        <Border Height="1" VerticalAlignment="Center" Background="{DynamicResource FP.Border.Strong}"
+                                IsVisible="{Binding AreToolGroupSeparatorsVisible}" />
+                    </Panel>
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Auswahl"
                             Command="{Binding SetToolCommand}"
@@ -679,9 +716,9 @@
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Selection}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Selection}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Auswahl" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/cursor.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Auswahl" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -691,9 +728,9 @@
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Mask}"
                             Classes.selected-kind="{Binding IsMaskToolbarAccented}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Maske" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/mask-happy.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Maske" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <!-- Die Beleuchtung steht bei Auswahl und Maske: auch sie wirkt auf einen Ort im
@@ -704,9 +741,9 @@
                             CommandParameter="Light"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Light}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Beleuchtung" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/flashlight.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Beleuchtung" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
 
@@ -717,8 +754,8 @@
                             Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Text}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Text}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/text-t.svg" Width="18" Height="18" />
                             <TextBlock Text="Text" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/text-t.svg" Width="18" Height="18" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -728,8 +765,8 @@
                             Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Image}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Image}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/image.svg" Width="18" Height="18" />
                             <TextBlock Text="Bild" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/image.svg" Width="18" Height="18" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -739,8 +776,8 @@
                             Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=QR}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=QR}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/qr-code.svg" Width="18" Height="18" />
                             <TextBlock Text="QR-Code" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/qr-code.svg" Width="18" Height="18" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -750,8 +787,8 @@
                             Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Watermark}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Watermark}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/copyright.svg" Width="18" Height="18" />
                             <TextBlock Text="Wasserzeichen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/copyright.svg" Width="18" Height="18" />
                         </StackPanel>
                     </Button>
 
@@ -769,8 +806,8 @@
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Path}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Path}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/bezier-curve.svg" Width="18" Height="18" />
                             <TextBlock Text="Pfad" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/bezier-curve.svg" Width="18" Height="18" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -781,8 +818,8 @@
                             Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Brush}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Brush}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/paint-brush.svg" Width="18" Height="18" />
                             <TextBlock Text="Pinsel" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/paint-brush.svg" Width="18" Height="18" />
                         </StackPanel>
                     </Button>
                     <!-- BILDPINSEL: Radierer, Abwedeln, Nachbelichten, Schwamm und Farbe ersetzen hinter
@@ -795,8 +832,8 @@
                             Classes.active="{Binding IsImageBrushMode}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Eraser}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eraser.svg" Width="18" Height="18" />
                             <TextBlock Text="Bildpinsel" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eraser.svg" Width="18" Height="18" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -806,8 +843,8 @@
                             CommandParameter="Blur"
                             Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Blur}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/drop-half-bottom.svg" Width="18" Height="18" />
                             <TextBlock Text="Verwischen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/drop-half-bottom.svg" Width="18" Height="18" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -817,8 +854,8 @@
                             CommandParameter="Repair"
                             Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Repair}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/custom/repair-brush.svg" Width="18" Height="18" />
                             <TextBlock Text="Reparaturpinsel" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/custom/repair-brush.svg" Width="18" Height="18" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -828,8 +865,8 @@
                             CommandParameter="Clone"
                             Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Clone}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/stamp.svg" Width="18" Height="18" />
                             <TextBlock Text="Stempel" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/stamp.svg" Width="18" Height="18" />
                         </StackPanel>
                     </Button>
 
@@ -840,9 +877,9 @@
                             Classes.active="{Binding IsGeometryToolSelected}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Insert}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Formen und Symbole" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/shapes.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Formen und Symbole" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     </StackPanel>
@@ -862,10 +899,10 @@
             </Grid>
         </Border>
 
-        <!-- Spalte 1 ist die Vorgabe. Steht das Anpassungspanel links, tauschen Buehne und Panel
+        <!-- Spalte 0 ist die Vorgabe. Steht das Anpassungspanel links, tauschen Buehne und Panel
              ihre Spalten (UpdateAdjustmentsPanelSide) - deshalb der Name. -->
         <Border x:Name="EditorStageBorder"
-                Grid.Row="1" Grid.Column="1" Background="{DynamicResource FP.Bg.Root}" Padding="2">
+                Grid.Row="1" Grid.Column="0" Background="{DynamicResource FP.Bg.Root}" Padding="2">
             <Grid>
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12"
                             IsVisible="{Binding IsDocumentLoading}">
@@ -1432,7 +1469,7 @@
              verhandelt zwischen zwei Spalten, und eine Grenze am Splitter liesse die Buehne
              beliebig schmal werden. -->
         <GridSplitter x:Name="AdjustmentsPanelSplitter"
-                      Grid.Row="1" Grid.Column="2"
+                      Grid.Row="1" Grid.Column="1"
                       Width="6"
                       HorizontalAlignment="Left"
                       VerticalAlignment="Stretch"
@@ -1444,7 +1481,7 @@
                       DragCompleted="OnAdjustmentsPanelSplitterDragCompleted" />
 
         <Border x:Name="AdjustmentsPanelBorder"
-                Grid.Row="1" Grid.Column="2" Classes="panel-right">
+                Grid.Row="1" Grid.Column="1" Classes="panel-right">
             <!-- EINZELVERGLEICH nur hier, in den Panels der Werkzeuge: Rechtsklick auf Regler oder
                  Zahlenfeld (im Feld auch LEERTASTE) stellt den Wert auf den Standard und wieder
                  zurück (RoundSlider.ToggleCompare). Der Zoomregler und die Dialoge bleiben aussen vor. -->
@@ -2360,9 +2397,11 @@
 
         <!-- Platz des Filmstreifens, wenn er oben, links oder rechts steht. Er liegt in der Spalte
              der Buehne und wandert mit ihr (UpdateAdjustmentsPanelSide); Lage, Groesse und
-             Trennlinie setzt FilmstripPlacement.Apply. Leer und unsichtbar, solange er unten steht. -->
+             Trennlinie setzt FilmstripPlacement.Apply. Leer und unsichtbar, solange er unten steht.
+             Den seitlichen Rand gegen die Werkzeugleiste setzt ApplyToolSelectorLayout: die Leiste
+             bekommt den Platz an der Aussenseite, der Streifen rueckt nach innen ans Bild. -->
         <Border Name="FilmstripSideSlot"
-                Grid.Row="1" Grid.Column="1"
+                Grid.Row="1" Grid.Column="0"
                 IsVisible="False"
                 Background="{DynamicResource FP.Bg.Dark}"
                 BorderBrush="{DynamicResource FP.Border.Subtle}"
@@ -2370,16 +2409,16 @@
 
         <!-- Der Datenkontext ist das Panel, nicht der Editor: seinen Zustand haelt seit dem
              2026-08-06 das gemeinsame InfoPanelViewModel, dasselbe wie in Galerie und Betrachter. -->
-        <views:LayersPanelView Grid.Row="1" Grid.Column="3" Width="300" />
+        <views:LayersPanelView Grid.Row="1" Grid.Column="2" Width="300" />
 
-        <views:InfoSidebarView Grid.Row="1" Grid.Column="4" Width="320"
+        <views:InfoSidebarView Grid.Row="1" Grid.Column="3" Width="320"
                                DataContext="{Binding InfoPanel}" />
 
         <!-- Leerzustand: der Editor hält gar kein Dokument (Start ohne Bilddatei, oder der
              Neu-Dialog wurde abgebrochen). Deckt die ganze Arbeitszeile ab - Werkzeuge und Panels
              darunter wären ohne Dokument nur verwirrend. Steht NACH ihnen im Baum, liegt also
-             darüber. -->
-        <Border Grid.Row="1" Grid.ColumnSpan="5"
+             darüber - und braucht gegen die Werkzeugleiste (ZIndex 20) eine eigene Zahl. -->
+        <Border Grid.Row="1" Grid.ColumnSpan="4" ZIndex="30"
                 Background="{DynamicResource FP.Bg.Root}"
                 IsVisible="{Binding ShowEditorEmptyState}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16" MaxWidth="420">
@@ -2408,7 +2447,7 @@
 
         <!-- Entsteht erst beim ersten "Neues Bild": beim Start ohne Bilddatei erscheinen Host und
              Platzhalter sofort, der Dialog wird beim Öffnen davor gesetzt und danach behalten. -->
-        <ContentControl x:Name="NewDocumentDialogHost" Grid.Row="0" Grid.RowSpan="3" Grid.ColumnSpan="5" ZIndex="200" />
+        <ContentControl x:Name="NewDocumentDialogHost" Grid.Row="0" Grid.RowSpan="3" Grid.ColumnSpan="4" ZIndex="200" />
 
         <!-- Auch der Fuss mit Filmstreifen und Menue: waehrend eines Modelllaufs zum naechsten Bild
              zu blaettern hiesse, dass der Commit auf ein Bild trifft, das gar nicht mehr offen ist.
@@ -2418,7 +2457,7 @@
              Fusszeile. Der Rahmen geht erst, wenn beide aus sind - sonst blieben Rand und
              Polsterung als leerer Streifen stehen. -->
         <Border Grid.Row="2"
-                Grid.ColumnSpan="5"
+                Grid.ColumnSpan="4"
                 Classes="window-drag"
                 IsVisible="{Binding IsBottomBarVisible}"
                 Background="{DynamicResource FP.Bg.Dark}"
@@ -2611,19 +2650,6 @@
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/list.svg"
                                            Width="18" Height="18"/>
                         </Button>
-                        <!-- Sitzt in der Fusszeile statt in der Leiste selbst: so bleibt der Knopf
-                             auch bei eingeklappter Leiste an derselben Stelle erreichbar. -->
-                        <Button Classes="icon-btn" Width="28" Height="28"
-                                Margin="-5,0,0,0"
-                                Command="{Binding ToggleToolSidebarCommand}"
-                                ToolTip.Tip="Werkzeugleiste ein- oder ausklappen">
-                            <Panel>
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sidebar-simple.svg"
-                                               Width="18" Height="18" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sidebar.svg"
-                                               Width="18" Height="18" IsVisible="{Binding IsToolSidebarCollapsed}" />
-                            </Panel>
-                        </Button>
                         <!-- MAUSRAD UEBER DEM BILD ABSCHALTEN: kein Zoomen, kein Blaettern und keine
                              Werkzeuggroesse mit dem Rad. Gedrueckt (Akzent) heisst abgeschaltet, wie die Schalter in der
                              Fusszeile der Galerie. Betrachter und Editor haben je einen eigenen
@@ -2734,11 +2760,13 @@
             </Grid>
         </Border>
 
-        <!-- MITTIG ZUR BUEHNE wie die Gruppe in der Kopfleiste, deshalb ebenfalls in Spalte 1 des
-             Wurzelrasters. Die senkrechte Lage kommt von unten: die Fussleiste traegt 6 Punkt
-             Innenrand, darueber liegt ihre 28 Punkt hohe Bedienzeile.
+        <!-- MITTIG ZUR BUEHNE wie die Gruppe in der Kopfleiste, deshalb ebenfalls in der Spalte der
+             Buehne. Die senkrechte Lage kommt von unten: die Fussleiste traegt 6 Punkt Innenrand,
+             darueber liegt ihre 28 Punkt hohe Bedienzeile.
              Aendert sich eines von beiden, gehoert es hier mit geaendert - deshalb stehen beide
-             Zahlen nebeneinander im Rand.
+             Zahlen nebeneinander im Rand. Der seitliche Rand kommt aus ApplyToolSelectorLayout und
+             ersetzt diesen Wert vollstaendig: ohne ihn waere die Gruppe mittig ueber der ganzen
+             Spalte statt mittig ueber dem Bild.
 
              Die Spalte wandert mit der Buehne, genau wie bei der Gruppe in der Kopfleiste.
 
@@ -2746,7 +2774,7 @@
              sie deshalb ausdruecklich mitnehmen. Ohne das blieb die Zoom-Gruppe beim Ausblenden
              stehen, und die Fusszeile sah aus, als liesse sie sich gar nicht abschalten. -->
         <StackPanel x:Name="StageFooterButtons"
-                    Grid.Row="2" Grid.Column="1"
+                    Grid.Row="2" Grid.Column="0"
                     Orientation="Horizontal" Spacing="4"
                     Height="28" Margin="0,0,0,6"
                     VerticalAlignment="Bottom" HorizontalAlignment="Center"
@@ -2801,7 +2829,7 @@
              sehen. Der Rahmen liegt ueber dem angezeigten Bild, das Abzeichen folgt dem Zeiger.
              Beides nur, solange der Zeiger ueber dem Bild steht. -->
         <Canvas x:Name="FilmstripDropFeedbackCanvas"
-                Grid.RowSpan="3" Grid.ColumnSpan="5"
+                Grid.RowSpan="3" Grid.ColumnSpan="4"
                 IsVisible="False"
                 IsHitTestVisible="False"
                 ZIndex="190">

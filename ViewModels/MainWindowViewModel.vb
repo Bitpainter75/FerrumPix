@@ -1455,8 +1455,12 @@ Namespace ViewModels
             Editor?.RefreshFilmstripItemBadges()
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsInfoSidebarVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsLayersPanelVisible))
-            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsToolSidebarCollapsed))
+            ' Die Werkzeugleiste: der Modus hat keinen Knopf in der Leiste, sondern steht in den
+            ' Einstellungen, und was an Zeigerzeit noch ausstand, gehoert dem alten Modus nicht mehr.
+            Editor?.CancelToolSelectorHover()
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AreToolSidebarLabelsVisible))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolGroupHeadingOpacity))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AreToolGroupSeparatorsVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolSidebarWidth))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsAdjustmentsPanelOnLeft))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AdjustmentsVerticalScrollBarVisibility))

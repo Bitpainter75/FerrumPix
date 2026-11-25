@@ -795,9 +795,11 @@ Namespace Services
         ''' Abschaltbar, weil die Miniaturen Arbeit machen: ein Bild-Objekt wird dafuer aus seiner
         ''' Datei gelesen, und bei vielen Bildebenen ist der erste Aufbau des Panels spuerbar.</summary>
         Public Property EditorLayerThumbnails As Boolean = True
-        ''' Linke Werkzeugleiste des Editors eingeklappt (nur Symbole, keine Beschriftungen) -
-        ''' gemerkter Bedienzustand wie die Info-Leiste, der Umschalter sitzt in der Leiste selbst.
-        Public Property EditorToolSidebarCollapsed As Boolean = False
+        ''' <summary>Wie der Editor seine Werkzeugleiste zeigt: automatisch, nur Symbole oder immer
+        ''' mit Text. Der Modus hat einen Schalter auf der Einstellungsseite, anders als die Info-Leiste
+        ''' und das Ebenen-Panel: ein Knopf mit zwei Stellungen kann drei Modi nicht darstellen, und ein
+        ''' dritter Knopf in der Leiste waere ein zweiter Weg fuer dieselbe Sache.</summary>
+        Public Property EditorToolSelectorMode As String = AppSettingsService.ToolSelectorModeDefault
         ''' <summary>Breite des Anpassungspanels im Editor, in Punkten. Gemerkter Bedienzustand wie
         ''' die eingeklappte Werkzeugleiste: gezogen wird sie am Rand des Panels, nicht im
         ''' Einstellungsdialog.
@@ -1552,6 +1554,7 @@ Namespace Services
                 settings.RawDemosaicAlgorithm = NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
                 NormalizeMacGraphicsSettings(settings)
                 settings.PickerReadout = NormalizePickerReadout(settings.PickerReadout)
+                settings.EditorToolSelectorMode = NormalizeToolSelectorMode(settings.EditorToolSelectorMode)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.ViewerDoubleClickTarget = NormalizeViewerDoubleClickTarget(settings.ViewerDoubleClickTarget)
                 settings.EditorHomeTarget = NormalizeEditorHomeTarget(settings.EditorHomeTarget)
@@ -1804,6 +1807,7 @@ Namespace Services
                 settings.RawDemosaicAlgorithm = NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
                 NormalizeMacGraphicsSettings(settings)
                 settings.PickerReadout = NormalizePickerReadout(settings.PickerReadout)
+                settings.EditorToolSelectorMode = NormalizeToolSelectorMode(settings.EditorToolSelectorMode)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.ViewerDoubleClickTarget = NormalizeViewerDoubleClickTarget(settings.ViewerDoubleClickTarget)
                 settings.EditorHomeTarget = NormalizeEditorHomeTarget(settings.EditorHomeTarget)
@@ -3076,6 +3080,30 @@ Namespace Services
                 If String.Equals(choice, trimmed, StringComparison.OrdinalIgnoreCase) Then Return choice
             Next
             Return MacRenderingModeDefault
+        End Function
+
+        ''' <summary>Die Werkzeugleiste des Editors zeigt ab Werk automatisch: schmal, bis der
+        ''' Zeiger ueber ihr steht. Der Modus sitzt als Schalter auf der Einstellungsseite, weil ein
+        ''' Knopf mit zwei Stellungen die drei Modi nicht darstellen kann.</summary>
+        Public Const ToolSelectorModeDefault As String = "Auto"
+
+        ''' <summary>Die waehlbaren Modi der Werkzeugleiste, in der Reihenfolge der Auswahlliste. Die
+        ''' Namen liegen in der settings.json und sind keine Anzeigetexte.</summary>
+        Public Shared ReadOnly ToolSelectorModeChoices As String() = {"Auto", "Compact", "Expanded"}
+
+        Public Const ToolSelectorModeAuto As String = "Auto"
+        Public Const ToolSelectorModeCompact As String = "Compact"
+        Public Const ToolSelectorModeExpanded As String = "Expanded"
+
+        ''' <summary>Macht aus jedem Wert einen der drei Modi: leer oder unbekannt wird die Vorgabe,
+        ''' damit ein verstuemmelter Bestand die Leiste nicht unbedienbar macht.</summary>
+        Public Shared Function NormalizeToolSelectorMode(value As String) As String
+            If String.IsNullOrWhiteSpace(value) Then Return ToolSelectorModeDefault
+            Dim trimmed = value.Trim()
+            For Each choice In ToolSelectorModeChoices
+                If String.Equals(choice, trimmed, StringComparison.OrdinalIgnoreCase) Then Return choice
+            Next
+            Return ToolSelectorModeDefault
         End Function
 
         ''' <summary>Die Anzeige neben der Pipette nennt ab Werk Hex-Wert und R G B.</summary>
