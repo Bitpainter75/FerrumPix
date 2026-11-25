@@ -12094,11 +12094,11 @@
   <data name="EXR_Dateien_lesen_49df259a" xml:space="preserve">
     <value>Чтение файлов EXR</value>
   </data>
-  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__7934f082" xml:space="preserve">
-    <value>OpenJPEG читает файлы JPEG 2000, в том числе HTJ2K, и распространяется по лицензии BSD. Windows и Linux поставляют её вместе с программой, Flatpak берёт её из своей среды выполнения; в macOS её пока нет. Без неё не открываются только эти файлы.</value>
+  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__e382d8fe" xml:space="preserve">
+    <value>OpenJPEG читает файлы JPEG 2000, в том числе HTJ2K, и распространяется по лицензии BSD. Windows, Linux и macOS поставляют её вместе с программой, Flatpak берёт её из своей среды выполнения. Без неё не открываются только эти файлы.</value>
   </data>
-  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_62671d4b" xml:space="preserve">
-    <value>OpenEXR читает файлы EXR и распространяется по лицензии BSD, входящие в неё libdeflate, OpenJPH и zstd по лицензиям MIT и BSD. Windows, Linux и Flatpak поставляют её вместе с программой; в macOS её пока нет. Без неё не открываются только эти файлы.</value>
+  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_c861eac1" xml:space="preserve">
+    <value>OpenEXR читает файлы EXR и распространяется по лицензии BSD, входящие в неё libdeflate, OpenJPH и zstd по лицензиям MIT и BSD. Windows, Linux, macOS и Flatpak поставляют её вместе с программой. Без неё не открываются только эти файлы.</value>
   </data>
   <data name="OpenJPEG_fc68646e" xml:space="preserve">
     <value>OpenJPEG</value>

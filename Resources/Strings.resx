@@ -12073,11 +12073,11 @@
   <data name="EXR_Dateien_lesen_49df259a" xml:space="preserve">
     <value>Reading EXR files</value>
   </data>
-  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__7934f082" xml:space="preserve">
-    <value>OpenJPEG reads JPEG 2000 files, including HTJ2K, and is licensed under the BSD license. Windows and Linux bring it along, the Flatpak takes it from its runtime; it is not yet included on macOS. Without it, only these files stay closed.</value>
+  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__e382d8fe" xml:space="preserve">
+    <value>OpenJPEG reads JPEG 2000 files, including HTJ2K, and is licensed under the BSD license. Windows, Linux and macOS bring it along, the Flatpak takes it from its runtime. Without it, only these files stay closed.</value>
   </data>
-  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_62671d4b" xml:space="preserve">
-    <value>OpenEXR reads EXR files and is licensed under the BSD license, the included libdeflate, OpenJPH and zstd under the MIT and BSD licenses. Windows, Linux and the Flatpak bring it along; it is not yet included on macOS. Without it, only these files stay closed.</value>
+  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_c861eac1" xml:space="preserve">
+    <value>OpenEXR reads EXR files and is licensed under the BSD license, the included libdeflate, OpenJPH and zstd under the MIT and BSD licenses. Windows, Linux, macOS and the Flatpak bring it along. Without it, only these files stay closed.</value>
   </data>
   <data name="OpenJPEG_fc68646e" xml:space="preserve">
     <value>OpenJPEG</value>

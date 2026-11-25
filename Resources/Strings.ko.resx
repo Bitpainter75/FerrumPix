@@ -12098,11 +12098,11 @@
   <data name="EXR_Dateien_lesen_49df259a" xml:space="preserve">
     <value>EXR 파일 읽기</value>
   </data>
-  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__7934f082" xml:space="preserve">
-    <value>OpenJPEG는 HTJ2K를 포함한 JPEG 2000 파일을 읽으며 BSD 라이선스를 따릅니다. Windows와 Linux에는 함께 제공되고, Flatpak은 런타임에서 가져옵니다. macOS에는 아직 없습니다. 없으면 이 파일들만 열리지 않습니다.</value>
+  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__e382d8fe" xml:space="preserve">
+    <value>OpenJPEG는 HTJ2K를 포함한 JPEG 2000 파일을 읽으며 BSD 라이선스를 따릅니다. Windows, Linux, macOS에는 함께 제공되고, Flatpak은 런타임에서 가져옵니다. 없으면 이 파일들만 열리지 않습니다.</value>
   </data>
-  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_62671d4b" xml:space="preserve">
-    <value>OpenEXR는 EXR 파일을 읽으며 BSD 라이선스를 따르고, 포함된 libdeflate, OpenJPH, zstd는 MIT 및 BSD 라이선스를 따릅니다. Windows, Linux, Flatpak에는 함께 제공되며 macOS에는 아직 없습니다. 없으면 이 파일들만 열리지 않습니다.</value>
+  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_c861eac1" xml:space="preserve">
+    <value>OpenEXR는 EXR 파일을 읽으며 BSD 라이선스를 따르고, 포함된 libdeflate, OpenJPH, zstd는 MIT 및 BSD 라이선스를 따릅니다. Windows, Linux, macOS, Flatpak에는 함께 제공됩니다. 없으면 이 파일들만 열리지 않습니다.</value>
   </data>
   <data name="OpenJPEG_fc68646e" xml:space="preserve">
     <value>OpenJPEG</value>

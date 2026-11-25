@@ -12052,11 +12052,11 @@
   <data name="EXR_Dateien_lesen_49df259a" xml:space="preserve">
     <value>读取 EXR 文件</value>
   </data>
-  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__7934f082" xml:space="preserve">
-    <value>OpenJPEG 读取 JPEG 2000 文件，包括 HTJ2K，采用 BSD 许可证。Windows 和 Linux 随附提供，Flatpak 使用其运行时中的版本；macOS 上暂时还没有。缺少它时，只有这些文件无法打开。</value>
+  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__e382d8fe" xml:space="preserve">
+    <value>OpenJPEG 读取 JPEG 2000 文件，包括 HTJ2K，采用 BSD 许可证。Windows、Linux 和 macOS 随附提供，Flatpak 使用其运行时中的版本。缺少它时，只有这些文件无法打开。</value>
   </data>
-  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_62671d4b" xml:space="preserve">
-    <value>OpenEXR 读取 EXR 文件，采用 BSD 许可证，其中包含的 libdeflate、OpenJPH 和 zstd 采用 MIT 和 BSD 许可证。Windows、Linux 和 Flatpak 随附提供；macOS 上暂时还没有。缺少它时，只有这些文件无法打开。</value>
+  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_c861eac1" xml:space="preserve">
+    <value>OpenEXR 读取 EXR 文件，采用 BSD 许可证，其中包含的 libdeflate、OpenJPH 和 zstd 采用 MIT 和 BSD 许可证。Windows、Linux、macOS 和 Flatpak 随附提供。缺少它时，只有这些文件无法打开。</value>
   </data>
   <data name="OpenJPEG_fc68646e" xml:space="preserve">
     <value>OpenJPEG</value>

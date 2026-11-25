@@ -646,6 +646,8 @@ Namespace Services
             look.CurveRedPoints = ScaleLookCurve(look.CurveRedPoints, strength)
             look.CurveGreenPoints = ScaleLookCurve(look.CurveGreenPoints, strength)
             look.CurveBluePoints = ScaleLookCurve(look.CurveBluePoints, strength)
+            ' Ein Look setzt den Dunst neu: hinzugefuegter Dunst bekommt die aktuelle Fassung.
+            look.HazeModel = HazeModelAfter(0, 0, look.Haze)
             look.FilterPreset = name.Trim()
             look.FilterStrength = CSng(Math.Max(0, Math.Min(100, strengthPercent)))
             Return look
@@ -956,6 +958,39 @@ Namespace Services
         Public Property ColorNoiseAdd As Single = 0
         Public Property DustScratches As Single = 0
         Public Property Haze As Single = 0
+        ''' <summary>Fassung des hinzugefuegten Dunstes (<see cref="Haze"/> positiv). 0 ist der Weg
+        ''' bis 0.9.91 und gilt fuer jedes Rezept ohne das Feld: der Schleier hat die Helligkeit des
+        ''' Dunstlichts und eine feste, leicht kuehle Toenung. 1 (<see cref="CurrentHazeModel"/>): der
+        ''' Schleier nimmt die FARBE des gemessenen Dunstlichts an, als Median der dunstigsten
+        ''' 0,17 Prozent (ImageProcessor.AddedHazeMap); unter warmem Licht wird er warm wie beim
+        ''' Referenzprogramm. Dunst entfernen kennt keine Fassung.
+        '''
+        ''' WANN EIN REZEPT DIE NEUE FASSUNG BEKOMMT: sobald hinzugefuegter Dunst NEU entsteht, also
+        ''' das Rezept vorher keinen hatte (<see cref="HazeModelAfter"/>): der Regler im Editor, ein
+        ''' XMP-Preset oder eine Beistelldatei beim Einlesen, ein eingebauter Look. Steht schon Dunst
+        ''' im Rezept, bleibt seine Fassung, auch wenn der Regler weiter verstellt wird; zurueck auf
+        ''' null oder ins Entfernen geht sie auf 0. Gespeicherte Bearbeitungen sehen so bitgleich aus
+        ''' wie zuvor.
+        '''
+        ''' EIN PIXELREGLER, gehoert also zum Look und wandert mit dem Dunst: Kopieren und Einfuegen,
+        ''' Vorlagen (Eintrag Dunst, AdjustmentEntries), Korrekturebenen und Objekte, Stapel. Sonst
+        ''' saehe eingefuegter Dunst anders aus als in der Quelle. Allein zaehlt das Feld nie als
+        ''' Bearbeitung: ohne hinzugefuegten Dunst ist es bedeutungslos und wird bei jedem Vergleich
+        ''' mit dem Neutralwert uebergangen (HasPixelAdjustments, IsEditedComparedTo,
+        ''' AdjustmentEntries.NonNeutralEntries).</summary>
+        Public Property HazeModel As Integer = 0
+        ''' <summary>Die Fassung, die neu hinzugefuegter Dunst bekommt (siehe <see cref="HazeModel"/>).</summary>
+        Public Const CurrentHazeModel As Integer = 1
+
+        ''' <summary>Die Fassung nach einer neuen Dunst-Einstellung: ohne hinzugefuegten Dunst 0;
+        ''' hatte das Rezept schon welchen, bleibt seine Fassung; sonst die aktuelle. Die eine Regel
+        ''' fuer Editor, XMP-Leser und eingebaute Looks.</summary>
+        Public Shared Function HazeModelAfter(previousHaze As Double, previousModel As Integer, newHaze As Double) As Integer
+            If newHaze <= 0 Then Return 0
+            If previousHaze > 0 Then Return previousModel
+            Return CurrentHazeModel
+        End Function
+
         Public Property AddNoise As Single = 0
         Public Property [Structure] As Single = 0
         Public Property Glow As Single = 0
@@ -1794,10 +1829,15 @@ Namespace Services
             If look Is Nothing Then Return
             Dim neutral = New ImageAdjustments()
             For Each p In PixelAdjustmentProperties()
+                ' Die Fassung des Dunstes geht mit dem Dunst, nicht allein (siehe unten).
+                If p.Name = NameOf(HazeModel) Then Continue For
                 Dim value = p.GetValue(look)
                 Dim standard = p.GetValue(neutral)
                 If Not Equals(value, standard) Then p.SetValue(Me, value)
             Next
+            ' Setzt der Look den Dunst, bringt er seine Fassung mit; eine Fassung 0 des Looks waere
+            ' sonst als Neutralwert uebergangen und der Dunst rechnete in der Fassung des Ziels.
+            If look.Haze <> neutral.Haze Then HazeModel = If(look.Haze > 0, look.HazeModel, 0)
         End Sub
 
         ''' <summary>Die Pixel-Anpassungen als eigenes Rezept - für eine Maskenebene oder ein
@@ -2015,6 +2055,8 @@ Namespace Services
         Public Function HasPixelAdjustments() As Boolean
             Dim neutral = New ImageAdjustments()
             For Each p In PixelAdjustmentProperties()
+                ' Die Fassung des Dunstes allein ist keine Anpassung; mit Dunst zaehlt der Dunst.
+                If p.Name = NameOf(HazeModel) Then Continue For
                 If Not Object.Equals(p.GetValue(Me), p.GetValue(neutral)) Then Return True
             Next
             Return False
@@ -2071,6 +2113,9 @@ Namespace Services
                 Dim p = type.GetProperty(name)
                 If p IsNot Nothing AndAlso p.CanRead AndAlso p.CanWrite Then p.SetValue(own, p.GetValue(reference))
             Next
+            ' Ohne hinzugefuegten Dunst ist dessen Fassung bedeutungslos (HazeModel).
+            If own.Haze <= 0 Then own.HazeModel = 0
+            If reference.Haze <= 0 Then reference.HazeModel = 0
             ' Nachsichtig gilt auch 0 als Startwert: Rezepte aus der Zeit vor der Kameratabelle tragen
             ' dort 0 statt der heutigen Grundbelichtung.
             If lenient AndAlso (own.Exposure = 0.0F OrElse
@@ -2158,6 +2203,7 @@ Namespace Services
                 .ColorNoiseAdd = ColorNoiseAdd,
                 .DustScratches = DustScratches,
                 .Haze = Haze,
+                .HazeModel = HazeModel,
                 .AddNoise = AddNoise,
                 .Structure = [Structure],
                 .Glow = Glow,

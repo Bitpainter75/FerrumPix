@@ -3696,9 +3696,9 @@ Namespace Services
             End If
             If adj.Haze <> 0 Then
                 processed = RunDetailStage(session, processed, owned, "Pixel: Dunst",
-                                           If(adj.Haze > 0, HazeOnGpu(adj.Haze / 100.0F), DehazeOnGpu(adj.Haze / 100.0F)),
-                                           Function(s) ApplyHaze(s, adj.Haze / 100.0F),
-                                           Function(d) ApplyHazeDeep(d, adj.Haze / 100.0F))
+                                           If(adj.Haze > 0, HazeOnGpu(adj.Haze / 100.0F, adj.HazeModel), DehazeOnGpu(adj.Haze / 100.0F)),
+                                           Function(s) ApplyHaze(s, adj.Haze / 100.0F, adj.HazeModel),
+                                           Function(d) ApplyHazeDeep(d, adj.Haze / 100.0F, adj.HazeModel))
             End If
 
             If adj.NoiseReduction > 0 Then
@@ -5672,6 +5672,7 @@ Namespace Services
         Private Shared Sub NeutralizeDetailStages(tone As ImageAdjustments)
             Dim neutral = New ImageAdjustments()
             tone.Clarity = neutral.Clarity : tone.Structure = neutral.Structure : tone.Haze = neutral.Haze
+            tone.HazeModel = neutral.HazeModel
             tone.NoiseReduction = neutral.NoiseReduction : tone.NoiseReductionMethod = neutral.NoiseReductionMethod
             tone.NoiseReductionDetail = neutral.NoiseReductionDetail : tone.Blur = neutral.Blur
             ' Das Farbrauschen bleibt im Schluessel: es laeuft VOR der Punktkette, gehoert also zum Tonstand.
@@ -5904,7 +5905,7 @@ Namespace Services
                 adj.NoiseReduction, adj.NoiseReductionMethod, adj.NoiseReductionDetail, adj.Blur, adj.ColorNoiseReduction,
                 adj.FarbrauschGrob, adj.ColorNoiseCoarseScale,
                 adj.ColorNoiseAdd,
-                adj.DustScratches, adj.Haze, adj.AddNoise, adj.[Structure], adj.Glow,
+                adj.DustScratches, adj.Haze, adj.HazeModel, adj.AddNoise, adj.[Structure], adj.Glow,
                 adj.PerspectiveHorizontal, adj.PerspectiveVertical, adj.PerspectiveAspect, adj.PerspectiveScale,
                 adj.PerspectiveCorner0X, adj.PerspectiveCorner0Y, adj.PerspectiveCorner1X, adj.PerspectiveCorner1Y,
                 adj.PerspectiveCorner2X, adj.PerspectiveCorner2Y, adj.PerspectiveCorner3X, adj.PerspectiveCorner3Y,

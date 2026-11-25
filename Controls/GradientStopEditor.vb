@@ -108,6 +108,13 @@ Namespace Controls
             Return New Rect(Bounds.Size).Contains(point)
         End Function
 
+        ' Avalonia gibt seit 12.2 fuer die Pruefung mit einer Flaeche einen vorgegebenen Rumpf mit
+        ' Empty vor; VB.NET uebernimmt solche Ruempfe nicht und verlangt die Methode ausdruecklich.
+        ' Dieselbe Antwort wie der vorgegebene Rumpf, das Verhalten bleibt also wie vorher.
+        Public Function HitTest(geometry As Avalonia.Media.Geometry) As Avalonia.Media.IntersectionResult Implements ICustomHitTest.HitTest
+            Return Avalonia.Media.IntersectionResult.Empty
+        End Function
+
         ''' <summary>Entfernt den markierten Stopp, solange danach noch zwei bleiben.</summary>
         Public Sub RemoveSelectedStop()
             If _selected Is Nothing OrElse _stops.Count <= 2 Then Return

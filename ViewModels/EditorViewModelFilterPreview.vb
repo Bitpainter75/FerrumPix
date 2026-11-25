@@ -404,7 +404,7 @@ Namespace ViewModels
                 "Vibrance", "Saturation",
                 "Clarity", "Sharpness", "SharpenRadius", "SharpenDetail", "SharpenMasking", "SharpenMethod",
                 "NoiseReduction", "NoiseReductionDetail", "Blur", "ColorNoiseReduction", "FarbrauschGrob",
-                "ColorNoiseCoarseScale", "NoiseReductionMethod", "Haze", "AddNoise", "Structure", "Glow",
+                "ColorNoiseCoarseScale", "NoiseReductionMethod", "Haze", "HazeModel", "AddNoise", "Structure", "Glow",
                 "Vignette", "VignetteTransition", "VignetteRoundness", "VignetteFeather", "VignetteCenterX",
                 "VignetteCenterY", "VignetteStyle",
                 "Grain", "GrainSize", "GrainFrequency", "GrainColor", "ColorNoiseAdd", "DustScratches",
@@ -421,7 +421,7 @@ Namespace ViewModels
         Private Shared Function BuildLookPropertyNames() As String()
             Dim names As New List(Of String) From {
                 "Exposure", "Brightness", "Contrast", "Highlights", "ShadowsLevel", "Whites", "Blacks",
-                "Clarity", "Structure", "Haze", "Vibrance", "Saturation",
+                "Clarity", "Structure", "Haze", "HazeModel", "Vibrance", "Saturation",
                 "Sharpness", "SharpenRadius", "SharpenDetail", "SharpenMasking",
                 "NoiseReduction", "NoiseReductionDetail", "Blur", "ColorNoiseReduction", "ColorNoiseAdd",
                 "Grain", "GrainSize", "GrainFrequency", "GrainColor",

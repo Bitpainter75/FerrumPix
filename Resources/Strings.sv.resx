@@ -12094,11 +12094,11 @@
   <data name="EXR_Dateien_lesen_49df259a" xml:space="preserve">
     <value>Läsning av EXR-filer</value>
   </data>
-  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__7934f082" xml:space="preserve">
-    <value>OpenJPEG läser JPEG 2000-filer, även HTJ2K, och är licensierad under BSD-licensen. Windows och Linux har den med sig, Flatpak tar den från sin körmiljö; på macOS saknas den ännu. Utan den förblir bara dessa filer oöppnade.</value>
+  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__e382d8fe" xml:space="preserve">
+    <value>OpenJPEG läser JPEG 2000-filer, även HTJ2K, och är licensierad under BSD-licensen. Windows, Linux och macOS har den med sig, Flatpak tar den från sin körmiljö. Utan den förblir bara dessa filer oöppnade.</value>
   </data>
-  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_62671d4b" xml:space="preserve">
-    <value>OpenEXR läser EXR-filer och är licensierad under BSD-licensen, de medföljande libdeflate, OpenJPH och zstd under MIT- och BSD-licensen. Windows, Linux och Flatpak har den med sig; på macOS saknas den ännu. Utan den förblir bara dessa filer oöppnade.</value>
+  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_c861eac1" xml:space="preserve">
+    <value>OpenEXR läser EXR-filer och är licensierad under BSD-licensen, de medföljande libdeflate, OpenJPH och zstd under MIT- och BSD-licensen. Windows, Linux, macOS och Flatpak har den med sig. Utan den förblir bara dessa filer oöppnade.</value>
   </data>
   <data name="OpenJPEG_fc68646e" xml:space="preserve">
     <value>OpenJPEG</value>

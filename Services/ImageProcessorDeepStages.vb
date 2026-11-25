@@ -984,8 +984,8 @@ Namespace Services
         ''' Die Karte (wo Dunst liegt, wie hell das Dunstlicht ist) entsteht wie in der Vorschau
         ''' aus den Zellmitteln eines 8-Bit-Abbilds: sie ist eine Messung am Bild, und ueber ein
         ''' ganzes Feld gemittelt aendert die Tiefe daran nichts. Tief gerechnet wird, was danach
-        ''' je Bildpunkt geschieht.</summary>
-        Private Shared Function ApplyHazeDeep(deep As SKBitmap, amount As Single) As SKBitmap
+        ''' je Bildpunkt geschieht. <paramref name="hazeModel"/> wie bei ApplyHaze.</summary>
+        Private Shared Function ApplyHazeDeep(deep As SKBitmap, amount As Single, hazeModel As Integer) As SKBitmap
             Dim signed = Clamp(amount, -1, 1)
             If Math.Abs(signed) <= 0.001F Then Return Nothing
             Dim strength = Math.Abs(CDbl(signed))
@@ -1002,7 +1002,7 @@ Namespace Services
                 ' Dunst hinzufuegen, wie ApplyAddedHaze.
                 Dim veil As Double() = Nothing
                 Dim lightFactor As Double
-                Dim map = AddedHazeMap(lowR, lowG, lowB, lowOwn, lw, lh, veil, lightFactor)
+                Dim map = AddedHazeMap(lowR, lowG, lowB, lowOwn, lw, lh, hazeModel, veil, lightFactor)
                 Dim amountPow = Math.Pow(strength, AddedHazeExponent)
                 Dim back = Function(u As Double) CSng(Math.Pow(Math.Max(0.0, Math.Min(1.0, u)), 1.0 / AddedHazePower) * 255.0)
                 Parallel.For(0, height,
