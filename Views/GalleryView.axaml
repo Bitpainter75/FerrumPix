@@ -3549,28 +3549,27 @@
                                                                            IsVisible="{Binding IsFavorite}"/>
                                                         </StackPanel>
                                                     </Border>
-                                                    <!-- BEHALTEN und VERWORFEN oben in der Mitte: dieselbe Pille wie an der
-                                                    Galeriekachel, in der Groesse des Streifens (eigene Einstellung des
-                                                    Filmstreifens, ab Werk an). Die Klasse center traegt sie hier in die
-                                                    Mitte, in Betrachter und Editor sitzt sie links. Kein Knopf: ein Klick
-                                                    auf eine Kachel waehlt sie. -->
+                                                    <!-- BEHALTEN und VERWORFEN oben links: dieselbe Pille wie im
+                                                    Filmstreifen von Betrachter und Editor, in Lage und Groesse
+                                                    (eigene Einstellung des Filmstreifens, ab Werk an). Kein Knopf: ein
+                                                    Klick auf eine Kachel waehlt sie. -->
                                                     <Panel IsVisible="{Binding DataContext.ShowFilmstripPickBadge, RelativeSource={RelativeSource AncestorType=UserControl}}">
-                                                        <Border Classes="filmstrip-pick-badge reject center" IsVisible="{Binding IsRejected}">
+                                                        <Border Classes="filmstrip-pick-badge reject" IsVisible="{Binding IsRejected}">
                                                             <Border.Effect>
                                                                 <DropShadowEffect Color="#D0000000" BlurRadius="4" OffsetX="0" OffsetY="1"/>
                                                             </Border.Effect>
                                                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-down-bold.svg"
-                                                                           Width="18" Height="18"
+                                                                           Width="14" Height="14"
                                                                            IconBrush="White"
                                                                            HorizontalAlignment="Center"
                                                                            VerticalAlignment="Center"/>
                                                         </Border>
-                                                        <Border Classes="filmstrip-pick-badge keep center" IsVisible="{Binding IsPicked}">
+                                                        <Border Classes="filmstrip-pick-badge keep" IsVisible="{Binding IsPicked}">
                                                             <Border.Effect>
                                                                 <DropShadowEffect Color="#D0000000" BlurRadius="4" OffsetX="0" OffsetY="1"/>
                                                             </Border.Effect>
                                                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-up-bold.svg"
-                                                                           Width="18" Height="18"
+                                                                           Width="14" Height="14"
                                                                            IconBrush="White"
                                                                            HorizontalAlignment="Center"
                                                                            VerticalAlignment="Center"/>
