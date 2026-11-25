@@ -2076,16 +2076,22 @@
     </Style>
     <!-- BEHALTEN und VERWORFEN im Filmstreifen (eigene Einstellung, ab Werk an): dieselbe Pille wie
          an der Galeriekachel, nur in der Groesse des Streifens. Kein Knopf, damit ein Klick wie
-         ueberall sonst im Streifen die Kachel waehlt. Oben in der Mitte ist Platz: unten links
-         sitzt die Pille mit Etikett, Sternen und Herz, unten rechts das Bearbeitet-Zeichen. -->
+         ueberall sonst im Streifen die Kachel waehlt. In Betrachter und Editor oben links, mit
+         demselben Rand wie das Bearbeitet-Zeichen gegenueber: unten links sitzt die Pille mit
+         Etikett, Sternen und Herz, unten rechts das Bearbeitet-Zeichen. -->
     <Style Selector="Border.filmstrip-pick-badge">
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Padding" Value="4,2"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
         <Setter Property="VerticalAlignment" Value="Top"/>
-        <Setter Property="Margin" Value="0,5,0,0"/>
+        <Setter Property="Margin" Value="5"/>
         <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
+    <!-- Die Kacheln der Kartenansicht tragen die Pille weiterhin oben in der Mitte. -->
+    <Style Selector="Border.filmstrip-pick-badge.center">
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="0,5,0,0"/>
     </Style>
     <Style Selector="Border.filmstrip-pick-badge.reject">
         <Setter Property="Background" Value="#C08E2D2D"/>
