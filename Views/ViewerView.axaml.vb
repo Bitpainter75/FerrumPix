@@ -1830,7 +1830,10 @@ Namespace Views
                e.PropertyName = NameOf(ViewerViewModel.ShowVideoSurface) Then
                 UpdateActiveVideoView()
                 ResetFullscreenVideoControlsVisibility()
+                UpdateVideoPosterCover()
             End If
+
+            If e.PropertyName = NameOf(ViewerViewModel.ShowVideoPoster) Then UpdateVideoPosterCover()
 
             If e.PropertyName = NameOf(ViewerViewModel.CurrentFilmstripIndex) Then
                 _filmstripController.ScrollToCurrent()
@@ -2083,6 +2086,46 @@ Namespace Views
                       End Sub
             _pendingVideoAttachHandler = handler
             AddHandler control.LayoutUpdated, handler
+        End Sub
+
+        Private _videoPosterCoverWired As Boolean = False
+
+        ''' <summary>Solange das Standbild eines Films steht (ViewerViewModel.ShowVideoPoster),
+        ''' muss die native Videoflaeche aus dem Weg: ihr Fenster liegt ueber allem, was Avalonia
+        ''' zeichnet, und verdeckte das Standbild.
+        '''
+        ''' Sie wird VERSCHOBEN, nicht ausgeblendet. Ausgeblendet bekaeme sie keine Groesse mehr, und
+        ''' der Spieler wird erst an eine Flaeche mit Groesse gehaengt (AttachVideoPlayer): der Film
+        ''' kaeme dann nie ins Laufen, und das Standbild ginge nie weg. Verschoben behaelt sie Groesse
+        ''' und Fenster, mpv zeichnet weiter hinein, nur liegt das Fenster links ausserhalb des
+        ''' Hauptfensters, und das Fenstersystem schneidet es weg. Um die Breite des Hauptfensters und
+        ''' etwas mehr, damit auch eine Flaeche am rechten Rand ganz verschwindet; so bleibt der Wert
+        ''' auch bei doppelter Punktdichte weit in dem Bereich, den X11 fuer eine Lage zulaesst.
+        '''
+        ''' Avalonia setzt das native Fenster nur bei einer Aenderung von Groesse oder Sichtbarkeit
+        ''' neu, nicht bei einer Verschiebung; deshalb wird hier ausdruecklich nachgezogen, und bei
+        ''' jeder Groessenaenderung der Flaeche noch einmal (das Hauptfenster kann gewachsen sein).
+        ''' Der abholende Weg (macOS) braucht nichts davon: dort liegt das Standbild ohnehin darueber.</summary>
+        Private Sub UpdateVideoPosterCover()
+            Dim videoView = Me.FindControl(Of MpvVideoView)("TheVideoView")
+            If videoView Is Nothing Then Return
+            If Not _videoPosterCoverWired Then
+                _videoPosterCoverWired = True
+                AddHandler videoView.SizeChanged, Sub(s, args) UpdateVideoPosterCover()
+            End If
+
+            Dim vm = GetVm()
+            Dim cover = vm IsNot Nothing AndAlso vm.ShowVideoPoster AndAlso Not MpvPlayer.UsesRenderSurfaceOnThisPlatform
+            If cover Then
+                Dim root = TopLevel.GetTopLevel(videoView)
+                Dim rootWidth = If(root IsNot Nothing, root.Bounds.Width, videoView.Bounds.Width)
+                videoView.RenderTransform = New Avalonia.Media.TranslateTransform(-(rootWidth + 64), 0)
+            ElseIf videoView.RenderTransform Is Nothing Then
+                Return
+            Else
+                videoView.RenderTransform = Nothing
+            End If
+            videoView.TryUpdateNativeControlPosition()
         End Sub
 
         Private Async Sub StartPendingVideoAutoplayAfterHostReady(target As IMpvVideoTarget, mediaPlayer As MpvPlayer, vm As ViewerViewModel)

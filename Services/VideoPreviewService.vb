@@ -15,6 +15,16 @@ Namespace Services
         Private Shared ReadOnly _videoExtensions As String() = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
         Private Shared ReadOnly _thumbnailGate As New SemaphoreSlim(1, 1)
 
+        ''' <summary>Die Stelle des Standbilds, als Wert der mpv-Option "start": ein Zehntel der
+        ''' Laufzeit. Am Anfang steht bei vielen Filmen eine Einblendung aus Schwarz.</summary>
+        Friend Const PreviewStartPosition As String = "10%"
+
+        ''' <summary>Fassung der Video-Kacheln im Namen der Kachel (ThumbnailCacheService). Erhoehen,
+        ''' wenn sich aendert, WELCHES Bild eines Films die Kachel zeigt; dann werden nur die
+        ''' Video-Kacheln neu gerechnet, nicht der ganze Bestand. 2 seit der Startstelle vor dem
+        ''' Laden: vorher konnte die Kachel das erste Bild statt der Stelle bei 10 % zeigen.</summary>
+        Friend Const TileVersion As Integer = 2
+
         Public Shared Function IsSupportedVideo(filePath As String) As Boolean
             If String.IsNullOrEmpty(filePath) Then Return False
             Return _videoExtensions.Contains(Path.GetExtension(filePath).ToLowerInvariant())
@@ -24,7 +34,15 @@ Namespace Services
             If Not App.IsVideoThumbnailAvailable Then Return Nothing
             If Not IsSupportedVideo(filePath) OrElse Not File.Exists(filePath) Then Return Nothing
 
-            If Not _thumbnailGate.Wait(Math.Max(timeoutMs, 4000)) Then Return Nothing
+            ' Ein Standbild zur Zeit. Wer zu lange wartet, gibt auf; die Kachel faengt das ab
+            ' (ImageItem.RetryLocalThumbnailAfterFailure, zwei Nachversuche), danach bleibt sie bis
+            ' zum naechsten Neuaufbau der Galerie leer. Damit das nicht still geschieht, steht es im
+            ' Protokoll.
+            Dim waitMs = Math.Max(timeoutMs, 4000)
+            If Not _thumbnailGate.Wait(waitMs) Then
+                DiagnosticLogService.LogAlways("Video.Thumbnail", $"{Path.GetFileName(filePath)}: ausgelassen, ein anderes Standbild belegt die Schleuse seit {waitMs} ms")
+                Return Nothing
+            End If
             Try
                 Return ExtractPreviewCore(filePath, maxDimension, timeoutMs)
             Finally
@@ -59,6 +77,16 @@ Namespace Services
                 SetOption(handle, "keep-open", "yes")
                 SetOption(handle, "hwdec", "no")
                 SetOption(handle, "vo", "null")
+                ' DIE STELLE STEHT VOR DEM LADEN FEST, nicht als Sprung danach. mpv meldet
+                ' PLAYBACK_RESTART schon fuer den Anfang des Films; ein "seek" nach FileLoaded fing
+                ' diese erste Meldung und fotografierte, bevor der Sprung fertig war. Bei Filmen mit
+                ' Einblendung lag dann ein schwarzes Bild in der Kachel. Mit "start" beginnt der Film
+                ' an der Stelle, und die erste Meldung gehoert schon zu ihr. Ist die Laufzeit
+                ' unbekannt, laesst mpv die Prozentangabe fallen und beginnt am Anfang; auch dann
+                ' gibt es ein Bild.
+                SetOption(handle, "start", PreviewStartPosition)
+                ' Genau an der Stelle, nicht am Schluesselbild davor: das kann in einer Einblendung liegen.
+                SetOption(handle, "hr-seek", "yes")
 
                 Dim result = MpvInterop.Initialize(handle)
                 If result < 0 Then
@@ -81,8 +109,11 @@ Namespace Services
                     Return Nothing
                 End If
 
-                Command(handle, "seek", "10", "absolute-percent", "exact")
-                WaitForEvent(handle, Math.Min(timeoutMs, 1500), messages, MpvInterop.MpvEventId.PlaybackRestart)
+                ' Die erste Meldung nach dem Laden ist die der Startstelle (siehe "start" oben).
+                ' Bleibt sie aus, wird trotzdem fotografiert: ein Bild vom Anfang ist besser als keins.
+                If Not WaitForEvent(handle, timeoutMs, messages, MpvInterop.MpvEventId.PlaybackRestart) Then
+                    DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: Startstelle nicht binnen {timeoutMs} ms erreicht, Bild vom aktuellen Stand")
+                End If
 
                 If Command(handle, "screenshot-to-file", tempPath, "video") < 0 Then
                     DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: screenshot-to-file fehlgeschlagen{Reason(handle, messages)}")
