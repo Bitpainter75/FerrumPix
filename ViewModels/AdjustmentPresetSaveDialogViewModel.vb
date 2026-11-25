@@ -128,27 +128,39 @@ Namespace ViewModels
     End Class
 
     ''' <summary>Ein Ordner der Anpassungen in einer Auswahlliste: der Pfad relativ zum Wurzelordner
-    ''' und seine Beschriftung. Der Wurzelordner heisst "Hauptordner".</summary>
+    ''' und seine Beschriftung. Der Wurzelordner heisst "Hauptordner". Die aufgeklappte Liste
+    ''' zeigt die Ordner als eingerueckten Baum (<see cref="Name"/> mit <see cref="Indent"/>), das
+    ''' geschlossene Feld und Menues den ganzen Pfad (<see cref="Label"/>).</summary>
     Public Class AdjustmentPresetFolderChoice
         Public ReadOnly Property Path As String
+        ''' Der ganze Pfad: "Ordner / Unterordner".
         Public ReadOnly Property Label As String
+        ''' Nur der Name des Ordners, fuer die Zeile im eingerueckten Baum.
+        Public ReadOnly Property Name As String
+        ''' Die Stufe im Baum: der Hauptordner und die Ordner darin stehen am Rand (0).
+        Public ReadOnly Property Depth As Integer
+        Public ReadOnly Property Indent As Avalonia.Thickness
 
         Public Sub New(path As String)
             Me.Path = AdjustmentPresetStore.NormalizeFolder(path)
             Label = If(Me.Path.Length = 0, LocalizationService.T("Hauptordner"), Me.Path.Replace("/", " / "))
+            Name = If(Me.Path.Length = 0, Label, AdjustmentPresetStore.FolderName(Me.Path))
+            Depth = If(Me.Path.Length = 0, 0, Me.Path.Split("/"c).Length - 1)
+            Indent = New Avalonia.Thickness(Depth * AdjustmentPresetChoiceRow.IndentStep, 0, 0, 0)
         End Sub
 
         Public Overrides Function ToString() As String
             Return Label
         End Function
 
-        ''' <summary>Die Auswahlliste zu einer Ordnerliste: der Wurzelordner zuerst.</summary>
+        ''' <summary>Die Auswahlliste zu einer Ordnerliste: der Wurzelordner zuerst, danach die
+        ''' Ordner in der Reihenfolge des Baums, jeder vor seinen Unterordnern.</summary>
         Public Shared Function ListOf(folders As IEnumerable(Of String)) As List(Of AdjustmentPresetFolderChoice)
             Dim result As New List(Of AdjustmentPresetFolderChoice) From {New AdjustmentPresetFolderChoice("")}
-            For Each folder In If(folders, Enumerable.Empty(Of String)()).
+            Dim known = If(folders, Enumerable.Empty(Of String)()).
                 Select(Function(f) AdjustmentPresetStore.NormalizeFolder(f)).
-                Where(Function(f) f.Length > 0).Distinct(StringComparer.Ordinal).
-                OrderBy(Function(f) f, StringComparer.OrdinalIgnoreCase)
+                Where(Function(f) f.Length > 0)
+            For Each folder In AdjustmentPresetStore.OrderFoldersAsTree(known)
                 result.Add(New AdjustmentPresetFolderChoice(folder))
             Next
             Return result

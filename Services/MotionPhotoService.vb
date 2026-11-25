@@ -129,6 +129,13 @@ Namespace Services
 
         Private Shared ReadOnly JpegExtensions As String() = {".jpg", ".jpeg", ".jpe", ".jfif"}
 
+        ''' <summary>Traegt der Pfad eine JPEG-Endung? Nur solche Dateien gelten hier als Motion
+        ''' Photo; die Erkennung im EXIF-Lauf (LivePhotoService.Identify) fragt dasselbe.</summary>
+        Friend Shared Function IsJpegPath(path As String) As Boolean
+            If String.IsNullOrEmpty(path) Then Return False
+            Return JpegExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant())
+        End Function
+
         ' ── Schritt 1: was das XMP behauptet ──────────────────────────────────────
 
         ''' <summary>Liest die Behauptung aus den Verzeichnissen des Metadatenlesers (dieselben, die
@@ -395,6 +402,25 @@ Namespace Services
         Public Shared Function HasVideoInFile(path As String) As Boolean
             Return DetectCached(path).HasVideo
         End Function
+
+        ''' <summary>Fuehrt der Katalog eine Datei, die einen Film traegt, mit einer zur Datei
+        ''' passenden Zeile als etwas anderes, wird die Zeile aus der Datei neu gelesen. Nur
+        ''' aufrufen, wenn die Datei den Film belegt hat (HasVideoInFile); liest die Datei und
+        ''' schreibt in den Katalog: im Hintergrund. Wirft nie.</summary>
+        Friend Shared Sub CorrectCatalogIfWrong(path As String)
+            Try
+                Dim kind As MotionKind
+                Dim ignoredId As String = Nothing
+                If Not LibraryService.Instance.TryGetCurrentMotion(path, kind, ignoredId) OrElse kind = MotionKind.MotionPhoto Then Return
+                DiagnosticLogService.LogAlways("MotionPhoto.CatalogCorrected", $"Katalog fuehrte {IO.Path.GetFileName(path)} als {kind}, die Datei traegt einen Film")
+                ExifService.Invalidate(path)
+                Dim data = ExifService.ReadExif(path)
+                Dim fields = ExifService.ExtractSearchFields(data, path)
+                LibraryService.Instance.SyncExifData(path, fields, ExifService.BuildCatalogSummary(data, fields))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("MotionPhoto.CorrectCatalog", ex)
+            End Try
+        End Sub
 
         ''' <summary>Wo die Datei selbst zuletzt gefragt wurde und seither unveraendert ist, gilt
         ''' diese Antwort vor dem Katalog.</summary>

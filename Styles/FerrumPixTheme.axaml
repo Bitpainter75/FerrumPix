@@ -550,6 +550,23 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Background" Value="Transparent"/>
     </Style>
+    <!-- FARBETIKETT ALS KREIS (Info-Leiste, Filter der Galerie, Suchdialog, Feld des Vergleichs,
+         Etikettenzeile der Menues, Bewertungsleiste im Vollbild). Ueberall derselbe Knopf: 24
+         Punkte rund, darin der Farbkreis mit 16 und beim gesetzten Etikett die beiden Scheiben
+         des Doppelrings mit 24 und 20, alle mittig auf ganzen Punkten. Der schwarze Ring deckt
+         den Rahmen des Ghost-Knopfs genau ab. Rahmenstaerke und Rahmenfarbe bleiben die des
+         Ghost-Knopfs am jeweiligen Ort; gesetzt (Klasse active, nur im Vollbild) nimmt der
+         Rahmen NICHT den Akzent an, sonst saeume er den schwarzen Ring farbig. Steht hinter
+         Button.ghost.active, damit es diese Regel ueberschreibt. -->
+    <Style Selector="Button.label-chip">
+        <Setter Property="Width" Value="24"/>
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="CornerRadius" Value="12"/>
+    </Style>
+    <Style Selector="Button.label-chip.active">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+    </Style>
     <!-- Die acht Stufen des Schriftgrads. OHNE RAHMEN, auch die aktive: acht Kaestchen
          nebeneinander waeren ein Gitter, und die Schaltflaechen tragen ohnehin verschieden
          grosse Schrift - der Groessenunterschied ist die eigentliche Auskunft, ein Rahmen
@@ -743,6 +760,13 @@
          VOR den Farben darunter, damit gesetzt Gruen und Rot gewinnen. -->
     <Style Selector="Button.icon-btn.pick-btn.on-image icons|SvgIcon">
         <Setter Property="IconBrush" Value="White"/>
+    </Style>
+    <!-- Neben den Sternen auf einem Paneel (Info-Leiste, Menuezeile): ungesetzt in Farbe und
+         Deckkraft der ungesetzten Sterne, wie das Herz dort (beside-stars, siehe fav-heart weiter
+         unten). Mit :not(.active), damit gesetzt Gruen und Rot bei voller Deckkraft bleiben. -->
+    <Style Selector="Button.icon-btn.pick-btn.beside-stars:not(.active) icons|SvgIcon">
+        <Setter Property="IconBrush" Value="#EAEFF5"/>
+        <Setter Property="Opacity" Value="0.92"/>
     </Style>
     <Style Selector="Button.icon-btn.pick-keep.active icons|SvgIcon">
         <Setter Property="IconBrush" Value="#22C55E"/>
@@ -1079,18 +1103,17 @@
     <Style Selector="DatePicker.capture-date-picker /template/ Rectangle#PART_SecondSpacer">
         <Setter Property="Fill" Value="{DynamicResource FP.Border.Normal}"/>
     </Style>
-    <!-- IN EINEM AUFKLAPPFENSTER LOESCHT EIN ELEMENT, DAS SELBST NICHTS ZEICHNET, DEN HINTERGRUND
-         SEINES ELTERNTEILS; an seiner Stelle kommt der Hintergrund des MENUES zum Vorschein. Am
-         gerenderten Aufklappfenster gemessen: ein leerer Border ueber einer roten Flaeche zeigte in
-         seinem Bereich nicht rot, sondern die Menuefarbe, ein Border MIT Hintergrund dagegen den
-         eigenen - schon ein durchsichtiger Hintergrund genuegt, um das Loeschen zu verhindern. In
-         der Vorlage einer TextBox stapeln sich mehrere solche leeren Behaelter (Raster, Andockfeld,
-         Rollbereich); in den Suchkaesten der Filtermenues stand deshalb ein hellerer Block ueber die
-         ganze Breite des Feldes, auch nachdem das Feld seine Flaeche selbst malte
-         (Nutzerbefund). Der Rollbereich liegt zuoberst und deckt die Textflaeche ab, ihn
-         zu faerben genuegt. Im Hauptfenster tritt das nicht auf, nur in Popups - dort aber in JEDEM
-         Textfeld, auch in den Hex-Feldern der Farbwaehler. Die Klassen mit bewusst durchsichtigem
-         Feld ziehen das weiter unten einzeln wieder zurueck. -->
+    <!-- DER ROLLBEREICH TRAEGT DIE FLAECHE DES FELDES MIT. In einem Aufklappfenster loescht ein
+         Element ohne eigenen Hintergrund NICHTS: am gerenderten Aufklappfenster gemessen zeigen ein
+         Panel, ein durchsichtiger Border und ein TextBlock ohne Hintergrund die Flaeche ihres
+         Kastens. Die Menuefarbe zeigt dort nur ein Border OHNE eigenen Wert, weil ihm die Regel
+         "Popup Border" weiter unten FP.Bg.Elevated gibt - und das trifft auch die Border in der
+         Vorlage eines Textfelds (Pruefung "Aufklappfenster: ein Element ohne Flaeche zeigt den
+         Kasten, nur ein Border ohne eigenen Wert bekommt die Menuefarbe"). Der hellere Block in
+         den Suchkaesten der Filtermenues (Nutzerbefund) kam von dort, nicht von einem Loeschen.
+         Gefaerbt wird der Rollbereich trotzdem, als zweite Lage unter dem Text; die Felder im
+         eigenen Kasten (search-input) und die Klassen mit bewusst durchsichtigem Feld nehmen das
+         weiter unten einzeln zurueck. -->
     <Style Selector="TextBox /template/ ScrollViewer#PART_ScrollViewer">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
     </Style>
@@ -1121,30 +1144,62 @@
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
     </Style>
-    <Style Selector="TextBox.search-input">
+    <!-- EIN ZUSAMMENGESETZTES FELD HAT GENAU EINE FLAECHE, BIS AN DEN RAHMEN. AutoCompleteBox
+         (Stichwort hinzufuegen, Objektiv suchen, Namen) und Zahlenfeld tragen aussen die Flaeche
+         des Standarderscheinungsbilds, ein halbdurchsichtiges Schwarz (#66000000) oder Weiss, und
+         reichen sie an ihre Vorlage weiter; innen liegt ein Textfeld, dessen Rollbereich die
+         Regel oben in FP.Bg.Input faerbt. Gerendert stand dadurch hinter dem Platzhalter ein
+         eigenes Rechteck, eingerueckt um den Innenabstand, in einem dunkleren Rand (Nutzerbefund
+         in Grau hell). Deshalb: das aeussere Feld traegt FP.Bg.Input, der Rollbereich des inneren
+         Textfelds bleibt durchsichtig. Die Klassen slider-value und combo-like weiter unten
+         setzen ihre eigene Flaeche danach. Pruefung "Zusammengesetzte Felder: eine Flaeche bis
+         an den Rahmen". -->
+    <Style Selector="AutoCompleteBox">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+    </Style>
+    <Style Selector=":is(NumericUpDown)">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+    </Style>
+    <Style Selector="AutoCompleteBox /template/ TextBox#PART_TextBox /template/ ScrollViewer#PART_ScrollViewer">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector=":is(NumericUpDown) /template/ TextBox#PART_TextBox /template/ ScrollViewer#PART_ScrollViewer">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="TextBox.search-input">
+        <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="CornerRadius" Value="0"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="MinHeight" Value="0"/>
     </Style>
-    <!-- DAS FELD MALT SEINE FLAECHE SELBST, UND ZWAR IN DER FARBE SEINES KASTENS. Durchsichtig
-         waere naheliegend, weil der Kasten darunter dieselbe Farbe hat - in einem Aufklappfenster
-         kam darunter aber nicht der Kasten zum Vorschein, sondern der Hintergrund des MENUES: hinter
-         dem Platzhaltertext stand ein hellerer Block ueber die ganze Breite des Feldes
-         (Nutzerbefund). Der Grund steht beim Rollbereich weiter oben. Alle Suchkaesten
-         liegen auf FP.Bg.Input, das Feld faellt also nirgends auf. Jeder Zustand braucht seine
-         eigene Regel, und das ist keine Doppelung: der Hintergrund einer TextBox haengt bei Avalonia
-         am PART_BorderElement der Vorlage, nicht an ihrer Background-Eigenschaft. Ein Background an
-         der TextBox selbst - ob als Klasse oder direkt am Element - laeuft ins Leere. -->
+    <!-- EIN FELD IM EIGENEN KASTEN MALT KEINE FLAECHE. Die Klasse search-input steht an Feldern,
+         die mit Lupe und Kreuz in einem gerahmten Kasten liegen; der Kasten malt die Flaeche, das
+         Feld steht durchsichtig darauf, und der Platzhalter mit ihm. Malte das Feld selbst, laege
+         eine zweite Flaeche im Kasten, sobald der Kasten eine andere Farbe hat als FP.Bg.Input
+         (Nutzerbefund). Durchsichtig heisst: am Feld, am Rahmenelement in jedem Zustand und am
+         Rollbereich, denn alle drei malen in der Vorlage uebereinander. Im Aufklappfenster haelt
+         das: ein durchsichtiges Element zeigt dort den Kasten, nicht das Menue (siehe Rollbereich
+         weiter oben); den unbenannten Border der Vorlage stellt die Regel nach "Popup Border"
+         durchsichtig. Gemessen in allen vier Themen, im Fenster und im Aufklapper, mit einer
+         Kastenfarbe, die kein Thema kennt (Pruefung "Textfeld im Kasten: keine eigene Flaeche").
+         Freistehende Felder ohne Kasten behalten ihre Flaeche FP.Bg.Input, sonst saehe man sie
+         nicht. -->
     <Style Selector="TextBox.search-input /template/ Border#PART_BorderElement">
-        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
     </Style>
     <Style Selector="TextBox.search-input:pointerover /template/ Border#PART_BorderElement">
-        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="TextBox.search-input:disabled /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="TextBox.search-input /template/ ScrollViewer#PART_ScrollViewer">
+        <Setter Property="Background" Value="Transparent"/>
     </Style>
     <!-- JEDES SUCHFELD HAT EIN KREUZ ZUM LEEREN, sobald etwas darin steht, nicht erst mit dem
          Fokus: ein stehen gebliebener Suchtext siebt eine Liste leer, und wer das Feld nicht
@@ -1203,7 +1258,7 @@
         <Setter Property="Background" Value="Transparent"/>
     </Style>
     <Style Selector="TextBox.search-input:focus /template/ Border#PART_BorderElement">
-        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
     </Style>
 
@@ -1698,6 +1753,20 @@
     </Style>
     <Style Selector="MenuItem:pressed /template/ Border">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+    </Style>
+
+    <!-- Die Widget-Zeilen enthalten klickbare Knöpfe als Header. Die Trefferfläche gehört
+         diesen Knöpfen, auch wenn das Kontextmenü den Eintrag unter dem Zeiger auswählt. -->
+    <Style Selector="MenuItem.widget">
+        <Setter Property="StaysOpenOnClick" Value="True"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <ContentPresenter Name="PART_HeaderPresenter"
+                                  Content="{TemplateBinding Header}"
+                                  IsHitTestVisible="True"
+                                  HorizontalContentAlignment="Stretch"/>
+            </ControlTemplate>
+        </Setter>
     </Style>
 
     <Style Selector="ToolTip">
@@ -2358,9 +2427,6 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
     </Style>
-    <!-- Auf der Kachel stehen Herz und Sterne nebeneinander; die Sterne zeigen beim Ueberfahren den
-         Hintergrund des Standardknopfs, also das Herz auch. Sonst sah es aus, als liesse es sich
-         nicht anklicken. -->
     <Style Selector="Button.image-favorite-btn.tile-action-hit">
         <Setter Property="CornerRadius" Value="4"/>
     </Style>
@@ -2381,45 +2447,25 @@
         <Setter Property="IconBrush" Value="#EAEFF5"/>
         <Setter Property="Opacity" Value="0.92"/>
     </Style>
-    <!-- Derselbe Schatten wie bei den Sternen darunter: das Herz steht ueberall neben ihnen, auf
-         der Kachel auch ueber hellen Bildstellen, und ging dort ohne Kante unter. -->
-    <Style Selector="Button.favorite-btn icons|SvgIcon.fav-heart">
-        <Setter Property="Effect">
-            <DropShadowEffect BlurRadius="0"
-                              OffsetX="1"
-                              OffsetY="1"
-                              Color="#B0000000"/>
-        </Setter>
+    <!-- NEBEN DEN STERNEN auf einem Paneel (Info-Leiste, Fussleisten, Menuezeile, Listenzeile):
+         das ungesetzte Herz traegt dort ebenfalls die Farbe und Deckkraft der ungesetzten Sterne.
+         In der Symbolfarbe des Themas stand es in einem hellen Thema dunkel neben fast weissen
+         Sternen und sah wie anders gezeichnet aus. Der Knopf traegt dafuer beside-stars; dieselbe
+         Klasse gilt den Daumen (siehe pick-btn weiter oben). -->
+    <Style Selector="Button.beside-stars icons|SvgIcon.fav-heart:not(.active)">
+        <Setter Property="IconBrush" Value="#EAEFF5"/>
+        <Setter Property="Opacity" Value="0.92"/>
     </Style>
-    <!-- Bewertungssterne: SVG-basiert, aktiv in Akzentfarbe -->
+    <!-- Bewertungssterne: SVG-basiert, aktiv in Akzentfarbe. Ihr Schatten sitzt wie der von
+         Herz, Behalten und Verwerfen direkt im gemeinsamen SvgIcon-Steuerelement. -->
     <Style Selector="Button.star-btn icons|SvgIcon.rating-star">
         <Setter Property="IconBrush" Value="#EAEFF5"/>
         <Setter Property="Opacity" Value="0.92"/>
-        <Setter Property="Effect">
-            <DropShadowEffect BlurRadius="0"
-                              OffsetX="1"
-                              OffsetY="1"
-                              Color="#B0000000"/>
-        </Setter>
     </Style>
     <Style Selector="Button.star-btn.active icons|SvgIcon.rating-star">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="Opacity" Value="1"/>
     </Style>
-    <!-- AUF DER KACHEL KEIN EFFEKT. Sterne, Herz, Metadatenzeichen und die Symbole der
-         Kachelknoepfe sind dort icons:ShadowedSvgIcon und zeichnen ein VORGERECHNETES
-         Schattenbild unter sich (Rand und Hof, Werte in Controls/IconShadow.vb). Als
-         DropShadowEffect waren es zwei je Zeichen, jeder eine eigene Zwischenflaeche je Kachel und
-         Bild, und auf schwaecheren Grafikkarten ruckelte das Rollen. Die schlanken Schatten oben
-         gelten fuer Infoleiste, Betrachter und Suchdialog; hier werden sie fuer die Kachel
-         ausdruecklich abgeschaltet, sonst kaemen sie dort wieder an. -->
-    <Style Selector="Border.thumb-card Button.star-btn icons|SvgIcon.rating-star">
-        <Setter Property="Effect" Value="{x:Null}"/>
-    </Style>
-    <Style Selector="Border.thumb-card Button.favorite-btn icons|SvgIcon.fav-heart">
-        <Setter Property="Effect" Value="{x:Null}"/>
-    </Style>
-
     <!-- SVG-Grafiken bekommen in Kacheln und Filmstreifen eine helle Unterlage wie ein Blatt
          Papier. Ihre Vorschau ist durchsichtig gerastert, und was in der Datei als currentColor
          steht (fast jeder Symbolsatz), zeichnet die SVG-Bibliothek schwarz; auf einer dunklen
@@ -2513,9 +2559,11 @@
     <Style Selector="TextBox.combo-like:focus /template/ Border#PART_BorderElement">
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
+    <!-- Dieselbe Regel fuer das Zahlenfeld: beim Ueberfahren nur der Rahmen, die Flaeche bleibt
+         die des Felds. Sonst zeigte es unter dem Zeiger eine zweite Flaeche. -->
     <Style Selector="NumericUpDown.combo-like:pointerover">
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
-        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
     </Style>
     <Style Selector="NumericUpDown.combo-like:focus">
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
@@ -2680,8 +2728,10 @@
          eingerueckt). Im Hauptfenster malt er nichts, im Aufklapper bekam er von "Popup Border"
          die Menuefarbe: um die Textflaeche lag ein hellerer Ring, und seine Ecken deckten die
          runden Ecken des Akzentrahmens ab (Nutzerbefund am Hex-Feld des Farbknopfs; das
-         Zahlenfeld der Deckkraft zeigte denselben Block). Durchsichtig statt leer: ein Element
-         ohne Hintergrund loescht in einem Aufklapper den Grund darunter, siehe Rollbereich. -->
+         Zahlenfeld der Deckkraft zeigte denselben Block). Ausdruecklich durchsichtig statt nur
+         ohne Setter: ohne eigenen Wert behielte der Border die Menuefarbe von "Popup Border".
+         Ein durchsichtiger Border zeigt im Aufklapper den Grund darunter, gemessen (siehe
+         Rollbereich). -->
     <Style Selector="Popup TextBox /template/ Border:not(#PART_BorderElement)">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>

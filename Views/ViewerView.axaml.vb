@@ -586,7 +586,9 @@ Namespace Views
             ' Streifen, nicht beim Bild.
             ' Ein waagrechtes Wischen im Trackpad-Modus geht wie bisher unten zum Blaettern.
             Dim trackpadSwipe = IsTrackpadMode() AndAlso Math.Abs(e.Delta.X) > Math.Abs(e.Delta.Y)
-            If vm.IsFullscreenMode AndAlso Not vm.ShowsVideoStage AndAlso Not vm.IsCompareMode AndAlso
+            ' Auch aus dem Vergleich heraus: im Vollbild steht EIN Bild (das des aktiven Felds), und
+            ' das Rad gilt ihm; die Flaechen des Vergleichs liegen verdeckt darunter.
+            If vm.IsFullscreenMode AndAlso Not vm.ShowsVideoStage AndAlso
                Not IsOverFullscreenFilmstrip(e) AndAlso Not trackpadSwipe Then
                 Dim viewport = Me.FindControl(Of Grid)("FullscreenViewport")
                 If viewport IsNot Nothing Then
@@ -1748,9 +1750,13 @@ Namespace Views
                 ApplyFullscreenImageMode()
             End If
 
+            ' Das Bild der Vollbildflaeche ist im Vergleich das des aktiven Felds, nicht
+            ' CurrentImage; die Flaeche wird fuer jedes neue Bild neu bemessen.
+            If e.PropertyName = NameOf(ViewerViewModel.FullscreenImage) Then ApplyFullscreenImageMode()
+
             ' Die Bildleiste im Vollbild verlangt ein geladenes Bild. Wird das Vollbild geoeffnet,
             ' waehrend es noch laedt, entscheidet erst dieses Eintreffen, ob sie zu sehen ist.
-            If e.PropertyName = NameOf(ViewerViewModel.CurrentImage) Then UpdateFullscreenImageBar()
+            If e.PropertyName = NameOf(ViewerViewModel.FullscreenImage) Then UpdateFullscreenImageBar()
 
             ' Der Vergleich teilt sich denselben ZoomLevel - alle Flaechen muessen also bei jeder
             ' Zoomaenderung neu bemessen werden. Ein neu geladenes Vergleichsbild meldet seine
@@ -1795,7 +1801,7 @@ Namespace Views
             ' Ein anderes Bild im Vollbild steht wieder eingepasst. Geprueft wird am Bild, nicht an
             ' einer Meldung von CurrentImagePath: LoadPathAt setzt erst das Feld und dann die
             ' Eigenschaft mit demselben Wert, und RaiseAndSetIfChanged meldet dann nichts.
-            If e.PropertyName = NameOf(ViewerViewModel.CurrentImage) AndAlso _fullscreenZoom > 0 Then
+            If e.PropertyName = NameOf(ViewerViewModel.FullscreenImage) AndAlso _fullscreenZoom > 0 Then
                 Dim path = GetVm()?.CurrentImagePath
                 If Not String.Equals(path, _fullscreenZoomPath, StringComparison.Ordinal) Then ResetFullscreenZoom()
             End If
@@ -2267,14 +2273,16 @@ Namespace Views
             Dim image = Me.FindControl(Of Image)("FullscreenImage")
             Dim background = Me.FindControl(Of Border)("FullscreenImageBackgroundBorder")
             Dim viewport = Me.FindControl(Of Grid)("FullscreenViewport")
-            If vm Is Nothing OrElse image Is Nothing OrElse viewport Is Nothing OrElse vm.CurrentImage Is Nothing Then Return
+            ' Das Bild der Vollbildflaeche: im Vergleich das des aktiven Felds (FullscreenImage).
+            Dim shown = vm?.FullscreenImage
+            If vm Is Nothing OrElse image Is Nothing OrElse viewport Is Nothing OrElse shown Is Nothing Then Return
 
             Dim vw = viewport.Bounds.Width
             Dim vh = viewport.Bounds.Height
             If vw <= 0 OrElse vh <= 0 Then Return
 
-            Dim iw = vm.CurrentImage.Size.Width
-            Dim ih = vm.CurrentImage.Size.Height
+            Dim iw = shown.Size.Width
+            Dim ih = shown.Size.Height
 
             If _fullscreenZoom > 0 Then
                 ' Gezoomt: das Bild steht in seiner gezoomten Groesse in der Mitte, verschoben um
@@ -2383,11 +2391,12 @@ Namespace Views
         Private Sub ZoomFullscreen(factor As Double, anchor As Point?)
             Dim vm = GetVm()
             Dim viewport = Me.FindControl(Of Grid)("FullscreenViewport")
-            If vm Is Nothing OrElse viewport Is Nothing OrElse vm.CurrentImage Is Nothing OrElse vm.ShowsVideoStage Then Return
+            Dim shown = vm?.FullscreenImage
+            If vm Is Nothing OrElse viewport Is Nothing OrElse shown Is Nothing OrElse vm.ShowsVideoStage Then Return
             Dim vw = viewport.Bounds.Width
             Dim vh = viewport.Bounds.Height
-            Dim iw = vm.CurrentImage.Size.Width
-            Dim ih = vm.CurrentImage.Size.Height
+            Dim iw = shown.Size.Width
+            Dim ih = shown.Size.Height
             Dim fit = FullscreenFitScale(iw, ih, vw, vh)
             Dim current = If(_fullscreenZoom > 0, _fullscreenZoom, fit)
             Dim target = Math.Min(FullscreenZoomMax, current * factor)
@@ -2423,8 +2432,9 @@ Namespace Views
             End If
             Dim vm = GetVm()
             Dim viewport = Me.FindControl(Of Grid)("FullscreenViewport")
-            If vm Is Nothing OrElse viewport Is Nothing OrElse vm.CurrentImage Is Nothing Then Return
-            Dim fit = FullscreenFitScale(vm.CurrentImage.Size.Width, vm.CurrentImage.Size.Height,
+            Dim shown = vm?.FullscreenImage
+            If vm Is Nothing OrElse viewport Is Nothing OrElse shown Is Nothing Then Return
+            Dim fit = FullscreenFitScale(shown.Size.Width, shown.Size.Height,
                                          viewport.Bounds.Width, viewport.Bounds.Height)
             Dim current = If(_fullscreenZoom > 0, _fullscreenZoom, fit)
             If current <= 0 Then Return
@@ -2437,7 +2447,7 @@ Namespace Views
         ''' True, wenn die Taste hier eine Bedeutung hatte.</summary>
         Public Function HandleFullscreenZoomKey(key As Key, modifiers As KeyModifiers) As Boolean
             Dim vm = GetVm()
-            If vm Is Nothing OrElse Not vm.IsFullscreenMode OrElse vm.ShowsVideoStage OrElse vm.IsCompareMode Then Return False
+            If vm Is Nothing OrElse Not vm.IsFullscreenMode OrElse vm.ShowsVideoStage Then Return False
             If modifiers <> KeyModifiers.None Then Return False
             Select Case key
                 Case Key.Add, Key.OemPlus
@@ -2506,7 +2516,7 @@ Namespace Views
             Dim vm = GetVm()
             Dim bar = Me.FindControl(Of Border)("FullscreenImageBar")
             If bar Is Nothing Then Return
-            Dim forImage = vm IsNot Nothing AndAlso vm.IsFullscreenMode AndAlso Not vm.ShowsVideoStage AndAlso vm.CurrentImage IsNot Nothing
+            Dim forImage = vm IsNot Nothing AndAlso vm.IsFullscreenMode AndAlso Not vm.ShowsVideoStage AndAlso vm.FullscreenImage IsNot Nothing
             bar.IsVisible = forImage AndAlso _fullscreenVideoControlsVisible
             bar.Margin = New Thickness(0, 0, 0, If(_fullscreenFilmstripEdge = FilmstripPlacement.PositionBottom, 24 + FilmstripPlacement.TopExtent, 24))
             ' Die Bewertungsleiste oben geht mit der Bedienleiste unten und rueckt unter einen oben

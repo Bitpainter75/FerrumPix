@@ -1135,40 +1135,6 @@ Namespace Views
             Return True
         End Function
 
-        ''' <summary>P: markiert das aktuelle Bild bzw. die Galerie-Auswahl als behalten; dasselbe
-        ''' Kürzel noch einmal hebt das Behalten auf. Spiegelbild von TryToggleRejected, damit
-        ''' Annehmen und Aussortieren im selben Zug durch beide Modi laufen.</summary>
-        Private Shared Function TryTogglePicked(vm As MainWindowViewModel) As Boolean
-            If vm.IsFullscreen OrElse vm.CurrentMode = AppMode.Viewer Then
-                vm.Viewer?.TogglePickedCommand.Execute(Nothing)
-            ElseIf vm.CurrentMode = AppMode.Gallery Then
-                vm.Gallery?.ToggleKeepSelectedCommand.Execute(Nothing)
-            ElseIf vm.CurrentMode = AppMode.Editor Then
-                vm.Editor?.TogglePickedCommand.Execute(Nothing)
-            Else
-                Return False
-            End If
-            Return True
-        End Function
-
-        ''' <summary>X: verwirft das aktuelle Bild bzw. die Galerie-Auswahl; dasselbe Kürzel noch
-        ''' einmal hebt das Verwerfen auf. Dasselbe Muster wie bei Bewertung, Etikett und Favorit:
-        ''' der Modus entscheidet, welche Ansicht ihr Bild markiert - nicht der Fokus. Ein Modus ohne
-        ''' eigene Markierung (Einstellungen, Personen) wirft die Taste ausdrücklich zurück, statt
-        ''' sie still zu schlucken.</summary>
-        Private Shared Function TryToggleRejected(vm As MainWindowViewModel) As Boolean
-            If vm.IsFullscreen OrElse vm.CurrentMode = AppMode.Viewer Then
-                vm.Viewer?.ToggleRejectedCommand.Execute(Nothing)
-            ElseIf vm.CurrentMode = AppMode.Gallery Then
-                vm.Gallery?.ToggleRejectSelectedCommand.Execute(Nothing)
-            ElseIf vm.CurrentMode = AppMode.Editor Then
-                vm.Editor?.ToggleRejectedCommand.Execute(Nothing)
-            Else
-                Return False
-            End If
-            Return True
-        End Function
-
         Private Async Sub OnWindowKeyDown(sender As Object, e As KeyEventArgs)
             Try
                 Dim vm = TryCast(DataContext, MainWindowViewModel)
@@ -1312,12 +1278,10 @@ Namespace Views
                 ' noch, nachdem ein Overlay-Dialog den Fokus hatte.
                 ' Ohne den Umschalt-Ausschluss würde dieser Zweig auch Strg+Umschalt+P schlucken -
                 ' das ist im Editor „Vorschau anwenden".
-                ' Jetzt nur noch mit STRG: das blanke P gehört seit derselben Änderung dem Behalten,
-                ' genau wie das blanke X dem Verwerfen. Das Drucken hatte den Buchstaben nie für sich,
-                ' es war nur ein zweiter Weg auf dasselbe Kommando.
                 If e.Key = Key.P AndAlso
-                   PlatformShortcutService.HasPrimaryModifier(e.KeyModifiers) AndAlso
-                   Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) Then
+                   (isBareLetter OrElse
+                    (PlatformShortcutService.HasPrimaryModifier(e.KeyModifiers) AndAlso
+                     Not e.KeyModifiers.HasFlag(KeyModifiers.Shift))) Then
                     Select Case vm.CurrentMode
                         Case AppMode.Editor
                             vm.Editor.PrintCommand.Execute(Nothing)
@@ -1358,41 +1322,19 @@ Namespace Views
                     End Select
                 End If
 
-                ' P BEHALTEN: in der Galerie die Auswahl, im Betrachter und im Editor das gezeigte bzw.
-                ' geoeffnete Bild; ein zweites P hebt das Behalten wieder auf. Dasselbe Muster wie bei X
-                ' darunter: ein Bild, das man gross sieht, will man gerade dort annehmen, ohne vorher
-                ' zurueck in die Liste zu gehen.
-                '
-                ' Anders als die andern Stapel-Ablaeufe gilt P auch im Editor: dessen blanke Buchstaben
-                ' zaehlen die Werkzeuge auf (R, T, B, M, I, K, E, Z, F, J) und nennen P nicht - das
-                ' Kuerzel war dort frei und ist es geblieben, das Drucken liegt jetzt allein auf STRG+P.
-                If e.Key = Key.P AndAlso e.KeyModifiers = KeyModifiers.None AndAlso
-                   Not PlatformShortcutService.IsInputFieldSource(e.Source) Then
-                    If TryTogglePicked(vm) Then
-                        e.Handled = True
-                        Return
-                    End If
-                End If
-
-                ' X VERWIRFT: in der Galerie die Auswahl, im Betrachter und im Editor das gezeigte
-                ' bzw. geoeffnete Bild; ein zweites X nimmt es zurueck. Früher kannte nur die Galerie
-                ' das Kürzel - wer ein Bild gross sieht, will es gerade dort aussortieren, ohne vorher
-                ' in die Liste zurückzukehren. Nur blank oder mit SHIFT: mit Strg ist X das
-                ' Ausschneiden (Zweig weiter unten).
-                '
-                ' SHIFT+X bleibt ein Galerie-Kürzel: Serien und Stapel, deren Rest man damit verwirft,
-                ' gibt es nur dort - im Betrachter und im Editor liegt immer genau ein Bild vor.
-                If e.Key = Key.X AndAlso Not PlatformShortcutService.IsInputFieldSource(e.Source) Then
+                ' X VERWIRFT in der Galerie die Auswahl, ein zweites X nimmt es zurueck; SHIFT+X
+                ' verwirft in einer Serie alles ausser der gewaehlten Aufnahme. Nur blank oder mit
+                ' SHIFT: mit Strg ist X das Ausschneiden (Zweig weiter unten).
+                If e.Key = Key.X AndAlso vm.CurrentMode = AppMode.Gallery AndAlso
+                   Not PlatformShortcutService.IsInputFieldSource(e.Source) AndAlso
+                   (e.KeyModifiers = KeyModifiers.None OrElse e.KeyModifiers = KeyModifiers.Shift) Then
                     If e.KeyModifiers = KeyModifiers.Shift Then
-                        If vm.CurrentMode = AppMode.Gallery Then
-                            vm.Gallery?.RejectRestOfStackCommand.Execute(Nothing)
-                            e.Handled = True
-                            Return
-                        End If
-                    ElseIf e.KeyModifiers = KeyModifiers.None AndAlso TryToggleRejected(vm) Then
-                        e.Handled = True
-                        Return
+                        vm.Gallery?.RejectRestOfStackCommand.Execute(Nothing)
+                    Else
+                        vm.Gallery?.ToggleRejectSelectedCommand.Execute(Nothing)
                     End If
+                    e.Handled = True
+                    Return
                 End If
 
                 ' Dieselbe Bauart wie Strg+R darueber, fuer die drei Stapel-Ablaeufe: in der Galerie

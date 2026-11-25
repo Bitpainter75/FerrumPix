@@ -16,6 +16,10 @@ Namespace Services
         Public Property Folder As String = ""
         ''' Der volle Pfad der Datei.
         Public Property FilePath As String = ""
+        ''' Die Kennung, unter der diese Fassung angeliefert wurde, wenn sie beim Import oder beim
+        ''' Mitziehen eine neue bekam (dieselbe Kennung meinte am Ziel schon etwas anderes). Daran
+        ''' erkennt ein wiederholter Import sie wieder. Leer bei allem anderen.
+        Public Property ImportedFrom As String = ""
 
         ''' <summary>Name mit Ordnerpfad davor, wie ihn die Auswahllisten zeigen:
         ''' "Ordner / Unterordner / Name". Im Wurzelordner nur der Name.</summary>
@@ -260,12 +264,17 @@ Namespace Services
         End Function
 
         ''' <summary>Ein Ordnerpfad relativ zum Wurzelordner in seiner einen Schreibweise: mit "/"
-        ''' getrennt, ohne leere Teile, ohne "." und "..", jeder Teil ein sicherer Name.</summary>
+        ''' getrennt, ohne leere Teile, ohne "." und "..".
+        '''
+        ''' DIE TEILE BLEIBEN, WIE SIE SIND. Der Pfad meint einen vorhandenen Ordner, und der kann
+        ''' einen Namen tragen, den die Anwendung selbst nie vergaebe ("A:B" oder "Foo." aus dem
+        ''' Dateimanager). Wuerde er hier zu seiner sicheren Fassung, traefe jede Aktion den
+        ''' Zwilling "A_B" oder "Foo", oder gar nichts. <see cref="SafeFileName"/> gilt nur beim
+        ''' ANLEGEN eines neuen Namens (CreateFolder, RenameFolder, Import).</summary>
         Public Shared Function NormalizeFolder(folder As String) As String
-            Dim parts = If(folder, "").Replace("\"c, "/"c).Split("/"c).
-                Select(Function(p) p.Trim()).
-                Where(Function(p) p.Length > 0 AndAlso p <> "." AndAlso p <> "..").
-                Select(Function(p) SafeFileName(p))
+            Dim parts = If(folder, "").
+                Replace(Path.DirectorySeparatorChar, "/"c).Replace(Path.AltDirectorySeparatorChar, "/"c).Split("/"c).
+                Where(Function(p) p.Trim().Length > 0 AndAlso p <> "." AndAlso p <> "..")
             Return String.Join("/", parts)
         End Function
 
@@ -283,6 +292,29 @@ Namespace Services
 
         Public Shared Function CombineFolder(parent As String, name As String) As String
             Return NormalizeFolder(NormalizeFolder(parent) & "/" & If(name, ""))
+        End Function
+
+        ''' <summary>Ordnerpfade in der Reihenfolge des Baums: jeder Ordner unmittelbar vor seinen
+        ''' Unterordnern, Geschwister nach Namen, ohne Doppel. Eine blosse Sortierung der Pfade
+        ''' reicht dafuer nicht: "A B" stuende zwischen "A" und "A/Unter". Ein Ordner, dessen
+        ''' Elternordner in der Liste fehlt, steht dort, wo der Elternordner stuende.</summary>
+        Public Shared Function OrderFoldersAsTree(folders As IEnumerable(Of String)) As List(Of String)
+            Dim known = If(folders, Enumerable.Empty(Of String)()).
+                Select(Function(f) NormalizeFolder(f)).Where(Function(f) f.Length > 0).
+                Distinct(StringComparer.Ordinal).ToList()
+            ' Geschwister nach Namen: verglichen wird Teil fuer Teil, der Pfad eines Ordners ist
+            ' dabei immer kleiner als der seiner Unterordner.
+            known.Sort(Function(a, b)
+                           Dim partsA = a.Split("/"c)
+                           Dim partsB = b.Split("/"c)
+                           For i = 0 To Math.Min(partsA.Length, partsB.Length) - 1
+                               Dim order = StringComparer.OrdinalIgnoreCase.Compare(partsA(i), partsB(i))
+                               If order = 0 Then order = StringComparer.Ordinal.Compare(partsA(i), partsB(i))
+                               If order <> 0 Then Return order
+                           Next
+                           Return partsA.Length.CompareTo(partsB.Length)
+                       End Function)
+            Return known
         End Function
 
         ''' <summary>Der volle Pfad zu einem Ordner relativ zum Wurzelordner.</summary>
@@ -332,6 +364,10 @@ Namespace Services
                 root("fields") = fields
             End If
             root("recipe") = JsonNode.Parse(preset.RecipeJson)
+            ' Nur wo es eine gibt. Ein zusaetzliches Feld aendert die Formatversion nicht: Parse
+            ' uebergeht, was es nicht kennt, auch in aelteren Fassungen der Anwendung.
+            Dim origin = If(TryCast(preset, AdjustmentPresetFile)?.ImportedFrom, "").Trim()
+            If origin.Length > 0 Then root("importedFrom") = JsonValue.Create(origin)
             Return root.ToJsonString(New JsonSerializerOptions With {
                 .WriteIndented = True,
                 .Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping})
@@ -369,7 +405,8 @@ Namespace Services
 
                 Dim id = If(StringOf(root("id")), "").Trim()
                 If id.Length = 0 Then id = HashOf(name & vbLf & recipeJson)
-                Return New AdjustmentPresetFile With {.Id = id, .Name = name, .RecipeJson = recipeJson, .Fields = fields}
+                Return New AdjustmentPresetFile With {.Id = id, .Name = name, .RecipeJson = recipeJson, .Fields = fields,
+                                                      .ImportedFrom = If(StringOf(root("importedFrom")), "").Trim()}
             Catch
                 Return Nothing
             End Try
@@ -503,8 +540,12 @@ Namespace Services
         ''' sich die Datei nicht schreiben liess.</summary>
         ''' <param name="id">Die Kennung einer Anpassung, die es schon gibt (Import, Uebernahme);
         ''' ohne sie entsteht eine neue.</param>
+        ''' <param name="importedFrom">Die Kennung, unter der eine Fassung angeliefert wurde, wenn
+        ''' sie hier eine neue bekommt (<see cref="AdjustmentPresetFile.ImportedFrom"/>). Ersetzt
+        ''' das Speichern eine vorhandene, behaelt die ihre.</param>
         Public Function Save(folder As String, name As String, recipeJson As String,
-                             fields As List(Of String), Optional id As String = Nothing) As AdjustmentPresetFile
+                             fields As List(Of String), Optional id As String = Nothing,
+                             Optional importedFrom As String = Nothing) As AdjustmentPresetFile
             Dim cleanName = If(name, "").Trim()
             Dim recipe = If(recipeJson, "").Trim()
             If cleanName.Length = 0 OrElse recipe.Length = 0 OrElse Not IsReachable() Then Return Nothing
@@ -522,8 +563,10 @@ Namespace Services
                 If existing IsNot Nothing Then
                     preset.Id = existing.Id
                     preset.FilePath = existing.FilePath
+                    preset.ImportedFrom = existing.ImportedFrom
                 Else
                     If Not String.IsNullOrWhiteSpace(id) Then preset.Id = id.Trim()
+                    preset.ImportedFrom = If(importedFrom, "").Trim()
                     preset.FilePath = UniquePath(directory, SafeFileName(cleanName), FileExtension)
                 End If
                 If Not WriteFile(preset.FilePath, preset) Then Return Nothing
@@ -546,12 +589,32 @@ Namespace Services
                                 String.Equals(p.Name, cleanName, StringComparison.OrdinalIgnoreCase)) Then Return False
                 Dim directory = Path.GetDirectoryName(preset.FilePath)
                 Dim wantedPath = Path.Combine(directory, SafeFileName(cleanName) & FileExtension)
-                Dim newPath = If(String.Equals(wantedPath, preset.FilePath, StringComparison.Ordinal),
+                ' NUR DIE SCHREIBWEISE AENDERT SICH ("abend" zu "Abend"). Wo das Dateisystem Gross
+                ' und Klein nicht unterscheidet (Windows, macOS), meldet es unter dem neuen Namen die
+                ' eigene Datei; die zaehlt nicht als belegt. Belegt ist der Name nur, wenn dort eine
+                ' Datei mit genau dieser Schreibweise steht, also eine andere.
+                Dim caseOnly = Not String.Equals(wantedPath, preset.FilePath, StringComparison.Ordinal) AndAlso
+                               String.Equals(wantedPath, preset.FilePath, StringComparison.OrdinalIgnoreCase) AndAlso
+                               Not IO.Directory.EnumerateFiles(directory).Any(Function(f) String.Equals(f, wantedPath, StringComparison.Ordinal))
+                Dim newPath = If(String.Equals(wantedPath, preset.FilePath, StringComparison.Ordinal) OrElse caseOnly,
                                  wantedPath, UniquePath(directory, SafeFileName(cleanName), FileExtension))
-                Dim renamed As New AdjustmentPresetSettings With {
-                    .Id = preset.Id, .Name = cleanName, .RecipeJson = preset.RecipeJson, .Fields = preset.Fields}
-                If Not WriteFile(newPath, renamed) Then Return False
-                If Not String.Equals(newPath, preset.FilePath, StringComparison.Ordinal) Then File.Delete(preset.FilePath)
+                Dim renamed As New AdjustmentPresetFile With {
+                    .Id = preset.Id, .Name = cleanName, .RecipeJson = preset.RecipeJson, .Fields = preset.Fields,
+                    .ImportedFrom = preset.ImportedFrom}
+                If caseOnly Then
+                    ' Ueber einen Zwischennamen: sonst schriebe WriteFile ueber die eigene Datei, und
+                    ' das Loeschen des alten Namens naehme danach die neue mit.
+                    Dim parked = Path.Combine(directory, "." & Guid.NewGuid().ToString("N").Substring(0, 12) & ".rename")
+                    File.Move(preset.FilePath, parked)
+                    If Not WriteFile(newPath, renamed) Then
+                        File.Move(parked, preset.FilePath)
+                        Return False
+                    End If
+                    File.Delete(parked)
+                Else
+                    If Not WriteFile(newPath, renamed) Then Return False
+                    If Not String.Equals(newPath, preset.FilePath, StringComparison.Ordinal) Then File.Delete(preset.FilePath)
+                End If
                 preset.Name = cleanName
                 preset.FilePath = newPath
                 Invalidate()
@@ -690,7 +753,9 @@ Namespace Services
             Return deleted
         End Function
 
-        ' ── Importieren und Exportieren ─────────────────────────────────────────────────────
+        ' ── Importieren ─────────────────────────────────────────────────────────────────────
+        ' Die Verwaltung bietet keinen Import an; gebraucht wird er beim Zurueckholen einer
+        ' Sicherung (CatalogBackupService).
 
         ''' <summary>Nimmt eine Datei oder einen Ordner samt Unterordnern auf. Ein Ordner kommt
         ''' als Unterordner gleichen Namens unter <paramref name="targetFolder"/> an. Was es mit
@@ -709,7 +774,7 @@ Namespace Services
                     Dim fullRoot = Path.GetFullPath(_root).TrimEnd(Path.DirectorySeparatorChar) & Path.DirectorySeparatorChar
                     If fullRoot.StartsWith(fullSource, StringComparison.Ordinal) OrElse fullSource.StartsWith(fullRoot, StringComparison.Ordinal) Then Return result
                     Dim name = Path.GetFileName(sourcePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
-                    ImportDirectory(sourcePath, CombineFolder(targetFolder, name), 0, known, result)
+                    ImportDirectory(sourcePath, CombineFolder(targetFolder, SafeFileName(name)), 0, known, result)
                 ElseIf File.Exists(sourcePath) Then
                     ImportFile(sourcePath, NormalizeFolder(targetFolder), known, result)
                 End If
@@ -732,7 +797,8 @@ Namespace Services
                 Dim name = Path.GetFileName(child)
                 If name.StartsWith(".", StringComparison.Ordinal) Then Continue For
                 If (File.GetAttributes(child) And FileAttributes.ReparsePoint) <> 0 Then Continue For
-                ImportDirectory(child, CombineFolder(folder, name), depth + 1, known, result)
+                ' Ein NEUER Ordner im Bestand: er bekommt die sichere Fassung des Namens.
+                ImportDirectory(child, CombineFolder(folder, SafeFileName(name)), depth + 1, known, result)
             Next
         End Sub
 
@@ -744,6 +810,15 @@ Namespace Services
                 Return
             End If
             Dim id = incoming.Id
+            ' Schon einmal unter neuer Kennung uebernommen (dieselbe Kennung meinte hier damals
+            ' etwas anderes, ImportedFrom): dieselbe Fassung wird wiedererkannt und nicht noch
+            ' einmal angelegt. Sonst legte jedes Zurueckholen derselben Sicherung eine weitere Kopie
+            ' daneben, sobald die Vorlage hier geaendert wurde.
+            If known.Any(Function(p) String.Equals(p.ImportedFrom, id, StringComparison.Ordinal) AndAlso SameSettings(p, incoming)) Then
+                result.AlreadyPresent += 1
+                Return
+            End If
+            Dim importedFrom As String = Nothing
             Dim sameId = known.FirstOrDefault(Function(p) String.Equals(p.Id, id, StringComparison.Ordinal))
             If sameId IsNot Nothing Then
                 ' Ohne den Namen: die vorhandene kann umbenannt sein, von Hand oder weil ihr Name
@@ -752,10 +827,11 @@ Namespace Services
                     result.AlreadyPresent += 1
                     Return
                 End If
+                importedFrom = id
                 id = Guid.NewGuid().ToString("N")
             End If
             Dim taken = known.Where(Function(p) String.Equals(p.Folder, folder, StringComparison.Ordinal)).Select(Function(p) p.Name)
-            Dim saved = Save(folder, UniqueName(incoming.Name, taken), incoming.RecipeJson, incoming.Fields, id)
+            Dim saved = Save(folder, UniqueName(incoming.Name, taken), incoming.RecipeJson, incoming.Fields, id, importedFrom)
             If saved Is Nothing Then
                 result.Skipped += 1
                 Return
@@ -787,57 +863,40 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Schreibt eine Anpassung als Datei an einen Ort ausserhalb des Bestands.</summary>
-        Public Function ExportPreset(preset As AdjustmentPresetFile, targetFile As String) As Boolean
-            If preset Is Nothing OrElse String.IsNullOrWhiteSpace(targetFile) Then Return False
-            Dim target = targetFile
-            If Not IsPresetFileName(target) Then target &= FileExtension
-            Return WriteFile(target, preset)
-        End Function
-
-        ''' <summary>Schreibt einen Ordner samt Unterordnern als Unterordner gleichen Namens nach
-        ''' <paramref name="targetDirectory"/>; der Wurzelordner kommt unmittelbar dort an.</summary>
-        ''' <returns>Wie viele Anpassungen geschrieben wurden.</returns>
-        Public Function ExportFolder(folder As String, targetDirectory As String) As Integer
-            Dim source = NormalizeFolder(folder)
-            If String.IsNullOrWhiteSpace(targetDirectory) OrElse Not IO.Directory.Exists(targetDirectory) Then Return 0
-            Dim written = 0
-            Dim baseDirectory = If(source.Length = 0, targetDirectory, Path.Combine(targetDirectory, FolderName(source)))
-            For Each preset In ReadAll().Presets
-                Dim relative As String
-                If source.Length = 0 Then
-                    relative = preset.Folder
-                ElseIf String.Equals(preset.Folder, source, StringComparison.Ordinal) Then
-                    relative = ""
-                ElseIf preset.Folder.StartsWith(source & "/", StringComparison.Ordinal) Then
-                    relative = preset.Folder.Substring(source.Length + 1)
-                Else
-                    Continue For
-                End If
-                Try
-                    Dim directory = If(relative.Length = 0, baseDirectory,
-                                       Path.Combine(baseDirectory, relative.Replace("/"c, Path.DirectorySeparatorChar)))
-                    IO.Directory.CreateDirectory(directory)
-                    If WriteFile(Path.Combine(directory, Path.GetFileName(preset.FilePath)), preset) Then written += 1
-                Catch ex As Exception
-                    DiagnosticLogService.LogException("AdjustmentPresetStore.ExportFolder", ex)
-                End Try
-            Next
-            Return written
-        End Function
-
         ' ── Ordnerwechsel und Uebernahme ────────────────────────────────────────────────────
+
+        ''' <summary>Liegt einer der beiden Ordner im anderen (oder sind es dieselben, auch ueber
+        ''' eine Verknuepfung)? Dann sieht jeder Bestand Dateien des anderen.</summary>
+        Public Shared Function AreNested(a As String, b As String) As Boolean
+            If String.IsNullOrWhiteSpace(a) OrElse String.IsNullOrWhiteSpace(b) Then Return False
+            Dim realA = FileOperationPolicy.ResolveLinks(a)
+            Dim realB = FileOperationPolicy.ResolveLinks(b)
+            Return PathIdentity.IsAncestorOrSelf(realA, realB) OrElse PathIdentity.IsAncestorOrSelf(realB, realA)
+        End Function
 
         ''' <summary>Zieht alle Anpassungen samt Ordnern in einen anderen Bestand um, beim Wechsel
         ''' des Ordners in den Einstellungen. Eine Datei verlaesst den alten Ordner erst, wenn sie
-        ''' im neuen belegt geschrieben ist; was dort mit gleicher Kennung schon liegt, wird nicht
-        ''' doppelt angelegt.</summary>
-        ''' <returns>Wie viele im neuen Bestand angekommen sind und wie viele nicht.</returns>
-        Public Function MoveAllTo(target As AdjustmentPresetStore) As (Moved As Integer, Failed As Integer)
+        ''' im neuen belegt geschrieben ist.
+        '''
+        ''' VERSCHACHTELTE ORDNER WERDEN ABGELEHNT, in beide Richtungen (Refused): liegt der neue
+        ''' im alten oder der alte im neuen, sieht der eine Bestand die Dateien des anderen mit
+        ''' derselben Kennung, und "schon angekommen" hiesse, die einzige Fassung zu loeschen.
+        ''' Bewegt wird dann nichts.
+        '''
+        ''' DIE KENNUNG ALLEIN BELEGT NICHT, DASS EINE FASSUNG ANGEKOMMEN IST. Die Quelle geht nur,
+        ''' wenn im Ziel eine ANDERE Datei mit derselben Kennung und derselben Einstellung liegt
+        ''' (SameSettings, wie beim Import). Meint die Kennung dort etwas anderes, kommt die Quelle
+        ''' unter freiem Namen und neuer Kennung dazu (KeptBeside), mit der alten als Herkunft;
+        ''' beide Fassungen bleiben.</summary>
+        ''' <returns>Wie viele im neuen Bestand angekommen sind, wie viele nicht, wie viele davon
+        ''' neben einer anderen Fassung gleicher Kennung stehen, und ob abgelehnt wurde.</returns>
+        Public Function MoveAllTo(target As AdjustmentPresetStore) As (Moved As Integer, Failed As Integer, KeptBeside As Integer, Refused As Boolean)
             Dim moved = 0
             Dim failed = 0
-            If target Is Nothing OrElse Not IsReachable() OrElse Not target.IsReachable() Then Return (0, 0)
-            If SamePath(_root, target.Root) Then Return (0, 0)
+            Dim keptBeside = 0
+            If target Is Nothing OrElse Not IsReachable() OrElse Not target.IsReachable() Then Return (0, 0, 0, False)
+            If SamePath(_root, target.Root) Then Return (0, 0, 0, False)
+            If AreNested(_root, target.Root) Then Return (0, 0, 0, True)
             Dim source = ReadAll()
             Dim there = target.ReadAll().Presets.ToList()
             For Each folder In source.Folders
@@ -847,13 +906,19 @@ Namespace Services
                 End Try
             Next
             For Each preset In source.Presets
-                Dim arrived = there.Any(Function(p) String.Equals(p.Id, preset.Id, StringComparison.Ordinal))
+                Dim sameId = there.FirstOrDefault(Function(p) String.Equals(p.Id, preset.Id, StringComparison.Ordinal))
+                Dim arrived = sameId IsNot Nothing AndAlso SameSettings(sameId, preset) AndAlso
+                              Not PathIdentity.AreSame(FileOperationPolicy.ResolveLinks(sameId.FilePath), FileOperationPolicy.ResolveLinks(preset.FilePath))
                 If Not arrived Then
                     Dim taken = there.Where(Function(p) String.Equals(p.Folder, preset.Folder, StringComparison.Ordinal)).Select(Function(p) p.Name)
-                    Dim saved = target.Save(preset.Folder, UniqueName(preset.Name, taken), preset.RecipeJson, preset.Fields, preset.Id)
-                    If saved IsNot Nothing Then
+                    ' Dieselbe Kennung meint im Ziel etwas anderes: neue Kennung, alte als Herkunft.
+                    Dim id = If(sameId Is Nothing, preset.Id, Guid.NewGuid().ToString("N"))
+                    Dim origin = If(sameId Is Nothing, preset.ImportedFrom, preset.Id)
+                    Dim saved = target.Save(preset.Folder, UniqueName(preset.Name, taken), preset.RecipeJson, preset.Fields, id, origin)
+                    If saved IsNot Nothing AndAlso Not PathIdentity.AreSame(saved.FilePath, preset.FilePath) Then
                         there.Add(saved)
                         arrived = True
+                        If sameId IsNot Nothing Then keptBeside += 1
                     End If
                 End If
                 If arrived Then
@@ -872,7 +937,7 @@ Namespace Services
                 End Try
             Next
             Invalidate()
-            Return (moved, failed)
+            Return (moved, failed, keptBeside, False)
         End Function
 
         ''' <summary>Die einmalige Uebernahme: jede Vorlage, die noch in den Einstellungen steht,

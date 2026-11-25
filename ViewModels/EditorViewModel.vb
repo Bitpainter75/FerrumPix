@@ -18296,9 +18296,22 @@ Namespace ViewModels
         ''' bzw. eine neue Datei.</summary>
         Private ReadOnly Property CurrentImageCarriesVideo As Boolean
             Get
-                Return Not String.IsNullOrEmpty(_currentImagePath) AndAlso MotionPhotoService.HasVideo(_currentImagePath)
+                Dim path = _currentImagePath
+                If String.IsNullOrEmpty(path) Then Return False
+                ' Je Pfad einmal gefragt: die Eigenschaft steckt in Gettern, die Bindungen auf dem
+                ' Anzeigefaden auswerten, und HasVideo oeffnet dafuer den Katalog oder die Datei.
+                ' Die letzte Sperre vor dem Ueberschreiben fragt ohnehin die Datei selbst
+                ' (MotionPhotoService.HasVideoInFile in SaveImage).
+                If Not String.Equals(path, _carriesVideoPath, StringComparison.Ordinal) Then
+                    _carriesVideo = MotionPhotoService.HasVideo(path)
+                    _carriesVideoPath = path
+                End If
+                Return _carriesVideo
             End Get
         End Property
+
+        Private _carriesVideoPath As String
+        Private _carriesVideo As Boolean
 
         ''' <summary>True, wenn "Speichern" das Immich-Quell-Asset ersetzt statt eine lokale Datei zu
         ''' schreiben (Einstellung "Vorhandene Assets aktualisieren"). Ohne die Einstellung bleibt bei
@@ -18592,15 +18605,6 @@ Namespace ViewModels
         Public ReadOnly Property SetRatingCommand As ICommand
         Public ReadOnly Property ToggleFavoriteCommand As ICommand
         Public ReadOnly Property SetColorLabelCommand As ICommand
-        ''' <summary>Behalten fuer das geoeffnete Bild (Kuerzel P). Dasselbe Muster wie beim Verwerfen
-        ''' direkt darunter: der Editor hat keinen eigenen Umschalt-Weg, sondern reicht den Befehl des
-        ''' Info-Panels durch, weil dort der Zustand liegt.</summary>
-        Public ReadOnly Property TogglePickedCommand As ICommand
-        ''' <summary>Verwerfen fuer das geoeffnete Bild (Kuerzel X). Kein eigener Umschalt-Weg des
-        ''' Editors, sondern der Befehl des Info-Panels: dort liegt der Zustand, und von dort nimmt
-        ''' derselbe Knopf noch einmal druecken die Markierung weg - genau das, was X in Galerie und
-        ''' Betrachter tut. Ein zweiter Umschalt-Pfad haette den Stand ein zweites Mal gehalten.</summary>
-        Public ReadOnly Property ToggleRejectedCommand As ICommand
         Public ReadOnly Property OpenTagSearchCommand As ICommand
         Public ReadOnly Property SaveCommand As ICommand
         Public ReadOnly Property SaveAsCommand As ICommand
@@ -18698,6 +18702,9 @@ Namespace ViewModels
         ''' Die Anpassungen des Ordners mit allen Unterordnern; die Liste zeigt sie mit Ordnerpfad
         ''' (AdjustmentPresetFile.DisplayPath).
         Public ReadOnly Property AdjustmentPresetChoices As ObservableCollection(Of AdjustmentPresetFile) = New ObservableCollection(Of AdjustmentPresetFile)()
+        ''' Dieselben Anpassungen als HIERARCHIE fuer die Auswahlliste: Ordner als nicht waehlbare
+        ''' Ueberschriften, darunter eingerueckt ihre Anpassungen (AdjustmentPresetChoiceRow).
+        Public ReadOnly Property AdjustmentPresetChoiceRows As ObservableCollection(Of AdjustmentPresetChoiceRow) = New ObservableCollection(Of AdjustmentPresetChoiceRow)()
         Private _selectedAdjustmentPreset As AdjustmentPresetFile
         Private _adjustmentPresetNameDraft As String = ""
         Private _adjustmentPresetFolders As New List(Of String)()
@@ -18729,6 +18736,26 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Die Zeile der gewaehlten Anpassung in der Auswahlliste. Will die Liste eine
+        ''' Ordner-Ueberschrift waehlen (PFEIL HOCH und RUNTER, ein getippter Buchstabe), gilt
+        ''' stattdessen die naechste Anpassung in der Richtung des Wegs
+        ''' (AdjustmentPresetChoiceRow.Resolve); eine Ueberschrift ist nie gewaehlt.</summary>
+        Public Property SelectedAdjustmentPresetRow As AdjustmentPresetChoiceRow
+            Get
+                Dim preset = _selectedAdjustmentPreset
+                If preset Is Nothing Then Return Nothing
+                Return AdjustmentPresetChoiceRows.FirstOrDefault(Function(r) r.Preset Is preset)
+            End Get
+            Set(value As AdjustmentPresetChoiceRow)
+                ' Die Liste meldet beim Neuaufbau kurz Nothing; die Wahl setzt danach der Aufbau.
+                If value Is Nothing Then Return
+                Dim resolved = AdjustmentPresetChoiceRow.Resolve(AdjustmentPresetChoiceRows, value, SelectedAdjustmentPresetRow)
+                If resolved?.Preset IsNot Nothing Then SelectedAdjustmentPreset = resolved.Preset
+                ' Die Liste steht auf einer Ueberschrift: sie bekommt die Zeile, die wirklich gilt.
+                If resolved IsNot value Then Me.RaisePropertyChanged(NameOf(SelectedAdjustmentPresetRow))
+            End Set
+        End Property
+
         ''' <summary>Der Name der gewaehlten Anpassung. Setzen waehlt die erste dieses Namens, der
         ''' Wurzelordner zuerst.</summary>
         Public Property SelectedAdjustmentPresetName As String
@@ -18745,6 +18772,7 @@ Namespace ViewModels
 
         Private Sub RaiseAdjustmentPresetSelectionState()
             Me.RaisePropertyChanged(NameOf(SelectedAdjustmentPresetName))
+            Me.RaisePropertyChanged(NameOf(SelectedAdjustmentPresetRow))
             Me.RaisePropertyChanged(NameOf(CanApplyAdjustmentPreset))
             Me.RaisePropertyChanged(NameOf(SelectedAdjustmentPresetSummary))
         End Sub
@@ -18817,14 +18845,19 @@ Namespace ViewModels
             ' Leeren ihr Nothing zurueck.
             _selectedAdjustmentPreset = Nothing
             AdjustmentPresetChoices.Clear()
+            AdjustmentPresetChoiceRows.Clear()
             For Each preset In listing.Presets.OrderBy(Function(p) p.DisplayPath, StringComparer.OrdinalIgnoreCase)
                 AdjustmentPresetChoices.Add(preset)
+            Next
+            For Each row In AdjustmentPresetChoiceRow.BuildTree(listing.Presets)
+                AdjustmentPresetChoiceRows.Add(row)
             Next
             _selectedAdjustmentPreset = If(listing.Find(wanted, If(selectId Is Nothing, settings.LastAdjustmentPresetName, Nothing)),
                                            AdjustmentPresetChoices.FirstOrDefault())
             If _selectedAdjustmentPreset IsNot Nothing Then _adjustmentPresetNameDraft = _selectedAdjustmentPreset.Name
             ' NICHT "name": seit es eine Eigenschaft Name gibt, loest VB den Namen dorthin auf.
             For Each propertyName In {NameOf(SelectedAdjustmentPreset), NameOf(SelectedAdjustmentPresetName),
+                                      NameOf(SelectedAdjustmentPresetRow),
                                       NameOf(AdjustmentPresetNameDraft),
                                       NameOf(CanSaveAdjustmentPreset), NameOf(CanApplyAdjustmentPreset),
                                       NameOf(SelectedAdjustmentPresetSummary),
@@ -18948,11 +18981,24 @@ Namespace ViewModels
             Dim manager As New AdjustmentPresetManagerViewModel()
             ' "Anwenden" im Fenster gibt es nur mit einem geoeffneten Bild; es nimmt denselben Weg
             ' wie der Knopf im Bereich.
-            If HasDocument Then manager.ApplyHandler = Function(preset) ApplyAdjustmentPreset(preset)
-            Await manager.ReloadAsync(If(_selectedAdjustmentPreset?.Folder, ""), _selectedAdjustmentPreset?.Id)
-            Await _mainVm.ShowAdjustmentPresetManagerAsync(manager)
+            If HasDocument Then
+                manager.ApplyHandler = Function(preset) ApplyAdjustmentPreset(preset)
+                ' Vorschaubild je Zeile und Vorschau im grossen Bild beim Ueberfahren: beide
+                ' brauchen das geoeffnete Bild.
+                manager.ThumbnailHandler = Function(presets, deliver, token) RenderAdjustmentPresetThumbnailsAsync(presets, deliver, token)
+                manager.HoverPreviewHandler = Sub(preset) BeginAdjustmentPresetHover(preset)
+            End If
+            Try
+                Await manager.ReloadAsync(If(_selectedAdjustmentPreset?.Folder, ""), _selectedAdjustmentPreset?.Id)
+                Await _mainVm.ShowAdjustmentPresetManagerAsync(manager)
+            Finally
+                ' Das Fenster ist zu: die kleinen Bilder werden frei, und das grosse zeigt wieder
+                ' genau das Rezept.
+                manager.Release()
+                EndAdjustmentPresetHover()
+            End Try
             Await EnsureAdjustmentPresetsLoadedAsync()
-            ' "Ordner ändern" im Fenster: erst nach dem Schliessen, die Anwendung zeigt nur einen
+            ' "Einstellungen öffnen" im Fenster (nicht erreichbarer Ordner): erst nach dem Schliessen, die Anwendung zeigt nur einen
             ' Dialog zur Zeit, und der Wechsel fragt womoeglich nach ungespeicherten Aenderungen.
             If manager.SettingsRequested Then _mainVm.OpenSettings()
         End Function
@@ -18980,11 +19026,13 @@ Namespace ViewModels
                 Return False
             End If
 
+            ' Eine Vorschau unter dem Zeiger endet hier; gerendert wird gleich ohnehin.
+            DropAdjustmentPresetHover()
             PushUndo()
             Dim target = GetCurrentAdjustments()
-            AdjustmentEntries.ApplyPreset(target, gespeichert, preset.Fields)
-            ' Der Graufarbausgleich der Vorlage gehoert ihrem Quellbild; dieses misst seinen eigenen.
-            target.ForgetTransferredNegativeGrayBalance(gespeichert)
+            ' Derselbe Schritt wie die Vorschau. Der Graufarbausgleich der Vorlage gehoert ihrem
+            ' Quellbild; dieses misst seinen eigenen.
+            ApplyPresetLook(target, gespeichert, preset.Fields)
             ApplyAdjustments(target)
             MeasurePendingFilmNegativeGrayBalance()
             _hasChanges = True
@@ -19408,12 +19456,6 @@ Namespace ViewModels
             ' Gleiche Farbe erneut = Etikett entfernen (wie im Galerie-Kontextmenü).
             SetColorLabelCommand = ReactiveCommand.Create(Of String)(
                 Sub(hex) InfoPanel.ColorLabel = If(String.Equals(InfoPanel.ColorLabel, If(hex, ""), StringComparison.OrdinalIgnoreCase), "", If(hex, "")))
-
-            ' Behalten und Verwerfen reichen den Befehl des Panels durch: die Knopfe in der Info-Leiste
-            ' und die Kuerzel P und X treffen dieselbe Umschaltlogik - nicht eine zweite, die den Stand
-            ' des Panels uebersieht.
-            TogglePickedCommand = ReactiveCommand.Create(Sub() InfoPanel.TogglePickedCommand.Execute(Nothing))
-            ToggleRejectedCommand = ReactiveCommand.Create(Sub() InfoPanel.ToggleRejectedCommand.Execute(Nothing))
 
             OpenTagSearchCommand = ReactiveCommand.Create(Of String)(Sub(tag) _mainVm?.OpenTagSearchInGallery(tag))
 
@@ -19908,6 +19950,7 @@ Namespace ViewModels
             ToggleFilterPreviewTilesCommand = CreateToggleFilterPreviewTilesCommand()
             ApplyFilterTileCommand = CreateApplyFilterTileCommand()
             InitializeFilterPreviews()
+            InitializeAdjustmentPresetPreviews()
             AutoAdjustCommand = ReactiveCommand.Create(AddressOf ApplyAutoAdjustments)
             AutoStraightenCommand = ReactiveCommand.CreateFromTask(AddressOf ApplyAutoStraightenAsync)
             AutoPerspectiveCommand = ReactiveCommand.CreateFromTask(AddressOf ApplyAutoPerspectiveAsync)
@@ -26017,6 +26060,8 @@ Namespace ViewModels
                     End If
                 Next
                 adj.CopyPixelAdjustmentsFrom(_imagePixelAdjustments)
+                ' Nur die Anzeige: die Anpassung unter dem Zeiger (EditorViewModelPresetPreview.vb).
+                If forPreview Then ApplyPresetHoverTo(adj)
                 Return adj
             End If
 
@@ -26031,6 +26076,9 @@ Namespace ViewModels
                 Next
                 adj.CopyPixelAdjustmentsFrom(_selectionImagePixelAdjustments)
             End If
+            ' Nur die Anzeige: die Anpassung unter dem Zeiger (EditorViewModelPresetPreview.vb).
+            ' Der kanonische Stand (Speichern, Rueckgaengig) kommt hier nie vorbei.
+            If forPreview Then ApplyPresetHoverTo(adj)
             Return adj
         End Function
 

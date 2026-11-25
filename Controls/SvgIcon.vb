@@ -24,6 +24,10 @@ Namespace Controls
         ' Nebenläufig, weil PreloadIconsAsync im Hintergrund einträgt, während Render auf dem
         ' UI-Faden liest. Doppelt geparste Icons sind dabei unkritisch - die Daten sind unveränderlich.
         Private Shared ReadOnly Cache As New ConcurrentDictionary(Of String, SvgIconData)()
+        ' Bewertung, Favorit und die beiden Auswahlmarken muessen auf Kachel, Bild und Paneel
+        ' gleich lesbar sein. Der Schatten sitzt deshalb am Symbol selbst statt an einzelnen
+        ' Ansichten, die sonst mit der Zeit auseinanderlaufen.
+        Private Shared ReadOnly StatusSymbolShadow As IBrush = New SolidColorBrush(Color.FromArgb(&HA0, 0, 0, 0))
         Private Shared _preloadStarted As Integer = 0
         Private Const IconAssetPrefix As String = "/Assets/Icons/"
         ''' <summary>Uralte Dateinamen aus der Zeit vor den Symbolsätzen, auf den Namen des damaligen
@@ -149,6 +153,22 @@ Namespace Controls
                                                 icon.SvgTransform *
                                                 Matrix.CreateScale(fit.Scale, fit.Scale) *
                                                 Matrix.CreateTranslation((Bounds.Width - fit.Width) / 2, (Bounds.Height - fit.Height) / 2))
+                ' Kacheln nutzen ShadowedSvgIcon mit seinem vorberechneten Schattenbild. Dort
+                ' darf der gemeinsame Schatten nicht ein zweites Mal unter dem Zeichen liegen.
+                ' Die Typfrage steht VORN: jedes Kachelzeichen kommt bei jedem Zeichnen hier
+                ' vorbei, und der Namensvergleich dahinter legt je Aufruf eine Zeichenkette an.
+                If Not TypeOf Me Is ShadowedSvgIcon AndAlso IsStatusSymbol(Source) Then
+                    ' Eine Einheit der Oberflaeche, unabhaengig von der Groesse des Symbols (bei
+                    ' doppelter Bildschirmskalierung also zwei Bildpunkte, wie der Effekt davor).
+                    Using shadow = context.PushTransform(Matrix.CreateTranslation(1.0 / fit.Scale, 1.0 / fit.Scale))
+                        If icon.IsStroked Then
+                            context.DrawGeometry(Nothing, New Pen(StatusSymbolShadow, icon.StrokeWidth,
+                                                                   lineCap:=PenLineCap.Round, lineJoin:=PenLineJoin.Round), icon.Geometry)
+                        Else
+                            context.DrawGeometry(StatusSymbolShadow, Nothing, icon.Geometry)
+                        End If
+                    End Using
+                End If
                 ' Kontur-Icons (fill="none" + stroke) werden nur mit Pen gezeichnet, damit sie als
                 ' Umriss statt als flächig gefülltes Symbol dargestellt werden.
                 If icon.IsStroked Then
@@ -159,6 +179,18 @@ Namespace Controls
                 End If
             End Using
         End Sub
+
+        ''' <summary>Die vier wiederkehrenden Katalogzeichen teilen Konturstärke (Bold-Satz) und
+        ''' den Schatten aus <see cref="Render"/>. Andere Herzen oder Sterne, etwa Zeichenobjekte
+        ''' im Editor, bleiben davon bewusst unberuehrt.</summary>
+        Friend Shared Function IsStatusSymbol(source As String) As Boolean
+            If String.IsNullOrWhiteSpace(source) Then Return False
+            Dim name = Path.GetFileName(source)
+            Return String.Equals(name, "star-bold.svg", StringComparison.OrdinalIgnoreCase) OrElse
+                   String.Equals(name, "heart-bold.svg", StringComparison.OrdinalIgnoreCase) OrElse
+                   String.Equals(name, "thumbs-up-bold.svg", StringComparison.OrdinalIgnoreCase) OrElse
+                   String.Equals(name, "thumbs-down-bold.svg", StringComparison.OrdinalIgnoreCase)
+        End Function
 
         Public Shared Function ResolveIconSource(source As String) As String
             If String.IsNullOrWhiteSpace(source) Then Return source

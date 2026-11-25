@@ -7917,9 +7917,6 @@
   <data name="Markierungen_im_Filmstreifen_anzeigen_ec895448" xml:space="preserve">
     <value>Vis markeringer i filmstriben</value>
   </data>
-  <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
-    <value>Viser stjernebedømmelse, favorit, farveetiket samt mærkerne behold og kassér på filmstribens felter i fremviseren og redigeringsprogrammet.</value>
-  </data>
   <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
     <value>Viser stjernebedømmelse, favorit og farveetiket på filmstribens felter i fremviseren og redigeringsprogrammet.</value>
   </data>
@@ -12343,35 +12340,8 @@
   <data name="Die_Anpassung_lie_sich_nicht_l_schen_ecd96ecc" xml:space="preserve">
     <value>Justeringen kunne ikke slettes.</value>
   </data>
-  <data name="0_Anpassung_en_importiert_fdc783e6" xml:space="preserve">
-    <value>{0} justering(er) importeret</value>
-  </data>
-  <data name="0_schon_vorhanden_68664521" xml:space="preserve">
-    <value>{0} findes allerede</value>
-  </data>
-  <data name="0_Datei_en_nicht_lesbar_9653e2bc" xml:space="preserve">
-    <value>{0} fil(er) kunne ikke læses</value>
-  </data>
-  <data name="Anpassung_exportiert_0_98d89e68" xml:space="preserve">
-    <value>Justeringen eksporteret: {0}</value>
-  </data>
-  <data name="Die_Anpassung_lie_sich_nicht_exportieren_53eb4a9a" xml:space="preserve">
-    <value>Justeringen kunne ikke eksporteres.</value>
-  </data>
-  <data name="0_Anpassung_en_exportiert_fd94c88c" xml:space="preserve">
-    <value>{0} justering(er) eksporteret</value>
-  </data>
   <data name="Einen_Unterordner_im_gew_hlten_Ordner_anlegen_04fa4248" xml:space="preserve">
     <value>Opret en undermappe i den valgte mappe</value>
-  </data>
-  <data name="Anpassungen_importieren_838230e9" xml:space="preserve">
-    <value>Importér justeringer</value>
-  </data>
-  <data name="Ordner_mit_Anpassungen_importieren_9be5ad2e" xml:space="preserve">
-    <value>Importér mappe med justeringer</value>
-  </data>
-  <data name="Anpassung_exportieren_ecc0fac1" xml:space="preserve">
-    <value>Eksporter justering</value>
   </data>
   <data name="Einstellungen_ffnen_dd5e857e" xml:space="preserve">
     <value>Åbn indstillinger</value>
@@ -12475,20 +12445,8 @@
   <data name="Den_Ordner_der_Anpassungen_im_Dateimanager_ffnen_b3fce593" xml:space="preserve">
     <value>Åbn mappen med justeringer i filhåndteringen</value>
   </data>
-  <data name="Schlie_t_dieses_Fenster_und_ffnet_die_Einstellun_58264913" xml:space="preserve">
-    <value>Lukker dette vindue og åbner indstillingerne. Mappen til justeringer vælges der under Redigering.</value>
-  </data>
-  <data name="Ordner_ndern_6c04e2d7" xml:space="preserve">
-    <value>Skift mappe</value>
-  </data>
   <data name="Anpassungen_in_allen_Ordnern_nach_ihrem_Namen_su_6edcb468" xml:space="preserve">
     <value>Søg efter justeringer i alle mapper efter navn</value>
-  </data>
-  <data name="Anpassungen_in_den_gew_hlten_Ordner_aufnehmen_65ddf882" xml:space="preserve">
-    <value>Hent justeringer ind i den valgte mappe</value>
-  </data>
-  <data name="Ordner_samt_Unterordnern_91847af9" xml:space="preserve">
-    <value>Mappe inklusive undermapper</value>
   </data>
   <data name="Unterordner_zeigen_oder_verbergen_11fab487" xml:space="preserve">
     <value>Vis eller skjul undermapper</value>
@@ -12496,14 +12454,8 @@
   <data name="Ordner_umbenennen_F2_91a94b55" xml:space="preserve">
     <value>Omdøb mappen (F2)</value>
   </data>
-  <data name="Ordner_samt_Unterordnern_in_ein_Verzeichnis_expo_2a332ad9" xml:space="preserve">
-    <value>Eksportér mappen inklusive undermapper til en mappe på disken</value>
-  </data>
   <data name="Ordner_l_schen_ENTF_Andere_Dateien_darin_bleiben_190eeb88" xml:space="preserve">
     <value>Slet mappen (DEL). Andre filer i den bevares.</value>
-  </data>
-  <data name="Klicken_zeigt_was_die_Anpassung_enth_lt_Auf_eine_f063f797" xml:space="preserve">
-    <value>Klik for at se, hvad justeringen indeholder. Træk den hen på en mappe for at flytte den.</value>
   </data>
   <data name="Auf_das_im_Editor_ge_ffnete_Bild_anwenden_e8e855ed" xml:space="preserve">
     <value>Anvend på det billede, der er åbent i redigeringen</value>
@@ -12513,18 +12465,6 @@
   </data>
   <data name="In_einen_anderen_Ordner_verschieben_66b049c4" xml:space="preserve">
     <value>Flyt til en anden mappe</value>
-  </data>
-  <data name="Als_Datei_an_einen_anderen_Ort_exportieren_b0632359" xml:space="preserve">
-    <value>Eksportér som fil til et andet sted</value>
-  </data>
-  <data name="L_schen_ENTF_2e101259" xml:space="preserve">
-    <value>Slet (DEL)</value>
-  </data>
-  <data name="enthalten_7d3b9efe" xml:space="preserve">
-    <value>indeholdt</value>
-  </data>
-  <data name="Alle_brigen_Regler_werden_auf_den_Neutralwert_ge_926e23af" xml:space="preserve">
-    <value>Alle øvrige skydere sættes til deres neutrale værdi.</value>
   </data>
   <data name="L_schen_4b292f16" xml:space="preserve">
     <value>Slet?</value>
@@ -12549,5 +12489,29 @@
   </data>
   <data name="Angewendet_45946cda" xml:space="preserve">
     <value>Anvendt</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_verschieben_Gibt_es_do_7cdb8df5" xml:space="preserve">
+    <value>Mappen kunne ikke flyttes. Findes der allerede en med samme navn dér?</value>
+  </data>
+  <data name="Ordner_verschoben_0_eee84cdb" xml:space="preserve">
+    <value>Mappen flyttet: {0}</value>
+  </data>
+  <data name="L_schen_ENTF_Der_zweite_Klick_auf_dieselbe_Stell_c26a1c0f" xml:space="preserve">
+    <value>Slet (DEL). Det andet klik på samme sted sletter.</value>
+  </data>
+  <data name="Kantenlicht_bda38e22" xml:space="preserve">
+    <value>Kantlys</value>
+  </data>
+  <data name="Das_Licht_kommt_von_hinten_und_zeichnet_einen_he_ef07b788" xml:space="preserve">
+    <value>Lyset kommer bagfra og tegner en lys kant langs omridset, hvor en genstand står foran en dybere baggrund. Lysets placering bestemmer siden, med stor højde løber kanten hele vejen rundt.</value>
+  </data>
+  <data name="Der_neue_Ordner_liegt_im_bisherigen_oder_der_bis_686676f3" xml:space="preserve">
+    <value>Den nye mappe ligger i den nuværende, eller den nuværende i den nye. Intet blev flyttet, og mappen forbliver, som den var.</value>
+  </data>
+  <data name="0_davon_gab_es_im_neuen_Ordner_schon_mit_anderem_8559aa84" xml:space="preserve">
+    <value>{0} af dem fandtes allerede i den nye mappe med andet indhold og ligger nu ved siden af som egne justeringer</value>
+  </data>
+  <data name="Nichts_wurde_umbenannt_91f18288" xml:space="preserve">
+    <value>Intet blev omdøbt.</value>
   </data>
 </root>

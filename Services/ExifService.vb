@@ -1127,9 +1127,13 @@ Namespace Services
         ''' heif 2, jpeg 1, mov 1: Art und Kennung eines Bewegtbilds (Spalten MotionKind und
         ''' MotionId, <see cref="LivePhotoService.Identify"/>). Nur diese drei Familien koennen eines
         ''' sein; ohne die Erhoehung bliebe ein schon eingelesenes Live Photo oder Motion Photo
-        ''' ohne Abzeichen, und Bild und Film faenden nicht zusammen.</summary>
+        ''' ohne Abzeichen, und Bild und Film faenden nicht zusammen.
+        '''
+        ''' heif 3: ein HEIC mit angehaengtem Film gilt nicht mehr als Motion Photo, weil nur ein
+        ''' JPEG abgespielt werden kann. Ohne die Erhoehung behielte eine schon eingelesene Zeile
+        ''' Abzeichen und Abspielknopf.</summary>
         Private Shared ReadOnly ReaderVersions As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase) From {
-            {".heic", "heif2"}, {".heif", "heif2"}, {".hif", "heif2"}, {".avif", "heif1"},
+            {".heic", "heif3"}, {".heif", "heif3"}, {".hif", "heif3"}, {".avif", "heif1"},
             {".jpg", "jpeg1"}, {".jpeg", "jpeg1"}, {".jpe", "jpeg1"}, {".jfif", "jpeg1"},
             {".mov", "mov1"}
         }

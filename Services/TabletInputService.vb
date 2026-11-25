@@ -144,6 +144,9 @@ Namespace Services
             If source Is Nothing Then Return
             Dim item = source.FindLogicalAncestorOfType(Of MenuItem)(True)
             If item Is Nothing Then Return
+            ' In den Bewertungs- und Etikettzeilen verarbeitet jeder Button den Druck selbst.
+            ' Der Menueeintrag dient nur als Rahmen und darf das Popup nicht vorher schliessen.
+            If item.Classes.Contains("widget") Then Return
             If item.HasSubMenu OrElse Not item.IsEffectivelyEnabled Then Return
             If Not e.GetCurrentPoint(item).Properties.IsLeftButtonPressed Then Return
 

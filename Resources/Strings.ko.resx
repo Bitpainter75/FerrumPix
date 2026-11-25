@@ -7917,9 +7917,6 @@
   <data name="Markierungen_im_Filmstreifen_anzeigen_ec895448" xml:space="preserve">
     <value>필름 스트립에 표식 보기</value>
   </data>
-  <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
-    <value>뷰어와 편집기의 필름 스트립 타일에 별점, 즐겨찾기, 색 라벨, 유지 및 제외 표시를 보여줍니다.</value>
-  </data>
   <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
     <value>뷰어와 편집기의 필름 스트립 타일에 별점, 즐겨찾기, 색 라벨을 보여줍니다.</value>
   </data>
@@ -12347,35 +12344,8 @@
   <data name="Die_Anpassung_lie_sich_nicht_l_schen_ecd96ecc" xml:space="preserve">
     <value>조정을 삭제하지 못했습니다.</value>
   </data>
-  <data name="0_Anpassung_en_importiert_fdc783e6" xml:space="preserve">
-    <value>조정 {0}개를 가져왔습니다</value>
-  </data>
-  <data name="0_schon_vorhanden_68664521" xml:space="preserve">
-    <value>{0}개는 이미 있습니다</value>
-  </data>
-  <data name="0_Datei_en_nicht_lesbar_9653e2bc" xml:space="preserve">
-    <value>파일 {0}개를 읽을 수 없습니다</value>
-  </data>
-  <data name="Anpassung_exportiert_0_98d89e68" xml:space="preserve">
-    <value>조정을 내보냈습니다: {0}</value>
-  </data>
-  <data name="Die_Anpassung_lie_sich_nicht_exportieren_53eb4a9a" xml:space="preserve">
-    <value>조정을 내보내지 못했습니다.</value>
-  </data>
-  <data name="0_Anpassung_en_exportiert_fd94c88c" xml:space="preserve">
-    <value>조정 {0}개를 내보냈습니다</value>
-  </data>
   <data name="Einen_Unterordner_im_gew_hlten_Ordner_anlegen_04fa4248" xml:space="preserve">
     <value>선택한 폴더에 하위 폴더 만들기</value>
-  </data>
-  <data name="Anpassungen_importieren_838230e9" xml:space="preserve">
-    <value>조정 가져오기</value>
-  </data>
-  <data name="Ordner_mit_Anpassungen_importieren_9be5ad2e" xml:space="preserve">
-    <value>조정이 든 폴더 가져오기</value>
-  </data>
-  <data name="Anpassung_exportieren_ecc0fac1" xml:space="preserve">
-    <value>조정 내보내기</value>
   </data>
   <data name="Einstellungen_ffnen_dd5e857e" xml:space="preserve">
     <value>설정 열기</value>
@@ -12479,20 +12449,8 @@
   <data name="Den_Ordner_der_Anpassungen_im_Dateimanager_ffnen_b3fce593" xml:space="preserve">
     <value>조정 폴더를 파일 관리자에서 열기</value>
   </data>
-  <data name="Schlie_t_dieses_Fenster_und_ffnet_die_Einstellun_58264913" xml:space="preserve">
-    <value>이 창을 닫고 설정을 엽니다. 조정 폴더는 설정의 편집기에서 지정합니다.</value>
-  </data>
-  <data name="Ordner_ndern_6c04e2d7" xml:space="preserve">
-    <value>폴더 변경</value>
-  </data>
   <data name="Anpassungen_in_allen_Ordnern_nach_ihrem_Namen_su_6edcb468" xml:space="preserve">
     <value>모든 폴더에서 이름으로 조정 검색</value>
-  </data>
-  <data name="Anpassungen_in_den_gew_hlten_Ordner_aufnehmen_65ddf882" xml:space="preserve">
-    <value>조정을 선택한 폴더로 가져오기</value>
-  </data>
-  <data name="Ordner_samt_Unterordnern_91847af9" xml:space="preserve">
-    <value>폴더와 하위 폴더</value>
   </data>
   <data name="Unterordner_zeigen_oder_verbergen_11fab487" xml:space="preserve">
     <value>하위 폴더 표시 또는 숨기기</value>
@@ -12500,14 +12458,8 @@
   <data name="Ordner_umbenennen_F2_91a94b55" xml:space="preserve">
     <value>폴더 이름 바꾸기 (F2)</value>
   </data>
-  <data name="Ordner_samt_Unterordnern_in_ein_Verzeichnis_expo_2a332ad9" xml:space="preserve">
-    <value>폴더를 하위 폴더와 함께 디렉터리로 내보내기</value>
-  </data>
   <data name="Ordner_l_schen_ENTF_Andere_Dateien_darin_bleiben_190eeb88" xml:space="preserve">
     <value>폴더 삭제 (DEL). 안에 있는 다른 파일은 그대로 남습니다.</value>
-  </data>
-  <data name="Klicken_zeigt_was_die_Anpassung_enth_lt_Auf_eine_f063f797" xml:space="preserve">
-    <value>클릭하면 조정에 들어 있는 내용을 보여 줍니다. 폴더로 끌어다 놓으면 옮겨집니다.</value>
   </data>
   <data name="Auf_das_im_Editor_ge_ffnete_Bild_anwenden_e8e855ed" xml:space="preserve">
     <value>편집기에 열려 있는 이미지에 적용</value>
@@ -12517,18 +12469,6 @@
   </data>
   <data name="In_einen_anderen_Ordner_verschieben_66b049c4" xml:space="preserve">
     <value>다른 폴더로 이동</value>
-  </data>
-  <data name="Als_Datei_an_einen_anderen_Ort_exportieren_b0632359" xml:space="preserve">
-    <value>파일로 다른 위치에 내보내기</value>
-  </data>
-  <data name="L_schen_ENTF_2e101259" xml:space="preserve">
-    <value>삭제 (DEL)</value>
-  </data>
-  <data name="enthalten_7d3b9efe" xml:space="preserve">
-    <value>포함</value>
-  </data>
-  <data name="Alle_brigen_Regler_werden_auf_den_Neutralwert_ge_926e23af" xml:space="preserve">
-    <value>나머지 슬라이더는 모두 중립값으로 설정됩니다.</value>
   </data>
   <data name="L_schen_4b292f16" xml:space="preserve">
     <value>삭제할까요?</value>
@@ -12553,5 +12493,29 @@
   </data>
   <data name="Angewendet_45946cda" xml:space="preserve">
     <value>적용했습니다</value>
+  </data>
+  <data name="Der_Ordner_lie_sich_nicht_verschieben_Gibt_es_do_7cdb8df5" xml:space="preserve">
+    <value>폴더를 옮기지 못했습니다. 그곳에 같은 이름의 폴더가 이미 있나요?</value>
+  </data>
+  <data name="Ordner_verschoben_0_eee84cdb" xml:space="preserve">
+    <value>폴더를 옮겼습니다: {0}</value>
+  </data>
+  <data name="L_schen_ENTF_Der_zweite_Klick_auf_dieselbe_Stell_c26a1c0f" xml:space="preserve">
+    <value>삭제 (DEL). 같은 자리를 한 번 더 클릭하면 삭제합니다.</value>
+  </data>
+  <data name="Kantenlicht_bda38e22" xml:space="preserve">
+    <value>림 라이트</value>
+  </data>
+  <data name="Das_Licht_kommt_von_hinten_und_zeichnet_einen_he_ef07b788" xml:space="preserve">
+    <value>빛이 뒤에서 들어와 물체가 더 깊은 배경 앞에 있는 곳의 윤곽에 밝은 테두리를 그립니다. 빛의 위치가 방향을 정하며, 높이가 크면 테두리가 윤곽 전체를 두릅니다.</value>
+  </data>
+  <data name="Der_neue_Ordner_liegt_im_bisherigen_oder_der_bis_686676f3" xml:space="preserve">
+    <value>새 폴더가 현재 폴더 안에 있거나 현재 폴더가 새 폴더 안에 있습니다. 아무것도 이동하지 않았으며 폴더는 그대로 유지됩니다.</value>
+  </data>
+  <data name="0_davon_gab_es_im_neuen_Ordner_schon_mit_anderem_8559aa84" xml:space="preserve">
+    <value>그중 {0}개는 새 폴더에 다른 내용으로 이미 있었으며, 이제 별도의 조정으로 나란히 있습니다</value>
+  </data>
+  <data name="Nichts_wurde_umbenannt_91f18288" xml:space="preserve">
+    <value>이름이 바뀐 항목이 없습니다.</value>
   </data>
 </root>

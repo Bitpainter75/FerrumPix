@@ -49,7 +49,9 @@ Namespace ViewModels
         ''' bisherigen Ordner Anpassungen, wird gefragt, ob sie mitziehen. Sie ziehen VOR dem
         ''' Umstellen um, und eine Datei verlaesst den alten Ordner erst, wenn sie im neuen belegt
         ''' geschrieben ist (AdjustmentPresetStore.MoveAllTo). Die Dateien werden im Hintergrund
-        ''' bewegt, beide Ordner koennen entfernt liegen.</summary>
+        ''' bewegt, beide Ordner koennen entfernt liegen. Liegt der eine Ordner im anderen, lehnt
+        ''' MoveAllTo das Mitziehen ab; dann bleibt auch die Einstellung, wie sie war, und die
+        ''' Zeile sagt warum.</summary>
         ''' <param name="moveExisting">Die Antwort auf die Frage, wenn sie nicht gestellt werden
         ''' soll (Pruefstand).</param>
         Public Async Function ChangeAdjustmentPresetFolderAsync(newFolder As String,
@@ -81,7 +83,17 @@ Namespace ViewModels
             Dim status = ""
             If moveAlong Then
                 Dim outcome = Await Task.Run(Function() source.MoveAllTo(target))
+                If outcome.Refused Then
+                    ' Der eine Ordner liegt im anderen: nichts bewegt, und der Ordner bleibt, wie er
+                    ' war. Umgestellt wuerde sonst auf einen Bestand, der den alten als Unterordner
+                    ' traegt oder in ihm steckt.
+                    RaiseAdjustmentPresetFolderChanged(LocalizationService.T("Der neue Ordner liegt im bisherigen oder der bisherige im neuen. Es wurde nichts verschoben, und der Ordner bleibt, wie er war."))
+                    Return
+                End If
                 status = String.Format(LocalizationService.T("{0} Anpassung(en) in den neuen Ordner verschoben"), outcome.Moved)
+                If outcome.KeptBeside > 0 Then
+                    status &= ", " & String.Format(LocalizationService.T("{0} davon gab es im neuen Ordner schon mit anderem Inhalt, sie stehen jetzt als eigene Anpassung daneben"), outcome.KeptBeside)
+                End If
                 If outcome.Failed > 0 Then
                     status &= ", " & String.Format(LocalizationService.T("{0} ließen sich nicht verschieben und liegen weiter im bisherigen Ordner"), outcome.Failed)
                 End If

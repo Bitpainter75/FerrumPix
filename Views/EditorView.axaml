@@ -1980,16 +1980,55 @@
                                              Vorlage enthält. Der Kurzhinweis der Liste nennt, was
                                              die gewählte Vorlage enthält; er kommt übersetzt aus dem
                                              ViewModel. -->
-                                        <!-- Jede Anpassung steht mit ihrem Ordnerpfad davor in der
-                                             Liste (AdjustmentPresetFile.DisplayPath). Umbenennen,
+                                        <!-- DIE LISTE ZEIGT DIE ORDNER ALS HIERARCHIE
+                                             (AdjustmentPresetChoiceRow): ein Ordner ist eine
+                                             Ueberschrift, die sich nicht waehlen laesst (der Eintrag
+                                             ist gesperrt), darunter stehen eingerueckt seine
+                                             Anpassungen; die des Hauptordners zuerst ohne
+                                             Ueberschrift. Das geschlossene Feld zeigt die gewaehlte
+                                             mit Ordnerpfad (SelectionBoxItemTemplate). Umbenennen,
                                              Verschieben und Löschen stehen hinter Verwalten. -->
-                                        <ComboBox ItemsSource="{Binding AdjustmentPresetChoices}"
-                                                  SelectedItem="{Binding SelectedAdjustmentPreset}"
+                                        <!-- KEINE VORSCHAU BEIM UEBERFAHREN in dieser Liste: die gibt
+                                             es nur im Fenster "Anpassungen verwalten". Beim Durchgehen
+                                             der aufgeklappten Liste wechselte sonst das grosse Bild
+                                             unter jedem Eintrag. -->
+                                        <ComboBox x:Name="AdjustmentPresetChoiceBox"
+                                                  ItemsSource="{Binding AdjustmentPresetChoiceRows}"
+                                                  SelectedItem="{Binding SelectedAdjustmentPresetRow}"
+                                                  SelectionChanged="OnPresetChoiceSelectionChanged"
                                                   PlaceholderText="Keine Anpassung gespeichert"
                                                   ToolTip.Tip="{Binding SelectedAdjustmentPresetSummary}"
                                                   MinHeight="32"
                                                   FontSize="{DynamicResource FP.Font.Small}"
-                                                  HorizontalAlignment="Stretch" />
+                                                  HorizontalAlignment="Stretch">
+                                            <ComboBox.Styles>
+                                                <Style Selector="ComboBoxItem">
+                                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                    <Setter Property="IsEnabled" Value="{Binding IsSelectable}" />
+                                                </Style>
+                                                <Style Selector="TextBlock.choice-header">
+                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}" />
+                                                </Style>
+                                            </ComboBox.Styles>
+                                            <ComboBox.SelectionBoxItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Classes="no-translate" Text="{Binding ClosedText}"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </DataTemplate>
+                                            </ComboBox.SelectionBoxItemTemplate>
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="Transparent">
+                                                        <TextBlock Classes="no-translate"
+                                                                   Classes.choice-header="{Binding IsHeader}"
+                                                                   Text="{Binding Text}"
+                                                                   Margin="{Binding Indent}"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
                                         <!-- Der Ordner der Anpassungen ist nicht erreichbar: die
                                              Liste bleibt leer, die Zeile sagt es und führt zur
                                              Einstellung. Der Text kommt übersetzt aus dem ViewModel. -->
@@ -2502,14 +2541,14 @@
                                                         IsVisible="{Binding HasColorLabel}"/>
                                                 <StackPanel Orientation="Horizontal" Spacing="1"
                                                             IsVisible="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg" Width="14" Height="14" IconBrush="White"/>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Width="14" Height="14" IconBrush="White"/>
                                                     <TextBlock Text="{Binding Rating}" Foreground="White" FontSize="11" VerticalAlignment="Center"/>
                                                 </StackPanel>
-                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg" Width="14" Height="14" IconBrush="White"
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/heart-bold.svg" Width="14" Height="14" IconBrush="White"
                                                                IsVisible="{Binding IsFavorite}"/>
                                             </StackPanel>
                                         </Border>
-                                        <!-- BEHALTEN und VERWORFEN, oben in der Mitte: dieselbe Pille wie an
+                                        <!-- BEHALTEN und VERWORFEN oben links: dieselbe Pille wie an
                                              der Galeriekachel (eigene Einstellung, ab Werk an). Kein Knopf:
                                              ein Klick auf eine Filmstreifen-Kachel waehlt sie. -->
                                         <Panel IsVisible="{Binding DataContext.ShowFilmstripPickBadge, RelativeSource={RelativeSource AncestorType=UserControl}}">
@@ -2517,7 +2556,7 @@
                                                 <Border.Effect>
                                                     <DropShadowEffect Color="#D0000000" BlurRadius="4" OffsetX="0" OffsetY="1"/>
                                                 </Border.Effect>
-                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-down.svg"
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-down-bold.svg"
                                                                Width="14" Height="14"
                                                                IconBrush="White"
                                                                HorizontalAlignment="Center"
@@ -2527,7 +2566,7 @@
                                                 <Border.Effect>
                                                     <DropShadowEffect Color="#D0000000" BlurRadius="4" OffsetX="0" OffsetY="1"/>
                                                 </Border.Effect>
-                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-up.svg"
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-up-bold.svg"
                                                                Width="14" Height="14"
                                                                IconBrush="White"
                                                                HorizontalAlignment="Center"
@@ -2637,7 +2676,7 @@
                                     Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
                                     Classes.active="{Binding InfoPanel.Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="1">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                Classes="rating-star"
                                                Width="18" Height="18"
                                                VerticalAlignment="Center" />
@@ -2645,7 +2684,7 @@
                             <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
                                     Classes.active="{Binding InfoPanel.Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="2">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                Classes="rating-star"
                                                Width="18" Height="18"
                                                VerticalAlignment="Center" />
@@ -2653,7 +2692,7 @@
                             <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
                                     Classes.active="{Binding InfoPanel.Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="3">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                Classes="rating-star"
                                                Width="18" Height="18"
                                                VerticalAlignment="Center" />
@@ -2661,7 +2700,7 @@
                             <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
                                     Classes.active="{Binding InfoPanel.Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="4">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                Classes="rating-star"
                                                Width="18" Height="18"
                                                VerticalAlignment="Center" />
@@ -2669,21 +2708,21 @@
                             <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
                                     Classes.active="{Binding InfoPanel.Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="5">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                Classes="rating-star"
                                                Width="18" Height="18"
                                                VerticalAlignment="Center" />
                             </Button>
-                            <Button Classes="icon-btn"
+                            <Button Classes="icon-btn beside-stars"
                                     Width="24" Height="24" VerticalAlignment="Center"
                                     Command="{Binding ToggleFavoriteCommand}"
                                     ToolTip.Tip="Favorit" Margin="6,0,0,0">
                                 <Grid Width="20" Height="20">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/heart-bold.svg"
                                                    Width="20" Height="20"
                                                    Classes="fav-heart"
                                                    IsVisible="{Binding !InfoPanel.IsFavorite}" />
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/heart-bold.svg"
                                                    Width="20" Height="20"
                                                    Classes="fav-heart active"
                                                    IsVisible="{Binding InfoPanel.IsFavorite}" />

@@ -683,7 +683,7 @@
                                                 Command="{Binding SetFilterFavoriteCommand}" CommandParameter="None">
                                             <Grid ColumnDefinitions="*,20">
                                                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg" Width="18" Height="18" VerticalAlignment="Center"/>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/heart-bold.svg" Width="18" Height="18" VerticalAlignment="Center"/>
                                                     <TextBlock Text="Kein Favorit" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterFavoriteNone}"
@@ -722,7 +722,7 @@
                                                 <!-- Dieselben Sterne wie auf der Kachel und im Kontextmenue,
                                                      nicht das Schriftzeichen. -->
                                                 <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                    Classes="rating-star" Width="18" Height="18"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating1Plus}"
@@ -734,9 +734,9 @@
                                                 Command="{Binding SetFilterRatingCommand}" CommandParameter="2">
                                             <Grid ColumnDefinitions="*,20">
                                                 <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                    Classes="rating-star" Width="18" Height="18"/>
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                    Classes="rating-star" Width="18" Height="18"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating2Plus}"
@@ -748,11 +748,11 @@
                                                 Command="{Binding SetFilterRatingCommand}" CommandParameter="3">
                                             <Grid ColumnDefinitions="*,20">
                                                 <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                    Classes="rating-star" Width="18" Height="18"/>
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                    Classes="rating-star" Width="18" Height="18"/>
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                    Classes="rating-star" Width="18" Height="18"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating3Plus}"
@@ -764,13 +764,13 @@
                                                 Command="{Binding SetFilterRatingCommand}" CommandParameter="4">
                                             <Grid ColumnDefinitions="*,20">
                                                 <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                    Classes="rating-star" Width="18" Height="18"/>
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                    Classes="rating-star" Width="18" Height="18"/>
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                    Classes="rating-star" Width="18" Height="18"/>
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                    Classes="rating-star" Width="18" Height="18"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating4Plus}"
@@ -782,15 +782,15 @@
                                                 Command="{Binding SetFilterRatingCommand}" CommandParameter="5">
                                             <Grid ColumnDefinitions="*,20">
                                                 <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                    Classes="rating-star" Width="18" Height="18"/>
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                    Classes="rating-star" Width="18" Height="18"/>
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                    Classes="rating-star" Width="18" Height="18"/>
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                    Classes="rating-star" Width="18" Height="18"/>
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                    Classes="rating-star" Width="18" Height="18"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating5}"
@@ -815,67 +815,76 @@
                                         </Button>
                                         <!-- Dieselben Farben wie die Akzentauswahl in den Einstellungen. -->
                                         <StackPanel Orientation="Horizontal" Spacing="5" Margin="10,4,10,6">
-                                            <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                            <Button Classes="ghost label-chip"
                                                     Command="{Binding SetFilterColorLabelCommand}" CommandParameter="#F08A1A" ToolTip.Tip="Orange">
                                                 <Grid>
+                                                    <Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsFilterLabelOrange}"/>
+                                                    <Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsFilterLabelOrange}"/>
                                                     <Ellipse Width="16" Height="16" Fill="#F08A1A"/>
-                                                    <Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsFilterLabelOrange}"/>
                                                 </Grid>
                                             </Button>
-                                            <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                            <Button Classes="ghost label-chip"
                                                     Command="{Binding SetFilterColorLabelCommand}" CommandParameter="#E74C3C" ToolTip.Tip="Rot">
                                                 <Grid>
+                                                    <Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsFilterLabelRed}"/>
+                                                    <Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsFilterLabelRed}"/>
                                                     <Ellipse Width="16" Height="16" Fill="#E74C3C"/>
-                                                    <Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsFilterLabelRed}"/>
                                                 </Grid>
                                             </Button>
-                                            <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                            <Button Classes="ghost label-chip"
                                                     Command="{Binding SetFilterColorLabelCommand}" CommandParameter="#F03B88" ToolTip.Tip="Pink">
                                                 <Grid>
+                                                    <Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsFilterLabelPink}"/>
+                                                    <Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsFilterLabelPink}"/>
                                                     <Ellipse Width="16" Height="16" Fill="#F03B88"/>
-                                                    <Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsFilterLabelPink}"/>
                                                 </Grid>
                                             </Button>
-                                            <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                            <Button Classes="ghost label-chip"
                                                     Command="{Binding SetFilterColorLabelCommand}" CommandParameter="#8B5CF6" ToolTip.Tip="Lila">
                                                 <Grid>
+                                                    <Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsFilterLabelPurple}"/>
+                                                    <Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsFilterLabelPurple}"/>
                                                     <Ellipse Width="16" Height="16" Fill="#8B5CF6"/>
-                                                    <Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsFilterLabelPurple}"/>
                                                 </Grid>
                                             </Button>
-                                            <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                            <Button Classes="ghost label-chip"
                                                     Command="{Binding SetFilterColorLabelCommand}" CommandParameter="#3B82F6" ToolTip.Tip="Blau">
                                                 <Grid>
+                                                    <Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsFilterLabelBlue}"/>
+                                                    <Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsFilterLabelBlue}"/>
                                                     <Ellipse Width="16" Height="16" Fill="#3B82F6"/>
-                                                    <Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsFilterLabelBlue}"/>
                                                 </Grid>
                                             </Button>
-                                            <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                            <Button Classes="ghost label-chip"
                                                     Command="{Binding SetFilterColorLabelCommand}" CommandParameter="#0891B2" ToolTip.Tip="Cyan">
                                                 <Grid>
+                                                    <Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsFilterLabelCyan}"/>
+                                                    <Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsFilterLabelCyan}"/>
                                                     <Ellipse Width="16" Height="16" Fill="#0891B2"/>
-                                                    <Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsFilterLabelCyan}"/>
                                                 </Grid>
                                             </Button>
-                                            <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                            <Button Classes="ghost label-chip"
                                                     Command="{Binding SetFilterColorLabelCommand}" CommandParameter="#0F766E" ToolTip.Tip="Türkis">
                                                 <Grid>
+                                                    <Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsFilterLabelTeal}"/>
+                                                    <Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsFilterLabelTeal}"/>
                                                     <Ellipse Width="16" Height="16" Fill="#0F766E"/>
-                                                    <Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsFilterLabelTeal}"/>
                                                 </Grid>
                                             </Button>
-                                            <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                            <Button Classes="ghost label-chip"
                                                     Command="{Binding SetFilterColorLabelCommand}" CommandParameter="#22C55E" ToolTip.Tip="Grün">
                                                 <Grid>
+                                                    <Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsFilterLabelGreen}"/>
+                                                    <Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsFilterLabelGreen}"/>
                                                     <Ellipse Width="16" Height="16" Fill="#22C55E"/>
-                                                    <Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsFilterLabelGreen}"/>
                                                 </Grid>
                                             </Button>
-                                            <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                            <Button Classes="ghost label-chip"
                                                     Command="{Binding SetFilterColorLabelCommand}" CommandParameter="#FACC15" ToolTip.Tip="Gelb">
                                                 <Grid>
+                                                    <Ellipse Width="24" Height="24" Fill="Black" IsVisible="{Binding IsFilterLabelYellow}"/>
+                                                    <Ellipse Width="20" Height="20" Fill="White" IsVisible="{Binding IsFilterLabelYellow}"/>
                                                     <Ellipse Width="16" Height="16" Fill="#FACC15"/>
-                                                    <Ellipse Width="22" Height="22" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2" IsVisible="{Binding IsFilterLabelYellow}"/>
                                                 </Grid>
                                             </Button>
                                         </StackPanel>
@@ -979,7 +988,7 @@
                                                 Command="{Binding SetFilterRejectedCommand}" CommandParameter="Only">
                                             <Grid ColumnDefinitions="*,20">
                                                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-down.svg" Width="18" Height="18" VerticalAlignment="Center"/>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-down-bold.svg" Width="18" Height="18" VerticalAlignment="Center" IconBrush="#E74C3C"/>
                                                     <TextBlock Text="Nur verworfene" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRejectedOnly}"
@@ -991,7 +1000,7 @@
                                                 Command="{Binding SetFilterRejectedCommand}" CommandParameter="Kept">
                                             <Grid ColumnDefinitions="*,20">
                                                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-up.svg" Width="18" Height="18" VerticalAlignment="Center"/>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-up-bold.svg" Width="18" Height="18" VerticalAlignment="Center" IconBrush="#22C55E"/>
                                                     <TextBlock Text="Nur behaltene" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterKeptOnly}"
@@ -2463,7 +2472,7 @@
                                                             Click="OnRejectBadgeClick"
                                                             ToolTip.Tip="Verworfen">
                                                         <!-- Auf farbiger Pille: nur der Rand, die Farbe bleibt. -->
-                                                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-down.svg"
+                                                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-down-bold.svg"
                                                                        Shadow="Rim"
                                                                        Width="18" Height="18"
                                                                        IconBrush="White"
@@ -2479,7 +2488,7 @@
                                                             IsVisible="{Binding IsPicked}"
                                                             Click="OnKeepBadgeClick"
                                                             ToolTip.Tip="Behalten">
-                                                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-up.svg"
+                                                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-up-bold.svg"
                                                                        Shadow="Rim"
                                                                        Width="18" Height="18"
                                                                        IconBrush="White"
@@ -2771,7 +2780,7 @@
                                                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
                                                             Tag="1"
                                                             Click="OnHoverSetRatingClick">
-                                                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                        Classes="rating-star"
                                                                        Width="18" Height="18" />
                                                     </Button>
@@ -2779,7 +2788,7 @@
                                                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
                                                             Tag="2"
                                                             Click="OnHoverSetRatingClick">
-                                                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                        Classes="rating-star"
                                                                        Width="18" Height="18" />
                                                     </Button>
@@ -2787,7 +2796,7 @@
                                                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
                                                             Tag="3"
                                                             Click="OnHoverSetRatingClick">
-                                                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                        Classes="rating-star"
                                                                        Width="18" Height="18" />
                                                     </Button>
@@ -2795,7 +2804,7 @@
                                                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
                                                             Tag="4"
                                                             Click="OnHoverSetRatingClick">
-                                                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                        Classes="rating-star"
                                                                        Width="18" Height="18" />
                                                     </Button>
@@ -2803,7 +2812,7 @@
                                                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
                                                             Tag="5"
                                                             Click="OnHoverSetRatingClick">
-                                                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                        Classes="rating-star"
                                                                        Width="18" Height="18" />
                                                     </Button>
@@ -2899,11 +2908,11 @@
                                                         CommandParameter="{Binding}"
                                                         ToolTip.Tip="Favorit">
                                                         <Grid>
-                                                            <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
+                                                            <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/heart-bold.svg"
                                                                            Width="20" Height="20"
                                                                            Classes="fav-heart"
                                                                            IsVisible="{Binding !IsFavorite}"/>
-                                                            <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
+                                                            <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/heart-bold.svg"
                                                                            Width="20" Height="20"
                                                                            Classes="fav-heart active"
                                                                            IsVisible="{Binding IsFavorite}"/>
@@ -3359,7 +3368,7 @@
                                                     Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
                                                     Tag="1"
                                                     Click="OnHoverSetRatingClick">
-                                                <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                Classes="rating-star"
                                                                Width="18" Height="18" />
                                             </Button>
@@ -3367,7 +3376,7 @@
                                                     Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
                                                     Tag="2"
                                                     Click="OnHoverSetRatingClick">
-                                                <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                Classes="rating-star"
                                                                Width="18" Height="18" />
                                             </Button>
@@ -3375,7 +3384,7 @@
                                                     Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
                                                     Tag="3"
                                                     Click="OnHoverSetRatingClick">
-                                                <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                Classes="rating-star"
                                                                Width="18" Height="18" />
                                             </Button>
@@ -3383,7 +3392,7 @@
                                                     Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
                                                     Tag="4"
                                                     Click="OnHoverSetRatingClick">
-                                                <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                Classes="rating-star"
                                                                Width="18" Height="18" />
                                             </Button>
@@ -3391,13 +3400,13 @@
                                                     Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
                                                     Tag="5"
                                                     Click="OnHoverSetRatingClick">
-                                                <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                                                <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                                                Classes="rating-star"
                                                                Width="18" Height="18" />
                                             </Button>
                                         </StackPanel>
                                         <Button Grid.Column="7"
-                                                Classes="favorite-btn gallery-toggle-badge"
+                                                Classes="favorite-btn gallery-toggle-badge beside-stars"
                                                 Classes.badge-always="{Binding DataContext.FavoriteBadgeAlwaysVisible, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 Background="Transparent"
                                                 BorderThickness="0"
@@ -3410,11 +3419,11 @@
                                                 CommandParameter="{Binding}"
                                                 ToolTip.Tip="Favorit">
                                             <Grid>
-                                                <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
+                                                <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/heart-bold.svg"
                                                                Width="20" Height="20"
                                                                Classes="fav-heart"
                                                                IsVisible="{Binding !IsFavorite}"/>
-                                                <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
+                                                <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/heart-bold.svg"
                                                                Width="20" Height="20"
                                                                Classes="fav-heart active"
                                                                IsVisible="{Binding IsFavorite}"/>
@@ -3533,10 +3542,10 @@
                                                                     IsVisible="{Binding HasColorLabel}"/>
                                                             <StackPanel Orientation="Horizontal" Spacing="1"
                                                                         IsVisible="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}">
-                                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg" Width="18" Height="18" IconBrush="White"/>
+                                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Width="18" Height="18" IconBrush="White"/>
                                                                 <TextBlock Text="{Binding Rating}" Foreground="White" FontSize="11" VerticalAlignment="Center"/>
                                                             </StackPanel>
-                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg" Width="18" Height="18" IconBrush="White"
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/heart-bold.svg" Width="18" Height="18" IconBrush="White"
                                                                            IsVisible="{Binding IsFavorite}"/>
                                                         </StackPanel>
                                                     </Border>
@@ -3550,7 +3559,7 @@
                                                             <Border.Effect>
                                                                 <DropShadowEffect Color="#D0000000" BlurRadius="4" OffsetX="0" OffsetY="1"/>
                                                             </Border.Effect>
-                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-down.svg"
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-down-bold.svg"
                                                                            Width="18" Height="18"
                                                                            IconBrush="White"
                                                                            HorizontalAlignment="Center"
@@ -3560,7 +3569,7 @@
                                                             <Border.Effect>
                                                                 <DropShadowEffect Color="#D0000000" BlurRadius="4" OffsetX="0" OffsetY="1"/>
                                                             </Border.Effect>
-                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-up.svg"
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-up-bold.svg"
                                                                            Width="18" Height="18"
                                                                            IconBrush="White"
                                                                            HorizontalAlignment="Center"
@@ -3815,48 +3824,48 @@
                         <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1" Width="22" Height="28"
                                 Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
                                 Command="{Binding SetSelectedRatingCommand}" CommandParameter="1">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                            Classes="rating-star"
                                            Width="18" Height="18"/>
                         </Button>
                         <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1" Width="22" Height="28"
                                 Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
                                 Command="{Binding SetSelectedRatingCommand}" CommandParameter="2">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                            Classes="rating-star"
                                            Width="18" Height="18"/>
                         </Button>
                         <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1" Width="22" Height="28"
                                 Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
                                 Command="{Binding SetSelectedRatingCommand}" CommandParameter="3">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                            Classes="rating-star"
                                            Width="18" Height="18"/>
                         </Button>
                         <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1" Width="22" Height="28"
                                 Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
                                 Command="{Binding SetSelectedRatingCommand}" CommandParameter="4">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                            Classes="rating-star"
                                            Width="18" Height="18"/>
                         </Button>
                         <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1" Width="22" Height="28"
                                 Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
                                 Command="{Binding SetSelectedRatingCommand}" CommandParameter="5">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg"
                                            Classes="rating-star"
                                            Width="18" Height="18"/>
                         </Button>
-                        <Button Classes="icon-btn"
+                        <Button Classes="icon-btn beside-stars"
                                 Width="28" Height="28" VerticalAlignment="Center" Margin="4,0,0,0"
                                 Command="{Binding ToggleSelectedFavoriteCommand}"
                                 ToolTip.Tip="Favorit">
                             <Grid Width="20" Height="20">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/heart-bold.svg"
                                                Width="20" Height="20"
                                                Classes="fav-heart"
                                                IsVisible="{Binding !SelectedIsFavorite}"/>
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/heart-bold.svg"
                                                Width="20" Height="20"
                                                Classes="fav-heart active"
                                                IsVisible="{Binding SelectedIsFavorite}"/>

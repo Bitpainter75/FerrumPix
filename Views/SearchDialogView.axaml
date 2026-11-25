@@ -105,9 +105,9 @@
                 <Button Classes="icon-btn" Width="30" Height="30" Click="OnFavoriteClick" Tag="Not"
                         ToolTip.Tip="Ohne Favoriten">
                     <Grid Width="20" Height="20">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/heart-bold.svg"
                                        Width="20" Height="20" Classes="fav-heart" IsVisible="{Binding !IsDialogSearchFavoriteNot}"/>
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/heart-bold.svg"
                                        Width="20" Height="20" Classes="fav-heart active" IsVisible="{Binding IsDialogSearchFavoriteNot}"/>
                     </Grid>
                 </Button>
@@ -118,12 +118,12 @@
                 <Button Classes="icon-btn pick-btn pick-keep" Width="30" Height="30"
                         Classes.active="{Binding IsDialogSearchPickKeep}" Click="OnPickClick" Tag="1"
                         ToolTip.Tip="Behalten">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-up.svg" Width="18" Height="18"/>
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-up-bold.svg" Width="18" Height="18"/>
                 </Button>
                 <Button Classes="icon-btn pick-btn pick-reject" Width="30" Height="30"
                         Classes.active="{Binding IsDialogSearchPickReject}" Click="OnPickClick" Tag="-1"
                         ToolTip.Tip="Verworfen">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-down.svg" Width="18" Height="18"/>
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/thumbs-down-bold.svg" Width="18" Height="18"/>
                 </Button>
             </StackPanel>
 
@@ -134,12 +134,16 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Button Classes="ghost" Width="26" Height="26" Padding="0" CornerRadius="13"
+                        <Button Classes="ghost label-chip"
                                 Command="{Binding ToggleCommand}" ToolTip.Tip="{Binding ToolTip}">
                             <Grid>
-                                <Ellipse Width="16" Height="16" Fill="{Binding Brush}"/>
-                                <Ellipse Width="24" Height="24" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2"
+                                <!-- Drei deckende Ebenen statt transparenter Konturen: Hintergrund
+                                     kann nicht mehr wie eine weitere Auswahlmarkierung aussehen. -->
+                                <Ellipse Width="24" Height="24" Fill="Black"
                                          IsVisible="{Binding IsActive}"/>
+                                <Ellipse Width="20" Height="20" Fill="White"
+                                         IsVisible="{Binding IsActive}"/>
+                                <Ellipse Width="16" Height="16" Fill="{Binding Brush}"/>
                             </Grid>
                         </Button>
                     </DataTemplate>
@@ -176,41 +180,41 @@
                             <Button Classes="dropdown-item" HorizontalContentAlignment="Left" Click="OnRatingClick" Tag="1"
                                     Classes.active="{Binding IsDialogSearchRating1}" ToolTip.Tip="1 Stern">
                                 <StackPanel Orientation="Horizontal" Spacing="3">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="search-star" Width="16" Height="16"/>
                                 </StackPanel>
                             </Button>
                             <Button Classes="dropdown-item" HorizontalContentAlignment="Left" Click="OnRatingClick" Tag="2"
                                     Classes.active="{Binding IsDialogSearchRating2}" ToolTip.Tip="2 Sterne">
                                 <StackPanel Orientation="Horizontal" Spacing="3">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="search-star" Width="16" Height="16"/>
                                 </StackPanel>
                             </Button>
                             <Button Classes="dropdown-item" HorizontalContentAlignment="Left" Click="OnRatingClick" Tag="3"
                                     Classes.active="{Binding IsDialogSearchRating3}" ToolTip.Tip="3 Sterne">
                                 <StackPanel Orientation="Horizontal" Spacing="3">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="search-star" Width="16" Height="16"/>
                                 </StackPanel>
                             </Button>
                             <Button Classes="dropdown-item" HorizontalContentAlignment="Left" Click="OnRatingClick" Tag="4"
                                     Classes.active="{Binding IsDialogSearchRating4}" ToolTip.Tip="4 Sterne">
                                 <StackPanel Orientation="Horizontal" Spacing="3">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="search-star" Width="16" Height="16"/>
                                 </StackPanel>
                             </Button>
                             <Button Classes="dropdown-item" HorizontalContentAlignment="Left" Click="OnRatingClick" Tag="5"
                                     Classes.active="{Binding IsDialogSearchRating5}" ToolTip.Tip="5 Sterne">
                                 <StackPanel Orientation="Horizontal" Spacing="3">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg" Classes="search-star" Width="16" Height="16"/>
                                 </StackPanel>
                             </Button>
                         </StackPanel>

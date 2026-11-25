@@ -38,13 +38,14 @@ Namespace ViewModels
         End Property
     End Class
 
-    ''' <summary>Ein Stern der Bewertung: gefuellt oder leer.</summary>
+    ''' <summary>Ein Stern der Bewertung: gesetzt oder nicht. Beide nehmen dasselbe Zeichen aus dem
+    ''' fetten Satz; den Unterschied macht die Farbe (Klasse on in der Ansicht), nicht die Form.</summary>
     Public Class MetadataCompareStar
         Public Property IsOn As Boolean
         Public ReadOnly Property Source As String
             Get
-                Return If(IsOn, "avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg",
-                                "avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg")
+                Return If(IsOn, "avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg",
+                                "avares://FerrumPix/Assets/Icons/phosphor/bold/star-bold.svg")
             End Get
         End Property
     End Class

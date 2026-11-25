@@ -183,7 +183,9 @@ Namespace ViewModels
         ''' <summary>Setzt ein neues Licht der gewaehlten Lichtart an diese Stelle (Prozent des Bildes).</summary>
         Public Function AddLightAt(xPercent As Double, yPercent As Double) As LightSource
             CaptureUndoState("LightAdd")
-            Dim light As New LightSource With {.XPercent = xPercent, .YPercent = yPercent}
+            ' Ein neues Licht rechnet seine Schatten auf dem neuesten Weg; gespeicherte behalten ihren.
+            Dim light As New LightSource With {.XPercent = xPercent, .YPercent = yPercent,
+                                               .ShadowModel = LightSource.CurrentShadowModel}
             Dim preset = If(LightPresets.Find(_newLightPresetKey), LightPresets.All(0))
             preset.ApplyTo(light)
             light.Name = NextLightName(LocalizationService.T(preset.Label))
@@ -340,6 +342,7 @@ Namespace ViewModels
                               NameOf(LightRayContrast), NameOf(LightUseDepth), NameOf(LightDepthReach), NameOf(LightX), NameOf(LightY),
                               NameOf(LightHeight), NameOf(LightShading), NameOf(LightCastShadows), NameOf(LightAmbient),
                               NameOf(LightShadowSoftness), NameOf(ShowLightShadowSoftness),
+                              NameOf(LightRimLight), NameOf(LightRimStrength), NameOf(LightRimWidth), NameOf(ShowLightRimControls),
                               NameOf(IsLightSpot), NameOf(IsLightArea), NameOf(IsLightRays), NameOf(IsLightDirectional),
                               NameOf(LightSwatchBrush), NameOf(LightName)}
                 Me.RaisePropertyChanged(name)
@@ -673,7 +676,14 @@ Namespace ViewModels
                 Return If(SelectedLight?.CastShadows, False)
             End Get
             Set(value As Boolean)
-                SetLightValue(NameOf(LightCastShadows), Sub(l) l.CastShadows = value, Function(l) l.CastShadows = value, raiseAll:=True)
+                ' Ein hier eingeschalteter Schatten ist eine neue Bearbeitung und bekommt den
+                ' neuesten Rechenweg. Ein geladenes Licht mit Schatten wird davon nicht beruehrt.
+                SetLightValue(NameOf(LightCastShadows),
+                              Sub(l)
+                                  l.CastShadows = value
+                                  If value Then l.ShadowModel = LightSource.CurrentShadowModel
+                              End Sub,
+                              Function(l) l.CastShadows = value, raiseAll:=True)
             End Set
         End Property
 
@@ -693,6 +703,46 @@ Namespace ViewModels
             Get
                 Dim light = SelectedLight
                 Return light IsNot Nothing AndAlso light.UseDepth AndAlso light.CastShadows
+            End Get
+        End Property
+
+        ''' <summary>Kantenlicht von hinten: ein heller Saum am Umriss zur Lichtseite (mit Tiefe).</summary>
+        Public Property LightRimLight As Boolean
+            Get
+                Return If(SelectedLight?.RimLight, False)
+            End Get
+            Set(value As Boolean)
+                SetLightValue(NameOf(LightRimLight), Sub(l) l.RimLight = value, Function(l) l.RimLight = value, raiseAll:=True)
+            End Set
+        End Property
+
+        ''' <summary>Staerke des Kantenlichts, 0 bis 100.</summary>
+        Public Property LightRimStrength As Double
+            Get
+                Return If(SelectedLight?.RimStrength, 50.0)
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.0, Math.Min(100.0, value))
+                SetLightValue(NameOf(LightRimStrength), Sub(l) l.RimStrength = v, Function(l) Math.Abs(l.RimStrength - v) < 0.0001)
+            End Set
+        End Property
+
+        ''' <summary>Breite des Saums, 0 bis 100.</summary>
+        Public Property LightRimWidth As Double
+            Get
+                Return If(SelectedLight?.RimWidth, 30.0)
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.0, Math.Min(100.0, value))
+                SetLightValue(NameOf(LightRimWidth), Sub(l) l.RimWidth = v, Function(l) Math.Abs(l.RimWidth - v) < 0.0001)
+            End Set
+        End Property
+
+        ''' <summary>Die Regler des Kantenlichts stehen nur da, wenn es eingeschaltet ist.</summary>
+        Public ReadOnly Property ShowLightRimControls As Boolean
+            Get
+                Dim light = SelectedLight
+                Return light IsNot Nothing AndAlso light.UseDepth AndAlso light.RimLight
             End Get
         End Property
 
@@ -879,6 +929,7 @@ Namespace ViewModels
                 Case NameOf(LightShading) : Return CombineHistoryLabel("Beleuchtung", "Relief")
                 Case NameOf(LightCastShadows) : Return CombineHistoryLabel("Beleuchtung", "Schatten werfen")
                 Case NameOf(LightShadowSoftness) : Return CombineHistoryLabel("Beleuchtung", "Schattenkante")
+                Case NameOf(LightRimLight), NameOf(LightRimStrength), NameOf(LightRimWidth) : Return CombineHistoryLabel("Beleuchtung", "Kantenlicht")
                 Case NameOf(LightPresetLabel) : Return CombineHistoryLabel("Beleuchtung", "Lichtart")
                 Case NameOf(LightTemperature), NameOf(LightColorValue), NameOf(LightUseTemperature) : Return CombineHistoryLabel("Beleuchtung", "Lichtfarbe")
                 Case Else : Return LocalizationService.T("Beleuchtung")

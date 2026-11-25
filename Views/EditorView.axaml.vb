@@ -8443,6 +8443,25 @@ Namespace Views
             TryCast(TryCast(sender, Control)?.DataContext, ImageItem)?.EnsureCatalogCaptionLoaded()
         End Sub
 
+        ''' <summary>Die Liste steht auf einer Ordner-Ueberschrift (PFEIL HOCH und RUNTER, ein
+        ''' getippter Buchstabe): das ViewModel hat stattdessen die naechste Anpassung gewaehlt,
+        ''' und die Liste bekommt diese Zeile. Eine zweiseitige Bindung allein laesst die Liste
+        ''' auf dem abgelehnten Eintrag stehen.</summary>
+        Public Sub OnPresetChoiceSelectionChanged(sender As Object, e As SelectionChangedEventArgs)
+            Dim box = TryCast(sender, ComboBox)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If box Is Nothing OrElse vm Is Nothing Then Return
+            Dim shown = TryCast(box.SelectedItem, AdjustmentPresetChoiceRow)
+            If shown Is Nothing OrElse Not shown.IsHeader Then Return
+            ' Die Richtung kommt aus dem Eintrag, den die Liste gerade verlassen hat: so gilt
+            ' dasselbe, ob die Bindung das ViewModel schon erreicht hat oder nicht.
+            Dim previous = If(e.RemovedItems IsNot Nothing AndAlso e.RemovedItems.Count > 0,
+                              TryCast(e.RemovedItems(0), AdjustmentPresetChoiceRow), Nothing)
+            Dim target = AdjustmentPresetChoiceRow.Resolve(vm.AdjustmentPresetChoiceRows, shown, previous)
+            If target IsNot Nothing Then vm.SelectedAdjustmentPresetRow = target
+            box.SelectedItem = vm.SelectedAdjustmentPresetRow
+        End Sub
+
         ''' <summary>Wie im Viewer: verlaesst die Maus das Bild, geht sein Tooltip sofort zu.</summary>
         Public Sub OnFilmstripItemPointerExited(sender As Object, e As PointerEventArgs)
             Dim control = TryCast(sender, Control)

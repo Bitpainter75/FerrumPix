@@ -204,7 +204,7 @@
     "FUJIFILMXF1": 0.761,
     "FUJIFILMXF10": 0.357,
     "FUJIFILMXH1": -0.049,
-    "FUJIFILMXH2": 0.192,
+    "FUJIFILMXH2": 0.215,
     "FUJIFILMXH2S": 0.15,
     "FUJIFILMXM1": 0.094,
     "FUJIFILMXM5": 0.168,
@@ -344,7 +344,7 @@
     "NIKOND800": -0.15,
     "NIKOND800E": -0.15,
     "NIKOND810": -0.15,
-    "NIKOND850": -0.134,
+    "NIKOND850": -0.135,
     "NIKOND90": 0.75,
     "NIKONDF": -0.05,
     "NIKONE5400": 0.407,
@@ -470,7 +470,7 @@
     "PANASONICDMCFZ70": 0.709,
     "PANASONICDMCFZ72": 0.16,
     "PANASONICDMCFZ8": 0.7,
-    "PANASONICDMCG1": 0.75,
+    "PANASONICDMCG1": 0.792,
     "PANASONICDMCG2": 0.752,
     "PANASONICDMCG3": 0.632,
     "PANASONICDMCG6": 0.581,
@@ -770,6 +770,15 @@
       "blueHue": -1,
       "blueSaturation": -11,
       "shadowTint": 0
+    },
+    "NIKONZF": {
+      "redHue": -11,
+      "redSaturation": 10,
+      "greenHue": 8,
+      "greenSaturation": 6,
+      "blueHue": 2,
+      "blueSaturation": -30,
+      "shadowTint": 1
     },
     "OLYMPUSE5": {
       "redHue": -3,

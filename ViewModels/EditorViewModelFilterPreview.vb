@@ -306,8 +306,7 @@ Namespace ViewModels
             Dim jobs = _filterPreviewTiles.Select(Function(t) (Tile:=t, Adjustments:=FilterPreviewAdjustments(current, t.Id))).ToList()
             Dim path = RenderSourcePath
             Dim usesUnbaked = _pixelLayerHidden
-            Dim sourceKey = String.Concat(OriginalDecodeKey(path), "|", _workingImage.Version.ToString(Globalization.CultureInfo.InvariantCulture),
-                                          "|", If(usesUnbaked, "u", "b"))
+            Dim sourceKey = FilterPreviewSourceKeyNow()
             Dim ignored = RenderFilterPreviewsAsync(jobs, path, usesUnbaked, sourceKey, cts.Token)
         End Sub
 
@@ -322,17 +321,7 @@ Namespace ViewModels
             Try
                 Await Task.Run(
                     Sub()
-                        If _filterPreviewSource Is Nothing OrElse
-                           Not String.Equals(_filterPreviewSourceKey, sourceKey, StringComparison.Ordinal) Then
-                            ' Wie die kleine Quelle des Reglerzugs (BuildSliderPreviewSourceAsync).
-                            Dim built = If(usesUnbaked,
-                                           LoadOriginalSource(path, FilterPreviewMaxDimension),
-                                           _workingImage.RenderDownscale(FilterPreviewMaxDimension))
-                            If built Is Nothing Then Return
-                            _filterPreviewSource?.Dispose()
-                            _filterPreviewSource = built
-                            _filterPreviewSourceKey = sourceKey
-                        End If
+                        If EnsureFilterPreviewSource(path, usesUnbaked, sourceKey) Is Nothing Then Return
                         For Each job In jobs
                             If token.IsCancellationRequested Then Return
                             Dim rendered As SKBitmap = Nothing
@@ -363,6 +352,34 @@ Namespace ViewModels
             Finally
                 _filterPreviewRenderGate.Release()
             End Try
+        End Function
+
+        ''' <summary>Die kleine Fassung des Arbeitsbilds, gebaut nur, wenn sie fehlt oder fuer einen
+        ''' anderen Stand gilt. Nur innerhalb von <see cref="_filterPreviewRenderGate"/> und im
+        ''' Hintergrund rufen. Die Kacheln der Filter und die Vorschaubilder der gespeicherten
+        ''' Anpassungen (EditorViewModelPresetPreview.vb) teilen sie sich: so entsteht fuer beide
+        ''' zusammen hoechstens eine, und nie zwei zugleich.</summary>
+        Private Function EnsureFilterPreviewSource(path As String, usesUnbaked As Boolean, sourceKey As String) As SKBitmap
+            If _filterPreviewSource Is Nothing OrElse
+               Not String.Equals(_filterPreviewSourceKey, sourceKey, StringComparison.Ordinal) Then
+                ' Wie die kleine Quelle des Reglerzugs (BuildSliderPreviewSourceAsync).
+                Dim built = If(usesUnbaked,
+                               LoadOriginalSource(path, FilterPreviewMaxDimension),
+                               _workingImage.RenderDownscale(FilterPreviewMaxDimension))
+                If built Is Nothing Then Return Nothing
+                _filterPreviewSource?.Dispose()
+                _filterPreviewSource = built
+                _filterPreviewSourceKey = sourceKey
+            End If
+            Return _filterPreviewSource
+        End Function
+
+        ''' <summary>Der Schluessel der kleinen Quelle fuer den Stand von jetzt, vom Anzeigefaden
+        ''' gelesen: Datei mit Beschnitt der RAW-Stufe, Stand des Arbeitsbilds, mit oder ohne
+        ''' eingebackene Ebene.</summary>
+        Private Function FilterPreviewSourceKeyNow() As String
+            Return String.Concat(OriginalDecodeKey(RenderSourcePath), "|", _workingImage.Version.ToString(Globalization.CultureInfo.InvariantCulture),
+                                 "|", If(_pixelLayerHidden, "u", "b"))
         End Function
 
         ''' Was der Klick auf einen Filter zurücknimmt (<see cref="ResetFilterInternal"/>), als Felder

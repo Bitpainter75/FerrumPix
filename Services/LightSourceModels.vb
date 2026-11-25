@@ -74,6 +74,24 @@ Namespace Services
         ''' <summary>Wie weich der Rand des geworfenen Schattens ist, 0 bis 100: bei 0 scharf, darueber
         ''' laeuft er zunehmend weich aus. Kommt zur Weiche des Lichts hinzu.</summary>
         Public Property ShadowSoftness As Double = 40
+        ''' <summary>Rechenweg des geworfenen Schattens. 0 ist der Weg bis 0.9.90 und gilt fuer jedes
+        ''' Licht ohne das Feld: was vor der Quelle steht, ist massiv bis zum Grund. 1
+        ''' (<see cref="CurrentShadowModel"/>): ein Gegenstand ist so dick, wie er an der Stelle
+        ''' schmal ist, ein Strahl, der tiefer unter ihm durchlaeuft, ist frei. Ein Zaun, ein Ast oder
+        ''' ein Arm weit vor dem Hintergrund wirft so einen schmalen Schatten statt einer Wand bis
+        ''' zum Grund. Der Editor setzt es, wenn ein Licht angelegt oder sein Schatten eingeschaltet
+        ''' wird; gespeicherte Lichter behalten ihren Weg und sehen bitgleich aus wie zuvor.</summary>
+        Public Property ShadowModel As Integer = 0
+        ''' <summary>Das Modell, das ein neu eingeschalteter Schatten bekommt (siehe <see cref="ShadowModel"/>).</summary>
+        Public Const CurrentShadowModel As Integer = 1
+        ''' <summary>Kantenlicht von hinten: das Licht zeichnet einen hellen Saum an den Umriss eines
+        ''' Gegenstands, hinter dem die Tiefe zurueckspringt, auf der Seite zum Licht. Braucht die
+        ''' Tiefe; ab Werk aus.</summary>
+        Public Property RimLight As Boolean = False
+        ''' <summary>Staerke des Kantenlichts, 0 bis 100. Bei 0 entsteht keins.</summary>
+        Public Property RimStrength As Double = 50
+        ''' <summary>Breite des Saums, 0 bis 100: von einem schmalen Strich bis zu einem breiten Band.</summary>
+        Public Property RimWidth As Double = 30
 
         Public Function Clone() As LightSource
             Return DirectCast(MemberwiseClone(), LightSource)
@@ -84,7 +102,8 @@ Namespace Services
             Return String.Join(",", New Object() {
                 Enabled, Kind, XPercent, YPercent, RadiusPercent, Intensity, AngleDegrees, ConeDegrees,
                 AspectPercent, Softness, Falloff, UseTemperature, TemperatureKelvin, Color, BlendMode, Glow,
-                RayCount, RayContrast, UseDepth, DepthReach, HeightPercent, Shading, CastShadows, ShadowSoftness, Id
+                RayCount, RayContrast, UseDepth, DepthReach, HeightPercent, Shading, CastShadows, ShadowSoftness,
+                ShadowModel, RimLight, RimStrength, RimWidth, Id
             }.Select(Function(v) Convert.ToString(v, CultureInfo.InvariantCulture)))
         End Function
     End Class

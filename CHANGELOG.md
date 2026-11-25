@@ -9,6 +9,12 @@
 - The viewer can show where the camera focused, switched on and off with a new button in the
   footer, and Z then zooms to 100 percent right at that spot.
 
+- Lighting in the editor: a light can now draw a rim light, a bright edge along the outline of a
+  subject that stands in front of a more distant background, as a light from behind does. It is
+  switched on per light and has its own strength and width. Shadows cast by newly placed lights
+  treat thin things such as fences, branches and ropes as thin, so they no longer throw a shadow
+  like a wall. Lights in saved edits look exactly as before.
+
 - The picture comparison in the viewer can show four pictures at once, in two rows. Select three
   or four pictures in the gallery and choose Compare, or switch between two and four with a new
   button next to the chain. Paging changes only the picture you clicked, zoom and position stay
@@ -20,9 +26,12 @@
 - Saving an adjustment in the editor now asks what it should contain: tick whole groups such as
   colour or single sliders, and applying it later changes only those and leaves the rest of the
   picture alone. Adjustments saved before keep working as they did. Saved adjustments can be
-  sorted into folders, and a new Manage button opens a window to rename, move, delete, import and
-  export them. Each one is a small file, so sharing them means copying files or a whole folder,
-  and the settings let you keep them in a folder of your choice, for example in a cloud folder.
+  sorted into folders, and a new Manage button opens a window to rename, move and delete them.
+  With a picture open, that window shows your photo in small with each
+  adjustment and shows one on the picture while the mouse rests on it, before you apply
+  anything. Each one is a small file, so sharing them means copying files
+  or a whole folder, and the settings let you keep them in a folder of your choice, for example
+  in a cloud folder.
   Pasting copied adjustments has a second command, Paste with selection, that asks which sliders
   to paste and leaves all others as they are.
 
@@ -69,6 +78,9 @@
 - Videos in the viewer: two quick clicks on the seek bar no longer jump back to the start, the
   handle no longer slips away under the pointer while dragging, the play button shows the right
   state after switching to another video, and the mouse wheel on the seek bar really jumps.
+
+- Full screen from the picture comparison shows the picture of the active field, and paging there
+  changes it; back in the window the comparison is as you left it.
 
 - When the graphics card runs out of memory during the depth map, denoising, object removal or
   upscaling, for example because another program is using it, FerrumPix now continues on the

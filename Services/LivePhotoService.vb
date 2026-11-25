@@ -98,8 +98,11 @@ Namespace Services
                 End If
                 If Not IsImageHalf(path) Then Return result
 
+                ' Motion Photo nur bei JPEG: Abspielen, Herausschreiben und die Speicherwege
+                ' (MotionPhotoService.Detect, ExtractClip, HasVideo) kennen nur JPEG. Ein HEIC mit
+                ' angehaengtem Film bekaeme sonst Abzeichen und Abspielknopf, und der Film liefe nie.
                 Dim claim = MotionPhotoService.ReadClaim(list)
-                If claim.Claimed Then
+                If claim.Claimed AndAlso MotionPhotoService.IsJpegPath(path) Then
                     Using stream As New FileStream(path, FileMode.Open, FileAccess.Read,
                                                    FileShare.ReadWrite Or FileShare.Delete, 4096)
                         If MotionPhotoService.Evaluate(claim, stream).HasVideo Then
@@ -199,19 +202,33 @@ Namespace Services
             Return result
         End Function
 
+        ''' <summary>Fuer die Pruefungen: zaehlt, wie oft die Suche nach der anderen Haelfte auf dem
+        ''' Anzeigefaden lief. Sie liest Ordner und im Zweifel beide Dateien und gehoert in den
+        ''' Hintergrund.</summary>
+        Friend Shared PartnerLookupsOnUiThread As Integer
+
         ''' <summary>Die andere Haelfte eines Live Photos zu diesem Pfad, oder Nothing. Erst der
         ''' Ordner: liegt dort keine Datei gleichen Stamms mit der passenden Endung, ist die Frage
         ''' schon beantwortet, ohne dass eine Datei geoeffnet wird. Liest Ordner und im Zweifel
         ''' Dateien: nicht fuer jede Kachel auf dem Anzeigefaden rufen. Wirft nie.</summary>
         Public Shared Function FindPartnerPath(path As String) As String
             If String.IsNullOrEmpty(path) Then Return Nothing
+            Try
+                If Avalonia.Threading.Dispatcher.UIThread.CheckAccess() Then Threading.Interlocked.Increment(PartnerLookupsOnUiThread)
+            Catch
+            End Try
             Dim wantsVideo = IsImageHalf(path)
             If Not wantsVideo AndAlso Not IsVideoHalf(path) Then Return Nothing
             Try
                 Dim folder = IO.Path.GetDirectoryName(path)
                 Dim stem = IO.Path.GetFileNameWithoutExtension(path)
                 If String.IsNullOrEmpty(folder) OrElse String.IsNullOrEmpty(stem) OrElse Not IO.Directory.Exists(folder) Then Return Nothing
-                Dim candidates = IO.Directory.EnumerateFiles(folder, stem & ".*").
+                ' Das Muster ohne Ruecksicht auf die Schreibweise, wie ArePair und PairItems den
+                ' Stamm vergleichen: sonst zeigte die Galerie ein Paar, das Umbenennen aber faende
+                ' die andere Haelfte nicht. Ein * oder ? im Stamm findet hoechstens zu viel, und
+                ' das faellt im Vergleich darunter heraus.
+                Dim options As New IO.EnumerationOptions With {.MatchCasing = IO.MatchCasing.CaseInsensitive}
+                Dim candidates = IO.Directory.EnumerateFiles(folder, stem & ".*", options).
                     Where(Function(c) Not String.Equals(c, path, PathIdentity.Comparison) AndAlso
                                       String.Equals(IO.Path.GetFileNameWithoutExtension(c), stem, StringComparison.OrdinalIgnoreCase) AndAlso
                                       If(wantsVideo, IsVideoHalf(c), IsImageHalf(c))).

@@ -485,6 +485,8 @@ Namespace ViewModels
             Set(value As Bitmap)
                 Dim previous = _currentImage
                 Me.RaiseAndSetIfChanged(_currentImage, value)
+                ' Ohne Vergleich ist es auch das Bild der Vollbildflaeche.
+                If Not _isCompareMode Then RaiseFullscreenImageChanged()
                 Me.RaisePropertyChanged(NameOf(HasNoMedia))
                 Me.RaisePropertyChanged(NameOf(IsSingleImageVisible))
                 Me.RaisePropertyChanged(NameOf(ShowBitmapLoading))
@@ -1998,6 +2000,8 @@ Namespace ViewModels
                                          For Each target In CatalogTargets()
                                              LibraryService.Instance.SetRating(target, value, syncToXmp:=True)
                                          Next
+                                         ' Im Vergleich stehen die Sterne auch AUF dem Feld.
+                                         If _isCompareMode Then LoadCompareMarkers()
                                      End If
                                  End Sub
 
@@ -2019,6 +2023,7 @@ Namespace ViewModels
                                            For Each target In CatalogTargets()
                                                LibraryService.Instance.SetFavorite(target, value)
                                            Next
+                                           If _isCompareMode Then LoadCompareMarkers()
                                        End If
                                    End Sub
 
@@ -2032,6 +2037,7 @@ Namespace ViewModels
                                              End If
                                          ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
                                              LibraryService.Instance.SetColorLabelForMany(CatalogTargets(), value, syncToXmp:=True)
+                                             If _isCompareMode Then LoadCompareMarkers()
                                          End If
                                      End Sub
 
@@ -2502,8 +2508,14 @@ Namespace ViewModels
         Private ReadOnly _compareSet As New List(Of String)()
 
         Private Function CreateComparePanes() As ComparePaneViewModel()
-            Return {New ComparePaneViewModel(Me, 0), New ComparePaneViewModel(Me, 1),
-                    New ComparePaneViewModel(Me, 2), New ComparePaneViewModel(Me, 3)}
+            Dim panes = {New ComparePaneViewModel(Me, 0), New ComparePaneViewModel(Me, 1),
+                         New ComparePaneViewModel(Me, 2), New ComparePaneViewModel(Me, 3)}
+            ' Die Vollbildflaeche zeigt im Vergleich das Bild des aktiven Felds und muss hoeren,
+            ' wenn es ankommt (ViewerViewModelFullscreen.vb).
+            For Each pane In panes
+                AddHandler pane.PropertyChanged, AddressOf OnComparePaneChangedForFullscreen
+            Next
+            Return panes
         End Function
 
         ''' <summary>Die vier Flaechen des Vergleichs. Sichtbar sind die ersten zwei oder alle vier
@@ -2580,6 +2592,10 @@ Namespace ViewModels
         Private Sub SetPaneEntry(pane As ComparePaneViewModel, entry As String)
             entry = If(entry, "")
             pane.FocusToken += 1
+            ' Die Peaking-Ebene gehoerte zum vorigen Bild: weg, bis das neue entwickelt ist, und
+            ' eine noch laufende Rechnung fuer das alte landet nicht mehr.
+            pane.PeakingToken += 1
+            pane.SetFocusPeakingImage(Nothing)
             pane.SetEntry(entry, EntryName(entry))
             Dim tile As Bitmap = Nothing
             If entry.Length > 0 Then
@@ -2644,6 +2660,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsSingleImageVisible))
                 RaiseCompareFieldCountChanged()
                 SyncComparePaneState()
+                RaiseFullscreenImageChanged()
             End Set
         End Property
 
@@ -2723,7 +2740,8 @@ Namespace ViewModels
                 If value < 0 OrElse value >= _compareFieldCount Then Return
                 If _comparePanes(value).IsEmpty Then Return
                 If _focusedComparePane = value Then Return
-                Me.RaiseAndSetIfChanged(_focusedComparePane, value)
+                ' Gemeldet wird in AfterComparePaneFocusChanged, wie bei jedem anderen Wechsel.
+                _focusedComparePane = value
                 AfterComparePaneFocusChanged()
                 ShowDataOfFocusedPane()
             End Set
@@ -2748,18 +2766,26 @@ Namespace ViewModels
         ''' Feldern, die Stelle im Filmstreifen ziehen mit (dort blaettert die aktive Flaeche).</summary>
         Private Sub AfterComparePaneFocusChanged()
             SyncComparePaneState()
+            ' Auch die Wege, die das Feld direkt setzen (Feldzahl umschalten, Loeschen, Tauschen),
+            ' melden den Wechsel; sonst hielte die Ansicht den alten Index.
+            Me.RaisePropertyChanged(NameOf(FocusedComparePane))
             Me.RaisePropertyChanged(NameOf(IsCompareLeftFocused))
             Me.RaisePropertyChanged(NameOf(IsCompareRightFocused))
             Me.RaisePropertyChanged(NameOf(CanSwapComparePanes))
             SyncIndexToBrowsePane()
             ShowFocusStatusOfFocusedPane()
+            RaiseFullscreenImageChanged()
         End Sub
 
         ''' <summary>Die Flaeche, in die das Blaettern das naechste Bild setzt: bei zwei Feldern
         ''' immer die rechte, bei vier die aktive. -1, wenn die aktive das Bezugsbild ist: Feld 1
-        ''' blaettert nicht.</summary>
+        ''' blaettert nicht. IM VOLLBILD ist nur das aktive Feld zu sehen (FullscreenImage), also
+        ''' blaettert auch bei zwei Feldern nur dieses: stuende dort das Bezugsbild und wechselte
+        ''' dahinter das rechte Feld, liefen Zaehler und Filmstreifen weiter, das Bild aber nicht.
+        ''' Mit aktivem Bezugsbild macht der erste Blaetterschritt dort stattdessen das naechste
+        ''' belegte Feld aktiv (LoadPathAt, FullscreenTakeoverPane).</summary>
         Private Function BrowsePaneIndex() As Integer
-            If _compareFieldCount = 2 Then Return 1
+            If _compareFieldCount = 2 AndAlso Not IsFullscreenMode Then Return 1
             Return If(_focusedComparePane > 0, _focusedComparePane, -1)
         End Function
 
@@ -2818,6 +2844,9 @@ Namespace ViewModels
         ''' <summary>Bewertung, Favorit oder Farbetikett haben sich im Katalog geaendert, etwa in der
         ''' Galerie oder im Editor. Betrifft es das gezeigte Bild, liest der Betrachter sie neu.</summary>
         Friend Sub RefreshCatalogState(changedPaths As IReadOnlyCollection(Of String))
+            ' Im Vergleich traegt jedes Feld seine Marken AUF dem Bild; eine Aenderung von aussen
+            ' (Kontextmenue, Galerie, Editor) kann jedes davon treffen, nicht nur das aktive.
+            If _isCompareMode AndAlso changedPaths IsNot Nothing Then LoadCompareMarkers()
             If _isImmichSession OrElse String.IsNullOrEmpty(_currentImagePath) OrElse changedPaths Is Nothing Then Return
             ' Die Pfade duerfen Schluessel zusaetzlicher Varianten sein; gefragt ist, ob die DATEI betroffen ist.
             If Not changedPaths.Any(Function(p) String.Equals(VariantKey.FileOf(p), _currentImagePath, PathIdentity.Comparison)) Then Return
@@ -2885,6 +2914,7 @@ Namespace ViewModels
             _currentPickState = target
             RaisePickState()
             LibraryService.Instance.SetPickStateForMany(CatalogTargets(), target, syncToXmp:=True)
+            If _isCompareMode Then LoadCompareMarkers()
         End Sub
 
         ''' <summary>Der Pfad samt seinem RAW+JPEG-Partner, sobald in der Galerie Stapel eingeschaltet
@@ -2968,7 +2998,7 @@ Namespace ViewModels
             SyncComparePaneState()
             RaiseCompareFieldCountChanged()
             LoadCompareMarkers()
-            For Each n In {NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
+            For Each n In {NameOf(FocusedComparePane), NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
                            NameOf(IsImagePinned), NameOf(PinnedFileName),
                            NameOf(CanDeleteCurrent), NameOf(CanSwapComparePanes),
                            NameOf(HasNoMedia)}
@@ -3538,7 +3568,7 @@ Namespace ViewModels
             ' zurueck in den Vergleich - und zwar mit dem Ordner des alten angehefteten Bildes,
             ' weil dessen Neuoeffnen den Filmstreifen mitzieht.
             SetPinnedPath("")
-            For Each n In {NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
+            For Each n In {NameOf(FocusedComparePane), NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
                            NameOf(IsImagePinned), NameOf(PinnedFileName),
                            NameOf(CanDeleteCurrent), NameOf(CanSwapComparePanes),
                            NameOf(HasNoMedia)}
@@ -3594,6 +3624,10 @@ Namespace ViewModels
                     If loaded.Bitmap Is Nothing Then pane.MarkLoadFailed()
                     RefreshPaneFocusPeaking(pane)
                     RefreshPaneFocusFrames(pane)
+                    ' Beim Ueberfahren kann das Infopanel schon auf diese Flaeche zeigen, waehrend
+                    ' ihr Bitmap noch unterwegs ist. Der erste Versuch fand dann bewusst kein Bild
+                    ' und kehrte zurueck; sobald es da ist, muss der Versuch nachgeholt werden.
+                    If pane.Index = _focusedComparePane Then EnsureHistogramLoaded()
                     If _isFitToWindow Then UpdateFitZoom()
                 Next
                 CompleteComparePaneOverlays()
@@ -5184,10 +5218,23 @@ Namespace ViewModels
             ' bekommt sonst das Ergebnis des ersten Laufs zu sehen, und der Merker unten sperrt
             ' jeden weiteren Versuch (siehe ScopeSelectionViewModel.Generation).
             Dim scopeGeneration = ScopeSelectionViewModel.Generation
-            ' Das angezeigte Bild muss zu dieser Datei gehoeren; waehrend des Ladens steht noch das
-            ' vorige da, dann holt RunBitmapLoad den Aufruf nach.
-            Dim shown = CurrentImage
-            If shown Is Nothing OrElse Not String.Equals(_shownBitmapPath, imagePath, StringComparison.Ordinal) Then Return
+            ' Im Vergleich ist CurrentImage die ausgeblendete Einzelansicht. Das Scope muss deshalb
+            ' aus dem Bitmap der aktuell ueberfahrenen Vergleichsflaeche entstehen. Ist sie noch
+            ' nicht geladen, holt LoadCompareImages diesen Aufruf nach dem Einsetzen nach.
+            Dim shown As Bitmap
+            Dim scopeSource As String
+            If _isCompareMode Then
+                Dim pane = _comparePanes(_focusedComparePane)
+                If Not pane.HasCurrentImage Then Return
+                shown = pane.Image
+                scopeSource = "compare"
+            Else
+                ' Das angezeigte Bild muss zu dieser Datei gehoeren; waehrend des Ladens steht noch
+                ' das vorige da, dann holt RunBitmapLoad den Aufruf nach.
+                shown = CurrentImage
+                If shown Is Nothing OrElse Not String.Equals(_shownBitmapPath, imagePath, StringComparison.Ordinal) Then Return
+                scopeSource = "shown"
+            End If
             Dim pixels As SkiaSharp.SKBitmap
             Try
                 pixels = ImageOrientationService.ToSkBitmap(shown)
@@ -5198,7 +5245,7 @@ Namespace ViewModels
             ' Der Schluessel ist das angezeigte Bild selbst: jedes neu geladene ist ein neues Objekt,
             ' und das Umschalten zwischen Histogramm, Waveform und Parade an DEMSELBEN trifft den
             ' Zwischenspeicher.
-            Dim scopeKey = $"shown:{imagePath}|{Runtime.CompilerServices.RuntimeHelpers.GetHashCode(shown)}"
+            Dim scopeKey = $"{scopeSource}:{imagePath}|{Runtime.CompilerServices.RuntimeHelpers.GetHashCode(shown)}"
             Task.Run(Sub()
                          Dim histogram As Bitmap
                          Using pixels
@@ -5311,6 +5358,12 @@ Namespace ViewModels
                     $"refused: Original darf nicht ersetzt werden source={IO.Path.GetFileName(source)}")
                 Await _mainVm.ShowMessageAsync(LocalizationService.T("Drehung speichern"), LocalizationService.T("Bild konnte nicht gespeichert werden"))
                 Return False
+            End If
+            ' CanReplaceOriginal fragt nach dem Film zuerst den Katalog. Traegt die Datei selbst
+            ' doch einen (der Katalog irrte), geht die Drehung wie bei jedem Bild mit Film ins
+            ' Rezept daneben, statt das Original samt Film zu ersetzen.
+            If Await Task.Run(Function() ImageProcessor.OriginalCarriesVideo(source)) Then
+                Return Await SaveRotationToSidecarAsync(source, angle)
             End If
 
             Dim ext = IO.Path.GetExtension(source)
@@ -5498,7 +5551,22 @@ Namespace ViewModels
                 ' Bei zwei Feldern blaettert die rechte Flaeche, bei vier die aktive; ist das
                 ' Bezugsbild aktiv, bleibt alles stehen (Feld 1 blaettert nicht).
                 Dim browse = BrowsePaneIndex()
-                If browse < 0 Then Return
+                If browse < 0 Then
+                    ' IM VOLLBILD ist nur das aktive Feld zu sehen. Steht dort das Bezugsbild,
+                    ' macht der erste Blaetterschritt das naechste belegte Feld aktiv und blaettert
+                    ' es in der Richtung des Schritts weiter; das Bezugsbild bleibt, wie es ist.
+                    ' Die Richtung wird VOR dem Wechsel abgelesen: danach steht die Stelle in der
+                    ' Reihe auf dem Bild des neuen Felds.
+                    Dim takeover = FullscreenTakeoverPane()
+                    If takeover < 0 Then Return
+                    Dim count = _folderPaths.Count
+                    Dim forward = ((idx - _currentIndex) Mod count + count) Mod count
+                    Dim direction = If(forward = 0 OrElse forward <= count \ 2, 1, -1)
+                    FocusedComparePane = takeover
+                    browse = BrowsePaneIndex()
+                    If browse < 0 Then Return
+                    idx = ((_currentIndex + direction) Mod count + count) Mod count
+                End If
                 ' Ein Bild kommt nie neben sich selbst, und Videos und Bilder ausserhalb der
                 ' Auswahl bleiben aussen vor: Blaettern geht in derselben Richtung daran vorbei;
                 ' gibt es kein anderes Bild, bleibt alles stehen.
@@ -5652,7 +5720,16 @@ Namespace ViewModels
             End Get
         End Property
 
-        Private Sub DeleteCurrent()
+        Private Async Sub DeleteCurrent()
+            Try
+                Await DeleteCurrentAsync()
+            Catch ex As Exception
+                ' Async Sub: eine Ausnahme landete sonst beim Dispatcher.
+                DiagnosticLogService.LogException("ViewerViewModel.DeleteCurrent", ex)
+            End Try
+        End Sub
+
+        Private Async Function DeleteCurrentAsync() As Task
             If Not CanDeleteCurrent Then Return
             ' In einer Serversitzung ist _currentImagePath nur die heruntergeladene Temp-Kopie - die zu
             ' löschen wäre wirkungslos (sie wäre beim nächsten Blättern wieder da). Gemeint ist das
@@ -5677,8 +5754,12 @@ Namespace ViewModels
             ' sonst die Datei (DeleteEntry).
             Dim deletedPath = CurrentItemPath
             ' Live Photo: die andere Haelfte geht mit (MainWindowViewModel.RequestDeletePaths). Steht
-            ' sie als eigener Eintrag im Streifen, faellt sie unten mit heraus.
-            Dim livePartner = LivePartnerOfCurrent()
+            ' sie als eigener Eintrag im Streifen, faellt sie unten mit heraus. Gesucht wird sie im
+            ' Hintergrund, fuer den festgehaltenen Pfad.
+            Dim livePartner = Await LivePartnerOfCurrentAsync()
+            ' Waehrend der Suche ein anderes Bild gezeigt: der Befehl galt dem vorigen, geloescht
+            ' wird dann nichts.
+            If Not String.Equals(CurrentItemPath, deletedPath, PathIdentity.Comparison) Then Return
             DeleteEntry(deletedPath, Sub()
                                                            ' Der Rueckruf kommt auch, wenn das Loeschen
                                                            ' scheiterte (Papierkorb nicht erreichbar,
@@ -5704,7 +5785,7 @@ Namespace ViewModels
                                                                _mainVm.BackToGallery(IO.Path.GetDirectoryName(deletedPath))
                                                            End If
                                                        End Sub)
-        End Sub
+        End Function
 
         ''' <summary>Das angezeigte Serverbild, wenn es aus einem Album stammt (ImageItem.ServerAlbumId).</summary>
         Private Function CurrentAlbumItem() As ImageItem
@@ -6211,7 +6292,16 @@ Namespace ViewModels
             End Try
         End Function
 
-        Private Sub RenameCurrent()
+        Private Async Sub RenameCurrent()
+            Try
+                Await RenameCurrentAsync()
+            Catch ex As Exception
+                ' Async Sub: eine Ausnahme landete sonst beim Dispatcher.
+                DiagnosticLogService.LogException("ViewerViewModel.RenameCurrent", ex)
+            End Try
+        End Sub
+
+        Private Async Function RenameCurrentAsync() As Task
             If String.IsNullOrEmpty(_currentImagePath) Then Return
             ' Eine zusaetzliche Variante hat ihren eigenen Namen; der der Datei gehoert allen.
             If CurrentVariantId.Length > 0 Then
@@ -6220,7 +6310,10 @@ Namespace ViewModels
             End If
             Dim oldPath = _currentImagePath
             ' Live Photo: die andere Haelfte bekommt denselben Stamm (MainWindowViewModel.RequestRenamePath).
-            Dim livePartner = LivePartnerOfCurrent()
+            ' Gesucht wird sie im Hintergrund, fuer den festgehaltenen Pfad; zeigt der Betrachter
+            ' danach ein anderes Bild, galt der Befehl dem vorigen und entfaellt.
+            Dim livePartner = Await LivePartnerOfCurrentAsync()
+            If Not String.Equals(_currentImagePath, oldPath, PathIdentity.Comparison) Then Return
             _mainVm.RequestRenamePath(oldPath, Sub(newPath)
                                                    FollowRenamedLivePartner(livePartner, newPath)
                                                    ' Alle Eintraege der Datei ziehen um, auch die ihrer
@@ -6234,7 +6327,7 @@ Namespace ViewModels
                                                    LoadFilmstrip()
                                                    OpenImage(newPath, _folderPaths)
                                                End Sub)
-        End Sub
+        End Function
 
         Public Sub ReleaseCurrentImageIfAny(paths As IEnumerable(Of String))
             If String.IsNullOrEmpty(_currentImagePath) OrElse paths Is Nothing Then Return
