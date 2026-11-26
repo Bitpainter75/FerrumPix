@@ -1,0 +1,55 @@
+# FerrumPix in the browser ON THIS COMPUTER ONLY: the port is published on 127.0.0.1 alone. For
+# other devices use docker-compose.yml with the proxy.
+#
+#   FERRUMPIX_PHOTOS=/path/to/photos docker compose -f docker-compose.local.yml up -d
+#
+# Then open http://127.0.0.1:14501. A password is optional and comes from the environment
+# (FERRUMPIX_PASSWORD, likewise FERRUMPIX_USER), not from this file. If one is set, it needs at
+# least 8 characters with an uppercase and a lowercase letter, a digit and a special character
+# (a space counts), otherwise FerrumPix does not start; it becomes the password of the sign-in
+# window.
+#
+# Own fonts go to /data/share/FerrumPix/Fonts in the data volume, there is no separate volume for
+# them.
+#
+# THE LINE UNDER "ports" STAYS ON 127.0.0.1. FERRUMPIX_BROWSER_LOCAL_FORWARD tells FerrumPix that
+# the port is only open on this computer; it then only checks that the browser called 127.0.0.1
+# or localhost. Without the 127.0.0.1 in front, it would be on the network unencrypted.
+
+name: ferrumpix-local
+
+services:
+  ferrumpix:
+    image: "${FERRUMPIX_IMAGE:-ghcr.io/bitpainter75/ferrumpix:latest}"
+    restart: unless-stopped
+    environment:
+      FERRUMPIX_BROWSER_LOCAL_FORWARD: "1"
+      FERRUMPIX_BROWSER_USER: "${FERRUMPIX_USER:-}"
+      FERRUMPIX_BROWSER_PASSWORD: "${FERRUMPIX_PASSWORD:-}"
+      LANG: "${FERRUMPIX_LANG:-C.UTF-8}"
+      # NVIDIA only, together with the NVIDIA block below:
+      # NVIDIA_DRIVER_CAPABILITIES: graphics,compute,utility
+    ports:
+      - "127.0.0.1:14501:14500"
+    volumes:
+      - ferrumpix-data:/data
+      - "${FERRUMPIX_PHOTOS:?FERRUMPIX_PHOTOS is missing}:/photos/Pictures"
+    # GRAPHICS CARD FOR THE MODELS (optional; without it the models run on the processor).
+    # Intel or AMD: uncomment these lines. FERRUMPIX_RENDER_GID is the group of the render device
+    # on this computer: stat -c %g /dev/dri/renderD128
+    # devices:
+    #   - /dev/dri:/dev/dri
+    # group_add:
+    #   - "${FERRUMPIX_RENDER_GID:-render}"
+    # NVIDIA: needs the NVIDIA Container Toolkit on this computer. Uncomment these lines and
+    # NVIDIA_DRIVER_CAPABILITIES above. With a recent Compose, "gpus: all" does the same.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+volumes:
+  ferrumpix-data:

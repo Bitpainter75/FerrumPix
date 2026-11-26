@@ -12802,9 +12802,6 @@
   <data name="Beim_n_chsten_Start_verwendet_FerrumPix_den_Date_82e8fbec" xml:space="preserve">
     <value>下次启动时 FerrumPix 将使用 {0} 中的数据文件夹。</value>
   </data>
-  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_ce1e5936" xml:space="preserve">
-    <value>下次启动时数据文件夹将迁移到 {0}。</value>
-  </data>
   <data name="Datenordner_nicht_erreichbar_9b1a712e" xml:space="preserve">
     <value>无法访问数据文件夹</value>
   </data>
@@ -12964,8 +12961,8 @@
   <data name="Abmelden_7e324c5c" xml:space="preserve">
     <value>退出登录</value>
   </data>
-  <data name="Mindestens_10_Zeichen_mit_Gro_buchstaben_Kleinbu_6da2d56e" xml:space="preserve">
-    <value>至少 10 个字符，包含大写字母、小写字母、数字和特殊字符；空格也算特殊字符。输入两次。留空则只更改锁定时间。</value>
+  <data name="Mindestens_8_Zeichen_mit_Gro_buchstaben_Kleinbuc_839d03de" xml:space="preserve">
+    <value>至少 8 个字符，包含大写字母、小写字母、数字和特殊字符；空格也算特殊字符。输入两次。留空则只更改锁定时间。</value>
   </data>
   <data name="Die_Wiederholung_stimmt_noch_nicht_mit_dem_neuen_eaa3a18a" xml:space="preserve">
     <value>重复输入的密码与新密码尚不一致。</value>
@@ -12984,5 +12981,68 @@
   </data>
   <data name="Noch_n_tig_ein_Sonderzeichen_auch_ein_Leerzeiche_c0e66159" xml:space="preserve">
     <value>还需要：一个特殊字符，空格也可以。</value>
+  </data>
+  <data name="Wird_vorbereitet_140ad8bf" xml:space="preserve">
+    <value>正在准备</value>
+  </data>
+  <data name="0_von_1_Dateien_2_von_3_80b385f5" xml:space="preserve">
+    <value>{1} 个文件中的 {0} 个，{3} 中的 {2}</value>
+  </data>
+  <data name="0_von_1_Dateien_8e8da684" xml:space="preserve">
+    <value>{1} 个文件中的 {0} 个</value>
+  </data>
+  <data name="0_Dateien_verschoben_3f8cf1d9" xml:space="preserve">
+    <value>已移动 {0} 个文件</value>
+  </data>
+  <data name="Datenordner_wird_verschoben_d0cb6bf0" xml:space="preserve">
+    <value>正在移动数据文件夹</value>
+  </data>
+  <data name="Bitte_FerrumPix_nicht_beenden_Danach_startet_es__f72667ce" xml:space="preserve">
+    <value>请不要退出 FerrumPix。之后它会自行启动。</value>
+  </data>
+  <data name="Bisheriger_Ort_a58722d7" xml:space="preserve">
+    <value>原位置</value>
+  </data>
+  <data name="Neuer_Ort_289b8469" xml:space="preserve">
+    <value>新位置</value>
+  </data>
+  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_686dbf3d" xml:space="preserve">
+    <value>下次启动时数据文件夹将迁移到 {0}。视大小而定可能需要一些时间；期间会有窗口显示进度，迁移无法取消。</value>
+  </data>
+  <data name="Eigene_Schriften_e9fcabf6" xml:space="preserve">
+    <value>自定义字体</value>
+  </data>
+  <data name="Schriften_im_Ordner_Fonts_des_Datenordners_stehe_c7bac268" xml:space="preserve">
+    <value>数据文件夹中 Fonts 文件夹里的字体可在编辑器中用于文字，与系统字体并列。读取 TTF、OTF 和 TTC 文件，包括子文件夹。</value>
+  </data>
+  <data name="Im_Browser_l_sst_sich_der_Ordner_nicht_ffnen_Die_08633754" xml:space="preserve">
+    <value>在浏览器中无法打开该文件夹。请将字体放入服务器上的这个文件夹，然后点击重新读取即可。</value>
+  </data>
+  <data name="Schriften_werden_eingelesen_636edd40" xml:space="preserve">
+    <value>正在读取字体 ...</value>
+  </data>
+  <data name="Noch_keine_eigenen_Schriften_gefunden_01f8abc7" xml:space="preserve">
+    <value>尚未找到自定义字体。</value>
+  </data>
+  <data name="Gefundene_Schriftfamilien_0_3387d9af" xml:space="preserve">
+    <value>找到的字体系列：{0}</value>
+  </data>
+  <data name="Hochladen_70d66639" xml:space="preserve">
+    <value>上传</value>
+  </data>
+  <data name="Dateien_von_diesem_Ger_t_in_den_ge_ffneten_Ordne_ce5708fe" xml:space="preserve">
+    <value>将此设备上的文件上传到打开的文件夹</value>
+  </data>
+  <data name="Die_fertigen_Dateien_kommen_auf_dieses_Ger_t_meh_90721ed6" xml:space="preserve">
+    <value>完成的文件会保存到此设备，多个文件打包为一个 ZIP。服务器上不会留下任何文件。</value>
+  </data>
+  <data name="Im_Datenordner_ist_nicht_genug_Platz_f_r_den_Dow_8e63bddc" xml:space="preserve">
+    <value>数据文件夹中没有足够的可用空间进行下载</value>
+  </data>
+  <data name="Der_Ordner_f_r_den_Download_lie_sich_im_Datenord_c5615f40" xml:space="preserve">
+    <value>无法在数据文件夹中创建用于下载的文件夹。</value>
+  </data>
+  <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
+    <value>可以下载：{0}</value>
   </data>
 </root>

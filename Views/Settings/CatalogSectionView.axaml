@@ -48,6 +48,39 @@
                             </StackPanel>
                         </Grid>
 
+                        <!-- Eigene Schriften (FontLibraryService): der Ordner Fonts im Datenordner,
+                             nicht waehlbar. Pfad und Zahl kommen fertig aus dem ViewModel, deshalb
+                             no-translate. Im Browser hat der Nutzer keinen Dateimanager dazu; dort
+                             steht statt "Ordner öffnen" der Hinweis auf den Server. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Eigene Schriften" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Schriften im Ordner Fonts des Datenordners stehen im Editor für Text zur Auswahl, neben den Schriften des Systems. Gelesen werden TTF, OTF und TTC, auch in Unterordnern." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding FontsFolderText}"
+                                           Classes="no-translate"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Small}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding FontLibraryCountText}"
+                                           Classes="no-translate"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Small}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="Im Browser lässt sich der Ordner nicht öffnen. Die Schriften gehören auf dem Server in diesen Ordner, danach genügt Neu einlesen."
+                                           IsVisible="{Binding ShowFontsFolderServerHint}"
+                                           Foreground="{DynamicResource FP.Text.Accent}"
+                                           FontSize="{DynamicResource FP.Font.Small}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <Button Classes="ghost" Padding="12,7"
+                                        IsVisible="{Binding CanOpenFontsFolder}"
+                                        Command="{Binding OpenFontsFolderCommand}">Ordner öffnen</Button>
+                                <Button Classes="ghost" Padding="12,7"
+                                        Command="{Binding ReloadFontLibraryCommand}">Neu einlesen</Button>
+                            </StackPanel>
+                        </Grid>
+
                         <!-- Katalogindex. Bisher entstanden Katalogeintrag und Vorschaubild erst
                              beim Ansehen eines Ordners; wer seinen Fotobestand hier einträgt, hat
                              Suche und Filter darauf, ohne jeden Ordner einmal besucht zu haben. -->

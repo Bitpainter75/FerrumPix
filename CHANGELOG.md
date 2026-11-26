@@ -37,7 +37,8 @@
 
 - All of FerrumPix's data now lives in one data folder that you can move, for example to a second
   drive or a network share (Settings, Catalog): the catalogue, thumbnails, models, extensions,
-  saved adjustments, favourites and search lists all move along at the next start. If a second
+  saved adjustments, favourites and search lists all move along at the next start, with a small
+  window showing the progress until the move is done. If a second
   computer opens the same catalogue, it says which computer is using it and carries on without it.
   A new size limit for thumbnails, unlimited out of the box, removes the ones you have not looked
   at for the longest time once it is reached (Settings, Performance).
@@ -57,7 +58,10 @@
 - In the browser, pictures now travel both ways: drop files onto the page to put them into the
   folder you are looking at, or onto the picture in the editor to add them as a layer, and choose
   Download in the context menu to bring pictures to your device, several at once as a ZIP with
-  their sidecar files. After Export to and Save as, the page offers the finished files for download.
+  their sidecar files. Save as, Export to and the batch tools have Download as a destination, so
+  the finished pictures come straight to your device without a folder on the server, and Upload in
+  the gallery opens the file picker of your browser. Signing out works through Lock, and the page
+  shows the FerrumPix icon in the tab.
 
 - FerrumPix in the browser is now also available as a container image for Docker and Podman, for
   amd64 and arm64, so it can run on a home server without a screen.
@@ -71,6 +75,11 @@
   it by hand. In the browser the same sign-in window replaces the
   browser's own password prompt, each browser stays signed in until the app is locked, and a
   container started with a password is protected from the first start.
+
+- **Own fonts.** Fonts you put into the Fonts folder of the data folder can be chosen for text in
+  the editor next to the system fonts, and they come along into exports, prints and Photoshop
+  files. Settings, Catalog shows where the folder is and reads it again on request; in the
+  container it is /data/share/FerrumPix/Fonts.
 
 ### Fixes
 

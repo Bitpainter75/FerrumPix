@@ -394,17 +394,8 @@ Public Class App
         If TypeOf ApplicationLifetime Is IClassicDesktopStyleApplicationLifetime Then
             Dim desktop = CType(ApplicationLifetime, IClassicDesktopStyleApplicationLifetime)
 
-            Dim initialImagePath As String = Nothing
-            Dim initialFolderPath As String = Nothing
-            Dim args = desktop.Args
-            If args IsNot Nothing AndAlso args.Length > 0 Then
-                If IO.File.Exists(args(0)) Then
-                    initialImagePath = args(0)
-                ElseIf IO.Directory.Exists(args(0)) Then
-                    initialFolderPath = args(0)
-                End If
-            End If
-
+            ' Bis hierher nur die Einstellungen, nichts aus dem Datenordner: auch das Fenster des
+            ' Umzugs braucht Sprache und Bedienart.
             LocalizationService.LanguageMode = AppSettingsService.Load().LanguageMode
             ' Ausdruecklich und nicht nur ueber das Ereignis: steht die Sprache schon auf dem
             ' gespeicherten Wert, meldet der Setter keinen Wechsel.
@@ -414,31 +405,121 @@ Public Class App
             ' Zeichentablett-Modus VOR dem ersten Fenster anhaengen: die Stile setzen ClickMode, und
             ' ein spaeter angehaengter Stil muesste alles noch einmal durchstilen.
             TabletInputService.Apply(AppSettingsService.Load().TabletMode)
-            ' Nur der Merker; die Karte wird erst beim ersten Bild angesprochen. Endete die letzte
-            ' Sitzung im Treiber, geht der Schalter dabei aus.
-            GpuImageService.StartFromSettings()
-            ' EINMAL beim Start nachsehen, welche gelernten Modelle vorliegen. Danach steht fuer
-            ' diese Sitzung fest, welche Funktionen es gibt; was fehlt, blendet die Oberflaeche aus.
-            ' Vor dem ViewModel, damit dessen Bindungen schon den richtigen Stand sehen.
-            AiModelService.CheckInventory()
-            ' Der aus einem Motion Photo herausgeschriebene Film einer Sitzung, die nicht ordentlich
-            ' endete, liegt noch im Cache der Anwendung: weg damit, im Hintergrund.
-            System.Threading.Tasks.Task.Run(Sub() Services.MotionPhotoService.ClearClipCache())
-            ' Mit Kennwort beginnt die Sitzung gesperrt, vor dem ersten Bild des Fensters.
-            AppLockService.LockAtStart()
-            Dim vm = New MainWindowViewModel(initialImagePath, initialFolderPath)
-            Dim win = New MainWindow()
-            win.DataContext = vm
-            desktop.MainWindow = win
-            ' Die eine Abfrage nach einer neueren Fassung je Sitzung. Hier und nicht im ViewModel:
-            ' der Pruefstand baut das ViewModel dutzendfach und soll dabei nichts abrufen.
-            vm.Settings?.BeginUpdateCheck()
 
-            desktop.ShutdownMode = ShutdownMode.OnMainWindowClose
-            BuildApplicationMenu(vm)
+            Dim plan = System.Threading.Interlocked.Exchange(_deferredStartupMove, Nothing)
+            If plan IsNot Nothing Then
+                StartAfterFolderMove(desktop, plan)
+            Else
+                StartMainWindow(desktop, showNow:=False)
+            End If
         End If
 
         MyBase.OnFrameworkInitializationCompleted()
+    End Sub
+
+    Private Shared _deferredStartupMove As StartupMovePlan
+
+    ''' <summary>Ein Umzug, den Program.Main fuer die Zeit nach dem Aufbau des Toolkits
+    ''' zurueckgestellt hat; Nothing, wenn er schon gelaufen ist oder keiner ansteht.</summary>
+    Friend Shared WriteOnly Property DeferredStartupMove As StartupMovePlan
+        Set(value As StartupMovePlan)
+            System.Threading.Interlocked.Exchange(_deferredStartupMove, value)
+        End Set
+    End Property
+
+    ''' <summary>So lange darf ein Umzug dauern, ohne dass ein Fenster erscheint: kuerzer, und es
+    ''' blitzte nur auf.</summary>
+    Friend Shared ReadOnly StartupMoveWindowDelay As TimeSpan = TimeSpan.FromMilliseconds(300)
+
+    ''' <summary>Der Umzug beim Start hinter seinem Fenster (StartupMoveCoordinator), danach der
+    ''' normale Start. Solange er laeuft, gibt es kein Hauptfenster; das Beenden der Anwendung
+    ''' (CMD+Q, Abmelden) wird abgewiesen, das Fenster selbst weist das Schliessen ab.</summary>
+    Private Sub StartAfterFolderMove(desktop As IClassicDesktopStyleApplicationLifetime, plan As StartupMovePlan)
+        desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown
+        Dim window As DataFolderMoveWindow = Nothing
+        Dim coordinator As StartupMoveCoordinator = Nothing
+        Dim refuseShutdown As EventHandler(Of ShutdownRequestedEventArgs) =
+            Sub(sender, e)
+                If coordinator IsNot Nothing AndAlso coordinator.IsRunning Then e.Cancel = True
+            End Sub
+        AddHandler desktop.ShutdownRequested, refuseShutdown
+        coordinator = New StartupMoveCoordinator(
+            plan,
+            work:=Sub(progress) Program.RunFolderStartupWork(progress),
+            describeError:=Function(ex) DescribeStartupMoveError(plan, ex),
+            post:=Sub(action) Avalonia.Threading.Dispatcher.UIThread.Post(action),
+            showWindow:=Sub(vm)
+                            ' Im Erscheinungsbild der Einstellungen, nicht in dem ab Werk.
+                            SettingsViewModel.ApplySavedTheme()
+                            window = New DataFolderMoveWindow With {.DataContext = vm}
+                            AddHandler window.ClosedAfterMove, Sub(s, e) coordinator.NotifyWindowClosed()
+                            window.Show()
+                        End Sub,
+            closeWindow:=Sub() window?.Close(),
+            continueStart:=Sub()
+                               RemoveHandler desktop.ShutdownRequested, refuseShutdown
+                               ' Ohne Fenster laeuft das noch in OnFrameworkInitializationCompleted,
+                               ' und die Laufzeit zeigt das Hauptfenster danach selbst.
+                               StartMainWindow(desktop, showNow:=coordinator.WindowShown)
+                           End Sub)
+        coordinator.Start(StartupMoveWindowDelay)
+    End Sub
+
+    ''' <summary>Ueberschrift und Satz fuer das Fenster des Umzugs, oder Nothing, wenn er
+    ''' geglueckt ist. Die Meldungen nimmt das Fenster an sich; das Hauptfenster zeigt sie nicht
+    ''' noch einmal.</summary>
+    Private Shared Function DescribeStartupMoveError(plan As StartupMovePlan, ex As Exception) As String()
+        Dim notices = AppFolders.TakeMoveNotices()
+        If notices.Count > 0 Then
+            Return {AppFolders.NoticeTitle(notices(0)),
+                    String.Join(" ", notices.Select(Function(n) AppFolders.NoticeMessage(n)))}
+        End If
+        If ex Is Nothing Then Return Nothing
+        Dim failed As New FolderStartupNotice With {.Kind = FolderStartupNoticeKind.MoveFailed, .Folder = plan.Target}
+        Return {AppFolders.NoticeTitle(failed), AppFolders.NoticeMessage(failed)}
+    End Function
+
+    ''' <summary>Der normale Start: Hauptfenster samt allem, was dafuer im Datenordner liest.</summary>
+    ''' <param name="showNow">True, wenn die Laufzeit das Hauptfenster nicht mehr selbst zeigt
+    ''' (nach dem Fenster des Umzugs).</param>
+    Private Sub StartMainWindow(desktop As IClassicDesktopStyleApplicationLifetime, showNow As Boolean)
+        Dim initialImagePath As String = Nothing
+        Dim initialFolderPath As String = Nothing
+        Dim args = desktop.Args
+        If args IsNot Nothing AndAlso args.Length > 0 Then
+            If IO.File.Exists(args(0)) Then
+                initialImagePath = args(0)
+            ElseIf IO.Directory.Exists(args(0)) Then
+                initialFolderPath = args(0)
+            End If
+        End If
+
+        ' Nur der Merker; die Karte wird erst beim ersten Bild angesprochen. Endete die letzte
+        ' Sitzung im Treiber, geht der Schalter dabei aus.
+        GpuImageService.StartFromSettings()
+        ' EINMAL beim Start nachsehen, welche gelernten Modelle vorliegen. Danach steht fuer
+        ' diese Sitzung fest, welche Funktionen es gibt; was fehlt, blendet die Oberflaeche aus.
+        ' Vor dem ViewModel, damit dessen Bindungen schon den richtigen Stand sehen.
+        AiModelService.CheckInventory()
+        ' Der aus einem Motion Photo herausgeschriebene Film einer Sitzung, die nicht ordentlich
+        ' endete, liegt noch im Cache der Anwendung: weg damit, im Hintergrund.
+        System.Threading.Tasks.Task.Run(Sub() Services.MotionPhotoService.ClearClipCache())
+        ' Ebenso, was fuer das Ziel "Herunterladen" im Browser im Datenordner liegen blieb; auch
+        ' wenn diesmal am Rechner gestartet wird.
+        System.Threading.Tasks.Task.Run(Sub() Services.BrowserBridge.CleanStaleDownloadFolders())
+        ' Mit Kennwort beginnt die Sitzung gesperrt, vor dem ersten Bild des Fensters.
+        AppLockService.LockAtStart()
+        Dim vm = New MainWindowViewModel(initialImagePath, initialFolderPath)
+        Dim win = New MainWindow()
+        win.DataContext = vm
+        desktop.MainWindow = win
+        ' Die eine Abfrage nach einer neueren Fassung je Sitzung. Hier und nicht im ViewModel:
+        ' der Pruefstand baut das ViewModel dutzendfach und soll dabei nichts abrufen.
+        vm.Settings?.BeginUpdateCheck()
+
+        desktop.ShutdownMode = ShutdownMode.OnMainWindowClose
+        BuildApplicationMenu(vm)
+        If showNow Then win.Show()
     End Sub
 
     ''' <summary>Das Programmmenue in der Menueleiste des Mac.

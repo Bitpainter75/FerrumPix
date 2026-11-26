@@ -759,7 +759,7 @@ Namespace Services
 
         ''' <summary>Ist dieses Modell auf dieser Karte gesperrt, nach einem Absturz oder einem
         ''' Fehler, auch aus einem frueheren Programmlauf? Die Sperren stehen in
-        ''' <see cref="GpuModelBlockService"/> (karte-gesperrt.json) und verfallen mit neuem Treiber
+        ''' <see cref="GpuModelBlockService"/> (gpu-blocked.json) und verfallen mit neuem Treiber
         ''' oder neuem Bau der Anwendung.</summary>
         Private Shared Function IsGpuFailedModel(fileName As String, deviceKey As String) As Boolean
             Return GpuModelBlockService.IsBlocked(fileName, deviceKey) OrElse IsGpuRunFailed(fileName, deviceKey)

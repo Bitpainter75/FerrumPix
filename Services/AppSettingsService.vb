@@ -471,6 +471,10 @@ Namespace Services
         ''' "Current" (aktueller Ordner, ab Werk) oder "LastSaved" (letzter Ordner). Der Dialog
         ''' belegt ihn beim naechsten Oeffnen wieder vor.</summary>
         Public Property SaveAsFolderChoice As String = "Current"
+        ''' <summary>War im Browser zuletzt "Herunterladen" das Ziel von "Speichern unter" und den
+        ''' Stapeldialogen? Dann ist es beim naechsten Oeffnen dort wieder gewaehlt. Am Rechner gibt
+        ''' es das Ziel nicht, und der Wert wirkt dort nicht.</summary>
+        Public Property SaveAsTargetDownload As Boolean = False
         Public Property ViewerShowFilmstrip As Boolean = True
         ''' <summary>Seite des Filmstreifens im Betrachter: "Bottom" (ab Werk), "Top", "Left" oder
         ''' "Right" (NormalizeFilmstripPosition).</summary>
@@ -3252,6 +3256,11 @@ Namespace Services
 
         Public Shared Sub SaveSaveAsFolderChoice(choice As String)
             Update(Sub(s) s.SaveAsFolderChoice = NormalizeSaveAsFolderChoice(choice))
+        End Sub
+
+        Public Shared Sub SaveSaveAsTargetDownload(value As Boolean)
+            If Load().SaveAsTargetDownload = value Then Return
+            Update(Sub(s) s.SaveAsTargetDownload = value)
         End Sub
 
         ''' <summary>Alles ausser "LastSaved" ist der aktuelle Ordner, auch ein fehlender Wert aus

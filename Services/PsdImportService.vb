@@ -683,7 +683,8 @@ Namespace Services
         Public Shared Function FindInstalledFamily(fontName As String, Optional isPostScriptName As Boolean = True) As String
             If String.IsNullOrWhiteSpace(fontName) Then Return Nothing
             Dim name = fontName.Trim()
-            Dim families = SKFontManager.Default.FontFamilies
+            ' Die eigenen Schriften aus dem Ordner Fonts zuerst: sie gehen beim Zeichnen auch vor.
+            Dim families = FontLibraryService.FamilyNames.Concat(SKFontManager.Default.FontFamilies).ToList()
             Dim resolve As Func(Of String, String) = AddressOf ImageProcessor.ResolveTextFamilyName
             If Not isPostScriptName Then
                 Dim plainKey = name.Replace(" ", "")
@@ -707,6 +708,9 @@ Namespace Services
                 Next
             End If
             If family IsNot Nothing Then Return family
+            ' Ein eigener Schnitt mit genau diesem PostScript-Namen, auch wenn die Familie anders heisst.
+            Dim ownFamily = FontLibraryService.FamilyForPostScriptName(name)
+            If ownFamily IsNot Nothing Then Return ownFamily
             ' Nicht freigeben: Skia gibt für denselben Schnitt dieselbe verwaltete Hülle heraus, die
             ' dann womöglich im Schriftzwischenspeicher des Zeichnens steckt.
             Dim byName = SKTypeface.FromFamilyName(name)

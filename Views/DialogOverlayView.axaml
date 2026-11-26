@@ -523,7 +523,20 @@
                                             IsVisible="{Binding IsSaveAsNextcloudAvailable}"
                                             Click="OnDialogSaveTargetClick"
                                             Tag="Nextcloud">Nextcloud</Button>
+                                    <!-- Nur im Browser: auf das Geraet des Browsers, statt in einen
+                                         Ordner des Servers (MainWindowViewModel.IsSaveAsDownloadAvailable). -->
+                                    <Button Classes="segmented"
+                                            Classes.active="{Binding IsSaveAsTargetDownload}"
+                                            IsVisible="{Binding IsSaveAsDownloadAvailable}"
+                                            Click="OnDialogSaveTargetClick"
+                                            Tag="Download">Herunterladen</Button>
                                 </StackPanel>
+                                <TextBlock Grid.Row="4" Grid.Column="1"
+                                           IsVisible="{Binding IsSaveAsTargetDownload}"
+                                           Text="Die fertigen Dateien kommen auf dieses Gerät, mehrere als ein ZIP. Auf dem Server bleibt nichts liegen."
+                                           Foreground="{DynamicResource FP.Text.Muted}"
+                                           FontSize="{DynamicResource FP.Font.Small}"
+                                           TextWrapping="Wrap"/>
 
                                 <TextBlock Grid.Row="4"
                                            Text="Zielordner"

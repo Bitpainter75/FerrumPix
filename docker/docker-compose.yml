@@ -1,0 +1,107 @@
+# FerrumPix in the browser for other devices: the app with Caddy in front as a reverse proxy with
+# HTTPS, both in a network of their own. A template to copy; see README.md next to it.
+#
+# 1. Put next to this file:
+#      Caddyfile                 (included next to this file)
+#      ferrumpix-password.txt    the password in the first line, readable for user id 1000
+#                                (chown 1000 ferrumpix-password.txt; chmod 600 ferrumpix-password.txt):
+#                                at least 8 characters with an uppercase and a lowercase letter,
+#                                a digit and a special character (a space counts), otherwise
+#                                FerrumPix does not start
+#      .env                      FERRUMPIX_DOMAIN=photos.example.org
+#                                FERRUMPIX_PHOTOS=/path/to/photos
+#                                FERRUMPIX_USER=anna         (optional)
+# 2. docker compose up -d
+# 3. Open https://<FERRUMPIX_DOMAIN> in the browser.
+#
+# WHAT THIS TEMPLATE MAKES SURE OF:
+# - FerrumPix publishes NO port. It is only reachable in the network "ferrumpix", and there it
+#   only accepts what comes from the fixed address of the proxy (FERRUMPIX_BROWSER_PROXY_ADDRESS)
+#   and is marked as encrypted by it. Whoever talks to FerrumPix past the proxy, even from this
+#   computer over its address in the network, gets 403 and is never asked for the password.
+# - A password is mandatory and is NOT in this file: Compose hands it in as a secret under
+#   /run/secrets, and the container reads it from there.
+# - FERRUMPIX_BROWSER_LOCAL_FORWARD is deliberately missing here. It promises "the port is only
+#   open on this computer" and switches off the check of the sender; it belongs to the local
+#   template only (docker-compose.local.yml).
+#
+# The addresses 172.30.145.0/24 are chosen freely. If another network on this computer already
+# uses them, change all three places together (the subnet, the address of the proxy and the
+# address in the environment).
+
+name: ferrumpix
+
+services:
+  ferrumpix:
+    image: "${FERRUMPIX_IMAGE:-ghcr.io/bitpainter75/ferrumpix:latest}"
+    restart: unless-stopped
+    environment:
+      FERRUMPIX_BROWSER_TLS_PROXY: "1"
+      FERRUMPIX_BROWSER_PROXY_ADDRESS: "172.30.145.2"
+      FERRUMPIX_BROWSER_USER: "${FERRUMPIX_USER:-}"
+      FERRUMPIX_BROWSER_PASSWORD_FILE: /run/secrets/ferrumpix_password
+      LANG: "${FERRUMPIX_LANG:-C.UTF-8}"
+      # NVIDIA only, together with the NVIDIA block below:
+      # NVIDIA_DRIVER_CAPABILITIES: graphics,compute,utility
+    secrets:
+      - ferrumpix_password
+    volumes:
+      # Settings, catalog, thumbnails and downloaded models. Own fonts go to
+      # /data/share/FerrumPix/Fonts, there is no separate volume for them.
+      - ferrumpix-data:/data
+      # Every photo folder under /photos/<name>; add lines in the same pattern.
+      - "${FERRUMPIX_PHOTOS:?FERRUMPIX_PHOTOS is missing in .env}:/photos/Pictures"
+    # GRAPHICS CARD FOR THE MODELS (optional; without it the models run on the processor).
+    # Intel or AMD: uncomment these lines. FERRUMPIX_RENDER_GID is the group of the render device
+    # on this computer: stat -c %g /dev/dri/renderD128
+    # devices:
+    #   - /dev/dri:/dev/dri
+    # group_add:
+    #   - "${FERRUMPIX_RENDER_GID:-render}"
+    # NVIDIA: needs the NVIDIA Container Toolkit on this computer. Uncomment these lines and
+    # NVIDIA_DRIVER_CAPABILITIES above. With a recent Compose, "gpus: all" does the same.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    networks:
+      ferrumpix:
+        ipv4_address: 172.30.145.3
+
+  caddy:
+    image: docker.io/library/caddy:2
+    restart: unless-stopped
+    depends_on:
+      ferrumpix:
+        condition: service_healthy
+    environment:
+      FERRUMPIX_DOMAIN: "${FERRUMPIX_DOMAIN:?FERRUMPIX_DOMAIN is missing in .env}"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      ferrumpix:
+        ipv4_address: 172.30.145.2
+
+networks:
+  ferrumpix:
+    ipam:
+      config:
+        - subnet: 172.30.145.0/24
+
+secrets:
+  ferrumpix_password:
+    file: ./ferrumpix-password.txt
+
+volumes:
+  ferrumpix-data:
+  caddy-data:
+  caddy-config:

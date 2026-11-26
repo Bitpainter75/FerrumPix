@@ -12844,9 +12844,6 @@
   <data name="Beim_n_chsten_Start_verwendet_FerrumPix_den_Date_82e8fbec" xml:space="preserve">
     <value>Bij de volgende start gebruikt FerrumPix de gegevensmap in {0}.</value>
   </data>
-  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_ce1e5936" xml:space="preserve">
-    <value>Bij de volgende start verhuist de gegevensmap naar {0}.</value>
-  </data>
   <data name="Datenordner_nicht_erreichbar_9b1a712e" xml:space="preserve">
     <value>Gegevensmap niet bereikbaar</value>
   </data>
@@ -13006,8 +13003,8 @@
   <data name="Abmelden_7e324c5c" xml:space="preserve">
     <value>Afmelden</value>
   </data>
-  <data name="Mindestens_10_Zeichen_mit_Gro_buchstaben_Kleinbu_6da2d56e" xml:space="preserve">
-    <value>Minstens 10 tekens met hoofdletters, kleine letters, een cijfer en een speciaal teken; een spatie telt als speciaal teken. Twee keer invoeren. Leeg laten om alleen de vergrendeltijd te wijzigen.</value>
+  <data name="Mindestens_8_Zeichen_mit_Gro_buchstaben_Kleinbuc_839d03de" xml:space="preserve">
+    <value>Minstens 8 tekens met hoofdletters, kleine letters, een cijfer en een speciaal teken; een spatie telt als speciaal teken. Twee keer invoeren. Leeg laten om alleen de vergrendeltijd te wijzigen.</value>
   </data>
   <data name="Die_Wiederholung_stimmt_noch_nicht_mit_dem_neuen_eaa3a18a" xml:space="preserve">
     <value>De herhaling komt nog niet overeen met het nieuwe wachtwoord.</value>
@@ -13026,5 +13023,68 @@
   </data>
   <data name="Noch_n_tig_ein_Sonderzeichen_auch_ein_Leerzeiche_c0e66159" xml:space="preserve">
     <value>Nog nodig: een speciaal teken; een spatie telt ook.</value>
+  </data>
+  <data name="Wird_vorbereitet_140ad8bf" xml:space="preserve">
+    <value>Wordt voorbereid</value>
+  </data>
+  <data name="0_von_1_Dateien_2_von_3_80b385f5" xml:space="preserve">
+    <value>{0} van {1} bestanden, {2} van {3}</value>
+  </data>
+  <data name="0_von_1_Dateien_8e8da684" xml:space="preserve">
+    <value>{0} van {1} bestanden</value>
+  </data>
+  <data name="0_Dateien_verschoben_3f8cf1d9" xml:space="preserve">
+    <value>{0} bestanden verplaatst</value>
+  </data>
+  <data name="Datenordner_wird_verschoben_d0cb6bf0" xml:space="preserve">
+    <value>Gegevensmap wordt verplaatst</value>
+  </data>
+  <data name="Bitte_FerrumPix_nicht_beenden_Danach_startet_es__f72667ce" xml:space="preserve">
+    <value>Sluit FerrumPix niet af. Daarna start het vanzelf.</value>
+  </data>
+  <data name="Bisheriger_Ort_a58722d7" xml:space="preserve">
+    <value>Vorige locatie</value>
+  </data>
+  <data name="Neuer_Ort_289b8469" xml:space="preserve">
+    <value>Nieuwe locatie</value>
+  </data>
+  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_686dbf3d" xml:space="preserve">
+    <value>Bij de volgende start verhuist de gegevensmap naar {0}. Afhankelijk van de grootte kan dat even duren; een venster toont zolang de voortgang, en de verhuizing kan niet worden afgebroken.</value>
+  </data>
+  <data name="Eigene_Schriften_e9fcabf6" xml:space="preserve">
+    <value>Eigen lettertypen</value>
+  </data>
+  <data name="Schriften_im_Ordner_Fonts_des_Datenordners_stehe_c7bac268" xml:space="preserve">
+    <value>Lettertypen in de map Fonts van de gegevensmap zijn in de editor voor tekst te kiezen, naast de systeemlettertypen. TTF, OTF en TTC worden gelezen, ook in submappen.</value>
+  </data>
+  <data name="Im_Browser_l_sst_sich_der_Ordner_nicht_ffnen_Die_08633754" xml:space="preserve">
+    <value>In de browser kan de map niet worden geopend. Zet de lettertypen op de server in deze map; daarna volstaat Opnieuw inlezen.</value>
+  </data>
+  <data name="Schriften_werden_eingelesen_636edd40" xml:space="preserve">
+    <value>Lettertypen worden ingelezen ...</value>
+  </data>
+  <data name="Noch_keine_eigenen_Schriften_gefunden_01f8abc7" xml:space="preserve">
+    <value>Nog geen eigen lettertypen gevonden.</value>
+  </data>
+  <data name="Gefundene_Schriftfamilien_0_3387d9af" xml:space="preserve">
+    <value>Gevonden lettertypefamilies: {0}</value>
+  </data>
+  <data name="Hochladen_70d66639" xml:space="preserve">
+    <value>Uploaden</value>
+  </data>
+  <data name="Dateien_von_diesem_Ger_t_in_den_ge_ffneten_Ordne_ce5708fe" xml:space="preserve">
+    <value>Bestanden van dit apparaat naar de geopende map uploaden</value>
+  </data>
+  <data name="Die_fertigen_Dateien_kommen_auf_dieses_Ger_t_meh_90721ed6" xml:space="preserve">
+    <value>De voltooide bestanden komen op dit apparaat, meerdere als één ZIP. Op de server blijft niets achter.</value>
+  </data>
+  <data name="Im_Datenordner_ist_nicht_genug_Platz_f_r_den_Dow_8e63bddc" xml:space="preserve">
+    <value>Er is niet genoeg vrije ruimte in de gegevensmap voor de download</value>
+  </data>
+  <data name="Der_Ordner_f_r_den_Download_lie_sich_im_Datenord_c5615f40" xml:space="preserve">
+    <value>De map voor de download kon niet in de gegevensmap worden aangemaakt.</value>
+  </data>
+  <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
+    <value>Klaar om te downloaden: {0}</value>
   </data>
 </root>

@@ -1,0 +1,15 @@
+# Caddy in front of FerrumPix (see docker-compose.yml next to it). Caddy gets the certificate for
+# FERRUMPIX_DOMAIN by itself, as long as that name points at this computer from the internet and
+# the ports 80 and 443 are reachable.
+#
+# Only in your own network, without a public name: uncomment the line "tls internal". Caddy then
+# issues its own certificate, which the browser has to trust once.
+#
+# Caddy sets X-Forwarded-Proto and X-Forwarded-Host itself and passes the WebSocket under /ws
+# through without further settings. The address is the fixed one of FerrumPix in the Compose
+# network.
+
+{$FERRUMPIX_DOMAIN} {
+	# tls internal
+	reverse_proxy 172.30.145.3:14500
+}

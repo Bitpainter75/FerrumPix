@@ -1,0 +1,133 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="FerrumPix.Views.DataFolderMoveWindow"
+        Title="FerrumPix"
+        Width="600" Height="440"
+        CanResize="False"
+        CanMinimize="False"
+        CanMaximize="False"
+        WindowDecorations="None"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="True"
+        Background="{DynamicResource FP.Bg.Elevated}">
+
+    <!-- DAS FENSTER BEIM UMZUG DES DATENORDNERS (DataFolderMoveViewModel). Bauweise und Bild wie
+         das Anmeldefenster: Welcome.jpg als Hintergrund, darueber ein Schleier in der Kartenfarbe,
+         der unten deckt. Ohne Rahmen des Systems und ohne Knopf: abbrechen laesst sich der Umzug
+         nicht, und Schliessen weist das Fenster ab, solange er laeuft. Ein Druck auf die Flaeche
+         verschiebt das Fenster. -->
+    <Window.Styles>
+        <Style Selector="Arc.move-spinner">
+            <Setter Property="RenderTransform" Value="rotate(0deg)"/>
+            <Style.Animations>
+                <Animation Duration="0:0:1.1" IterationCount="Infinite">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="RenderTransform" Value="rotate(0deg)"/>
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="RenderTransform" Value="rotate(360deg)"/>
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+        <Style Selector="TextBlock.move-label">
+            <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+        </Style>
+        <Style Selector="TextBlock.move-path">
+            <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
+    </Window.Styles>
+
+    <Border PointerPressed="OnBackgroundPointerPressed">
+        <Panel>
+            <Border IsHitTestVisible="False">
+                <Border.Background>
+                    <ImageBrush Source="avares://FerrumPix/Assets/Welcome.jpg" Stretch="UniformToFill"/>
+                </Border.Background>
+            </Border>
+            <Border Background="{DynamicResource FP.Bg.Elevated}" Opacity="0.92" IsHitTestVisible="False">
+                <Border.OpacityMask>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="#00000000"/>
+                        <GradientStop Offset="0.34" Color="#00000000"/>
+                        <GradientStop Offset="0.5" Color="#FF000000"/>
+                        <GradientStop Offset="1" Color="#FF000000"/>
+                    </LinearGradientBrush>
+                </Border.OpacityMask>
+            </Border>
+
+            <StackPanel VerticalAlignment="Bottom" Margin="40,0,40,28" Spacing="10">
+                <!-- Waehrend des Umzugs: Kreisel und Ueberschrift. -->
+                <StackPanel Orientation="Horizontal" Spacing="14" IsVisible="{Binding !HasError}">
+                    <Arc Classes="move-spinner"
+                         Width="26" Height="26"
+                         StartAngle="0" SweepAngle="270"
+                         Stroke="{DynamicResource FP.Accent}"
+                         StrokeThickness="3"
+                         StrokeLineCap="Round"
+                         VerticalAlignment="Center"/>
+                    <TextBlock Text="Datenordner wird verschoben"
+                               FontSize="{DynamicResource FP.Font.Subtitle}"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock Text="Bitte FerrumPix nicht beenden. Danach startet es von selbst."
+                           IsVisible="{Binding !HasError}"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Body}"
+                           TextWrapping="Wrap"/>
+
+                <!-- Nach einem Fehler: der Satz und der eine Knopf. Die Texte kommen schon
+                     uebersetzt (AppFolders.NoticeMessage). -->
+                <TextBlock Classes="no-translate"
+                           Text="{Binding ErrorTitle}"
+                           IsVisible="{Binding HasError}"
+                           FontSize="{DynamicResource FP.Font.Subtitle}"
+                           FontWeight="SemiBold"
+                           TextWrapping="Wrap"/>
+                <TextBlock Classes="no-translate"
+                           Text="{Binding ErrorText}"
+                           IsVisible="{Binding HasError}"
+                           Foreground="{DynamicResource FP.Text.Danger}"
+                           FontSize="{DynamicResource FP.Font.Body}"
+                           TextWrapping="Wrap"/>
+
+                <ProgressBar Height="4" Minimum="0" Maximum="100"
+                             Value="{Binding ProgressPercent}"
+                             IsIndeterminate="{Binding !HasKnownTotal}"
+                             IsVisible="{Binding IsRunning}"
+                             Margin="0,4,0,0"/>
+                <TextBlock Classes="no-translate"
+                           Text="{Binding ProgressText}"
+                           IsVisible="{Binding IsRunning}"
+                           FontSize="{DynamicResource FP.Font.Body}"/>
+                <TextBlock Classes="no-translate move-path"
+                           Text="{Binding CurrentFileText}"
+                           IsVisible="{Binding IsRunning}"
+                           Foreground="{DynamicResource FP.Text.Muted}"
+                           MinHeight="18"/>
+
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" RowSpacing="4" Margin="0,4,0,0">
+                    <TextBlock Classes="move-label" Grid.Row="0" Grid.Column="0" Text="Bisheriger Ort"/>
+                    <TextBlock Classes="no-translate move-path" Grid.Row="0" Grid.Column="1" Text="{Binding SourceText}"/>
+                    <TextBlock Classes="move-label" Grid.Row="1" Grid.Column="0" Text="Neuer Ort"/>
+                    <TextBlock Classes="no-translate move-path" Grid.Row="1" Grid.Column="1" Text="{Binding TargetText}"/>
+                </Grid>
+
+                <Button Classes="accent"
+                        IsVisible="{Binding HasError}"
+                        HorizontalAlignment="Right"
+                        Padding="18,8"
+                        Margin="0,6,0,0"
+                        Command="{Binding CloseCommand}">Schließen</Button>
+            </StackPanel>
+
+            <Border BorderBrush="{DynamicResource FP.Border.Strong}" BorderThickness="1" IsHitTestVisible="False"/>
+        </Panel>
+    </Border>
+</Window>

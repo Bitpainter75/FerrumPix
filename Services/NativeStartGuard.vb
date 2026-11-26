@@ -36,9 +36,14 @@ Namespace Services
         End Sub
 
         ''' <summary>Die Laufzeit fuer gelernte Modelle: Umgebung und erste Sitzungsoption.</summary>
-        Public Const ModelRuntime As String = "modelllaufzeit"
+        Public Const ModelRuntime As String = "model-runtime"
         ''' <summary>Die Grafikbeschleunigung: Bibliothek anmelden und Karten abfragen.</summary>
-        Public Const GpuDevices As String = "grafikkarten"
+        Public Const GpuDevices As String = "gpu-devices"
+
+        ''' <summary>Die deutschen Namen der beiden Teile frueherer Fassungen, je mit dem neuen; nur fuer den Umzug
+        ''' der Merkdateien beim Start (AppFolders.MigrateGermanGuardNames).</summary>
+        Friend Shared ReadOnly LegacyPartNames As (OldName As String, NewName As String)() = {
+            ("modelllaufzeit", ModelRuntime), ("grafikkarten", GpuDevices)}
 
         ''' <summary>Fuer den Pruefstand: ein anderer Ordner und eine feste Fassung.</summary>
         Friend Shared DirectoryOverride As String = Nothing
@@ -53,12 +58,12 @@ Namespace Services
             End Get
         End Property
 
-        ''' <summary>Die Marke DIESES Prozesses: <c>teil.pid.marke</c>. Je Prozess eine eigene Datei,
+        ''' <summary>Die Marke DIESES Prozesses: <c>teil.pid.marker</c>. Je Prozess eine eigene Datei,
         ''' denn zwei gleichzeitig startende FerrumPix teilten sich sonst eine: der zuerst fertige
         ''' loeschte sie, und stuerzte der andere danach ab, blieb keine Spur.</summary>
         Private Shared Function OwnMarkerPath(name As String) As String
             Return Path.Combine(GuardDirectory,
-                                name & "." & Environment.ProcessId.ToString(Globalization.CultureInfo.InvariantCulture) & ".marke")
+                                name & "." & Environment.ProcessId.ToString(Globalization.CultureInfo.InvariantCulture) & AppFolders.GuardMarkerExtension)
         End Function
 
         ''' <summary>Fassung und Aenderungszeit der Programmdatei. Aendert sich eines davon, wird
@@ -114,7 +119,7 @@ Namespace Services
             Try
                 If Not Directory.Exists(GuardDirectory) Then Return False
                 Dim stamp = CurrentStamp()
-                For Each marker In Directory.GetFiles(GuardDirectory, name & ".*.marke")
+                For Each marker In Directory.GetFiles(GuardDirectory, name & ".*" & AppFolders.GuardMarkerExtension)
                     Dim lines = File.ReadAllLines(marker)
                     Dim markedStamp = If(lines.Length > 0, lines(0), "")
                     Dim markedPid = -1

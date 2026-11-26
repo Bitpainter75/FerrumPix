@@ -1,0 +1,77 @@
+# FerrumPix in the browser on a Synology NAS, behind the reverse proxy that DSM already has.
+# No Caddy: DSM terminates HTTPS (with its Let's Encrypt certificate) and forwards to FerrumPix.
+#
+# 1. Create the folders in File Station, for example
+#      /volume1/docker/ferrumpix/data     settings, catalog, thumbnails and models; own fonts go
+#                                         to ./data/share/FerrumPix/Fonts, no separate volume
+#      /volume1/docker/ferrumpix/password.txt   the password in the first line: at least 8
+#                                               characters with an uppercase and a lowercase letter,
+#                                               a digit and a special character (a space counts),
+#                                               otherwise FerrumPix does not start
+#    and note the user id and group id of the DSM user who owns them (SSH: `id <user>`;
+#    the first DSM user is usually 1026, the group "users" is 100).
+# 2. Put this file and an .env next to it in /volume1/docker/ferrumpix:
+#      FERRUMPIX_UID=1026
+#      FERRUMPIX_GID=100
+#      FERRUMPIX_PHOTOS=/volume1/photo
+#      FERRUMPIX_USER=anna            (optional)
+# 3. Container Manager > Project > Create > choose /volume1/docker/ferrumpix, use this file.
+# 4. Control Panel > Login Portal > Advanced > Reverse Proxy > Create:
+#      Source:      HTTPS, hostname photos.example.org (or your DSM name), port 443
+#      Destination: HTTP, localhost, port 14500
+#    Custom Header > Create > WebSocket (adds Upgrade and Connection), then add
+#      X-Forwarded-Proto   https
+#      X-Forwarded-Host    $host
+#    Pick the certificate for that hostname under Control Panel > Security > Certificate.
+#    With split DNS on your router or DNS server, point photos.example.org at the NAS inside your
+#    network; the certificate and the proxy entry stay the same.
+# 5. Open https://photos.example.org and sign in with the password.
+#
+# WHY THE FIXED NETWORK: DSM's proxy reaches the container through the published port on
+# 127.0.0.1. Inside the container that connection arrives from the gateway of the Docker network,
+# not from 127.0.0.1. FerrumPix only accepts requests from the address named in
+# FERRUMPIX_BROWSER_PROXY_ADDRESS, so the network gets a fixed gateway (172.30.146.1) and exactly
+# that address is named. If the subnet is taken on your NAS, change the subnet, the gateway and the
+# address below together. If FerrumPix still answers 403, its log names the address it saw.
+#
+# The port stays on 127.0.0.1: only DSM's proxy reaches it, never the network directly. This
+# template deliberately has no way to put FerrumPix on the network without HTTPS; for plain HTTP
+# in a home network see docker-compose.synology-http.yml.
+#
+# Most Synology models have no suitable graphics unit, so the models run on the processor there.
+
+name: ferrumpix
+
+services:
+  ferrumpix:
+    image: "${FERRUMPIX_IMAGE:-ghcr.io/bitpainter75/ferrumpix:latest}"
+    restart: unless-stopped
+    # The image runs as user 1000; on a Synology the files belong to the DSM user.
+    user: "${FERRUMPIX_UID:-1026}:${FERRUMPIX_GID:-100}"
+    environment:
+      FERRUMPIX_BROWSER_TLS_PROXY: "1"
+      FERRUMPIX_BROWSER_PROXY_ADDRESS: "172.30.146.1"
+      FERRUMPIX_BROWSER_USER: "${FERRUMPIX_USER:-}"
+      FERRUMPIX_BROWSER_PASSWORD_FILE: /run/secrets/ferrumpix_password
+      LANG: "${FERRUMPIX_LANG:-C.UTF-8}"
+    secrets:
+      - ferrumpix_password
+    ports:
+      - "127.0.0.1:14500:14500"
+    volumes:
+      - ./data:/data
+      # Every photo folder under /photos/<name>; add lines in the same pattern.
+      - "${FERRUMPIX_PHOTOS:?FERRUMPIX_PHOTOS is missing in .env}:/photos/Photos"
+    networks:
+      - ferrumpix
+
+networks:
+  ferrumpix:
+    ipam:
+      config:
+        - subnet: 172.30.146.0/24
+          gateway: 172.30.146.1
+
+secrets:
+  ferrumpix_password:
+    file: ./password.txt

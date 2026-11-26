@@ -1690,11 +1690,13 @@ Namespace ViewModels
                 Dim v = "Local"
                 If String.Equals(value, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso IsSaveAsImmichAvailable Then v = "Immich"
                 If String.Equals(value, "Nextcloud", StringComparison.OrdinalIgnoreCase) AndAlso IsSaveAsNextcloudAvailable Then v = "Nextcloud"
+                If String.Equals(value, SaveAsTargetDownload, StringComparison.OrdinalIgnoreCase) AndAlso IsSaveAsDownloadAvailable Then v = SaveAsTargetDownload
                 If _dialogSaveAsTarget = v Then Return
                 Me.RaiseAndSetIfChanged(_dialogSaveAsTarget, v)
                 Me.RaisePropertyChanged(NameOf(IsSaveAsTargetLocal))
                 Me.RaisePropertyChanged(NameOf(IsSaveAsTargetImmich))
                 Me.RaisePropertyChanged(NameOf(IsSaveAsTargetNextcloud))
+                Me.RaisePropertyChanged(NameOf(IsSaveAsTargetDownload))
                 Me.RaisePropertyChanged(NameOf(IsSaveAsTargetFolderVisible))
                 Me.RaisePropertyChanged(NameOf(IsSaveAsTargetRowVisible))
                 Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceCurrentActive))
@@ -2037,9 +2039,37 @@ Namespace ViewModels
 
         Public ReadOnly Property IsSaveAsTargetLocal As Boolean
             Get
-                Return Not IsSaveAsTargetImmich AndAlso Not IsSaveAsTargetNextcloud
+                Return Not IsSaveAsTargetImmich AndAlso Not IsSaveAsTargetNextcloud AndAlso Not IsSaveAsTargetDownload
             End Get
         End Property
+
+        ''' <summary>Der Wert von <see cref="DialogSaveAsTarget"/> fuer das Ziel "Herunterladen".</summary>
+        Public Const SaveAsTargetDownload As String = "Download"
+
+        ''' <summary>"Herunterladen" auf das Geraet des Browsers, nur im Browser: dort schreibt die
+        ''' Anwendung in einen eigenen Ordner im Datenordner und bietet das Ergebnis gleich zum
+        ''' Herunterladen an (BrowserBridge.CreateDownloadFolder, OfferDownloadFolder). Am Rechner
+        ''' gibt es die Wahl nicht.</summary>
+        Public ReadOnly Property IsSaveAsDownloadAvailable As Boolean
+            Get
+                Return BrowserBridge.IsActive
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSaveAsTargetDownload As Boolean
+            Get
+                Return String.Equals(_dialogSaveAsTarget, SaveAsTargetDownload, StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' <summary>Das Ziel beim Oeffnen eines Dialogs: ein Ordner, im Browser "Herunterladen",
+        ''' wenn es zuletzt gewaehlt war (AppSettings.SaveAsTargetDownload). Immich und Nextcloud
+        ''' werden wie bisher nicht gemerkt.</summary>
+        Private Sub ResetDialogSaveAsTarget()
+            DialogSaveAsTarget = If(IsSaveAsDownloadAvailable AndAlso AppSettingsService.Load().SaveAsTargetDownload,
+                                    SaveAsTargetDownload, "Local")
+            Me.RaisePropertyChanged(NameOf(IsSaveAsDownloadAvailable))
+        End Sub
 
         Public ReadOnly Property IsSaveAsTargetImmich As Boolean
             Get
@@ -2734,7 +2764,7 @@ Namespace ViewModels
             SetDialogFormats(includeFpx:=True)
             DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat(allowFpx:=True))
             DialogJpgQuality = DefaultJpgQuality()
-            DialogSaveAsTarget = "Local"
+            ResetDialogSaveAsTarget()
             InitDialogTargetFolder(currentFolder)
             PrepareDialogExportForms(settings, samplePath)
             Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
@@ -3098,7 +3128,7 @@ Namespace ViewModels
             FillDialogSaveAsNameChoices("", LocalizationService.T("Name der Quelle"), DialogTargetNamePattern)
             DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat())
             DialogJpgQuality = If(_dialogBatchFilterOverwrite, 95, DefaultJpgQuality())
-            DialogSaveAsTarget = "Local"
+            ResetDialogSaveAsTarget()
             InitDialogTargetFolder(currentFolder)
             ' Nach dem Neuaufbau steht der erste Filter in der Auswahl - dessen Setter setzt die Stärke.
             RebuildDialogFilterChoices()
@@ -6200,7 +6230,7 @@ Namespace ViewModels
             FillDialogSaveAsNameChoices("", LocalizationService.T("Name der Quelle"), DialogTargetNamePattern)
             DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat())
             DialogJpgQuality = If(_dialogBatchResizeOverwrite, 95, DefaultJpgQuality())
-            DialogSaveAsTarget = "Local"
+            ResetDialogSaveAsTarget()
             InitDialogTargetFolder(currentFolder)
 
             If Not String.IsNullOrWhiteSpace(samplePath) AndAlso File.Exists(samplePath) Then
@@ -6320,7 +6350,7 @@ Namespace ViewModels
             FillDialogSaveAsNameChoices("", LocalizationService.T("Name der Quelle"), DialogTargetNamePattern)
             DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat())
             DialogJpgQuality = If(_dialogBatchWatermarkOverwrite, 95, DefaultJpgQuality())
-            DialogSaveAsTarget = "Local"
+            ResetDialogSaveAsTarget()
             InitDialogTargetFolder(currentFolder)
 
             For Each preset In settings.WatermarkPresets
@@ -6594,7 +6624,7 @@ Namespace ViewModels
             DialogSelectedFormat = NormalizeSaveAsFormat(initialFormat)
             ' 0 = kein eigener Startwert, dann gilt die Einstellung.
             DialogJpgQuality = If(initialJpgQuality > 0, initialJpgQuality, DefaultJpgQuality())
-            DialogSaveAsTarget = "Local"
+            ResetDialogSaveAsTarget()
             InitDialogTargetFolder("")
             ResetDialogSaveAsMetaOptions()
             Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
@@ -6650,7 +6680,7 @@ Namespace ViewModels
             DialogLosslessJpegToJxl = True
             ' 0 = kein eigener Startwert, dann gilt die Einstellung.
             DialogJpgQuality = If(initialJpgQuality > 0, initialJpgQuality, DefaultJpgQuality())
-            DialogSaveAsTarget = "Local"
+            ResetDialogSaveAsTarget()
             DialogTargetNamePattern = AppSettingsService.Load().LastTargetNamePattern
             FillDialogSaveAsNameChoices("", LocalizationService.T("Name der Quelle"), DialogTargetNamePattern)
             InitDialogTargetFolder(currentFolder)
@@ -6731,6 +6761,9 @@ Namespace ViewModels
         End Sub
 
         Private Sub PersistDialogTargetFolderIfLocal()
+            ' Im Browser merkt der Dialog sich auch, ob zuletzt "Herunterladen" das Ziel war; ein
+            ' Ordner, Immich oder Nextcloud heben das wieder auf. Am Rechner bleibt der Merker, wie er ist.
+            If IsSaveAsDownloadAvailable Then AppSettingsService.SaveSaveAsTargetDownload(IsSaveAsTargetDownload)
             If Not IsSaveAsTargetLocal Then Return
             Dim folder = AppSettingsService.NormalizeFolderPath(DialogSaveAsTargetFolder)
             If String.IsNullOrWhiteSpace(folder) Then Return

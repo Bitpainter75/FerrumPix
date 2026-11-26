@@ -18,13 +18,13 @@ Namespace Services
     '''
     ''' DIE LAUFMARKE: vor Sitzungsaufbau und jedem Lauf eines Modells AUF DER KARTE wird im Ordner
     ''' des Startschutzes (<see cref="NativeStartGuard.GuardDirectory"/>) eine Marke
-    ''' <c>modell-&lt;datei&gt;-&lt;karte&gt;.&lt;pid&gt;.marke</c> angelegt und danach geloescht. Sie
+    ''' <c>gpu-model-&lt;datei&gt;-&lt;karte&gt;.&lt;pid&gt;.marker</c> angelegt und danach geloescht. Sie
     ''' traegt Programmfassung, Prozessnummer, Modelldatei, Kartenschluessel, Kartenname,
     ''' Ausfuehrungsweg und Treiberfassung. Bleibt sie liegen und lebt ihr Prozess nicht mehr, ist er
     ''' genau dort gestorben. Wie beim Startschutz hat jeder Prozess seine eigenen Marken; laufen in
     ''' einem Prozess zwei Laeufe desselben Paares gleichzeitig, steht die Marke bis zum letzten.
     '''
-    ''' DIE SPERRDATEI <c>karte-gesperrt.json</c> liegt im Datenordner, in einem gewaehlten mit dem
+    ''' DIE SPERRDATEI <c>gpu-blocked.json</c> liegt im Datenordner, in einem gewaehlten mit dem
     ''' Rechnernamen (AppFolders.GpuBlockPath; wie die Marke der Bildkette,
     ''' <c>gpu-busy.marker</c>). Beim ersten Blick in die Sperren eines Programmlaufs
     ''' werden liegengebliebene Laufmarken dorthin uebernommen (Grund "crash"), und auch ein
@@ -56,8 +56,12 @@ Namespace Services
         ''' <summary>Der Aufbau auf der Karte warf eine gefangene Ausnahme.</summary>
         Public Const ReasonError As String = "error"
 
-        Private Const MarkerPrefix As String = "modell-"
-        Private Const BlockFileName As String = "karte-gesperrt.json"
+        ''' <summary>Der Anfang jeder Laufmarke. Er darf mit keinem Teil des Startschutzes
+        ''' (NativeStartGuard.ModelRuntime, GpuDevices) beginnen: die Suche nach
+        ''' "&lt;anfang&gt;*.marker" nimmt sonst dessen Marken mit und loescht sie.</summary>
+        Friend Const MarkerPrefix As String = "gpu-model-"
+        ''' <summary>Der Anfang der Laufmarken frueherer Fassungen, nur fuer den Umzug beim Start.</summary>
+        Friend Const LegacyMarkerPrefix As String = "modell-"
 
         ''' <summary>Eine Sperre: dieses Modell auf dieser Karte.</summary>
         Public NotInheritable Class BlockEntry
@@ -189,7 +193,7 @@ Namespace Services
 
         Private Shared Function OwnMarkerPath(baseName As String) As String
             Return Path.Combine(NativeStartGuard.GuardDirectory,
-                                baseName & "." & Environment.ProcessId.ToString(Globalization.CultureInfo.InvariantCulture) & ".marke")
+                                baseName & "." & Environment.ProcessId.ToString(Globalization.CultureInfo.InvariantCulture) & AppFolders.GuardMarkerExtension)
         End Function
 
         Private Shared Sub LeaveRun(baseName As String)
@@ -388,7 +392,7 @@ Namespace Services
                 Next
             Catch ex As Exception
                 ' Eine kaputte Datei sperrt nichts. Sie bleibt liegen, bis neu geschrieben wird.
-                DiagnosticLogService.LogAlways("Startschutz", $"{BlockFileName} nicht lesbar, wird ignoriert: {ex.GetType().Name}")
+                DiagnosticLogService.LogAlways("Startschutz", $"{Path.GetFileName(BlockFilePath)} nicht lesbar, wird ignoriert: {ex.GetType().Name}")
                 result.Clear()
             End Try
             Return result
@@ -403,7 +407,7 @@ Namespace Services
                 Dim folder = NativeStartGuard.GuardDirectory
                 If Not Directory.Exists(folder) Then Return False
                 Dim stamp = NativeStartGuard.CurrentStamp()
-                For Each marker In Directory.GetFiles(folder, MarkerPrefix & "*.marke")
+                For Each marker In Directory.GetFiles(folder, MarkerPrefix & "*" & AppFolders.GuardMarkerExtension)
                     Dim lines As String()
                     Try
                         lines = File.ReadAllLines(marker)

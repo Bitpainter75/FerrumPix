@@ -86,10 +86,20 @@ Namespace Services
         Public Const FavoritesFileName As String = "favorites.json"
         Public Const SearchListsFileName As String = "searchlists.json"
         Public Const LogsFolderName As String = "logs"
-        Friend Const StartGuardFolderName As String = "startschutz"
+        Friend Const StartGuardFolderName As String = "start-guard"
+        ''' <summary>Die Endung der Merkdateien im Ordner des Startschutzes.</summary>
+        Friend Const GuardMarkerExtension As String = ".marker"
         Friend Const BackgroundRunLockName As String = "background-run"
         Friend Const GpuBusyMarkerName As String = "gpu-busy"
-        Friend Const GpuBlockFileName As String = "karte-gesperrt"
+        ''' <summary>Die Sperren von Modell und Karte, ohne Endung (".json"); in einem gewaehlten
+        ''' Datenordner steht der Rechnername dazwischen.</summary>
+        Friend Const GpuBlockFileName As String = "gpu-blocked"
+        ''' <summary>Die deutschen Namen frueherer Fassungen: Ordner des Startschutzes, Endung seiner
+        ''' Merkdateien und Sperrdatei der Karte. Nur noch der Umzug beim Start liest sie
+        ''' (<see cref="MigrateGermanGuardNames"/>).</summary>
+        Friend Const LegacyStartGuardFolderName As String = "startschutz"
+        Friend Const LegacyGuardMarkerExtension As String = ".marke"
+        Friend Const LegacyGpuBlockFileName As String = "karte-gesperrt"
 
         ' --- Fuer den Pruefstand ----------------------------------------------------------
 

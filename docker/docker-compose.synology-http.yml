@@ -1,0 +1,78 @@
+# FerrumPix in the browser on a Synology NAS, WITHOUT HTTPS, for the home network only.
+#
+# WARNING: the connection is unencrypted. Password, pictures and everything shown travel
+# readable through your network. Use this only in a home network you trust, never open the port
+# in your router (no port forwarding, no UPnP), and use docker-compose.synology.yml (HTTPS through
+# the reverse proxy of DSM) for access from outside.
+#
+# What FerrumPix does in this mode (FERRUMPIX_BROWSER_ALLOW_HTTP=1):
+#   - it only answers private addresses: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16,
+#     169.254.0.0/16, fc00::/7, fe80::/10 and the NAS itself; everybody else gets 403 and is never
+#     asked for the password,
+#   - it refuses to start without a password,
+#   - its log and the page in the browser say that the connection is unencrypted.
+#
+# 1. Create the folders in File Station, for example
+#      /volume1/docker/ferrumpix/data     settings, catalog, thumbnails and models; own fonts go
+#                                         to ./data/share/FerrumPix/Fonts, no separate volume
+#      /volume1/docker/ferrumpix/password.txt   the password in the first line: at least 8
+#                                               characters with an uppercase and a lowercase letter,
+#                                               a digit and a special character (a space counts),
+#                                               otherwise FerrumPix does not start
+#    and note the user id and group id of the DSM user who owns them (SSH: `id <user>`;
+#    the first DSM user is usually 1026, the group "users" is 100).
+# 2. Put this file and an .env next to it in /volume1/docker/ferrumpix:
+#      FERRUMPIX_UID=1026
+#      FERRUMPIX_GID=100
+#      FERRUMPIX_PHOTOS=/volume1/photo
+#      FERRUMPIX_USER=anna            (optional)
+# 3. Container Manager > Project > Create > choose /volume1/docker/ferrumpix, use this file.
+# 4. Open http://<address of the NAS>:14500 (for example http://192.168.1.10:14500) and sign in.
+#    Use the IPv4 address or the local name of the NAS: a device that reaches the NAS over its
+#    global IPv6 address looks like any address on the internet and gets 403.
+#
+# WHY THE HOST NETWORK: FerrumPix decides by the address a connection comes from. With a
+# published port on a Docker network, a connection can arrive from the gateway of that network
+# instead of the real device (always when Docker's userland proxy forwards it, for example over
+# IPv6), and the gateway is a private address. Then EVERY request looks like the home network,
+# also one that a port forwarding of the router brings in from the internet. With
+# network_mode: host there is no Docker network in between, FerrumPix sees the real address of
+# every device, and a request from the internet gets 403 even if the router forwards the port.
+# The port 14500 must then be free on the NAS; change FERRUMPIX_BROWSER_BIND to move it.
+#
+# If you prefer a published port, remove network_mode and use the ports lines at the end instead.
+# The address check then is only as good as your router: keep the port closed there.
+#
+# A VPN into the home network (WireGuard or OpenVPN on the router or the NAS) is fine, as long as
+# its addresses are private ones from the list above.
+#
+# Most Synology models have no suitable graphics unit, so the models run on the processor there.
+
+name: ferrumpix-http
+
+services:
+  ferrumpix:
+    image: "${FERRUMPIX_IMAGE:-ghcr.io/bitpainter75/ferrumpix:latest}"
+    restart: unless-stopped
+    # The image runs as user 1000; on a Synology the files belong to the DSM user.
+    user: "${FERRUMPIX_UID:-1026}:${FERRUMPIX_GID:-100}"
+    network_mode: host
+    environment:
+      FERRUMPIX_BROWSER_ALLOW_HTTP: "1"
+      FERRUMPIX_BROWSER_BIND: "0.0.0.0:14500"
+      FERRUMPIX_BROWSER_USER: "${FERRUMPIX_USER:-}"
+      FERRUMPIX_BROWSER_PASSWORD_FILE: /run/secrets/ferrumpix_password
+      LANG: "${FERRUMPIX_LANG:-C.UTF-8}"
+    secrets:
+      - ferrumpix_password
+    volumes:
+      - ./data:/data
+      # Every photo folder under /photos/<name>; add lines in the same pattern.
+      - "${FERRUMPIX_PHOTOS:?FERRUMPIX_PHOTOS is missing in .env}:/photos/Photos"
+    # Instead of network_mode: host (see above, the address check is weaker then):
+    # ports:
+    #   - "14500:14500"
+
+secrets:
+  ferrumpix_password:
+    file: ./password.txt

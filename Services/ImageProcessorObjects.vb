@@ -2523,8 +2523,9 @@ Namespace Services
         ' SKTypeface.FromFamilyName ist unter Linux/Fontconfig ein bekannt langsamer Pfad
         ' (Font-Matching-Scan), der ohne Cache bei jedem einzelnen Bake einer Text-/Wasserzeichen-
         ' Annotation erneut ausgeführt wurde. SKTypeface-Instanzen sind immutable und threadsicher
-        ' wiederverwendbar, daher genügt ein einfacher, nie geleerter Cache über die kleine,
-        ' begrenzte Menge an im Editor tatsächlich genutzten Font-Familiennamen.
+        ' wiederverwendbar, daher genügt ein einfacher Cache über die kleine, begrenzte Menge an
+        ' im Editor tatsächlich genutzten Font-Familiennamen. Geleert wird er nur nach dem
+        ' Einlesen der eigenen Schriften (ClearTypefaceCaches).
         Private Shared ReadOnly _typefaceCache As New Dictionary(Of String, SKTypeface)()
         Private Shared ReadOnly _typefaceCacheLock As New Object()
         ' Der gewaehlte Font ist eine gestalterische Vorgabe. Fehlt ihm ein Zeichen, darf das
@@ -2540,17 +2541,45 @@ Namespace Services
         ''' vorhandenen zurueck; ein synthetisches Schraegstellen macht es NICHT.</summary>
         Private Shared Function GetTypeface(fontFamily As String, Optional bold As Boolean = False,
                                             Optional italic As Boolean = False) As SKTypeface
-            Dim key = If(fontFamily, "") & "|" & If(bold, "b", "") & If(italic, "i", "")
+            ' Erst die eigenen Schriften aus dem Ordner Fonts (FontLibraryService), dann das System.
+            ' Das Warten auf das erste Einlesen steht VOR dem Schloss: das Einlesen leert am Ende
+            ' genau diese Zwischenspeicher und braucht dafuer das Schloss.
+            FontLibraryService.EnsureLoaded()
+            Dim key = FontLibraryService.Version.ToString(Globalization.CultureInfo.InvariantCulture) & "|" &
+                      If(fontFamily, "") & "|" & If(bold, "b", "") & If(italic, "i", "")
             SyncLock _typefaceCacheLock
                 Dim cached As SKTypeface = Nothing
                 If _typefaceCache.TryGetValue(key, cached) Then Return cached
-                Dim stil = New SKFontStyle(If(bold, SKFontStyleWeight.Bold, SKFontStyleWeight.Normal),
-                                           SKFontStyleWidth.Normal,
-                                           If(italic, SKFontStyleSlant.Italic, SKFontStyleSlant.Upright))
-                Dim created = SKTypeface.FromFamilyName(fontFamily, stil)
+                Dim created = FontLibraryService.Match(fontFamily, bold, italic)
+                If created Is Nothing Then
+                    Dim requestedStyle = New SKFontStyle(If(bold, SKFontStyleWeight.Bold, SKFontStyleWeight.Normal),
+                                                         SKFontStyleWidth.Normal,
+                                                         If(italic, SKFontStyleSlant.Italic, SKFontStyleSlant.Upright))
+                    created = SKTypeface.FromFamilyName(fontFamily, requestedStyle)
+                End If
                 _typefaceCache(key) = created
                 Return created
             End SyncLock
+        End Function
+
+        ''' <summary>Leert die Zwischenspeicher der Schriftschnitte, nach jedem Einlesen der eigenen
+        ''' Schriften: ein Name, der vorher die Ersatzschrift des Systems bekam, kann jetzt eine
+        ''' eigene meinen. Die Schluessel tragen ohnehin den Stand des Einlesens; das Leeren gibt
+        ''' nur die alten Eintraege frei.</summary>
+        Friend Shared Sub ClearTypefaceCaches()
+            SyncLock _typefaceCacheLock
+                _typefaceCache.Clear()
+                _characterFallbackTypefaceCache.Clear()
+            End SyncLock
+        End Sub
+
+        ''' <summary>Der Schnitt, mit dem das Zeichnen Text in dieser Schrift setzt, eigene Schriften
+        ''' aus dem Ordner Fonts eingeschlossen (<see cref="GetTypeface"/>). Fuer Messungen ausserhalb
+        ''' des Prozessors, die sonst am System vorbei an der eigenen Schrift vorbeimessen.
+        ''' Nicht freigeben: der Schnitt steckt im Zwischenspeicher.</summary>
+        Friend Shared Function ResolveTypeface(fontFamily As String, Optional bold As Boolean = False,
+                                               Optional italic As Boolean = False) As SKTypeface
+            Return GetTypeface(fontFamily, bold, italic)
         End Function
 
         ''' <summary>Der Familienname des Schnitts, mit dem das Zeichnen Text in dieser Schrift
@@ -2596,12 +2625,16 @@ Namespace Services
                                         SKFontStyleWidth.Normal,
                                         If(italic, SKFontStyleSlant.Italic, SKFontStyleSlant.Upright))
             Dim language = GetTextLanguageHint(text)
-            Dim key = If(fontFamily, "") & "|" & style.Weight.ToString() & "|" & style.Slant.ToString() & "|" & language & "|" & codePoint.ToString()
+            FontLibraryService.EnsureLoaded()
+            Dim key = FontLibraryService.Version.ToString(Globalization.CultureInfo.InvariantCulture) & "|" &
+                      If(fontFamily, "") & "|" & style.Weight.ToString() & "|" & style.Slant.ToString() & "|" & language & "|" & codePoint.ToString()
             SyncLock _typefaceCacheLock
                 Dim cached As SKTypeface = Nothing
                 If _characterFallbackTypefaceCache.TryGetValue(key, cached) Then Return cached
                 Dim languages As String() = If(String.IsNullOrEmpty(language), Nothing, New String() {language})
-                Dim matched = SKFontManager.Default.MatchCharacter(fontFamily, style, languages, codePoint)
+                ' Zuerst ein eigener Schnitt mit dem Zeichen, dann das System.
+                Dim matched = FontLibraryService.MatchCharacter(codePoint, bold, italic)
+                If matched Is Nothing Then matched = SKFontManager.Default.MatchCharacter(fontFamily, style, languages, codePoint)
                 If matched IsNot Nothing Then _characterFallbackTypefaceCache(key) = matched
                 Return matched
             End SyncLock

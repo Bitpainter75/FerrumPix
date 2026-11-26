@@ -12803,9 +12803,6 @@
   <data name="Beim_n_chsten_Start_verwendet_FerrumPix_den_Date_82e8fbec" xml:space="preserve">
     <value>No próximo arranque o FerrumPix usa a pasta de dados em {0}.</value>
   </data>
-  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_ce1e5936" xml:space="preserve">
-    <value>No próximo arranque a pasta de dados muda para {0}.</value>
-  </data>
   <data name="Datenordner_nicht_erreichbar_9b1a712e" xml:space="preserve">
     <value>Pasta de dados inacessível</value>
   </data>
@@ -12965,8 +12962,8 @@
   <data name="Abmelden_7e324c5c" xml:space="preserve">
     <value>Terminar sessão</value>
   </data>
-  <data name="Mindestens_10_Zeichen_mit_Gro_buchstaben_Kleinbu_6da2d56e" xml:space="preserve">
-    <value>Pelo menos 10 caracteres com maiúsculas, minúsculas, um número e um carácter especial; um espaço conta como carácter especial. Introduza-a duas vezes. Deixe vazio para alterar apenas o tempo de bloqueio.</value>
+  <data name="Mindestens_8_Zeichen_mit_Gro_buchstaben_Kleinbuc_839d03de" xml:space="preserve">
+    <value>Pelo menos 8 caracteres com maiúsculas, minúsculas, um número e um carácter especial; um espaço conta como carácter especial. Introduza-a duas vezes. Deixe vazio para alterar apenas o tempo de bloqueio.</value>
   </data>
   <data name="Die_Wiederholung_stimmt_noch_nicht_mit_dem_neuen_eaa3a18a" xml:space="preserve">
     <value>A repetição ainda não coincide com a nova palavra-passe.</value>
@@ -12985,5 +12982,68 @@
   </data>
   <data name="Noch_n_tig_ein_Sonderzeichen_auch_ein_Leerzeiche_c0e66159" xml:space="preserve">
     <value>Ainda falta: um carácter especial; um espaço também conta.</value>
+  </data>
+  <data name="Wird_vorbereitet_140ad8bf" xml:space="preserve">
+    <value>A preparar</value>
+  </data>
+  <data name="0_von_1_Dateien_2_von_3_80b385f5" xml:space="preserve">
+    <value>{0} de {1} ficheiros, {2} de {3}</value>
+  </data>
+  <data name="0_von_1_Dateien_8e8da684" xml:space="preserve">
+    <value>{0} de {1} ficheiros</value>
+  </data>
+  <data name="0_Dateien_verschoben_3f8cf1d9" xml:space="preserve">
+    <value>{0} ficheiros movidos</value>
+  </data>
+  <data name="Datenordner_wird_verschoben_d0cb6bf0" xml:space="preserve">
+    <value>A mover a pasta de dados</value>
+  </data>
+  <data name="Bitte_FerrumPix_nicht_beenden_Danach_startet_es__f72667ce" xml:space="preserve">
+    <value>Não feche o FerrumPix. Depois ele inicia sozinho.</value>
+  </data>
+  <data name="Bisheriger_Ort_a58722d7" xml:space="preserve">
+    <value>Localização anterior</value>
+  </data>
+  <data name="Neuer_Ort_289b8469" xml:space="preserve">
+    <value>Nova localização</value>
+  </data>
+  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_686dbf3d" xml:space="preserve">
+    <value>No próximo arranque a pasta de dados muda para {0}. Consoante o tamanho, pode demorar; entretanto uma janela mostra o progresso, e a mudança não pode ser cancelada.</value>
+  </data>
+  <data name="Eigene_Schriften_e9fcabf6" xml:space="preserve">
+    <value>Fontes próprias</value>
+  </data>
+  <data name="Schriften_im_Ordner_Fonts_des_Datenordners_stehe_c7bac268" xml:space="preserve">
+    <value>As fontes da pasta Fonts da pasta de dados podem ser escolhidas para texto no editor, ao lado das fontes do sistema. São lidos ficheiros TTF, OTF e TTC, também em subpastas.</value>
+  </data>
+  <data name="Im_Browser_l_sst_sich_der_Ordner_nicht_ffnen_Die_08633754" xml:space="preserve">
+    <value>A pasta não pode ser aberta no navegador. Coloque as fontes nesta pasta no servidor; depois basta Ler novamente.</value>
+  </data>
+  <data name="Schriften_werden_eingelesen_636edd40" xml:space="preserve">
+    <value>A ler fontes ...</value>
+  </data>
+  <data name="Noch_keine_eigenen_Schriften_gefunden_01f8abc7" xml:space="preserve">
+    <value>Ainda não foram encontradas fontes próprias.</value>
+  </data>
+  <data name="Gefundene_Schriftfamilien_0_3387d9af" xml:space="preserve">
+    <value>Famílias de fontes encontradas: {0}</value>
+  </data>
+  <data name="Hochladen_70d66639" xml:space="preserve">
+    <value>Enviar</value>
+  </data>
+  <data name="Dateien_von_diesem_Ger_t_in_den_ge_ffneten_Ordne_ce5708fe" xml:space="preserve">
+    <value>Enviar ficheiros deste dispositivo para a pasta aberta</value>
+  </data>
+  <data name="Die_fertigen_Dateien_kommen_auf_dieses_Ger_t_meh_90721ed6" xml:space="preserve">
+    <value>Os ficheiros prontos vêm para este dispositivo, vários num único ZIP. Nada fica no servidor.</value>
+  </data>
+  <data name="Im_Datenordner_ist_nicht_genug_Platz_f_r_den_Dow_8e63bddc" xml:space="preserve">
+    <value>Não há espaço livre suficiente na pasta de dados para a transferência</value>
+  </data>
+  <data name="Der_Ordner_f_r_den_Download_lie_sich_im_Datenord_c5615f40" xml:space="preserve">
+    <value>Não foi possível criar a pasta para a transferência na pasta de dados.</value>
+  </data>
+  <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
+    <value>Pronto para transferir: {0}</value>
   </data>
 </root>

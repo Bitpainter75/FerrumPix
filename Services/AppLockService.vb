@@ -78,13 +78,13 @@ Namespace Services
         Private Const HashLength As Integer = 32
 
         ''' <summary>Mindestlaenge eines neuen Kennworts, in Zeichen (Unicode-Codepunkten).</summary>
-        Public Const MinimumPasswordLength As Integer = 10
+        Public Const MinimumPasswordLength As Integer = 8
 
         ''' <summary>Welche Regeln ein NEUES Kennwort verletzt; leer heisst in Ordnung. Gilt beim
         ''' Setzen in den Einstellungen und fuer das beim Start mitgegebene, nie beim Entsperren
         ''' (dort zaehlt nur der Hash, ein aelteres Kennwort bleibt gueltig).
         '''
-        ''' <para>Mindestens zehn Zeichen, je ein Gross- und Kleinbuchstabe, eine Ziffer und ein
+        ''' <para>Mindestens acht Zeichen, je ein Gross- und Kleinbuchstabe, eine Ziffer und ein
         ''' Sonderzeichen. Buchstaben sind Unicode-Buchstaben (auch ä, ß, é): wer deutsch tippt,
         ''' soll nicht zu ASCII gezwungen werden. ß ist ein Kleinbuchstabe. Sonderzeichen ist alles,
         ''' was weder Buchstabe noch Ziffer ist, auch das Leerzeichen; Passphrasen aus mehreren
@@ -283,8 +283,8 @@ Namespace Services
 
         ''' <summary>Prueft das Kennwort, ohne etwas zu entsperren (Einstellungen, Browser).
         '''
-        ''' <para>GEZAEHLT WIRD JE ZAEHLER, ES GIBT KEINEN GEMEINSAMEN FUER DIE GANZE ANWENDUNG
-        ''' (Patrick, 2026-11-26). Am Rechner ist das <see cref="LocalKey"/>; im Browser die
+        ''' <para>GEZAEHLT WIRD JE ZAEHLER, ES GIBT KEINEN GEMEINSAMEN FUER DIE GANZE ANWENDUNG.
+        ''' Am Rechner ist das <see cref="LocalKey"/>; im Browser die
         ''' Anmeldung dieses Browsers UND seine Absenderadresse (BrowserBridge.LoginCounterKeys):
         ''' gebremst wird, wo falsch getippt wurde, und wer das Cookie wegwirft, um von vorn zu
         ''' zaehlen, bleibt ueber die Adresse gebremst. Andere Browser an anderen Adressen und das

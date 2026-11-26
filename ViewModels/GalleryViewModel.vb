@@ -15440,7 +15440,13 @@ Namespace ViewModels
                 Return
             End If
 
-            Dim targetFolder = If(resize.TargetFolder, "").Trim()
+            ' Ziel "Herunterladen" im Browser: ein eigener Ordner der Bruecke statt des Zielordners.
+            Dim download = Await BeginBrowserDownloadAsync(resize.Target, LocalizationService.T("Bildgröße ändern"),
+                                                           localItems.Select(Function(i) i.FilePath))
+            If Not download.Proceed Then Return
+            Dim folderWriter As Func(Of String, String, Boolean) = writer
+            If download.Run IsNot Nothing Then folderWriter = download.Run.Wrap(writer)
+            Dim targetFolder = If(download.Run?.Folder, If(resize.TargetFolder, "").Trim())
             If String.IsNullOrWhiteSpace(targetFolder) Then
                 Await _mainVm.ShowMessageAsync(LocalizationService.T("Bildgröße ändern"), LocalizationService.T("Kein Zielordner angegeben."))
                 Return
@@ -15457,14 +15463,15 @@ Namespace ViewModels
             End If
 
             Dim nameBuilder = CreateNameBuilder(resize.NamePattern)
-            changedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems, targetFolder, writer,
+            changedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems, targetFolder, folderWriter,
                                                                      Function(source) resize.Extension,
                                                                      "", skipSameExtension:=False,
-                                                                     metaCopy:=resize.MetaCopy,
+                                                                     metaCopy:=If(download.Run Is Nothing, resize.MetaCopy, BrowserDownloadRun.NoMetaCopy),
                                                                      nameBuilder:=nameBuilder).ConfigureAwait(True)
-            uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems, targetFolder, writer,
+            uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems, targetFolder, folderWriter,
                                                                        Function(source) resize.Extension,
                                                                        "", nameBuilder).ConfigureAwait(True)
+            download.Run?.Finish()
 
             StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) geändert"), changedCount + uploadedCount, targetItems.Count)
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
@@ -15687,7 +15694,13 @@ Namespace ViewModels
                 Return
             End If
 
-            Dim targetFolder = If(result.TargetFolder, "").Trim()
+            ' Ziel "Herunterladen" im Browser: ein eigener Ordner der Bruecke statt des Zielordners.
+            Dim download = Await BeginBrowserDownloadAsync(result.Target, LocalizationService.T("Anpassungen anwenden"),
+                                                           localItems.Select(Function(i) i.FilePath))
+            If Not download.Proceed Then Return
+            Dim folderWriter As Func(Of String, String, Boolean) = writer
+            If download.Run IsNot Nothing Then folderWriter = download.Run.Wrap(writer)
+            Dim targetFolder = If(download.Run?.Folder, If(result.TargetFolder, "").Trim())
             If String.IsNullOrWhiteSpace(targetFolder) Then
                 Await _mainVm.ShowMessageAsync(LocalizationService.T("Anpassungen anwenden"), LocalizationService.T("Kein Zielordner angegeben."))
                 Return
@@ -15704,14 +15717,15 @@ Namespace ViewModels
             End If
 
             Dim nameBuilder = CreateNameBuilder(result.NamePattern)
-            changedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems, targetFolder, writer,
+            changedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems, targetFolder, folderWriter,
                                                                      Function(source) result.Extension,
                                                                      suffix, skipSameExtension:=False,
-                                                                     metaCopy:=result.MetaCopy,
+                                                                     metaCopy:=If(download.Run Is Nothing, result.MetaCopy, BrowserDownloadRun.NoMetaCopy),
                                                                      nameBuilder:=nameBuilder).ConfigureAwait(True)
-            uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems, targetFolder, writer,
+            uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems, targetFolder, folderWriter,
                                                                        Function(source) result.Extension,
                                                                        suffix, nameBuilder).ConfigureAwait(True)
+            download.Run?.Finish()
 
             StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) angepasst"), changedCount + uploadedCount, targetItems.Count)
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
@@ -16444,7 +16458,13 @@ Namespace ViewModels
                 Return
             End If
 
-            Dim targetFolder = If(result.TargetFolder, "").Trim()
+            ' Ziel "Herunterladen" im Browser: ein eigener Ordner der Bruecke statt des Zielordners.
+            Dim download = Await BeginBrowserDownloadAsync(result.Target, LocalizationService.T("Wasserzeichen anwenden"),
+                                                           localItems.Select(Function(i) i.FilePath))
+            If Not download.Proceed Then Return
+            Dim folderWriter As Func(Of String, String, Boolean) = writer
+            If download.Run IsNot Nothing Then folderWriter = download.Run.Wrap(writer)
+            Dim targetFolder = If(download.Run?.Folder, If(result.TargetFolder, "").Trim())
             If String.IsNullOrWhiteSpace(targetFolder) Then
                 Await _mainVm.ShowMessageAsync(LocalizationService.T("Wasserzeichen anwenden"), LocalizationService.T("Kein Zielordner angegeben."))
                 Return
@@ -16460,14 +16480,15 @@ Namespace ViewModels
                 Return
             End If
 
-            changedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems, targetFolder, writer,
+            changedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems, targetFolder, folderWriter,
                                                                      Function(source) result.Extension,
                                                                      "", skipSameExtension:=False,
-                                                                     metaCopy:=result.MetaCopy,
+                                                                     metaCopy:=If(download.Run Is Nothing, result.MetaCopy, BrowserDownloadRun.NoMetaCopy),
                                                                      nameBuilder:=nameBuilder).ConfigureAwait(True)
-            uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems, targetFolder, writer,
+            uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems, targetFolder, folderWriter,
                                                                        Function(source) result.Extension,
                                                                        nameBuilder:=nameBuilder).ConfigureAwait(True)
+            download.Run?.Finish()
 
             StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) mit Wasserzeichen versehen"), changedCount + uploadedCount, targetItems.Count)
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
@@ -17646,7 +17667,11 @@ Namespace ViewModels
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
                     Function(source) result.Extension, uploadedAssetIds, nameBuilder:=nameBuilder).ConfigureAwait(True)
             Else
-                Dim targetFolder = If(result.TargetFolder, "").Trim()
+                ' Ziel "Herunterladen" im Browser: ein eigener Ordner der Bruecke statt des Zielordners.
+                Dim download = Await BeginBrowserDownloadAsync(result.Target, LocalizationService.T("Exportieren nach"),
+                                                               localItems.Select(Function(i) i.FilePath))
+                If Not download.Proceed Then Return
+                Dim targetFolder = If(download.Run?.Folder, If(result.TargetFolder, "").Trim())
                 If String.IsNullOrWhiteSpace(targetFolder) Then
                     Await _mainVm.ShowMessageAsync(LocalizationService.T("Exportieren nach"), LocalizationService.T("Kein Zielordner angegeben."))
                     Return
@@ -17664,9 +17689,12 @@ Namespace ViewModels
 
                 ' Im Browser sollen die fertigen Dateien auf den Rechner des Browsers kommen: der
                 ' Schreiber merkt sich jedes gelungene Ziel, danach geht EIN Angebot an die Seite.
+                ' Mit dem Ziel "Herunterladen" merkt sich das der Lauf selbst und startet den Download.
                 Dim writtenTargets As New List(Of String)()
-                Dim recordingWriter = writer
-                If BrowserBridge.IsActive Then
+                Dim recordingWriter As Func(Of String, String, Boolean) = writer
+                If download.Run IsNot Nothing Then
+                    recordingWriter = download.Run.Wrap(writer)
+                ElseIf BrowserBridge.IsActive Then
                     recordingWriter = Function(source As String, target As String)
                                           Dim saved = writer(source, target)
                                           If saved Then
@@ -17680,12 +17708,16 @@ Namespace ViewModels
                 exportedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems, targetFolder, recordingWriter,
                                                                           Function(source) result.Extension,
                                                                           "", skipSameExtension:=False,
-                                                                          metaCopy:=result.MetaCopy,
+                                                                          metaCopy:=If(download.Run Is Nothing, result.MetaCopy, BrowserDownloadRun.NoMetaCopy),
                                                                           nameBuilder:=nameBuilder).ConfigureAwait(True)
                 uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems, targetFolder, recordingWriter,
                                                                            Function(source) result.Extension,
                                                                            "", nameBuilder).ConfigureAwait(True)
-                If writtenTargets.Count > 0 Then BrowserBridge.OfferDownload(writtenTargets)
+                If download.Run IsNot Nothing Then
+                    download.Run.Finish()
+                ElseIf writtenTargets.Count > 0 Then
+                    BrowserBridge.OfferDownload(writtenTargets)
+                End If
             End If
 
             If saveToImmich AndAlso uploadedAssetIds.Count > 0 Then Await RefreshImmichViewAsync()
@@ -17817,7 +17849,17 @@ Namespace ViewModels
                     Function(source) result.Extension,
                     uploadedAssetIds).ConfigureAwait(True)
             Else
-                Dim targetFolder = If(result.TargetFolder, "").Trim()
+                ' Ziel "Herunterladen" im Browser: ein eigener Ordner der Bruecke statt des Zielordners.
+                Dim download = Await BeginBrowserDownloadAsync(result.Target, LocalizationService.T("Konvertieren"),
+                                                               localItems.Select(Function(i) i.FilePath))
+                If Not download.Proceed Then Return
+                Dim folderWriter As Func(Of String, String, Boolean) = writer
+                Dim folderServerWriter As Func(Of String, String, Boolean) = serverWriter
+                If download.Run IsNot Nothing Then
+                    folderWriter = download.Run.Wrap(writer)
+                    folderServerWriter = download.Run.Wrap(serverWriter)
+                End If
+                Dim targetFolder = If(download.Run?.Folder, If(result.TargetFolder, "").Trim())
                 If String.IsNullOrWhiteSpace(targetFolder) Then
                     Await _mainVm.ShowMessageAsync(LocalizationService.T("Konvertierung fehlgeschlagen"), LocalizationService.T("Kein Zielordner angegeben."))
                     Return
@@ -17836,15 +17878,16 @@ Namespace ViewModels
                 Dim nameBuilder = CreateNameBuilder(result.NamePattern)
                 convertedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems,
                     targetFolder,
-                    writer,
+                    folderWriter,
                     Function(source) result.Extension,
-                    metaCopy:=result.MetaCopy,
+                    metaCopy:=If(download.Run Is Nothing, result.MetaCopy, BrowserDownloadRun.NoMetaCopy),
                     nameBuilder:=nameBuilder).ConfigureAwait(True)
 
                 uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems,
                     targetFolder,
-                    serverWriter,
+                    folderServerWriter,
                     Function(source) result.Extension).ConfigureAwait(True)
+                download.Run?.Finish()
             End If
 
             StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) konvertiert"), convertedCount + uploadedCount, targetItems.Count)

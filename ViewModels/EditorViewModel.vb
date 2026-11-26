@@ -1737,20 +1737,83 @@ Namespace ViewModels
         Private Shared ReadOnly FallbackFontOptions As IReadOnlyList(Of String) =
             New List(Of String) From {"Arial", "Segoe UI", "DejaVu Sans", "Liberation Sans", "Times New Roman", "Georgia", "Courier New", "Consolas", "Verdana", "Tahoma"}
 
+        ''' <summary>Die Schriften zur Wahl: die des Systems und die eigenen aus dem Ordner Fonts des
+        ''' Datenordners (<see cref="FontLibraryService"/>), ohne Doppel und gemeinsam sortiert.
+        ''' Nach "Neu einlesen" baut die Liste sich neu (<see cref="OnFontLibraryChanged"/>).</summary>
         Public ReadOnly Property AnnotationFontOptions As IReadOnlyList(Of String)
             Get
-                If _annotationFontOptionsCache Is Nothing Then
-                    Dim names = Avalonia.Media.FontManager.Current?.SystemFonts?.
-                        Select(Function(f) f.Name).
+                Dim libraryVersion = FontLibraryService.Version
+                If _annotationFontOptionsCache Is Nothing OrElse _annotationFontOptionsVersion <> libraryVersion Then
+                    Dim systemNames As IEnumerable(Of String) = Nothing
+                    Try
+                        systemNames = Avalonia.Media.FontManager.Current?.SystemFonts?.Select(Function(f) f.Name)
+                    Catch
+                        systemNames = Nothing
+                    End Try
+                    Dim names = If(systemNames, Enumerable.Empty(Of String)()).
+                        Concat(FontLibraryService.FamilyNames).
                         Where(Function(n) Not String.IsNullOrWhiteSpace(n)).
                         Distinct(StringComparer.OrdinalIgnoreCase).
                         OrderBy(Function(n) n, StringComparer.OrdinalIgnoreCase).
                         ToList()
-                    _annotationFontOptionsCache = If(names IsNot Nothing AndAlso names.Count > 0, names, FallbackFontOptions)
+                    _annotationFontOptionsCache = If(names.Count > 0, names, FallbackFontOptions)
+                    _annotationFontOptionsVersion = FontLibraryService.Version
                 End If
                 Return _annotationFontOptionsCache
             End Get
         End Property
+
+        Private _annotationFontOptionsVersion As Integer = -1
+
+        ''' <summary>Die offenen Editoren, schwach gehalten: der Pruefstand baut viele, und keiner
+        ''' soll nur wegen dieser Liste weiterleben.</summary>
+        Private Shared ReadOnly _fontLibraryListeners As New List(Of WeakReference(Of EditorViewModel))()
+        Private Shared _fontLibraryHooked As Boolean
+
+        Private Shared Sub ListenToFontLibrary(editor As EditorViewModel)
+            SyncLock _fontLibraryListeners
+                _fontLibraryListeners.RemoveAll(Function(w)
+                                                    Dim alive As EditorViewModel = Nothing
+                                                    Return Not w.TryGetTarget(alive)
+                                                End Function)
+                _fontLibraryListeners.Add(New WeakReference(Of EditorViewModel)(editor))
+                If Not _fontLibraryHooked Then
+                    _fontLibraryHooked = True
+                    AddHandler FontLibraryService.Changed, AddressOf OnFontLibraryChanged
+                End If
+            End SyncLock
+        End Sub
+
+        ''' <summary>Nach dem Einlesen der eigenen Schriften: Liste neu, und das Bild neu zeichnen,
+        ''' denn ein Textobjekt kann jetzt eine eigene Schrift meinen, die vorher fehlte.</summary>
+        Private Shared Sub OnFontLibraryChanged(sender As Object, e As EventArgs)
+            Dim editors As New List(Of EditorViewModel)()
+            SyncLock _fontLibraryListeners
+                For Each reference In _fontLibraryListeners
+                    Dim alive As EditorViewModel = Nothing
+                    If reference.TryGetTarget(alive) Then editors.Add(alive)
+                Next
+            End SyncLock
+            If editors.Count = 0 Then Return
+            Try
+                Avalonia.Threading.Dispatcher.UIThread.Post(
+                    Sub()
+                        For Each editor In editors
+                            editor.RaisePropertyChanged(NameOf(AnnotationFontOptions))
+                            editor.RedrawAfterFontLibraryChange()
+                        Next
+                    End Sub)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.FontLibraryChanged", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Zeichnet neu, wenn ein Bild mit Textobjekten offen ist; das Rezept bleibt
+        ''' unveraendert, also auch nichts ungespeichert.</summary>
+        Private Sub RedrawAfterFontLibraryChange()
+            If _annotations Is Nothing OrElse _annotations.Count = 0 Then Return
+            SchedulePreviewUpdate(markDirty:=False)
+        End Sub
 
         Public ReadOnly Property TextAnnotations As ObservableCollection(Of ImageAnnotation)
             Get
@@ -19755,6 +19818,7 @@ Namespace ViewModels
 
         Public Sub New(mainVm As IEditorHost)
             _mainVm = mainVm
+            ListenToFontLibrary(Me)
             LoadStraightenCanvasPreference()
             RestoreRememberedDenoiseStrength()
             FilmstripItems = New BulkObservableCollection(Of ImageItem)()
@@ -25378,6 +25442,8 @@ Namespace ViewModels
             Dim targetQuality = SaveQuality
             Dim saveToImmich As Boolean = False
             Dim saveToNextcloud As Boolean = False
+            ' Ziel "Herunterladen" im Browser: der eigene Ordner der Bruecke, in den die Datei geht.
+            Dim deviceDownloadFolder As String = Nothing
             ' Der Name zu einer Nummer, wenn der Name einen Zaehler (#) traegt; sonst Nothing. Lokal
             ' wie auf der Nextcloud sucht der Zaehler damit die erste freie Nummer im Ziel.
             Dim nameForCounter As Func(Of Integer, String) = Nothing
@@ -25486,6 +25552,23 @@ Namespace ViewModels
                     Dim uploadTempDir = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "ImmichUpload")
                     IO.Directory.CreateDirectory(uploadTempDir)
                     targetPath = IO.Path.Combine(uploadTempDir, cleanBaseName & saveAsResult.Extension)
+                ElseIf String.Equals(saveAsResult.Target, MainWindowViewModel.SaveAsTargetDownload, StringComparison.OrdinalIgnoreCase) Then
+                    ' Auf das Geraet des Browsers: in einen eigenen Ordner der Bruecke im Datenordner,
+                    ' nie in den Bildordner; nach dem Schreiben startet der Download, und der Ordner
+                    ' geht mit dem Angebot (BrowserBridgeDownloads.vb).
+                    deviceDownloadFolder = BrowserBridge.CreateDownloadFolder()
+                    If deviceDownloadFolder Is Nothing Then
+                        Await _mainVm.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"),
+                                                       LocalizationService.T("Der Ordner für den Download ließ sich im Datenordner nicht anlegen."))
+                        Return False
+                    End If
+                    Dim spaceProblem = BrowserBridge.DownloadSpaceProblem(deviceDownloadFolder, {RenderSourcePath})
+                    If spaceProblem IsNot Nothing Then
+                        BrowserBridge.DiscardDownloadFolder(deviceDownloadFolder)
+                        Await _mainVm.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"), spaceProblem)
+                        Return False
+                    End If
+                    targetPath = IO.Path.Combine(deviceDownloadFolder, cleanBaseName & saveAsResult.Extension)
                 Else
                     ' Eine Ordnervorlage ({folder}/export ...) gilt fuer dieses Bild; {folder} ist der
                     ' Ordner, den der Dialog ohnehin vorschlug (bei einer Arbeitskopie vom Server der
@@ -25685,6 +25768,17 @@ Namespace ViewModels
                                                                             metadataParts:=metadataParts,
                                                                             bitDepth:=bitDepth,
                                                                             outcome:=saveOutcome))
+                End If
+                If deviceDownloadFolder IsNot Nothing Then
+                    ' Ziel "Herunterladen": angeboten wird genau diese eine Datei, der Download
+                    ' beginnt gleich. Im Bestand ist nichts entstanden; das offene Bild bleibt, wie
+                    ' es war, auch mit seinen ungesicherten Aenderungen.
+                    If ok Then
+                        BrowserBridge.OfferDownloadFolder(deviceDownloadFolder, {targetPath})
+                        StatusText = String.Format(LocalizationService.T("Zum Herunterladen bereit: {0}"), IO.Path.GetFileName(targetPath))
+                        Return True
+                    End If
+                    BrowserBridge.DiscardDownloadFolder(deviceDownloadFolder)
                 End If
                 If ok AndAlso saveToNextcloud Then
                     ' Ziel Nextcloud: die gerenderte Datei in den Dateibaum legen. Wohin, ist NICHT
@@ -29431,7 +29525,7 @@ Namespace ViewModels
             If content.Length = 0 Then content = "Text"
             ' Seit SkiaSharp 3 trägt SKFont die Schrift, SKPaint nur noch Farbe/Kantenglättung.
             ' LinearMetrics=True wie im internen Ersatz-Font von SKPaint, sonst weichen die Textbreiten ab.
-            Using font = New SKFont(SKTypeface.FromFamilyName(If(String.IsNullOrWhiteSpace(fontFamily), "Arial", fontFamily)), CSng(fontSizePx)) With {.LinearMetrics = True}
+            Using font = New SKFont(ImageProcessor.ResolveTypeface(If(String.IsNullOrWhiteSpace(fontFamily), "Arial", fontFamily)), CSng(fontSizePx)) With {.LinearMetrics = True}
                 Using paint = New SKPaint With {.IsAntialias = True}
                 ' Die Kästchengröße muss zu dem passen, was DrawWrappedText tatsächlich zeichnet, sonst
                 ' steht der Auswahlrahmen sichtbar weiter außen als der Text. Dort gilt: Grundlinie der

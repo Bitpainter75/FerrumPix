@@ -2173,6 +2173,25 @@
                                        VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
+                    <!-- Hochladen: nur im Browser (UpdateLockAppButton setzt die Sichtbarkeit). Die
+                         Anwendung kann den Dateiwaehler des Browsers nicht selbst oeffnen; die Seite
+                         tut es auf ihre Nachricht (BrowserBridge.RequestFilePicker), und die Dateien
+                         gehen in den Ordner, den die Galerie zeigt. -->
+                    <Button x:Name="BrowserUploadButton"
+                            Classes="ghost"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Padding="8,7"
+                            IsVisible="False"
+                            Click="OnBrowserUploadClick"
+                            ToolTip.Tip="Dateien von diesem Gerät in den geöffneten Ordner hochladen">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/file-arrow-up.svg"
+                                           Width="20" Height="20"/>
+                            <TextBlock Text="Hochladen"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                     <Button Classes="ghost"
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Left"

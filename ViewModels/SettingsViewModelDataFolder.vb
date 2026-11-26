@@ -52,7 +52,7 @@ Namespace ViewModels
                 If AppFolders.PendingDataFolderIsAdopt Then
                     Return String.Format(LocalizationService.T("Beim nächsten Start verwendet FerrumPix den Datenordner in {0}."), pending)
                 End If
-                Return String.Format(LocalizationService.T("Beim nächsten Start zieht der Datenordner nach {0} um."), pending)
+                Return String.Format(LocalizationService.T("Beim nächsten Start zieht der Datenordner nach {0} um. Je nach Größe kann das dauern; ein Fenster zeigt so lange den Fortschritt, abbrechen lässt sich der Umzug nicht."), pending)
             End Get
         End Property
 
@@ -124,6 +124,17 @@ Namespace ViewModels
             End If
             RaiseDataFolderChanged()
         End Function
+
+        ''' <summary>Setzt Thema und Akzent aus den Einstellungen, bevor es ein Einstellungsmodell
+        ''' gibt: fuer das Fenster beim Umzug des Datenordners, das vor dem Hauptfenster steht.</summary>
+        Friend Shared Sub ApplySavedTheme()
+            Try
+                Dim saved = AppSettingsService.Load()
+                ApplyTheme(saved.ThemeMode, saved.AccentColor, saved.AccentStrength)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.ApplySavedTheme", ex)
+            End Try
+        End Sub
 
         ''' <summary>Der belegte Platz eines Ordners samt Unterordnern; unlesbare zaehlen nicht.</summary>
         Private Shared Function MeasureFolderBytes(folder As String) As Long

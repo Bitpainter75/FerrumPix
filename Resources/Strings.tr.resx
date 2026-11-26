@@ -12848,9 +12848,6 @@
   <data name="Beim_n_chsten_Start_verwendet_FerrumPix_den_Date_82e8fbec" xml:space="preserve">
     <value>Bir sonraki başlatmada FerrumPix {0} içindeki veri klasörünü kullanır.</value>
   </data>
-  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_ce1e5936" xml:space="preserve">
-    <value>Bir sonraki başlatmada veri klasörü {0} konumuna taşınır.</value>
-  </data>
   <data name="Datenordner_nicht_erreichbar_9b1a712e" xml:space="preserve">
     <value>Veri klasörüne ulaşılamıyor</value>
   </data>
@@ -13010,8 +13007,8 @@
   <data name="Abmelden_7e324c5c" xml:space="preserve">
     <value>Oturumu kapat</value>
   </data>
-  <data name="Mindestens_10_Zeichen_mit_Gro_buchstaben_Kleinbu_6da2d56e" xml:space="preserve">
-    <value>En az 10 karakter; büyük harf, küçük harf, rakam ve özel karakter içermeli; boşluk da özel karakter sayılır. İki kez girin. Yalnızca kilit süresini değiştirmek için boş bırakın.</value>
+  <data name="Mindestens_8_Zeichen_mit_Gro_buchstaben_Kleinbuc_839d03de" xml:space="preserve">
+    <value>En az 8 karakter; büyük harf, küçük harf, rakam ve özel karakter içermeli; boşluk da özel karakter sayılır. İki kez girin. Yalnızca kilit süresini değiştirmek için boş bırakın.</value>
   </data>
   <data name="Die_Wiederholung_stimmt_noch_nicht_mit_dem_neuen_eaa3a18a" xml:space="preserve">
     <value>Tekrar henüz yeni parolayla eşleşmiyor.</value>
@@ -13030,5 +13027,68 @@
   </data>
   <data name="Noch_n_tig_ein_Sonderzeichen_auch_ein_Leerzeiche_c0e66159" xml:space="preserve">
     <value>Hâlâ gerekli: bir özel karakter; boşluk da sayılır.</value>
+  </data>
+  <data name="Wird_vorbereitet_140ad8bf" xml:space="preserve">
+    <value>Hazırlanıyor</value>
+  </data>
+  <data name="0_von_1_Dateien_2_von_3_80b385f5" xml:space="preserve">
+    <value>{1} dosyadan {0}, {3} içinden {2}</value>
+  </data>
+  <data name="0_von_1_Dateien_8e8da684" xml:space="preserve">
+    <value>{1} dosyadan {0}</value>
+  </data>
+  <data name="0_Dateien_verschoben_3f8cf1d9" xml:space="preserve">
+    <value>{0} dosya taşındı</value>
+  </data>
+  <data name="Datenordner_wird_verschoben_d0cb6bf0" xml:space="preserve">
+    <value>Veri klasörü taşınıyor</value>
+  </data>
+  <data name="Bitte_FerrumPix_nicht_beenden_Danach_startet_es__f72667ce" xml:space="preserve">
+    <value>Lütfen FerrumPix'i kapatmayın. Ardından kendiliğinden başlar.</value>
+  </data>
+  <data name="Bisheriger_Ort_a58722d7" xml:space="preserve">
+    <value>Önceki konum</value>
+  </data>
+  <data name="Neuer_Ort_289b8469" xml:space="preserve">
+    <value>Yeni konum</value>
+  </data>
+  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_686dbf3d" xml:space="preserve">
+    <value>Bir sonraki başlatmada veri klasörü {0} konumuna taşınır. Boyutuna göre bu biraz sürebilir; bu sırada bir pencere ilerlemeyi gösterir ve taşıma iptal edilemez.</value>
+  </data>
+  <data name="Eigene_Schriften_e9fcabf6" xml:space="preserve">
+    <value>Kendi yazı tipleri</value>
+  </data>
+  <data name="Schriften_im_Ordner_Fonts_des_Datenordners_stehe_c7bac268" xml:space="preserve">
+    <value>Veri klasöründeki Fonts klasöründe bulunan yazı tipleri, düzenleyicide metin için sistem yazı tiplerinin yanında seçilebilir. TTF, OTF ve TTC dosyaları alt klasörler dahil okunur.</value>
+  </data>
+  <data name="Im_Browser_l_sst_sich_der_Ordner_nicht_ffnen_Die_08633754" xml:space="preserve">
+    <value>Klasör tarayıcıda açılamaz. Yazı tiplerini sunucuda bu klasöre koyun, ardından Yeniden oku yeterlidir.</value>
+  </data>
+  <data name="Schriften_werden_eingelesen_636edd40" xml:space="preserve">
+    <value>Yazı tipleri okunuyor ...</value>
+  </data>
+  <data name="Noch_keine_eigenen_Schriften_gefunden_01f8abc7" xml:space="preserve">
+    <value>Henüz kendi yazı tipi bulunamadı.</value>
+  </data>
+  <data name="Gefundene_Schriftfamilien_0_3387d9af" xml:space="preserve">
+    <value>Bulunan yazı tipi aileleri: {0}</value>
+  </data>
+  <data name="Hochladen_70d66639" xml:space="preserve">
+    <value>Yükle</value>
+  </data>
+  <data name="Dateien_von_diesem_Ger_t_in_den_ge_ffneten_Ordne_ce5708fe" xml:space="preserve">
+    <value>Bu cihazdaki dosyaları açık klasöre yükle</value>
+  </data>
+  <data name="Die_fertigen_Dateien_kommen_auf_dieses_Ger_t_meh_90721ed6" xml:space="preserve">
+    <value>Bitmiş dosyalar bu cihaza gelir, birden fazlası tek bir ZIP olarak. Sunucuda hiçbir şey kalmaz.</value>
+  </data>
+  <data name="Im_Datenordner_ist_nicht_genug_Platz_f_r_den_Dow_8e63bddc" xml:space="preserve">
+    <value>Veri klasöründe indirme için yeterli boş alan yok</value>
+  </data>
+  <data name="Der_Ordner_f_r_den_Download_lie_sich_im_Datenord_c5615f40" xml:space="preserve">
+    <value>İndirme için klasör veri klasöründe oluşturulamadı.</value>
+  </data>
+  <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
+    <value>İndirmeye hazır: {0}</value>
   </data>
 </root>

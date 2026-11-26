@@ -29,6 +29,25 @@ Namespace Services
         Public Property Detail As String = ""
     End Class
 
+    ''' <summary>Ein Zwischenstand eines Umzugs fuer die Anzeige: wie viele Dateien und Bytes
+    ''' schon am Ziel sind, welche gerade dran ist und zwischen welchen Orten es geht.</summary>
+    Public NotInheritable Class FolderMoveProgress
+        Public Property FilesDone As Integer
+        ''' <summary>0, wenn die Gesamtzahl nicht vorab bekannt ist.</summary>
+        Public Property FilesTotal As Integer
+        Public Property BytesDone As Long
+        ''' <summary>0, wenn die Gesamtgroesse nicht vorab bekannt ist.</summary>
+        Public Property BytesTotal As Long
+        ''' <summary>Die Datei, die gerade umzieht, "" zwischen zwei Dateien.</summary>
+        Public Property CurrentFile As String = ""
+        Public Property Source As String = ""
+        Public Property Target As String = ""
+
+        Public Function Clone() As FolderMoveProgress
+            Return DirectCast(MemberwiseClone(), FolderMoveProgress)
+        End Function
+    End Class
+
     ''' <summary>Was ein Aufrufer an einem Umzug selbst bestimmt.</summary>
     Public NotInheritable Class FolderRelocationOptions
         ''' <summary>Welche Eintraege der obersten Ebene mitgehen (Name ohne Pfad). Nothing: alle,
@@ -56,6 +75,10 @@ Namespace Services
         ''' Datenordner: eine Datenbank aendert sich oft, ohne ihre Groesse zu aendern, und ein
         ''' Umzug, der nach einem Abbruch fortsetzt, liesse sonst eine alte Fassung am Ziel stehen.</summary>
         Public Property RequireSameTimestamp As Boolean
+
+        ''' <summary>Bekommt vor und nach jeder Datei den Stand (Anzahl, Bytes, aktuelle Datei),
+        ''' fuer das Fenster beim Start. Aendert am Umzug selbst nichts; Nothing: keine Meldung.</summary>
+        Public Property DetailProgress As IProgress(Of FolderMoveProgress)
     End Class
 
     ''' <summary>Zieht den Inhalt eines Ordners an einen anderen Ort um, ohne dass dabei etwas
@@ -109,6 +132,8 @@ Namespace Services
                     result.Outcome = FolderRelocationOutcome.Moved
                     result.MovedFiles = renamed
                     progress?.Report(1.0)
+                    opts.DetailProgress?.Report(New FolderMoveProgress With {
+                        .FilesDone = renamed, .FilesTotal = renamed, .Source = source, .Target = target})
                     Return result
                 End If
             End If
@@ -234,9 +259,20 @@ Namespace Services
                     End Try
                 End Sub
 
+            ' Nur fuer die Anzeige: dieselbe Zaehlung wie unten, mit der Datei, die gerade dran ist.
+            Dim detail = opts.DetailProgress
+            Dim doneFiles = 0
+            Dim reportDetail =
+                Sub(doneBytesNow As Long, current As String)
+                    detail?.Report(New FolderMoveProgress With {
+                        .FilesDone = doneFiles, .FilesTotal = items.Count, .BytesDone = doneBytesNow,
+                        .BytesTotal = totalBytes, .CurrentFile = If(current, ""), .Source = source, .Target = target})
+                End Sub
+
             Try
                 Directory.CreateDirectory(target)
                 Dim doneBytes = 0L
+                reportDetail(0L, "")
                 For Each item In items
                     If cancellationToken.IsCancellationRequested Then
                         rollback()
@@ -247,8 +283,11 @@ Namespace Services
                         TryDeleteFile(item.Target & PartSuffix)
                         copiedSources.Add(item.Source)
                         doneBytes += item.Length
+                        doneFiles += 1
+                        reportDetail(doneBytes, "")
                         Continue For
                     End If
+                    reportDetail(doneBytes, item.Source)
                     EnsureDirectory(IO.Path.GetDirectoryName(item.Target), target, createdDirs)
                     Dim existedBefore = File.Exists(item.Target)
                     ' Erst unter einem Zwischennamen, erst vollstaendig unter dem eigenen: bricht der
@@ -281,7 +320,9 @@ Namespace Services
                     copiedSources.Add(item.Source)
                     result.MovedFiles += 1
                     doneBytes += item.Length
+                    doneFiles += 1
                     progress?.Report(Math.Min(0.99, doneBytes / CDbl(totalBytes)))
+                    reportDetail(doneBytes, "")
                 Next
                 opts.CompleteCopy?.Invoke(source, target)
             Catch ex As Exception

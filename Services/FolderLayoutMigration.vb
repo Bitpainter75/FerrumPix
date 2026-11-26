@@ -69,6 +69,10 @@ Namespace Services
         ''' Eine Ausnahme darin stellt einen Abbruch mitten im Umzug nach.</summary>
         Friend Shared BeforeEachMove As Action(Of String)
 
+        ''' <summary>Fuer das Fenster beim Start (AppFolders.PrepareAtStartup mit Fortschritt):
+        ''' laeuft vor jedem Verschieben einer Datei mit ihrem Pfad. Nothing: keine Meldung.</summary>
+        Friend Shared MoveReporter As Action(Of String)
+
         Private Shared ReadOnly OldVersionPattern As New Regex("^(?<family>[A-Za-z0-9][A-Za-z0-9-]*?)-v(?<n>\d+)\.(?<ext>[A-Za-z0-9]+)$",
                                                                RegexOptions.CultureInvariant)
 
@@ -98,7 +102,8 @@ Namespace Services
                                                    Path.Combine(dataRoot, AppFolders.FavoritesFileName), log)
             result.SearchListsDone = MoveFileMerging(Path.Combine(configRoot, AppFolders.SearchListsFileName),
                                                      Path.Combine(dataRoot, AppFolders.SearchListsFileName), log)
-            result.GpuStateDone = MoveFileMerging(Path.Combine(configRoot, AppFolders.GpuBlockFileName & ".json"),
+            ' Bis 0.9.91 trug die Sperrdatei bei den Einstellungen noch den deutschen Namen.
+            result.GpuStateDone = MoveFileMerging(Path.Combine(configRoot, AppFolders.LegacyGpuBlockFileName & ".json"),
                                                   Path.Combine(dataRoot, AppFolders.GpuBlockFileName & ".json"), log) And
                                   MoveFileMerging(Path.Combine(configRoot, AppFolders.GpuBusyMarkerName & ".marker"),
                                                   Path.Combine(dataRoot, AppFolders.GpuBusyMarkerName & ".marker"), log)
@@ -308,6 +313,7 @@ Namespace Services
         ''' welche Datei vollstaendig ist (<see cref="FinishInterruptedMove"/>).</summary>
         Private Shared Sub MoveFileAtomically(source As String, target As String)
             BeforeEachMove?.Invoke(source)
+            MoveReporter?.Invoke(source)
             Dim moving = target & MovingSuffix
             If File.Exists(moving) Then File.Delete(moving)
             File.Move(source, moving)

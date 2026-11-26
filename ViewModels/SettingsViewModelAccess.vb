@@ -27,7 +27,7 @@ Namespace ViewModels
     ''' Sperre nach Inaktivitaet.
     '''
     ''' <para>NICHTS WIRKT SOFORT. Anders als die uebrigen Einstellungen gilt eine Aenderung erst mit
-    ''' "Übernehmen", und ist ein Kennwort gesetzt, nur mit diesem: wer an einem entsperrten Rechner
+    ''' "Anwenden", und ist ein Kennwort gesetzt, nur mit diesem: wer an einem entsperrten Rechner
     ''' vorbeikommt, soll den Schutz nicht abschalten oder das Kennwort tauschen koennen. Deshalb
     ''' nimmt auch "Auf Standard zuruecksetzen" diesen Teil nicht mit.</para>
     '''
@@ -65,7 +65,7 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Der Schalter "Mit Kennwort schützen". Vorgemerkt bis "Übernehmen".</summary>
+        ''' <summary>Der Schalter "Mit Kennwort schützen". Vorgemerkt bis "Anwenden".</summary>
         Public Property AccessProtectionWanted As Boolean
             Get
                 Return _accessProtectionWanted
@@ -117,7 +117,7 @@ Namespace ViewModels
             End Select
         End Function
 
-        ''' <summary>Ob "Übernehmen" gerade etwas Gueltiges uebernehmen kann: beim Abschalten immer
+        ''' <summary>Ob "Anwenden" gerade etwas Gueltiges uebernehmen kann: beim Abschalten immer
         ''' (das aktuelle Kennwort prueft der Schritt selbst), mit neuem Kennwort erst, wenn alle
         ''' Regeln erfuellt sind und die Wiederholung passt, ohne neues Kennwort nur, wenn schon eines
         ''' gesetzt ist (dann aendert sich nur die Sperrzeit).</summary>
@@ -130,7 +130,7 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Waehrend "Übernehmen" laeuft (die Pruefung ist mit Absicht langsam), ist der
+        ''' <summary>Waehrend "Anwenden" laeuft (die Pruefung ist mit Absicht langsam), ist der
         ''' Knopf gesperrt.</summary>
         Private _applyingAccess As Boolean
 
@@ -206,7 +206,7 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Die gewaehlte Sperre nach Inaktivitaet. Vorgemerkt bis "Übernehmen".</summary>
+        ''' <summary>Die gewaehlte Sperre nach Inaktivitaet. Vorgemerkt bis "Anwenden".</summary>
         Public Property SelectedAccessIdle As AppLockIdleOption
             Get
                 Return AccessIdleOptions.FirstOrDefault(Function(o) o.Minutes = _accessIdleMinutes)

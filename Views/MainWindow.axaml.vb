@@ -62,6 +62,9 @@ Namespace Views
 
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
+            ' Die eigenen Schriften aus dem Ordner Fonts des Datenordners, im Hintergrund; wer
+            ' vorher Text zeichnet, wartet den Lauf ab (FontLibraryService.EnsureLoaded).
+            Services.FontLibraryService.StartLoading()
             ConfigurePlatformWindowChrome()
             ApplyInitialWindowSize()
             Icon = App.AppIcon
@@ -305,27 +308,16 @@ Namespace Views
         End Sub
 
         ''' <summary>Was beim Start mit den Orten schiefging (AppFolders.PrepareAtStartup), einmal
-        ''' nach dem Oeffnen des Fensters. Der Umzug selbst laeuft still; sichtbar wird nur ein
-        ''' Fehler. Danach die Frage zum Katalog, wenn ein anderer Rechner ihn hat (CatalogLock).</summary>
+        ''' nach dem Oeffnen des Fensters. Den Umzug selbst zeigt vorher ein eigenes Fenster
+        ''' (DataFolderMoveWindow), das auch seine Fehler meldet. Danach die Frage zum Katalog, wenn ein anderer Rechner ihn hat (CatalogLock).</summary>
         Private Async Sub ReportFolderStartupNotices()
             Try
                 Dim vm = TryCast(DataContext, MainWindowViewModel)
                 If vm Is Nothing Then Return
+                ' Hat das Fenster des Umzugs eine Meldung schon gezeigt, ist sie hier nicht mehr
+                ' dabei (AppFolders.TakeMoveNotices).
                 For Each notice In Services.AppFolders.TakeStartupNotices()
-                    Select Case notice.Kind
-                        Case Services.FolderStartupNoticeKind.DataFolderUnreachable
-                            Await vm.ShowMessageAsync(Services.LocalizationService.T("Datenordner nicht erreichbar"),
-                                String.Format(Services.LocalizationService.T("Der Datenordner {0} ist nicht erreichbar. Bis er wieder da ist, arbeitet FerrumPix ohne Katalog, und Modelle, Erweiterungen und gespeicherte Anpassungen fehlen."), notice.Folder))
-                        Case Services.FolderStartupNoticeKind.MoveTargetFull
-                            Await vm.ShowMessageAsync(Services.LocalizationService.T("Datenordner nicht umgezogen"),
-                                String.Format(Services.LocalizationService.T("Der Datenordner konnte nicht nach {0} umziehen, weil dort nicht genug Platz ist. Alles liegt weiter am bisherigen Ort."), notice.Folder))
-                        Case Services.FolderStartupNoticeKind.MoveFailed
-                            Await vm.ShowMessageAsync(Services.LocalizationService.T("Datenordner nicht umgezogen"),
-                                String.Format(Services.LocalizationService.T("Der Datenordner konnte nicht nach {0} umziehen. Alles liegt weiter am bisherigen Ort, Einzelheiten stehen im Protokoll."), notice.Folder))
-                        Case Services.FolderStartupNoticeKind.LayoutIncomplete
-                            Await vm.ShowMessageAsync(Services.LocalizationService.T("Daten nicht vollständig umgezogen"),
-                                String.Format(Services.LocalizationService.T("FerrumPix legt seine Daten jetzt gesammelt in {0} ab. Ein Teil ließ sich nicht dorthin bringen und wird am alten Ort weiter benutzt. Beim nächsten Start versucht FerrumPix es erneut; Einzelheiten stehen im Protokoll."), notice.Folder))
-                    End Select
+                    Await vm.ShowMessageAsync(Services.AppFolders.NoticeTitle(notice), Services.AppFolders.NoticeMessage(notice))
                 Next
                 If Services.CatalogLock.State <> Services.CatalogLockState.HeldElsewhere Then Return
                 Dim holder = Services.CatalogLock.Holder

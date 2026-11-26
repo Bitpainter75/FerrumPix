@@ -189,6 +189,71 @@ Namespace Services
             End SyncLock
         End Function
 
+        ''' <summary>Eine zurueckgehaltene Zeile und die Dateien, in die sie gehoert.</summary>
+        Private Structure HeldEntry
+            Public Text As String
+            Public ToVerbose As Boolean
+            Public ToErrors As Boolean
+        End Structure
+
+        ''' <summary>Nothing: es wird geschrieben. Sonst sammeln sich die Zeilen hier, bis
+        ''' <see cref="ReleaseHeldWrites"/> sie schreibt.</summary>
+        Private Shared _heldEntries As List(Of HeldEntry)
+
+        ''' <summary>So viele Zeilen haelt der Speicher hoechstens zurueck; was darueber kommt,
+        ''' steht nur noch auf der Konsole.</summary>
+        Private Const MaxHeldEntries As Integer = 5000
+
+        ''' <summary>Haelt das Schreiben der Protokolldateien an, solange der Datenordner beim Start
+        ''' umzieht: die Dateien liegen IN ihm (logs), und eine Zeile, die waehrenddessen am alten
+        ''' Ort angehaengt wird, kaeme nicht mehr mit oder bliebe dort liegen. Die Zeilen sammeln
+        ''' sich im Speicher und landen mit <see cref="ReleaseHeldWrites"/> am dann geltenden Ort.
+        ''' Die Konsole bekommt sie sofort.</summary>
+        Public Shared Sub HoldFileWrites()
+            SyncLock _writeLock
+                If _heldEntries Is Nothing Then _heldEntries = New List(Of HeldEntry)()
+            End SyncLock
+        End Sub
+
+        ''' <summary>Schreibt die zurueckgehaltenen Zeilen in ihre Dateien und schreibt ab hier
+        ''' wieder direkt. Ohne vorheriges Anhalten folgenlos.</summary>
+        Public Shared Sub ReleaseHeldWrites()
+            SyncLock _writeLock
+                Dim held = _heldEntries
+                _heldEntries = Nothing
+                If held Is Nothing OrElse held.Count = 0 Then Return
+                Try
+                    Directory.CreateDirectory(LogDirectory)
+                    For Each item In held
+                        If item.ToVerbose Then File.AppendAllText(LogPath, item.Text)
+                        If item.ToErrors Then
+                            RotateIfTooLarge()
+                            File.AppendAllText(ErrorLogPath, item.Text)
+                        End If
+                    Next
+                Catch
+                End Try
+            End SyncLock
+        End Sub
+
+        ''' <summary>Ob gerade zurueckgehalten wird (Pruefstand).</summary>
+        Public Shared ReadOnly Property IsHoldingFileWrites As Boolean
+            Get
+                SyncLock _writeLock
+                    Return _heldEntries IsNot Nothing
+                End SyncLock
+            End Get
+        End Property
+
+        ''' <summary>Unter <c>_writeLock</c>: True, wenn die Zeile zurueckgehalten (oder wegen der
+        ''' Obergrenze verworfen) wurde und nicht geschrieben werden darf.</summary>
+        Private Shared Function HoldEntry(text As String, toVerbose As Boolean, toErrors As Boolean) As Boolean
+            Dim held = _heldEntries
+            If held Is Nothing Then Return False
+            If held.Count < MaxHeldEntries Then held.Add(New HeldEntry With {.Text = text, .ToVerbose = toVerbose, .ToErrors = toErrors})
+            Return True
+        End Function
+
         ''' <summary>Schreibt eine Info-Zeile - nur bei eingeschaltetem EnableDiagnosticLogging.</summary>
         Public Shared Sub LogAlways(area As String, message As String)
             If Not IsVerboseEnabled Then Return
@@ -199,6 +264,7 @@ Namespace Services
             EchoToConsole(entry)
             Try
                 SyncLock _writeLock
+                    If HoldEntry(entry, toVerbose:=True, toErrors:=False) Then Return
                     Directory.CreateDirectory(LogDirectory)
                     File.AppendAllText(LogPath, entry)
                 End SyncLock
@@ -215,6 +281,7 @@ Namespace Services
             EchoToConsole(entry)
             Try
                 SyncLock _writeLock
+                    If HoldEntry(entry, toVerbose:=verbose, toErrors:=True) Then Return
                     Directory.CreateDirectory(LogDirectory)
                     ' Bei eingeschaltetem Diagnose-Log zusätzlich in die Ablaufspur, damit die
                     ' Ausnahme dort an ihrer zeitlichen Stelle steht.

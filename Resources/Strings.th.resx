@@ -12848,9 +12848,6 @@
   <data name="Beim_n_chsten_Start_verwendet_FerrumPix_den_Date_82e8fbec" xml:space="preserve">
     <value>เมื่อเริ่มครั้งถัดไป FerrumPix จะใช้โฟลเดอร์ข้อมูลใน {0}</value>
   </data>
-  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_ce1e5936" xml:space="preserve">
-    <value>เมื่อเริ่มครั้งถัดไป โฟลเดอร์ข้อมูลจะย้ายไปที่ {0}</value>
-  </data>
   <data name="Datenordner_nicht_erreichbar_9b1a712e" xml:space="preserve">
     <value>เข้าถึงโฟลเดอร์ข้อมูลไม่ได้</value>
   </data>
@@ -13010,8 +13007,8 @@
   <data name="Abmelden_7e324c5c" xml:space="preserve">
     <value>ออกจากระบบ</value>
   </data>
-  <data name="Mindestens_10_Zeichen_mit_Gro_buchstaben_Kleinbu_6da2d56e" xml:space="preserve">
-    <value>อย่างน้อย 10 ตัวอักษร ประกอบด้วยตัวพิมพ์ใหญ่ ตัวพิมพ์เล็ก ตัวเลข และอักขระพิเศษ ช่องว่างนับเป็นอักขระพิเศษ ป้อนสองครั้ง เว้นว่างไว้เพื่อเปลี่ยนเฉพาะเวลาล็อก</value>
+  <data name="Mindestens_8_Zeichen_mit_Gro_buchstaben_Kleinbuc_839d03de" xml:space="preserve">
+    <value>อย่างน้อย 8 ตัวอักษร ประกอบด้วยตัวพิมพ์ใหญ่ ตัวพิมพ์เล็ก ตัวเลข และอักขระพิเศษ ช่องว่างนับเป็นอักขระพิเศษ ป้อนสองครั้ง เว้นว่างไว้เพื่อเปลี่ยนเฉพาะเวลาล็อก</value>
   </data>
   <data name="Die_Wiederholung_stimmt_noch_nicht_mit_dem_neuen_eaa3a18a" xml:space="preserve">
     <value>รหัสผ่านที่ป้อนซ้ำยังไม่ตรงกับรหัสผ่านใหม่</value>
@@ -13030,5 +13027,68 @@
   </data>
   <data name="Noch_n_tig_ein_Sonderzeichen_auch_ein_Leerzeiche_c0e66159" xml:space="preserve">
     <value>ยังต้องมี: อักขระพิเศษ ช่องว่างก็นับด้วย</value>
+  </data>
+  <data name="Wird_vorbereitet_140ad8bf" xml:space="preserve">
+    <value>กำลังเตรียม</value>
+  </data>
+  <data name="0_von_1_Dateien_2_von_3_80b385f5" xml:space="preserve">
+    <value>{0} จาก {1} ไฟล์, {2} จาก {3}</value>
+  </data>
+  <data name="0_von_1_Dateien_8e8da684" xml:space="preserve">
+    <value>{0} จาก {1} ไฟล์</value>
+  </data>
+  <data name="0_Dateien_verschoben_3f8cf1d9" xml:space="preserve">
+    <value>ย้ายแล้ว {0} ไฟล์</value>
+  </data>
+  <data name="Datenordner_wird_verschoben_d0cb6bf0" xml:space="preserve">
+    <value>กำลังย้ายโฟลเดอร์ข้อมูล</value>
+  </data>
+  <data name="Bitte_FerrumPix_nicht_beenden_Danach_startet_es__f72667ce" xml:space="preserve">
+    <value>โปรดอย่าปิด FerrumPix หลังจากนั้นโปรแกรมจะเริ่มเอง</value>
+  </data>
+  <data name="Bisheriger_Ort_a58722d7" xml:space="preserve">
+    <value>ตำแหน่งเดิม</value>
+  </data>
+  <data name="Neuer_Ort_289b8469" xml:space="preserve">
+    <value>ตำแหน่งใหม่</value>
+  </data>
+  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_686dbf3d" xml:space="preserve">
+    <value>เมื่อเริ่มครั้งถัดไป โฟลเดอร์ข้อมูลจะย้ายไปที่ {0} อาจใช้เวลาสักครู่ตามขนาด ระหว่างนั้นจะมีหน้าต่างแสดงความคืบหน้า และไม่สามารถยกเลิกการย้ายได้</value>
+  </data>
+  <data name="Eigene_Schriften_e9fcabf6" xml:space="preserve">
+    <value>ฟอนต์ของคุณเอง</value>
+  </data>
+  <data name="Schriften_im_Ordner_Fonts_des_Datenordners_stehe_c7bac268" xml:space="preserve">
+    <value>ฟอนต์ในโฟลเดอร์ Fonts ของโฟลเดอร์ข้อมูลเลือกใช้กับข้อความในตัวแก้ไขได้ ควบคู่กับฟอนต์ของระบบ อ่านไฟล์ TTF, OTF และ TTC รวมถึงในโฟลเดอร์ย่อย</value>
+  </data>
+  <data name="Im_Browser_l_sst_sich_der_Ordner_nicht_ffnen_Die_08633754" xml:space="preserve">
+    <value>เปิดโฟลเดอร์ในเบราว์เซอร์ไม่ได้ ให้วางฟอนต์ไว้ในโฟลเดอร์นี้บนเซิร์ฟเวอร์ จากนั้นกดอ่านใหม่ก็พอ</value>
+  </data>
+  <data name="Schriften_werden_eingelesen_636edd40" xml:space="preserve">
+    <value>กำลังอ่านฟอนต์ ...</value>
+  </data>
+  <data name="Noch_keine_eigenen_Schriften_gefunden_01f8abc7" xml:space="preserve">
+    <value>ยังไม่พบฟอนต์ของคุณเอง</value>
+  </data>
+  <data name="Gefundene_Schriftfamilien_0_3387d9af" xml:space="preserve">
+    <value>ตระกูลฟอนต์ที่พบ: {0}</value>
+  </data>
+  <data name="Hochladen_70d66639" xml:space="preserve">
+    <value>อัปโหลด</value>
+  </data>
+  <data name="Dateien_von_diesem_Ger_t_in_den_ge_ffneten_Ordne_ce5708fe" xml:space="preserve">
+    <value>อัปโหลดไฟล์จากอุปกรณ์นี้ไปยังโฟลเดอร์ที่เปิดอยู่</value>
+  </data>
+  <data name="Die_fertigen_Dateien_kommen_auf_dieses_Ger_t_meh_90721ed6" xml:space="preserve">
+    <value>ไฟล์ที่เสร็จแล้วจะมาที่อุปกรณ์นี้ หลายไฟล์จะรวมเป็น ZIP เดียว ไม่มีอะไรเหลือไว้บนเซิร์ฟเวอร์</value>
+  </data>
+  <data name="Im_Datenordner_ist_nicht_genug_Platz_f_r_den_Dow_8e63bddc" xml:space="preserve">
+    <value>พื้นที่ว่างในโฟลเดอร์ข้อมูลไม่พอสำหรับการดาวน์โหลด</value>
+  </data>
+  <data name="Der_Ordner_f_r_den_Download_lie_sich_im_Datenord_c5615f40" xml:space="preserve">
+    <value>ไม่สามารถสร้างโฟลเดอร์สำหรับการดาวน์โหลดในโฟลเดอร์ข้อมูลได้</value>
+  </data>
+  <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
+    <value>พร้อมดาวน์โหลด: {0}</value>
   </data>
 </root>

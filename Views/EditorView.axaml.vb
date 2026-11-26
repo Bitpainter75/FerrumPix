@@ -7196,7 +7196,10 @@ Namespace Views
                 Else
                     editor.FontFeatures = Nothing
                 End If
-                editor.FontFamily = New FontFamily(vm.AnnotationFontFamily)
+                ' Eine eigene Schrift aus dem Ordner Fonts kennt Avalonia nur ueber ihre Sammlung
+                ' (FontLibraryUiCollection); ohne den Vorsatz setzte die Textbox in der Vorgabeschrift,
+                ' und Klicks in den Text traefen die falsche Stelle.
+                editor.FontFamily = New FontFamily(FontLibraryService.UiFamilyName(vm.AnnotationFontFamily))
                 editor.FontWeight = If(vm.AnnotationBold, FontWeight.Bold, FontWeight.Normal)
                 editor.FontStyle = If(vm.AnnotationItalic, FontStyle.Italic, FontStyle.Normal)
                 editor.LetterSpacing = displayFontSize * vm.AnnotationLetterSpacingPercent / 100.0

@@ -67,6 +67,15 @@ Namespace Services
                 log.Add($"chosen data folder not reachable, using {DataRoot}: {ConfiguredDataFolder}")
                 AddNotice(FolderStartupNoticeKind.DataFolderUnreachable, ConfiguredDataFolder)
             End If
+            ' Erst hier, wenn der Datenordner dieses Laufs feststeht, und vor allem, was eine Marke
+            ' liest oder schreibt: NativeStartGuard und GpuModelBlockService greifen erst beim ersten
+            ' Gebrauch der Laufzeit oder der Karte zu, lange nach Program.Main.
+            Try
+                MigrateGermanGuardNames(DataRoot, OwnGuardNameTags(), log)
+            Catch ex As Exception
+                log.Add("start guard names not migrated: " & ex.Message)
+                DiagnosticLogService.LogException("AppFolders.GuardNames", ex)
+            End Try
             WriteStartupLog(log)
             CatalogLock.Acquire()
         End Sub
@@ -85,6 +94,94 @@ Namespace Services
                 AddNotice(FolderStartupNoticeKind.LayoutIncomplete, DataRoot)
             End If
         End Sub
+
+        ''' <summary>Die Rechnerteile der Namen, die dieser Rechner umbenennt: "" (der Name ab Werk)
+        ''' und in einem gewaehlten Datenordner zusaetzlich der eigene Rechnername. Die Fassungen
+        ''' ANDERER Rechner bleiben, bis deren naechster Start sie umbenennt: ihre Marken tragen
+        ''' Prozessnummern, die nur dort etwas bedeuten, und ein dort laufendes FerrumPix schriebe
+        ''' noch in den alten Ordner.</summary>
+        Private Shared Function OwnGuardNameTags() As String()
+            If Not UsesChosenDataFolder Then Return {""}
+            Return {"", MachineTag}
+        End Function
+
+        ''' <summary>Benennt die deutschen Namen frueherer Fassungen um: den Ordner des Startschutzes
+        ''' (<see cref="LegacyStartGuardFolderName"/> wird <see cref="StartGuardFolderName"/>), darin
+        ''' die Merkdateien (Endung und Teilname englisch) und die Sperrdatei der Karte
+        ''' (<see cref="LegacyGpuBlockFileName"/> wird <see cref="GpuBlockFileName"/>), je mit dem
+        ''' Rechnerteil aus <paramref name="machineTags"/>.
+        '''
+        ''' WARUM UEBERHAUPT: eine Merkdatei ist die Spur eines Absturzes, die Sperrdatei eine
+        ''' dauerhafte Entscheidung. Unter dem alten Namen saehe sie keiner mehr, und der heikle Teil
+        ''' liefe beim naechsten Gebrauch wieder in denselben Absturz.
+        '''
+        ''' EIN VORHANDENES ZIEL BLEIBT. Eine Merkdatei gleichen Namens am Ziel ist dieselbe Spur
+        ''' (gleicher Teil, gleiche Prozessnummer), die alte faellt dann weg. Eine abweichende
+        ''' Sperrdatei kommt als "&lt;name&gt;.old.json" daneben (FolderLayoutMigration.MoveFileMerging).
+        ''' Ein danach leerer alter Ordner wird entfernt.
+        '''
+        ''' OHNE ALTES kostet es je Rechnerteil zwei Abfragen, ob es Ordner und Datei gibt.</summary>
+        Friend Shared Sub MigrateGermanGuardNames(dataRoot As String, machineTags As IEnumerable(Of String), log As List(Of String))
+            For Each tag In machineTags.Distinct(StringComparer.Ordinal)
+                Dim suffix = If(String.IsNullOrEmpty(tag), "", "." & tag)
+                Dim oldFolder = Path.Combine(dataRoot, LegacyStartGuardFolderName & suffix)
+                If Directory.Exists(oldFolder) Then
+                    MigrateGuardFolder(oldFolder, Path.Combine(dataRoot, StartGuardFolderName & suffix), log)
+                End If
+                Dim oldBlock = Path.Combine(dataRoot, LegacyGpuBlockFileName & suffix & ".json")
+                If File.Exists(oldBlock) Then
+                    FolderLayoutMigration.MoveFileMerging(oldBlock, Path.Combine(dataRoot, GpuBlockFileName & suffix & ".json"), log)
+                End If
+            Next
+        End Sub
+
+        Private Shared Sub MigrateGuardFolder(oldFolder As String, newFolder As String, log As List(Of String))
+            Directory.CreateDirectory(newFolder)
+            Dim moved = 0
+            Dim dropped = 0
+            For Each source In Directory.GetFiles(oldFolder)
+                Dim target = Path.Combine(newFolder, EnglishGuardMarkerName(Path.GetFileName(source)))
+                Try
+                    If File.Exists(target) Then
+                        File.Delete(source)
+                        dropped += 1
+                    Else
+                        File.Move(source, target)
+                        moved += 1
+                    End If
+                Catch ex As Exception
+                    log.Add($"start guard: {source} not moved - {ex.Message}")
+                End Try
+            Next
+            Dim removed = False
+            Try
+                If FolderRelocation.IsEmptyDirectory(oldFolder) Then
+                    Directory.Delete(oldFolder)
+                    removed = True
+                End If
+            Catch
+            End Try
+            log.Add($"start guard: {oldFolder} to {newFolder}, {moved} markers moved, {dropped} already there" &
+                    If(removed, ", old folder removed", ", old folder kept (not empty)"))
+        End Sub
+
+        ''' <summary>Der englische Name einer Merkdatei frueherer Fassungen: Endung ".marke" wird ".marker",
+        ''' die Teilnamen des Startschutzes und der Anfang der Laufmarken der Karte werden englisch.
+        ''' Ein Name, der nicht so aussieht, bleibt, wie er ist.</summary>
+        Friend Shared Function EnglishGuardMarkerName(name As String) As String
+            If Not name.EndsWith(LegacyGuardMarkerExtension, StringComparison.Ordinal) Then Return name
+            Dim stem = name.Substring(0, name.Length - LegacyGuardMarkerExtension.Length)
+            For Each part In NativeStartGuard.LegacyPartNames
+                If stem.StartsWith(part.OldName & ".", StringComparison.Ordinal) Then
+                    stem = part.NewName & stem.Substring(part.OldName.Length)
+                    Return stem & GuardMarkerExtension
+                End If
+            Next
+            If stem.StartsWith(GpuModelBlockService.LegacyMarkerPrefix, StringComparison.Ordinal) Then
+                stem = GpuModelBlockService.MarkerPrefix & stem.Substring(GpuModelBlockService.LegacyMarkerPrefix.Length)
+            End If
+            Return stem & GuardMarkerExtension
+        End Function
 
         ''' <summary>Ein vorgemerkter Wechsel. Gelingt er, gilt ab sofort der neue Ort. Scheitert
         ''' er, bleibt alles am alten Ort, die Vormerkung faellt weg und es meldet sich einmal.
@@ -151,7 +248,8 @@ Namespace Services
                 AddNotice(FolderStartupNoticeKind.MoveFailed, target)
                 Return
             End If
-            Dim moved = MoveDataFolder(source, target, ConfigRoot, Nothing, Sub() CommitDataFolder(target, setting, source))
+            Dim moved = MoveDataFolder(source, target, ConfigRoot, Nothing, Sub() CommitDataFolder(target, setting, source),
+                                       Volatile.Read(_startupProgress))
             log.Add($"data folder move {source} to {target}: {moved.Outcome}, {moved.MovedFiles} files, copied={moved.Copied} {moved.Detail}")
             Select Case moved.Outcome
                 Case FolderRelocationOutcome.Moved
@@ -190,7 +288,16 @@ Namespace Services
         Friend Shared Function MoveDataFolder(source As String, target As String, configRootFolder As String,
                                               freeSpaceProbe As Func(Of String, Long),
                                               beforeRemovingSource As Action) As FolderRelocationResult
-            Dim options As New FolderRelocationOptions With {.RequireSameTimestamp = True, .FreeSpaceProbe = freeSpaceProbe}
+            Return MoveDataFolder(source, target, configRootFolder, freeSpaceProbe, beforeRemovingSource, Nothing)
+        End Function
+
+        ''' <summary>Wie oben, mit dem Stand je Datei fuer das Fenster beim Start.</summary>
+        Friend Shared Function MoveDataFolder(source As String, target As String, configRootFolder As String,
+                                              freeSpaceProbe As Func(Of String, Long),
+                                              beforeRemovingSource As Action,
+                                              detailProgress As IProgress(Of FolderMoveProgress)) As FolderRelocationResult
+            Dim options As New FolderRelocationOptions With {.RequireSameTimestamp = True, .FreeSpaceProbe = freeSpaceProbe,
+                                                             .DetailProgress = detailProgress}
             If PathIdentity.AreSame(source, configRootFolder) Then
                 options.IncludeEntry = Function(name) Not BelongsToConfig(name)
             End If

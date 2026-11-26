@@ -12844,9 +12844,6 @@
   <data name="Beim_n_chsten_Start_verwendet_FerrumPix_den_Date_82e8fbec" xml:space="preserve">
     <value>Przy następnym uruchomieniu FerrumPix użyje folderu danych w {0}.</value>
   </data>
-  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_ce1e5936" xml:space="preserve">
-    <value>Przy następnym uruchomieniu folder danych zostanie przeniesiony do {0}.</value>
-  </data>
   <data name="Datenordner_nicht_erreichbar_9b1a712e" xml:space="preserve">
     <value>Folder danych jest niedostępny</value>
   </data>
@@ -13006,8 +13003,8 @@
   <data name="Abmelden_7e324c5c" xml:space="preserve">
     <value>Wyloguj</value>
   </data>
-  <data name="Mindestens_10_Zeichen_mit_Gro_buchstaben_Kleinbu_6da2d56e" xml:space="preserve">
-    <value>Co najmniej 10 znaków, w tym wielkie i małe litery, cyfra i znak specjalny; spacja liczy się jako znak specjalny. Wpisz je dwa razy. Zostaw puste, aby zmienić tylko czas blokady.</value>
+  <data name="Mindestens_8_Zeichen_mit_Gro_buchstaben_Kleinbuc_839d03de" xml:space="preserve">
+    <value>Co najmniej 8 znaków, w tym wielkie i małe litery, cyfra i znak specjalny; spacja liczy się jako znak specjalny. Wpisz je dwa razy. Zostaw puste, aby zmienić tylko czas blokady.</value>
   </data>
   <data name="Die_Wiederholung_stimmt_noch_nicht_mit_dem_neuen_eaa3a18a" xml:space="preserve">
     <value>Powtórzenie nie zgadza się jeszcze z nowym hasłem.</value>
@@ -13026,5 +13023,68 @@
   </data>
   <data name="Noch_n_tig_ein_Sonderzeichen_auch_ein_Leerzeiche_c0e66159" xml:space="preserve">
     <value>Jeszcze potrzeba: znaku specjalnego; spacja też się liczy.</value>
+  </data>
+  <data name="Wird_vorbereitet_140ad8bf" xml:space="preserve">
+    <value>Przygotowywanie</value>
+  </data>
+  <data name="0_von_1_Dateien_2_von_3_80b385f5" xml:space="preserve">
+    <value>{0} z {1} plików, {2} z {3}</value>
+  </data>
+  <data name="0_von_1_Dateien_8e8da684" xml:space="preserve">
+    <value>{0} z {1} plików</value>
+  </data>
+  <data name="0_Dateien_verschoben_3f8cf1d9" xml:space="preserve">
+    <value>Przeniesiono plików: {0}</value>
+  </data>
+  <data name="Datenordner_wird_verschoben_d0cb6bf0" xml:space="preserve">
+    <value>Przenoszenie folderu danych</value>
+  </data>
+  <data name="Bitte_FerrumPix_nicht_beenden_Danach_startet_es__f72667ce" xml:space="preserve">
+    <value>Nie zamykaj FerrumPix. Potem uruchomi się samo.</value>
+  </data>
+  <data name="Bisheriger_Ort_a58722d7" xml:space="preserve">
+    <value>Poprzednia lokalizacja</value>
+  </data>
+  <data name="Neuer_Ort_289b8469" xml:space="preserve">
+    <value>Nowa lokalizacja</value>
+  </data>
+  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_686dbf3d" xml:space="preserve">
+    <value>Przy następnym uruchomieniu folder danych zostanie przeniesiony do {0}. W zależności od rozmiaru może to potrwać; w tym czasie okno pokazuje postęp, a przenoszenia nie można przerwać.</value>
+  </data>
+  <data name="Eigene_Schriften_e9fcabf6" xml:space="preserve">
+    <value>Własne czcionki</value>
+  </data>
+  <data name="Schriften_im_Ordner_Fonts_des_Datenordners_stehe_c7bac268" xml:space="preserve">
+    <value>Czcionki z folderu Fonts w folderze danych można wybrać dla tekstu w edytorze, obok czcionek systemowych. Odczytywane są pliki TTF, OTF i TTC, także w podfolderach.</value>
+  </data>
+  <data name="Im_Browser_l_sst_sich_der_Ordner_nicht_ffnen_Die_08633754" xml:space="preserve">
+    <value>W przeglądarce nie można otworzyć folderu. Umieść czcionki w tym folderze na serwerze, potem wystarczy Wczytaj ponownie.</value>
+  </data>
+  <data name="Schriften_werden_eingelesen_636edd40" xml:space="preserve">
+    <value>Wczytywanie czcionek ...</value>
+  </data>
+  <data name="Noch_keine_eigenen_Schriften_gefunden_01f8abc7" xml:space="preserve">
+    <value>Nie znaleziono jeszcze własnych czcionek.</value>
+  </data>
+  <data name="Gefundene_Schriftfamilien_0_3387d9af" xml:space="preserve">
+    <value>Znalezione rodziny czcionek: {0}</value>
+  </data>
+  <data name="Hochladen_70d66639" xml:space="preserve">
+    <value>Prześlij</value>
+  </data>
+  <data name="Dateien_von_diesem_Ger_t_in_den_ge_ffneten_Ordne_ce5708fe" xml:space="preserve">
+    <value>Prześlij pliki z tego urządzenia do otwartego folderu</value>
+  </data>
+  <data name="Die_fertigen_Dateien_kommen_auf_dieses_Ger_t_meh_90721ed6" xml:space="preserve">
+    <value>Gotowe pliki trafiają na to urządzenie, kilka jako jeden plik ZIP. Na serwerze nic nie zostaje.</value>
+  </data>
+  <data name="Im_Datenordner_ist_nicht_genug_Platz_f_r_den_Dow_8e63bddc" xml:space="preserve">
+    <value>W folderze danych nie ma wystarczająco dużo wolnego miejsca na pobranie</value>
+  </data>
+  <data name="Der_Ordner_f_r_den_Download_lie_sich_im_Datenord_c5615f40" xml:space="preserve">
+    <value>Nie udało się utworzyć folderu na pobranie w folderze danych.</value>
+  </data>
+  <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
+    <value>Gotowe do pobrania: {0}</value>
   </data>
 </root>

@@ -41,16 +41,31 @@ Module Program
         ' DIE ORTE VOR ALLEM, WAS EINEN BENUTZT: der einmalige Umzug von 0.9.92, ein vorgemerkter
         ' Wechsel des Datenordners und die Sperre des Katalogs. Danach steht fest, wo Katalog,
         ' Modelle und Protokolle dieses Laufs liegen. Siehe AppFolders.
-        AppFolders.PrepareAtStartup()
+        '
+        ' STEHT EIN UMZUG AN, DER DAUERN KANN, und gibt es ein Fenster, laeuft er erst NACH dem
+        ' Aufbau des Toolkits, hinter einem Fenster mit seinem Stand (App.StartAfterFolderMove).
+        ' Bis dahin wird im Datenordner nichts geoeffnet: das Protokoll haelt seine Zeilen zurueck,
+        ' und alles, was dort liest oder schreibt, steht in RunFolderStartupWork. Ohne Fenster
+        ' (Browser, Behaelter) laeuft er hier, mit dem Stand auf der Konsole.
+        Dim browserRequested = BrowserBridge.IsRequested(args)
+        Dim movePlan = AppFolders.PlanStartupMove()
+        _folderWorkDeferred = movePlan IsNot Nothing AndAlso Not browserRequested
+        _echoBanner = debugRequested
 
-        If debugRequested Then
-            AttachDebugConsole()
-            EchoStartupBanner()
+        If debugRequested Then AttachDebugConsole()
+
+        If _folderWorkDeferred Then
+            DiagnosticLogService.HoldFileWrites()
+            App.DeferredStartupMove = movePlan
+        Else
+            Dim consoleProgress As StartupMoveConsoleProgress = Nothing
+            If movePlan IsNot Nothing Then
+                consoleProgress = New StartupMoveConsoleProgress()
+                consoleProgress.Announce(movePlan)
+            End If
+            RunFolderStartupWork(consoleProgress)
+            consoleProgress?.Finish()
         End If
-
-        ' EINE BEREITGELEGTE WIEDERHERSTELLUNG VOR ALLEM ANDEREN, was Katalog oder Einstellungen
-        ' oeffnet: schon die Zeile darunter liest die Einstellungen. Siehe CatalogBackupService.
-        CatalogBackupService.ApplyPendingRestore()
 
         ' Der Riegel gegen die Telemetrie der Modelllaufzeit. Er wirkt nur, solange noch keine
         ' ORT-Umgebung entstanden ist, deshalb steht er hier und nicht dort, wo die Laufzeit zum
@@ -86,12 +101,9 @@ Module Program
             If debugRequested Then LogSystemInfo()
         Catch
         End Try
-        ' Einmal je Lauf, im Hintergrund: die Protokolldateien auf ihre Obergrenze kuerzen.
-        DiagnosticLogService.TrimLogsSoon()
-
         ' Falsche Angaben fuer den Browser enden HIER mit einer Zeile, bevor das Toolkit entsteht:
         ' danach waere es eine Ausnahme mitten im Start, mit Aufrufkette statt Erklaerung.
-        If BrowserBridge.IsRequested(args) Then
+        If browserRequested Then
             Dim problem = BrowserBridge.CheckArguments(args)
             If problem IsNot Nothing Then
                 Console.Error.WriteLine(problem)
@@ -99,7 +111,7 @@ Module Program
             End If
         End If
 
-        Dim builder = If(BrowserBridge.IsRequested(args), BuildBrowserApp(args), BuildAvaloniaApp())
+        Dim builder = If(browserRequested, BuildBrowserApp(args), BuildAvaloniaApp())
         Dim exitCode = builder.StartWithClassicDesktopLifetime(ForwardedArguments(args))
         ' DIE LETZTE ZEILE IST SELBST EIN BEFUND: kommt sie, hat der Aufbau des Toolkits gehalten
         ' und die Anwendung ist geordnet zu Ende gegangen. Bleibt sie aus, endete der Prozess
@@ -108,6 +120,31 @@ Module Program
         WaitBeforeClosingOwnConsole()
         Return exitCode
     End Function
+
+    ''' <summary>Der Umzug laeuft erst hinter dem Fenster (siehe Main).</summary>
+    Private _folderWorkDeferred As Boolean
+
+    ''' <summary>Die Zeilen des Protokollschalters kommen nach dem Umzug, weil erst dann der Ort
+    ''' der Protokolldatei feststeht.</summary>
+    Private _echoBanner As Boolean
+
+    ''' <summary>Alles beim Start, was im Datenordner liest oder schreibt, in seiner Reihenfolge:
+    ''' Orte und Umzug, die Zeilen des Protokollschalters, eine bereitgelegte Wiederherstellung,
+    ''' das Freigeben und Kuerzen der Protokolle. Vor dem Toolkit auf dem Hauptfaden, oder bei
+    ''' einem Umzug hinter dem Fenster auf einem Hintergrundfaden (App.StartAfterFolderMove).
+    '''
+    ''' EINE BEREITGELEGTE WIEDERHERSTELLUNG VOR ALLEM ANDEREN, was den Katalog oeffnet. Hinter
+    ''' dem Fenster kommt sie nach den Einstellungen, die schon der Aufbau des Toolkits liest
+    ''' (Skalierung, Grafikkarte, Zeichenweg des Mac): zurueckgeholte Werte dafuer gelten dann ab
+    ''' dem naechsten Start. Siehe CatalogBackupService.</summary>
+    Friend Sub RunFolderStartupWork(progress As IProgress(Of FolderMoveProgress))
+        AppFolders.PrepareAtStartup(progress)
+        If _echoBanner Then EchoStartupBanner()
+        CatalogBackupService.ApplyPendingRestore()
+        DiagnosticLogService.ReleaseHeldWrites()
+        ' Einmal je Lauf, im Hintergrund: die Protokolldateien auf ihre Obergrenze kuerzen.
+        DiagnosticLogService.TrimLogsSoon()
+    End Sub
 
     ''' <summary>Das Sicherheitsnetz fuer alles, was niemand gefangen hat.
     '''

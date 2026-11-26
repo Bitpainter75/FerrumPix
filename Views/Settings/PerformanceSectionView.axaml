@@ -181,7 +181,7 @@
                                        TextWrapping="Wrap"
                                        Classes="no-translate"/>
                             <!-- Modelle, die auf einer Karte gesperrt sind (GpuModelBlockService,
-                                 karte-gesperrt.json): nach einem Absturz im Treiber oder einem Fehler
+                                 gpu-blocked.json): nach einem Absturz im Treiber oder einem Fehler
                                  im Aufbau. Nur sichtbar, wenn es welche gibt. Der Knopf hebt alle auf;
                                  Abbrechen traegt sie wieder ein. -->
                             <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasGpuModelBlocks}">

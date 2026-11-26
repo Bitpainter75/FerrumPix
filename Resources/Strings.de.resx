@@ -12822,9 +12822,6 @@
   <data name="Beim_n_chsten_Start_verwendet_FerrumPix_den_Date_82e8fbec" xml:space="preserve">
     <value>Beim nächsten Start verwendet FerrumPix den Datenordner in {0}.</value>
   </data>
-  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_ce1e5936" xml:space="preserve">
-    <value>Beim nächsten Start zieht der Datenordner nach {0} um.</value>
-  </data>
   <data name="Datenordner_nicht_erreichbar_9b1a712e" xml:space="preserve">
     <value>Datenordner nicht erreichbar</value>
   </data>
@@ -12984,8 +12981,8 @@
   <data name="Abmelden_7e324c5c" xml:space="preserve">
     <value>Abmelden</value>
   </data>
-  <data name="Mindestens_10_Zeichen_mit_Gro_buchstaben_Kleinbu_6da2d56e" xml:space="preserve">
-    <value>Mindestens 10 Zeichen mit Großbuchstaben, Kleinbuchstaben, Zahl und Sonderzeichen; ein Leerzeichen zählt als Sonderzeichen. Zweimal eingeben. Leer lassen, um nur die Sperrzeit zu ändern.</value>
+  <data name="Mindestens_8_Zeichen_mit_Gro_buchstaben_Kleinbuc_839d03de" xml:space="preserve">
+    <value>Mindestens 8 Zeichen mit Großbuchstaben, Kleinbuchstaben, Zahl und Sonderzeichen; ein Leerzeichen zählt als Sonderzeichen. Zweimal eingeben. Leer lassen, um nur die Sperrzeit zu ändern.</value>
   </data>
   <data name="Die_Wiederholung_stimmt_noch_nicht_mit_dem_neuen_eaa3a18a" xml:space="preserve">
     <value>Die Wiederholung stimmt noch nicht mit dem neuen Kennwort überein.</value>
@@ -13004,5 +13001,68 @@
   </data>
   <data name="Noch_n_tig_ein_Sonderzeichen_auch_ein_Leerzeiche_c0e66159" xml:space="preserve">
     <value>Noch nötig: ein Sonderzeichen, auch ein Leerzeichen zählt.</value>
+  </data>
+  <data name="Wird_vorbereitet_140ad8bf" xml:space="preserve">
+    <value>Wird vorbereitet</value>
+  </data>
+  <data name="0_von_1_Dateien_2_von_3_80b385f5" xml:space="preserve">
+    <value>{0} von {1} Dateien, {2} von {3}</value>
+  </data>
+  <data name="0_von_1_Dateien_8e8da684" xml:space="preserve">
+    <value>{0} von {1} Dateien</value>
+  </data>
+  <data name="0_Dateien_verschoben_3f8cf1d9" xml:space="preserve">
+    <value>{0} Dateien verschoben</value>
+  </data>
+  <data name="Datenordner_wird_verschoben_d0cb6bf0" xml:space="preserve">
+    <value>Datenordner wird verschoben</value>
+  </data>
+  <data name="Bitte_FerrumPix_nicht_beenden_Danach_startet_es__f72667ce" xml:space="preserve">
+    <value>Bitte FerrumPix nicht beenden. Danach startet es von selbst.</value>
+  </data>
+  <data name="Bisheriger_Ort_a58722d7" xml:space="preserve">
+    <value>Bisheriger Ort</value>
+  </data>
+  <data name="Neuer_Ort_289b8469" xml:space="preserve">
+    <value>Neuer Ort</value>
+  </data>
+  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_686dbf3d" xml:space="preserve">
+    <value>Beim nächsten Start zieht der Datenordner nach {0} um. Je nach Größe kann das dauern; ein Fenster zeigt so lange den Fortschritt, abbrechen lässt sich der Umzug nicht.</value>
+  </data>
+  <data name="Eigene_Schriften_e9fcabf6" xml:space="preserve">
+    <value>Eigene Schriften</value>
+  </data>
+  <data name="Schriften_im_Ordner_Fonts_des_Datenordners_stehe_c7bac268" xml:space="preserve">
+    <value>Schriften im Ordner Fonts des Datenordners stehen im Editor für Text zur Auswahl, neben den Schriften des Systems. Gelesen werden TTF, OTF und TTC, auch in Unterordnern.</value>
+  </data>
+  <data name="Im_Browser_l_sst_sich_der_Ordner_nicht_ffnen_Die_08633754" xml:space="preserve">
+    <value>Im Browser lässt sich der Ordner nicht öffnen. Die Schriften gehören auf dem Server in diesen Ordner, danach genügt Neu einlesen.</value>
+  </data>
+  <data name="Schriften_werden_eingelesen_636edd40" xml:space="preserve">
+    <value>Schriften werden eingelesen ...</value>
+  </data>
+  <data name="Noch_keine_eigenen_Schriften_gefunden_01f8abc7" xml:space="preserve">
+    <value>Noch keine eigenen Schriften gefunden.</value>
+  </data>
+  <data name="Gefundene_Schriftfamilien_0_3387d9af" xml:space="preserve">
+    <value>Gefundene Schriftfamilien: {0}</value>
+  </data>
+  <data name="Hochladen_70d66639" xml:space="preserve">
+    <value>Hochladen</value>
+  </data>
+  <data name="Dateien_von_diesem_Ger_t_in_den_ge_ffneten_Ordne_ce5708fe" xml:space="preserve">
+    <value>Dateien von diesem Gerät in den geöffneten Ordner hochladen</value>
+  </data>
+  <data name="Die_fertigen_Dateien_kommen_auf_dieses_Ger_t_meh_90721ed6" xml:space="preserve">
+    <value>Die fertigen Dateien kommen auf dieses Gerät, mehrere als ein ZIP. Auf dem Server bleibt nichts liegen.</value>
+  </data>
+  <data name="Im_Datenordner_ist_nicht_genug_Platz_f_r_den_Dow_8e63bddc" xml:space="preserve">
+    <value>Im Datenordner ist nicht genug Platz für den Download frei</value>
+  </data>
+  <data name="Der_Ordner_f_r_den_Download_lie_sich_im_Datenord_c5615f40" xml:space="preserve">
+    <value>Der Ordner für den Download ließ sich im Datenordner nicht anlegen.</value>
+  </data>
+  <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
+    <value>Zum Herunterladen bereit: {0}</value>
   </data>
 </root>

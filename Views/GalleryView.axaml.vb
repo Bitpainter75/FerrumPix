@@ -463,10 +463,12 @@ Namespace Views
 
         ''' <summary>"Sperren" in der Seitenleiste gibt es nur mit Kennwort. Der Schutz aendert sich
         ''' nur in den Einstellungen, also reicht es, beim Anhaengen und beim Betreten der Galerie
-        ''' nachzusehen.</summary>
+        ''' nachzusehen. "Hochladen" gibt es nur im Browser; das steht beim Start fest.</summary>
         Private Sub UpdateLockAppButton()
             Dim button = Me.FindControl(Of Button)("LockAppButton")
             If button IsNot Nothing Then button.IsVisible = AppLockService.IsProtected
+            Dim upload = Me.FindControl(Of Button)("BrowserUploadButton")
+            If upload IsNot Nothing Then upload.IsVisible = BrowserBridge.IsActive
         End Sub
 
         Private Sub OnGalleryAttachedToVisualTree(sender As Object, e As VisualTreeAttachmentEventArgs)
@@ -3618,6 +3620,13 @@ Namespace Views
         Public Sub OnLockAppClick(sender As Object, e As RoutedEventArgs)
             Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
             mainVm?.LockApp()
+            e.Handled = True
+        End Sub
+
+        ''' <summary>Hochladen aus der Seitenleiste, nur im Browser: die Seite oeffnet den
+        ''' Dateiwaehler (BrowserBridge.RequestFilePicker, dort die Begruendung).</summary>
+        Public Sub OnBrowserUploadClick(sender As Object, e As RoutedEventArgs)
+            If BrowserBridge.IsActive Then BrowserBridge.RequestFilePicker()
             e.Handled = True
         End Sub
 

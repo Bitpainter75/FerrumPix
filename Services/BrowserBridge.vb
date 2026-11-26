@@ -553,6 +553,11 @@ Namespace Services
                     Await ServeLoginImageAsync(context)
                     Return
                 End If
+                ' Das Symbol der Anwendung fuer den Tab, ebenfalls ohne Sitzung (BrowserBridgeIcons.vb).
+                If IsIconRoute(path) Then
+                    Await ServeIconAsync(context, path)
+                    Return
+                End If
                 ' Dateien hinauf und hinunter, siehe BrowserBridgeFiles.vb. Beide pruefen die
                 ' Anmeldung selbst, dazu die Kennung der Seite.
                 If path = UploadRoute Then

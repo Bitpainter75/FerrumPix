@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <title>FerrumPix</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #0B0E11; }
   #stage { position: fixed; inset: 0; outline: none; touch-action: none; user-select: none; }
@@ -13,16 +16,6 @@
   #drop { inset: 0; display: none; align-items: center; justify-content: center; pointer-events: none;
           background: rgba(11, 14, 17, 0.72); border: 3px dashed #F08A1A; box-sizing: border-box; font-size: 20px; }
   #drop.on { display: flex; }
-  #uploadButton { right: 0; top: 50%; transform: translateY(-50%); width: 26px; height: 52px; padding: 0;
-                  border: 1px solid #2A333C; border-right: none; border-radius: 8px 0 0 8px; background: #192128;
-                  color: #E7ECF0; opacity: 0.45; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-  #uploadButton:hover, #uploadButton:focus-visible { opacity: 1; }
-  /* Abmelden, nur mit Kennwort: unter dem Knopf zum Hochladen, in derselben Art. */
-  #logoutButton { right: 0; top: calc(50% + 32px); width: 26px; height: 34px; padding: 0;
-                  border: 1px solid #2A333C; border-right: none; border-radius: 8px 0 0 8px; background: #192128;
-                  color: #E7ECF0; opacity: 0.45; cursor: pointer; display: none; align-items: center; justify-content: center; }
-  #logoutButton.on { display: flex; }
-  #logoutButton:hover, #logoutButton:focus-visible { opacity: 1; }
   #panel { right: 16px; bottom: 16px; width: min(380px, calc(100vw - 32px)); max-height: 60vh; display: none;
            flex-direction: column; background: #192128; border: 1px solid #2A333C; border-radius: 10px;
            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5); overflow: hidden; }
@@ -61,12 +54,6 @@
 <body>
 <div id="stage" tabindex="0"></div>
 <div id="drop" class="fp-layer"></div>
-<button id="uploadButton" class="fp-layer" type="button">
-  <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M228 152v56a20 20 0 0 1-20 20H48a20 20 0 0 1-20-20v-56a12 12 0 0 1 24 0v52h152v-52a12 12 0 0 1 24 0ZM96.49 88.49 116 69v83a12 12 0 0 0 24 0V69l19.51 19.52a12 12 0 1 0 17-17l-40-40a12 12 0 0 0-17 0l-40 40a12 12 0 1 0 17 17Z"/></svg>
-</button>
-<button id="logoutButton" class="fp-layer" type="button">
-  <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M116 216a12 12 0 0 1-12 12H48a20 20 0 0 1-20-20V48a20 20 0 0 1 20-20h56a12 12 0 0 1 0 24H52v152h52a12 12 0 0 1 12 12Zm108.49-96.49-40-40a12 12 0 0 0-17 17L187 116h-83a12 12 0 0 0 0 24h83l-19.52 19.51a12 12 0 0 0 17 17l40-40a12 12 0 0 0 .01-17Z"/></svg>
-</button>
 <input id="filePicker" type="file" multiple hidden>
 <div id="panel" class="fp-layer">
   <header><span id="panelTitle"></span><button id="panelCancel" class="fp-button" type="button"></button><button id="panelClose" class="fp-button" type="button"></button></header>
@@ -115,6 +102,12 @@ function onText(message) {
     stage.style.cursor = cursors[message.name] || 'default';
   } else if (message.t === 'offer') {
     showOffer(message);
+  } else if (message.t === 'gone' || message.t === 'delivered') {
+    dropOffer(message.id);
+  } else if (message.t === 'interrupted') {
+    reshowOffer(message.id);
+  } else if (message.t === 'pick') {
+    pickFiles();
   } else if (message.t === 'reload') {
     // Die Kennung oder die Sitzung gilt nicht mehr: die Anwendung wurde neu gestartet oder
     // gesperrt. Neu laden holt eine frische Kennung oder, ohne Sitzung, das Anmeldefenster.
@@ -285,7 +278,6 @@ function text(id, ...values) {
 }
 
 const drop = document.getElementById('drop');
-const uploadButton = document.getElementById('uploadButton');
 const filePicker = document.getElementById('filePicker');
 const panel = document.getElementById('panel');
 const panelTitle = document.getElementById('panelTitle');
@@ -295,8 +287,6 @@ const rows = document.getElementById('rows');
 const overallBar = document.querySelector('#overall div');
 const offers = document.getElementById('offers');
 drop.textContent = text('dropHere');
-uploadButton.title = text('upload');
-uploadButton.setAttribute('aria-label', text('upload'));
 panelCancel.textContent = text('cancel');
 panelClose.textContent = text('close');
 
@@ -309,21 +299,7 @@ if (texts.httpNotice) {
   setTimeout(() => notice.classList.add('quiet'), 8000);
 }
 
-// Abmelden: beendet die Sitzung dieses Browsers, die anderen bleiben angemeldet. Den Text gibt
-// es nur mit Kennwort; ohne bleibt der Knopf verborgen.
-if (texts.logout) {
-  const logoutButton = document.getElementById('logoutButton');
-  logoutButton.title = texts.logout;
-  logoutButton.setAttribute('aria-label', texts.logout);
-  logoutButton.classList.add('on');
-  logoutButton.addEventListener('click', async () => {
-    try {
-      await fetch('/logout', { method: 'POST', credentials: 'same-origin', cache: 'no-store' });
-    } catch (ignored) { }
-    if (socket) socket.onclose = null;
-    location.replace('/');
-  });
-}
+// Abmelden hat keinen eigenen Knopf mehr: "Sperren" in der Galerie beendet alle Sitzungen.
 
 // Ablegen auf der Seite. Der Browser oeffnete die Datei sonst selbst und verliesse die Anwendung;
 // deshalb wird auch ein Ablegen von etwas anderem als Dateien abgefangen. Der Zaehler gleicht aus,
@@ -356,8 +332,36 @@ addEventListener('drop', event => {
   enqueue(event.dataTransfer.files, event.clientX, event.clientY);
 });
 
-// Ohne Ziehen (Tablet): der Dateiwaehler des Browsers. Ohne Stelle, das Ziel ist der Ordner.
-uploadButton.addEventListener('click', () => filePicker.click());
+// Ohne Ziehen (Tablet): "Hochladen" in der Galerie der Anwendung schickt 'pick', und hier
+// oeffnet sich der Dateiwaehler des Browsers. Ohne Stelle, das Ziel ist der Ordner der Galerie.
+// Der Browser oeffnet ihn nur in einer Geste des Nutzers. Der Klick auf den Knopf der Anwendung
+// begann als pointerdown auf dem Canvas, und die Aktivierung daraus haelt einige Sekunden; die
+// Nachricht kommt Millisekunden spaeter. Sagt der Browser, dass sie vorbei ist, steht statt dessen
+// ein eigener Knopf da, dessen Klick wieder eine Geste ist.
+function pickFiles() {
+  const activation = navigator.userActivation;
+  if (!activation || activation.isActive) {
+    filePicker.click();
+    return;
+  }
+  const prompt = document.createElement('div');
+  prompt.className = 'offer fp-layer';
+  prompt.style.position = 'static';
+  const choose = document.createElement('button');
+  choose.className = 'fp-button accent';
+  choose.type = 'button';
+  choose.textContent = text('upload');
+  choose.addEventListener('click', () => { prompt.remove(); filePicker.click(); });
+  const close = document.createElement('button');
+  close.className = 'fp-button';
+  close.type = 'button';
+  close.textContent = text('close');
+  close.addEventListener('click', () => { prompt.remove(); stage.focus(); });
+  const label = document.createElement('span');
+  prompt.append(label, choose, close);
+  offers.appendChild(prompt);
+  choose.focus();
+}
 filePicker.addEventListener('change', () => {
   if (filePicker.files.length > 0) enqueue(filePicker.files, -1, -1);
   filePicker.value = '';
@@ -419,9 +423,23 @@ function updatePanel() {
   panelCancel.style.display = busy ? '' : 'none';
   panelClose.style.display = busy ? 'none' : '';
 }
+// Alles angekommen und nichts schiefgegangen: kurz "Hochgeladen", dann geht das Fenster. Mit
+// einem Fehler bleibt es stehen, bis jemand Schliessen drueckt.
+let hideTimer = 0;
+function closePanel() {
+  clearTimeout(hideTimer);
+  panel.classList.remove('on');
+  rows.textContent = '';
+  finished = total = bytesDone = bytesTotal = 0;
+}
 function pump() {
+  clearTimeout(hideTimer);
   if (current || queue.length === 0) {
     updatePanel();
+    if (!current && queue.length === 0 && total > 0 && !rows.querySelector('.row.failed')) {
+      panelTitle.textContent = text('done');
+      hideTimer = setTimeout(closePanel, 2000);
+    }
     return;
   }
   const item = queue.shift();
@@ -477,15 +495,19 @@ panelCancel.addEventListener('click', () => {
   stage.focus();
 });
 panelClose.addEventListener('click', () => {
-  panel.classList.remove('on');
-  rows.textContent = '';
-  finished = total = bytesDone = bytesTotal = 0;
+  closePanel();
   stage.focus();
 });
 
 // Ein Angebot der Anwendung zum Herunterladen. Die Seite kennt nur seine Kennung, nie einen
-// Pfad. Kommt es aus dem Kontextmenue, beginnt es gleich; der Knopf bleibt fuer ein zweites Mal.
+// Pfad. Kommt es aus dem Kontextmenue oder vom Ziel "Herunterladen", beginnt es gleich.
+// Sobald der Download laeuft, tritt der Eintrag zurueck: ein Download ueber einen Verweis meldet
+// der Seite kein Ende, das tut die Bruecke ("delivered", dann geht er ganz). Bricht er ab
+// ("interrupted"), steht der Eintrag wieder da, mit dem Grund und dem Knopf fuer einen neuen Versuch.
 function startDownload(id, name) {
+  for (const entry of Array.from(offers.children)) {
+    if (entry.dataset.offer === id) entry.style.display = 'none';
+  }
   const link = document.createElement('a');
   link.href = '/download?id=' + encodeURIComponent(id) + '&token=' + encodeURIComponent(token);
   link.download = name;
@@ -493,8 +515,25 @@ function startDownload(id, name) {
   link.click();
   link.remove();
 }
+// Ein Angebot aus einem eigenen Ordner der Anwendung (Ziel "Herunterladen") gilt nur bis zum
+// fertigen Download; danach nimmt die Anwendung es zurueck, und sein Eintrag geht.
+function dropOffer(id) {
+  for (const entry of Array.from(offers.children)) {
+    if (entry.dataset.offer === id) entry.remove();
+  }
+}
+function reshowOffer(id) {
+  for (const entry of Array.from(offers.children)) {
+    if (entry.dataset.offer !== id) continue;
+    entry.style.display = '';
+    const label = entry.querySelector('span');
+    label.textContent = entry.dataset.name + ': ' + text('interrupted');
+  }
+}
 function showOffer(message) {
   const offer = document.createElement('div');
+  offer.dataset.offer = message.id;
+  offer.dataset.name = message.name;
   offer.className = 'offer fp-layer';
   offer.style.position = 'static';
   const label = document.createElement('span');

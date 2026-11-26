@@ -214,7 +214,7 @@ No window opens. FerrumPix tells you the address instead, `http://127.0.0.1:1450
 
 Leave the terminal open while you use it. FerrumPix runs in that terminal, and closing it ends FerrumPix; the page in the browser then stops reacting.
 
-If you want a sign-in in front of it, give it a password. Every browser then sees FerrumPix's own sign-in window first, in the look of the app, and stays signed in until FerrumPix is locked again. The password is the same as the one in Settings, Access, and FerrumPix keeps it from then on, so the app stays protected even if you start it without it later. It needs at least 10 characters with an uppercase and a lowercase letter, a digit and a special character (a space counts); a weaker one is refused at start. The user name is only for tools that sign in by themselves:
+If you want a sign-in in front of it, give it a password. Every browser then sees FerrumPix's own sign-in window first, in the look of the app, and stays signed in until FerrumPix is locked again. The password is the same as the one in Settings, Access, and FerrumPix keeps it from then on, so the app stays protected even if you start it without it later. It needs at least 8 characters with an uppercase and a lowercase letter, a digit and a special character (a space counts); a weaker one is refused at start. The user name is only for tools that sign in by themselves:
 
 ```
 ferrumpix --browser --browser-user=anna --browser-password=Tea-Time-42
@@ -267,9 +267,11 @@ docker run -d -p 127.0.0.1:14501:14500 -e FERRUMPIX_BROWSER_LOCAL_FORWARD=1 \
   -v ferrumpix-data:/data -v ~/Pictures:/photos/Pictures ghcr.io/bitpainter75/ferrumpix
 ```
 
-That keeps it on the server itself, at `http://127.0.0.1:14501`. For other devices the same rule as above applies: put a reverse proxy with HTTPS in front, tell FerrumPix where it is, and give it a password, or allow plain HTTP for your home network as described above.
+That keeps it on the server itself, at `http://127.0.0.1:14501`. For other devices the same rule as above applies: put a reverse proxy with HTTPS in front, tell FerrumPix where it is, and give it a password, or allow plain HTTP for your home network as described above. Ready-made Compose templates for that, with Caddy and HTTPS, for a Synology NAS, and only for the server itself, are in [`docker/`](docker/README.md).
 
-Pictures travel both ways: drop files onto the page to put them into the folder you are looking at, or onto the picture in the editor to add them as a layer, and Download in the right-click menu brings pictures, and your exports, to the device you sit at.
+Fonts for text in the editor can be added by putting them into the `Fonts` folder of the data folder, in the container `/data/share/FerrumPix/Fonts`; a server usually brings only a few of its own.
+
+Pictures travel both ways: drop files onto the page, or use Upload in the gallery, to put them into the folder you are looking at, or drop them onto the picture in the editor to add them as a layer. Download in the right-click menu brings pictures to the device you sit at, and Save as, Export to and the batch tools can save straight to it as well.
 
 This is a first version, and a few things are still missing. Copy and paste stay inside FerrumPix and do not reach the clipboard of the device you sit at. Videos play without sound. And because the computer draws everything without the help of its graphics card in this mode, it feels a little less quick than the window does, mostly with very large browser windows.
 

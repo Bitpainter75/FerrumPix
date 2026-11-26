@@ -728,7 +728,7 @@ Namespace Services
                 Dim folder = AppFolders.LogsFolder
                 IO.Directory.CreateDirectory(folder)
 
-                IO.File.WriteAllBytes(IO.Path.Combine(folder, "entfernen-ausschnitt.png"),
+                IO.File.WriteAllBytes(IO.Path.Combine(folder, "remove-crop.png"),
                                       PngEncoder.EncodeToBytes(small, PngPurpose.Stored))
 
                 ' Die Maske als Graustufenbild, damit man sie ueberhaupt sehen kann - ein
@@ -742,11 +742,11 @@ Namespace Services
                             visible.SetPixel(x, y, New SKColor(v, v, v, 255))
                         Next
                     Next
-                    IO.File.WriteAllBytes(IO.Path.Combine(folder, "entfernen-maske.png"),
+                    IO.File.WriteAllBytes(IO.Path.Combine(folder, "remove-mask.png"),
                                           PngEncoder.EncodeToBytes(visible, PngPurpose.Stored))
                 End Using
                 DiagnosticLogService.LogAlways("ObjektEntfernen",
-                    "Ausschnitt und Maske abgelegt: entfernen-ausschnitt.png, entfernen-maske.png")
+                    "Ausschnitt und Maske abgelegt: remove-crop.png, remove-mask.png")
             Catch
             End Try
         End Sub

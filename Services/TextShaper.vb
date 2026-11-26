@@ -59,7 +59,11 @@ Namespace Services
         Private ReadOnly _fontsLock As New Object()
 
         Private Function GetTypefaceKey(typeface As SKTypeface) As String
-            Return String.Join("|", typeface.FamilyName, typeface.PostScriptName, typeface.FontWeight, typeface.FontWidth,
+            ' Ein Schnitt aus dem Ordner Fonts traegt seine Datei im Schluessel: er kann dieselben
+            ' Namen fuehren wie eine Systemschrift (eine andere Fassung davon) und braucht dann
+            ' trotzdem seine eigenen Daten. Die Daten selbst kommen fuer beide gleich ueber
+            ' OpenStream, auch aus einer Sammlung (.ttc) samt Index.
+            Return String.Join("|", FontLibraryService.SourceOf(typeface), typeface.FamilyName, typeface.PostScriptName, typeface.FontWeight, typeface.FontWidth,
                                CInt(typeface.FontSlant), typeface.GlyphCount, typeface.UnitsPerEm, typeface.TableCount)
         End Function
 

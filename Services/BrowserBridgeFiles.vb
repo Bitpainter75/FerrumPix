@@ -126,6 +126,11 @@ Namespace Services
             Public Paths As List(Of String)
             Public FileName As String
             Public Created As DateTime
+            ''' <summary>Der eigene Ordner der Bruecke, in den fuer das Ziel "Herunterladen"
+            ''' geschrieben wurde (BrowserBridgeDownloads.vb). Er gehoert dem Angebot und geht mit
+            ''' ihm: nach dem fertigen Download, beim Ablauf, beim Verdraengen. Nothing bei einem
+            ''' Angebot von Dateien aus dem Bestand.</summary>
+            Public OwnedFolder As String
         End Class
 
         ''' <summary>Die Texte der Seite in der Sprache der Anwendung. Sie stehen hier und nicht in
@@ -151,8 +156,8 @@ Namespace Services
                 texts("httpNotice") = LocalizationService.T("Unverschlüsselte Verbindung im Heimnetz")
                 texts("httpNoticeDetail") = LocalizationService.T("Kennwort und Bilder gehen lesbar durch das Netz. Für den Zugriff von unterwegs HTTPS verwenden.")
             End If
-            ' Abmelden nur mit Kennwort; ohne gibt es keine Sitzung (BrowserBridgeSessions.vb).
-            If NeedsSignIn Then texts("logout") = LocalizationService.T("Abmelden")
+            ' Einen Knopf zum Abmelden hat die Seite nicht mehr: abgemeldet wird ueber "Sperren" in
+            ' der Galerie, das beendet alle Sitzungen. Den Weg /logout gibt es weiter.
             Return texts
         End Function
 
@@ -632,23 +637,37 @@ Namespace Services
                               Select(Function(p) VariantKey.FileOf(p)).
                               Where(Function(p) File.Exists(p) AndAlso FileOperationPolicy.CanCopy(p)).
                               Distinct(PathIdentity.Comparer).ToList()
-            If files.Count = 0 Then Return Nothing
+            Return RegisterOffer(files, startNow, Nothing)
+        End Function
 
+        ''' <summary>Legt das Angebot an und schickt es der Seite. Abgelaufene und verdraengte
+        ''' Angebote fallen dabei weg, samt ihrem eigenen Ordner.</summary>
+        Private Shared Function RegisterOffer(files As List(Of String), startNow As Boolean, ownedFolder As String) As String
+            If files Is Nothing OrElse files.Count = 0 Then Return Nothing
             Dim offer As New DownloadOffer With {
                 .Paths = files,
                 .Created = DateTime.UtcNow,
+                .OwnedFolder = ownedFolder,
                 .FileName = If(files.Count = 1, Path.GetFileName(files(0)),
                                $"FerrumPix_{DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}_{files.Count.ToString(CultureInfo.InvariantCulture)}.zip")}
             Dim id = Convert.ToHexString(RandomNumberGenerator.GetBytes(16))
+            Dim dropped As New List(Of DownloadOffer)()
             SyncLock Offers
                 For Each stale In Offers.Where(Function(o) DateTime.UtcNow - o.Value.Created > OfferLifetime).Select(Function(o) o.Key).ToList()
+                    dropped.Add(Offers(stale))
                     Offers.Remove(stale)
                 Next
                 While Offers.Count >= MaxOffers
-                    Offers.Remove(Offers.OrderBy(Function(o) o.Value.Created).First().Key)
+                    Dim oldest = Offers.OrderBy(Function(o) o.Value.Created).First().Key
+                    dropped.Add(Offers(oldest))
+                    Offers.Remove(oldest)
                 End While
                 Offers(id) = offer
             End SyncLock
+            For Each gone In dropped
+                DeleteDownloadFolder(gone.OwnedFolder)
+            Next
+            If ownedFolder IsNot Nothing Then EnsureOfferSweep()
 
             Dim message As New Dictionary(Of String, Object) From {
                 {"t", "offer"}, {"id", id}, {"name", offer.FileName}, {"count", files.Count}, {"start", startNow}}
@@ -704,6 +723,16 @@ Namespace Services
                     Await StreamingZipWriter.WriteAsync(response.OutputStream, entries)
                 End If
                 response.Close()
+                ' Was fuer das Ziel "Herunterladen" entstand, liegt nur fuer diesen Download im
+                ' Datenordner: einmal vollstaendig ausgeliefert, geht es samt Angebot. Ein
+                ' abgebrochener Download laesst beides stehen, der Knopf der Seite holt es noch einmal.
+                ' Ein Download ueber einen Verweis meldet der Seite kein Ende; das tut die Bruecke,
+                ' damit der Eintrag verschwindet, sobald die Datei ganz hinausgegangen ist.
+                If offer.OwnedFolder IsNot Nothing Then
+                    ReleaseOwnedOffer(id)
+                Else
+                    NotifyOfferState("delivered", id)
+                End If
             Catch ex As Exception When TypeOf ex Is HttpListenerException OrElse TypeOf ex Is IOException OrElse
                                        TypeOf ex Is ObjectDisposedException OrElse TypeOf ex Is UnauthorizedAccessException OrElse
                                        TypeOf ex Is InvalidOperationException
@@ -713,8 +742,18 @@ Namespace Services
                     response.Abort()
                 Catch
                 End Try
+                ' Die Seite zeigt den Eintrag dann wieder, mit dem Grund und dem Knopf fuer einen
+                ' neuen Versuch.
+                NotifyOfferState("interrupted", id)
             End Try
         End Function
+
+        ''' <summary>Sagt der Seite, wie ein Download ausging: "delivered" (ganz hinaus),
+        ''' "interrupted" (abgebrochen) oder "gone" (das Angebot gilt nicht mehr).</summary>
+        Private Shared Sub NotifyOfferState(state As String, id As String)
+            Dim message As New Dictionary(Of String, Object) From {{"t", state}, {"id", id}}
+            Dim ignored = SendTextAsync(JsonSerializer.Serialize(message))
+        End Sub
 
         ''' <summary>Die Eintraege des ZIP: jede Datei unter ihrem Namen, gleiche Namen aus
         ''' verschiedenen Ordnern mit " (1)", " (2)", und hinter jeder ihre Beistelldateien (.xmp und
@@ -775,9 +814,15 @@ Namespace Services
 
         ''' <summary>Vergisst Angebote und Ablegestapel. Fuer den Pruefstand, beim Anhalten.</summary>
         Private Shared Sub ResetFileTransfers()
+            Dim owned As List(Of String)
             SyncLock Offers
+                owned = Offers.Values.Select(Function(o) o.OwnedFolder).Where(Function(f) f IsNot Nothing).ToList()
                 Offers.Clear()
             End SyncLock
+            For Each folder In owned
+                DeleteDownloadFolder(folder)
+            Next
+            StopOfferSweep()
             SyncLock Batches
                 Batches.Clear()
                 BatchOrder.Clear()
