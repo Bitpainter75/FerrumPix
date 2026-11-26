@@ -974,6 +974,9 @@ Namespace Services
 
             Using data
                 Using codec = SKCodec.Create(data)
+                    ' Ein JPEG, dessen Rahmen mehr Bildpunkte verspricht, als seine Bytes tragen
+                    ' koennen, wird gar nicht erst angelegt (IsImplausibleJpegFrame).
+                    If IsImplausibleJpegFrame(codec, data.Size) Then Return Nothing
                     If codec Is Nothing OrElse codec.EncodedOrigin = SKEncodedOrigin.TopLeft Then
                         ' SKBitmap.Decode nimmt das Profil der Datei in die Bitmap mit. Fehlt dort
                         ' eines, fragt EffectiveProfile das EXIF - sonst liefe ein Adobe-RGB-Bild
@@ -1004,6 +1007,24 @@ Namespace Services
                     Return ToManagedSrgb(corrected, sourceProfile)
                 End Using
             End Using
+        End Function
+
+        ''' <summary>Hoechstens so viele Bildpunkte darf ein JPEG je Byte seiner Datei versprechen.
+        ''' Jeder 8x8-Block braucht in jedem Verfahren (auch progressiv, wo die AC-Durchgaenge ganze
+        ''' Bloecke ueberspringen) mindestens einen Code fuer seinen Gleichanteil, also ein bis zwei
+        ''' Bit: mehr als 256 bis 512 Bildpunkte je Byte kann keine echte Datei tragen. 2048 laesst
+        ''' den vierfachen Abstand.</summary>
+        Friend Const MaxJpegPixelsPerByte As Long = 2048
+
+        ''' <summary>True fuer ein JPEG, dessen Rahmen mehr Bildpunkte angibt, als seine Bytes tragen
+        ''' koennen (<see cref="MaxJpegPixelsPerByte"/>). WARUM: Skia legt das Bitmap nach dem Rahmen
+        ''' an und fuellt fehlende Zeilen auf; eine Datei von 161 Byte mit dem Rahmen 45000 x 45000
+        ''' ergab so ein Bild von 8,1 GB, ab 60000 x 60000 eine Ausnahme. Andere Formate bleiben
+        ''' aussen vor: ein PNG mit einem Bit je Punkt packt legitim weit dichter.</summary>
+        Friend Shared Function IsImplausibleJpegFrame(codec As SKCodec, encodedBytes As Long) As Boolean
+            If codec Is Nothing OrElse codec.EncodedFormat <> SKEncodedImageFormat.Jpeg Then Return False
+            Dim pixels = CLng(codec.Info.Width) * CLng(codec.Info.Height)
+            Return pixels > Math.Max(1L, encodedBytes) * MaxJpegPixelsPerByte
         End Function
 
         ''' <summary>Farbmanagement am Ausgang des Decodes: ein abweichendes Profil wird nach sRGB

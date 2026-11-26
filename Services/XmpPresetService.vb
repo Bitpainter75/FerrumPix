@@ -248,7 +248,10 @@ Namespace Services
             Dim xmpText = StripNestedCrsBlocks(rawText)
             Dim values = ParseXmpValues(xmpText)
             If values.Count = 0 Then Return Nothing
-
+            ' DIE PROZESSVERSION ENTSCHEIDET, WELCHE GRUNDREGLER GELTEN. Ein Satz vor 6.7 (aus einer
+            ' alten Fassung des Referenzprogramms) wird in die 2012er Regler umgerechnet, einer ab 6.7 liest die alten
+            ' Schluessel nicht mehr (siehe NormalizeProcessVersion). Danach gilt die Abbildung unten.
+            Dim legacyProcess = NormalizeProcessVersion(values)
             Dim adj As ImageAdjustments = If(baseLook Is Nothing, New ImageAdjustments(), baseLook.Clone())
             Dim d As Double
             ' EIN PRESET KOMMT VOLLSTAENDIG AN (seit 2026-10-25). Bis dahin liess ein PV2012-Preset mit
@@ -271,7 +274,9 @@ Namespace Services
                 adj.Exposure = ClampExposurePoints(d)
             End If
             ' Das alte crs:Brightness (-150..+150) hat in PV2012 keine Entsprechung mehr; es kommt der
-            ' Helligkeit am nächsten und wird auf deren ±100 gestaucht.
+            ' Helligkeit am nächsten und wird auf deren ±100 gestaucht. Erreicht wird das nur noch von
+            ' einem Satz ohne Prozessversion, der alte und 2012er Schluessel mischt: einer mit Angabe
+            ' ist vorher umgerechnet oder um die alten Schluessel bereinigt (NormalizeProcessVersion).
             If TryGetXmpDouble(values, "Brightness", d) Then adj.Brightness = Clamp100(d / 1.5)
             If TryGetXmpDouble(values, "Contrast2012", d) Then
                 adj.Contrast = Clamp100(d)
@@ -637,24 +642,123 @@ Namespace Services
             ''' Annäherung an Adobes Kurvenform, kein exakter Nachbau.
             ' Punktkurve: bevorzugt PV2012; fehlt sie (alte PV2003/2010-Presets), auf die Alt-Kurve
             ' <crs:ToneCurve> zurückfallen (gleiches rdf:Seq-Format). Beide durchlaufen dieselbe Faltung.
-            Dim mainCurvePoints = ParseXmpCurvePoints(xmpText, "ToneCurvePV2012")
-            If mainCurvePoints Is Nothing Then mainCurvePoints = ParseXmpCurvePoints(xmpText, "ToneCurve")
+            ' VOR 6.7 UMGEKEHRT: das Referenzprogramm legt neben die alte Kurve eine gerade 2012er und zeigt
+            ' die alte (an Katalogen belegt). Die Kanalkurven kommen aus derselben Familie.
+            Dim curveFamily = If(legacyProcess, "ToneCurve", "ToneCurvePV2012")
+            Dim mainCurvePoints = ParseXmpCurvePoints(xmpText, curveFamily)
+            If mainCurvePoints Is Nothing Then mainCurvePoints = ParseXmpCurvePoints(xmpText, If(legacyProcess, "ToneCurvePV2012", "ToneCurve"))
             Dim combinedCurve = ApplyParametricCurve(values, mainCurvePoints)
             If combinedCurve IsNot Nothing Then adj.CurveRgbPoints = combinedCurve
             ' KANALKURVEN NUR MIT GESAMTKURVE: die Referenz wendet ToneCurvePV2012Red/Green/Blue nur an,
             ' wenn auch ToneCurvePV2012 im Preset steht, und sei es die Gerade; ohne sie blieb ihr Bild
             ' bitgleich (gemessen 2026-10-24 an einem Preset nur mit den drei Kanalkurven).
-            If ParseXmpCurvePoints(xmpText, "ToneCurvePV2012") IsNot Nothing Then
-                Dim redCurve = ParseXmpCurvePoints(xmpText, "ToneCurvePV2012Red")
+            If ParseXmpCurvePoints(xmpText, curveFamily) IsNot Nothing Then
+                Dim redCurve = ParseXmpCurvePoints(xmpText, curveFamily & "Red")
                 If redCurve IsNot Nothing Then adj.CurveRedPoints = redCurve
-                Dim greenCurve = ParseXmpCurvePoints(xmpText, "ToneCurvePV2012Green")
+                Dim greenCurve = ParseXmpCurvePoints(xmpText, curveFamily & "Green")
                 If greenCurve IsNot Nothing Then adj.CurveGreenPoints = greenCurve
-                Dim blueCurve = ParseXmpCurvePoints(xmpText, "ToneCurvePV2012Blue")
+                Dim blueCurve = ParseXmpCurvePoints(xmpText, curveFamily & "Blue")
                 If blueCurve IsNot Nothing Then adj.CurveBluePoints = blueCurve
             End If
 
             Return adj
         End Function
+
+        ' ── Prozessversion (Plan PROZESSVERSION.md) ───────────────────────────────────────────
+
+        ''' <summary>Die Grundregler vor Prozessversion 2012 (5.0 = PV2003, 5.7 = PV2010) und ihre
+        ''' Nachfolger ab 6.7. Gleiche Regler, andere Nullpunkte: Helligkeit 50, Kontrast 25 und das
+        ''' alte "Shadows" (der Schwarzpunkt) 5.</summary>
+        Private Shared ReadOnly LegacyToneKeys As String() =
+            {"Exposure", "Brightness", "Contrast", "FillLight", "HighlightRecovery", "Shadows", "Clarity"}
+        Private Shared ReadOnly ProcessToneKeys2012 As String() =
+            {"Exposure2012", "Contrast2012", "Highlights2012", "Shadows2012", "Whites2012", "Blacks2012", "Clarity2012"}
+        ''' <summary>Der Platzhalter des Referenzprogramms fuer eine automatische Tonung, die noch nicht gerechnet
+        ''' ist. Zaehlt wie ein fehlender Wert.</summary>
+        Private Const AutoTonePending As Double = -999999
+
+        ''' <summary>Bringt die Grundregler eines Satzes auf Prozessversion 2012 und sagt, ob er von
+        ''' davor stammt.
+        '''
+        ''' Vor 6.7 werden die alten Regler so umgerechnet, wie das Referenzprogramm beim "Aktualisieren
+        ''' auf Prozess 2012" schreibt, und die 2012er Schluessel, die es genullt danebenlegt,
+        ''' fallen weg. Ab 6.7 gelten nur die 2012er; die alten Schluessel, die manche Fassung mit
+        ''' ihren Vorgabewerten weiterschreibt (Helligkeit +50), werden nicht mehr gelesen. Ohne
+        ''' Angabe gilt ein Satz nur mit alten Schluesseln als alt, jeder andere wird gelesen wie
+        ''' bisher.
+        '''
+        ''' Die Formeln sind je Regel an
+        ''' mindestens 99 Prozent von 341 umgerechneten Katalogsaetzen belegt; an 27 Fotos mit
+        ''' PV2003 fiel der Abstand zur Referenz von 8,11 auf 4,38 dE00. Abweichend von dort wird ein
+        ''' 2012er Wert nur gesetzt, wenn einer seiner Quellschluessel im Satz steht: ein Teilsatz
+        ''' ueber einem Ausgangslook laesst die uebrigen Regler stehen.</summary>
+        Friend Shared Function NormalizeProcessVersion(values As Dictionary(Of String, String)) As Boolean
+            If values Is Nothing Then Return False
+            Dim version As Double
+            Dim raw = GetXmpString(values, "ProcessVersion").Trim().Trim(""""c)
+            Dim known = Double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, version) AndAlso Double.IsFinite(version)
+            Dim legacy As Boolean
+            If known Then
+                legacy = version < 6.7
+            Else
+                legacy = LegacyToneKeys.Any(Function(k) values.ContainsKey(k)) AndAlso
+                         Not ProcessToneKeys2012.Any(Function(k) values.ContainsKey(k))
+            End If
+            If Not legacy Then
+                If known Then
+                    For Each key In LegacyToneKeys
+                        values.Remove(key)
+                    Next
+                End If
+                Return False
+            End If
+            ConvertLegacyTone(values, pv2003:=known AndAlso version < 5.7)
+            Return True
+        End Function
+
+        Private Shared Sub ConvertLegacyTone(values As Dictionary(Of String, String), pv2003 As Boolean)
+            Dim old As New Dictionary(Of String, Double)(StringComparer.OrdinalIgnoreCase)
+            For Each key In LegacyToneKeys
+                Dim d As Double
+                If TryGetXmpDouble(values, key, d) AndAlso d <> AutoTonePending Then old(key) = d
+                values.Remove(key)
+            Next
+            For Each key In ProcessToneKeys2012
+                values.Remove(key)
+            Next
+            Dim valueOr = Function(key As String, fallback As Double) As Double
+                              Dim d As Double
+                              Return If(old.TryGetValue(key, d), d, fallback)
+                          End Function
+            Dim put = Sub(key As String, d As Double) values(key) = d.ToString("R", CultureInfo.InvariantCulture)
+
+            Dim fill = valueOr("FillLight", 0)
+            If old.ContainsKey("Exposure") OrElse old.ContainsKey("Brightness") OrElse old.ContainsKey("FillLight") Then
+                ' Das Aufhelllicht hebt auch die Belichtung: 0,02 EV je Stufe bis 25, 0,01 bis 50,
+                ' 0,005 darueber.
+                Dim fillEv = 0.02 * Math.Min(fill, 25) + 0.01 * (Clamp(fill, 25, 50) - 25) + 0.005 * (Math.Max(fill, 50) - 50)
+                Dim exposure = valueOr("Exposure", 0) + (valueOr("Brightness", 50) - 50) / 50 + fillEv
+                put("Exposure2012", Clamp(Math.Round(exposure * 100, MidpointRounding.AwayFromZero) / 100, -5, 5))
+            End If
+            If old.ContainsKey("Contrast") Then
+                put("Contrast2012", Clamp(Math.Round((valueOr("Contrast", 25) - 25) * 4 / 3, MidpointRounding.AwayFromZero), -100, 100))
+            End If
+            If old.ContainsKey("FillLight") Then
+                put("Highlights2012", -Math.Truncate(fill * 0.5))
+                put("Shadows2012", Math.Truncate(Clamp(fill * 0.5, 0, 100)))
+            End If
+            If old.ContainsKey("HighlightRecovery") Then put("Whites2012", -valueOr("HighlightRecovery", 0))
+            If old.ContainsKey("Shadows") Then
+                Dim black = valueOr("Shadows", 5)
+                put("Blacks2012", If(black <= 5, 5 * (5 - black), Math.Round((5 - black) / 4, MidpointRounding.AwayFromZero)))
+            End If
+            If old.ContainsKey("Clarity") Then
+                ' Das Referenzprogramm schreibt die Haelfte einer positiven Klarheit; bei PV2003 kommt ein
+                ' Fuenftel dem Bild der Referenz naeher.
+                Dim clarity = valueOr("Clarity", 0)
+                put("Clarity2012", If(clarity > 0, Math.Truncate(clarity * If(pv2003, 0.2, 0.5)), clarity))
+            End If
+        End Sub
 
         ''' <summary>Rückfall-Referenz für die Kelvin-Näherung: D65 = sRGB-Weißpunkt = neutrales
         ''' Tageslicht. Ein Preset mit genau diesem Kelvin-Wert lässt die Temperatur unverändert

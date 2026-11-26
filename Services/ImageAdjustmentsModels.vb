@@ -1656,6 +1656,7 @@ Namespace Services
             "LensDistortion", "LensTca", "LensVignetting", "LensModel",
             "LensDistortionAmount", "LensTcaAmount", "LensVignettingAmount", "LensTcaRed", "LensTcaBlue",
             "DefringePurple",
+            "UnknownFields",
             "WorkingImageVersion", "WorkingImageHasTransparency", "WorkingImageExposure",
             "GeometryOperations",
             "BakedOperations", "BakedOperationsApplied",
@@ -2125,9 +2126,20 @@ Namespace Services
             Return Not String.Equals(FpxService.SerializeAdjustments(own), FpxService.SerializeAdjustments(reference), StringComparison.Ordinal)
         End Function
 
+        ''' <summary>Die Felder eines Rezepts, die DIESE Fassung nicht kennt, so wie sie in der Datei
+        ''' standen. Sie stammen aus einer neueren Fassung (zweiter Rechner, Freigabe, Flathub-Paket
+        ''' hinter dem eigenen) und werden beim Schreiben unveraendert zurueckgeschrieben. Ohne sie
+        ''' liesse das Lesen sie fallen, und der naechste Stern auf diesem Rechner loeschte die
+        ''' Bearbeitung der neueren Fassung still (siehe RawSidecarService.FloorFormatVersion).
+        ''' Nothing, solange es keine gibt. Strukturell: wandert weder mit einem Look noch auf eine
+        ''' Maskenebene.</summary>
+        <System.Text.Json.Serialization.JsonExtensionData>
+        Public Property UnknownFields As Dictionary(Of String, System.Text.Json.JsonElement)
 
         Public Function Clone() As ImageAdjustments
             Dim result = New ImageAdjustments With {
+                .UnknownFields = If(UnknownFields Is Nothing, Nothing,
+                                    New Dictionary(Of String, System.Text.Json.JsonElement)(UnknownFields, StringComparer.Ordinal)),
                 .Exposure = Exposure,
                 .SourceWidthPixels = SourceWidthPixels,
                 .SourceHeightPixels = SourceHeightPixels,

@@ -3650,6 +3650,47 @@ Namespace Services
         Private Shared ReadOnly _cubeLutCache As New Dictionary(Of String, Lut3DData)(StringComparer.OrdinalIgnoreCase)
         Private Shared ReadOnly _cubeLutCacheLock As New Object()
 
+        ''' <summary>Groesste .cube-Datei, die gelesen wird. Die groesste zulaessige Tabelle
+        ''' (MaxCube3DSize hoch drei Zeilen mit je drei Zahlen) braucht als Text rund 450 MB; die
+        ''' Grenze laesst dafuer Platz und haelt alles darueber vom Lesen fern.</summary>
+        Private Const MaxCubeFileBytes As Long = 768L * 1024L * 1024L
+
+        ''' <summary>Darf diese Datei als LUT gelesen werden? Der Pfad kommt aus dem Rezept, und ein
+        ''' Rezept kann aus fremder Hand stammen (Projektbuendel, Beistelldatei, Vorlage). Deshalb:
+        '''
+        ''' <para>NETZPFADE (\\server\freigabe, //server, \\?\, \\.\) nur, wenn genau diese Datei in der
+        ''' eigenen LUT-Liste steht (AppSettings.LutPresets). Unter Windows meldet schon die Frage, ob
+        ''' die Datei existiert, den Nutzer am fremden Server an; ein Rezept duerfte das sonst
+        ''' ausloesen. Die eigene Sammlung auf einer Freigabe bleibt so nutzbar.</para>
+        '''
+        ''' <para>NUR DATEIEN MIT INHALT bis <see cref="MaxCubeFileBytes"/>. Geraete, FIFOs und
+        ''' Pseudodateien melden die Groesse 0: /dev/zero liess das Lesen auf ueber 2 GB anwachsen,
+        ''' eine FIFO hielt den Renderfaden fuer immer an. Eine leere Datei ist ohnehin keine LUT.
+        ''' Hinter einem symbolischen Verweis zaehlt das Endziel.</para></summary>
+        Friend Shared Function IsLoadableLutPath(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            Dim trimmed = path.Trim()
+            If trimmed.StartsWith("\\", StringComparison.Ordinal) OrElse trimmed.StartsWith("//", StringComparison.Ordinal) Then
+                Dim own = AppSettingsService.Load()?.LutPresets
+                If own Is Nothing OrElse Not own.Any(Function(p) p IsNot Nothing AndAlso PathIdentity.AreSame(p.Path, trimmed)) Then Return False
+            End If
+            Try
+                Dim info As New FileInfo(trimmed)
+                If Not info.Exists Then Return False
+                ' FileInfo nennt bei einem symbolischen Verweis die Groesse des VERWEISES; ein
+                ' Verweis auf /dev/zero kam so durch (gemessen 8,6 GB). Deshalb das Endziel pruefen.
+                If info.LinkTarget IsNot Nothing Then
+                    Dim target = TryCast(info.ResolveLinkTarget(returnFinalTarget:=True), FileInfo)
+                    If target Is Nothing OrElse Not target.Exists Then Return False
+                    info = target
+                End If
+                Dim length = info.Length
+                Return length > 0 AndAlso length <= MaxCubeFileBytes
+            Catch
+                Return False
+            End Try
+        End Function
+
         ''' Lädt und parst eine .cube-Datei (3D, 1D oder 3D mit vorgeschalteter 1D-Kurve, siehe
         ''' ParseCubeLut). Ergebnis wird pro Dateipfad gecacht, da eine LUT beim
         ''' Ziehen an einem Stärke-Regler sonst bei jedem Preview-Frame neu von der Platte geparst würde.
@@ -3663,7 +3704,7 @@ Namespace Services
         ''' Faeden dieselbe Datei gleichzeitig lesen; das kostet einmal doppelte Arbeit und ist
         ''' ungefaehrlich, weil beide dasselbe Ergebnis haben und der Erste im Cache gewinnt.
         Private Shared Function LoadCubeLut(path As String) As Lut3DData
-            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return Nothing
+            If Not IsLoadableLutPath(path) Then Return Nothing
 
             SyncLock _cubeLutCacheLock
                 Dim cached As Lut3DData = Nothing

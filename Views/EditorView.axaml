@@ -2412,6 +2412,9 @@
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/caret-left.svg"
                                                Width="18" Height="18" />
+                                <!-- Das Symbol des Zielwerkzeugs, wie in der Werkzeugleiste. -->
+                                <icons:SvgIcon Source="{Binding PreviousSwitcherToolIcon}"
+                                               Width="16" Height="16" VerticalAlignment="Center" />
                                 <TextBlock Text="{Binding PreviousSwitcherToolLabel}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
@@ -2421,6 +2424,8 @@
                                 ToolTip.Tip="Nächstes Werkzeug (STRG+TAB)">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <TextBlock Text="{Binding NextSwitcherToolLabel}" VerticalAlignment="Center" />
+                                <icons:SvgIcon Source="{Binding NextSwitcherToolIcon}"
+                                               Width="16" Height="16" VerticalAlignment="Center" />
                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/caret-right.svg"
                                                Width="18" Height="18" />
                             </StackPanel>

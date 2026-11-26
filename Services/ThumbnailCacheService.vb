@@ -1428,6 +1428,7 @@ Namespace Services
             Using data = SKData.Create(stream)
             stream.Seek(0, SeekOrigin.Begin)
             Using codec = If(data Is Nothing, Nothing, SKCodec.Create(data))
+                If data IsNot Nothing AndAlso ImageProcessor.IsImplausibleJpegFrame(codec, data.Size) Then Return Nothing
                 If codec Is Nothing Then
                     stream.Seek(0, SeekOrigin.Begin)
                     Return Bitmap.DecodeToWidth(stream, maxWidth)

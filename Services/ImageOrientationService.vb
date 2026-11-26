@@ -112,6 +112,9 @@ Namespace Services
 
             Using data
                 Using codec = SKCodec.Create(data)
+                    ' Ein JPEG mit unmoeglich grossem Rahmen nicht anlegen, auch nicht ueber den
+                    ' Avalonia-Weg darunter (ImageProcessor.IsImplausibleJpegFrame).
+                    If ImageProcessor.IsImplausibleJpegFrame(codec, data.Size) Then Return Nothing
                     If codec Is Nothing Then Return BitmapFromData(data)
 
                     Dim origin = codec.EncodedOrigin

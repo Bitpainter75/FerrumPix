@@ -5506,12 +5506,13 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Ausrichtung der Gruppenueberschriften: auf die Seite des Textes, also gegenueber
-        ''' der Symbolkante. Unsichtbar statt weggenommen bleibt trotzdem (ToolGroupHeadingOpacity).</summary>
+        ''' <summary>Ausrichtung der Gruppenueberschriften: an die Symbolkante, also an dieselbe Kante
+        ''' wie die Zeilen darunter. Links steht die Ueberschrift damit linksbuendig ueber Symbol und
+        ''' Text, wie sie immer stand; rechts spiegelt sich das. Unsichtbar statt weggenommen bleibt
+        ''' trotzdem (ToolGroupHeadingOpacity).</summary>
         Public ReadOnly Property ToolGroupHeadingAlignment As Avalonia.Layout.HorizontalAlignment
             Get
-                Return If(IsToolSelectorOnLeft, Avalonia.Layout.HorizontalAlignment.Right,
-                                          Avalonia.Layout.HorizontalAlignment.Left)
+                Return ToolSelectorContentAlignment
             End Get
         End Property
 
@@ -21280,6 +21281,41 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Das Symbol des Werkzeugs, dasselbe wie sein Knopf in der Werkzeugleiste
+        ''' (EditorView.axaml). Wer die Leiste kennt, erkennt das Ziel der Wechseltaste am Symbol,
+        ''' bevor er den Namen liest.</summary>
+        Private Shared Function SwitcherToolIcon(tool As EditorTool) As String
+            Dim name As String
+            Select Case tool
+                Case EditorTool.Adjust : name = "sun"
+                Case EditorTool.Color : name = "intersect-three"
+                Case EditorTool.Details : name = "sliders-horizontal"
+                Case EditorTool.Effects : name = "sparkle"
+                Case EditorTool.Filters : name = "palette"
+                Case EditorTool.AllAdjustments : name = "sliders"
+                Case EditorTool.Extensions : name = "puzzle-piece"
+                Case EditorTool.Transform : name = "crop"
+                Case EditorTool.Resize : name = "frame-corners"
+                Case EditorTool.Warp : name = "perspective"
+                Case EditorTool.Selection : name = "cursor"
+                Case EditorTool.Mask : name = "mask-happy"
+                Case Else : Return Nothing
+            End Select
+            Return "avares://FerrumPix/Assets/Icons/phosphor/regular/" & name & ".svg"
+        End Function
+
+        Public ReadOnly Property PreviousSwitcherToolIcon As String
+            Get
+                Return SwitcherToolIcon(NeighborSwitcherTool(-1))
+            End Get
+        End Property
+
+        Public ReadOnly Property NextSwitcherToolIcon As String
+            Get
+                Return SwitcherToolIcon(NeighborSwitcherTool(1))
+            End Get
+        End Property
+
         ''' <summary>Zum Nachbarwerkzeug im Kreis wechseln, ueber denselben Weg wie die Knoepfe der
         ''' Werkzeugleiste. False ausserhalb des Kreises (dann bleibt die Taste unbehandelt).</summary>
         Public Function GoToNeighborSwitcherTool(direction As Integer) As Boolean
@@ -21290,7 +21326,8 @@ Namespace ViewModels
         End Function
 
         Public Sub RaiseToolSwitcherChanged()
-            For Each n In {NameOf(ShowToolSwitcher), NameOf(PreviousSwitcherToolLabel), NameOf(NextSwitcherToolLabel)}
+            For Each n In {NameOf(ShowToolSwitcher), NameOf(PreviousSwitcherToolLabel), NameOf(NextSwitcherToolLabel),
+                           NameOf(PreviousSwitcherToolIcon), NameOf(NextSwitcherToolIcon)}
                 Me.RaisePropertyChanged(n)
             Next
         End Sub

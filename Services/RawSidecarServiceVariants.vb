@@ -117,7 +117,8 @@ Namespace Services
             Return found
         End Function
 
-        ''' <summary>Steht in den ersten Zeichen die Formatnummer einer Datei mit Varianten?</summary>
+        ''' <summary>Steht in den ersten Zeichen die Formatnummer einer Datei mit Varianten? Auch die
+        ''' der Schwelle: eine solche Datei kann Varianten tragen, das klaert dann das Parsen.</summary>
         Private Shared Function HeaderNamesVariants(sidecar As String) As Boolean
             Dim buffer(511) As Char
             Dim count As Integer
@@ -125,8 +126,11 @@ Namespace Services
                 count = reader.ReadBlock(buffer, 0, buffer.Length)
             End Using
             Dim head = New String(buffer, 0, count)
-            Return head.Contains("version=""" & VariantsFormatVersion.ToString(Globalization.CultureInfo.InvariantCulture) & """",
-                                 StringComparison.Ordinal)
+            For version = VariantsFormatVersion To FloorFormatVersion
+                If head.Contains("version=""" & version.ToString(Globalization.CultureInfo.InvariantCulture) & """",
+                                 StringComparison.Ordinal) Then Return True
+            Next
+            Return False
         End Function
 
         ''' <summary>Der Name der Variante hinter einem Schluessel; leer bei einem gewoehnlichen Pfad
@@ -375,7 +379,7 @@ Namespace Services
                         root.Element(Ns + "versions")?.Remove()
                         Dim block = VariantsNode(variants)
                         If block IsNot Nothing Then root.Add(block)
-                        root.SetAttributeValue("version", If(block Is Nothing, FormatVersion, VariantsFormatVersion))
+                        root.SetAttributeValue("version", FormatVersionFor(root))
                         root.SetElementValue(Ns + "savedUtc", DateTime.UtcNow.ToString("O"))
 
                         Dim finalTarget = ImageProcessor.ResolveWriteTarget(target)

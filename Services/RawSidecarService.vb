@@ -152,6 +152,28 @@ Namespace Services
         ''' gilt dort als unlesbar und wird deshalb nicht angefasst. Sonst schriebe eine aeltere
         ''' Fassung sie beim naechsten Stern ohne die geparkten Varianten zurueck.</summary>
         Private Const VariantsFormatVersion As Integer = 3
+        ''' <summary>DIE SCHWELLE GEGEN AELTERE FASSUNGEN. Eine Datei traegt diese Nummer, sobald sie
+        ''' etwas enthaelt, das eine Fassung vor 0.9.92 beim Schreiben still verloere: ein Rezeptfeld,
+        ''' das diese Fassung nicht kennt (aus einer neueren), ein Feld aus
+        ''' <see cref="RecipeFieldsSinceFloor"/> mit gesetztem Wert, oder ein Element oder Attribut
+        ''' der Wurzel, das hier niemand schreibt. Diese Fassungen lesen hoechstens
+        ''' <see cref="VariantsFormatVersion"/>; eine hoehere Nummer ist fuer sie unlesbar, und
+        ''' unlesbare Dateien fasst kein Schreiber an. Der Preis ist bewusst: eine alte Fassung zeigt
+        ''' das Bild dann unbearbeitet, statt die Bearbeitung beim naechsten Stern zu zerstoeren.
+        '''
+        ''' Ab dieser Fassung bleibt Unbekanntes beim Schreiben erhalten (Rezeptfelder ueber
+        ''' <see cref="ImageAdjustments.UnknownFields"/>, Teile der Wurzel ueber
+        ''' <see cref="ForeignRootParts"/>); die Schwelle schuetzt also nur noch gegen die Fassungen
+        ''' davor. Eine Datei ohne solche Teile bleibt bei 2 oder 3 und fuer jede Fassung lesbar.</summary>
+        Private Const FloorFormatVersion As Integer = 4
+
+        ''' <summary>Rezeptfelder, die NACH der Schwelle dazugekommen sind. Ein Feld gehoert hierher,
+        ''' wenn eine Fassung vor 0.9.92 es nicht kennt; steht es mit einem anderen Wert als dem
+        ''' eines neuen Rezepts in der Datei, bekommt sie <see cref="FloorFormatVersion"/>. Die
+        ''' Pruefung "Rezeptfelder nach der Schwelle" haelt die Liste gegen den Grundstand aller
+        ''' Felder von 0.9.91 (packaging/Diagnostics/rezeptfelder-grundstand.txt): ein neues
+        ''' Feld, das hier fehlt, meldet sie rot.</summary>
+        Friend Shared ReadOnly RecipeFieldsSinceFloor As String() = Array.Empty(Of String)()
         Private Shared ReadOnly Ns As XNamespace = "https://github.com/Bitpainter75/FerrumPix/ns/recipe/1.0"
         Private Shared ReadOnly _writeLock As New Object()
 
@@ -488,7 +510,7 @@ Namespace Services
             Dim version As Integer
             If Not Integer.TryParse(root.Attribute("version")?.Value, Globalization.NumberStyles.Integer,
                                     Globalization.CultureInfo.InvariantCulture, version) Then Return UnknownRecipe
-            If version < 1 OrElse version > VariantsFormatVersion Then Return UnknownRecipe
+            If version < 1 OrElse version > FloorFormatVersion Then Return UnknownRecipe
             Dim variants As VariantSet = Nothing
             If Not TryParseVariants(root, variants) Then Return UnknownRecipe
             Dim variantId As String = Nothing
@@ -524,6 +546,109 @@ Namespace Services
             copy.BakedOperationsApplied = False
             Return FpxService.SerializeAdjustments(copy)
         End Function
+
+        ' ── Die Schwelle gegen aeltere Fassungen (siehe FloorFormatVersion) ─────────────────
+
+        ''' <summary>Die Teile der Wurzel, die diese Fassung selbst schreibt. Alles andere stammt aus
+        ''' einer neueren und wird beim Schreiben unveraendert mitgenommen.</summary>
+        Private Shared ReadOnly KnownRootElements As String() =
+            {"source", "savedUtc", "catalog", "description", "imported", "adjustments", "variants", "versions"}
+        Private Shared ReadOnly KnownRootAttributes As String() =
+            {"version", "generator", "developedThumbnail", "edited"}
+
+        Private Shared Function IsForeignRootPart(node As XObject) As Boolean
+            Dim attribute = TryCast(node, XAttribute)
+            If attribute IsNot Nothing Then
+                Return Not attribute.IsNamespaceDeclaration AndAlso
+                       Not (attribute.Name.Namespace = XNamespace.None AndAlso KnownRootAttributes.Contains(attribute.Name.LocalName))
+            End If
+            Dim element = TryCast(node, XElement)
+            Return element IsNot Nothing AndAlso
+                   Not (element.Name.Namespace = Ns AndAlso KnownRootElements.Contains(element.Name.LocalName))
+        End Function
+
+        ''' <summary>Abschriften der fremden Attribute und Elemente der Wurzel in der vorhandenen
+        ''' Datei. Leer, wenn es keine gibt oder die Datei fehlt. Der Schreiber baut die Wurzel aus
+        ''' dem, was er kennt, neu; ohne diese Teile verloere er, was eine neuere Fassung dort
+        ''' abgelegt hat.</summary>
+        Private Shared Function ForeignRootParts(rawPath As String) As List(Of XObject)
+            Dim parts As New List(Of XObject)()
+            Try
+                Dim sidecar = SidecarPathFor(rawPath)
+                If Not File.Exists(sidecar) Then Return parts
+                Dim root = XDocument.Load(sidecar).Root
+                If root Is Nothing OrElse root.Name <> Ns + "recipe" Then Return parts
+                For Each attribute In root.Attributes()
+                    If IsForeignRootPart(attribute) Then parts.Add(New XAttribute(attribute))
+                Next
+                For Each element In root.Elements()
+                    If IsForeignRootPart(element) Then parts.Add(New XElement(element))
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Sidecar.ForeignRootParts", ex)
+            End Try
+            Return parts
+        End Function
+
+        ''' <summary>Die Formatnummer fuer eine fertig gebaute Wurzel: 2 ohne, 3 mit Varianten, und
+        ''' <see cref="FloorFormatVersion"/>, sobald sie etwas traegt, das eine Fassung vor der
+        ''' Schwelle beim Schreiben verloere.</summary>
+        Private Shared Function FormatVersionFor(root As XElement) As Integer
+            If CarriesWhatOlderReadersLose(root) Then Return FloorFormatVersion
+            Dim hasVariants = root.Element(Ns + "variants") IsNot Nothing OrElse root.Element(Ns + "versions") IsNot Nothing
+            Return If(hasVariants, VariantsFormatVersion, FormatVersion)
+        End Function
+
+        Private Shared Function CarriesWhatOlderReadersLose(root As XElement) As Boolean
+            If root Is Nothing Then Return False
+            If root.Attributes().Any(Function(a) IsForeignRootPart(a)) Then Return True
+            If root.Elements().Any(Function(e) IsForeignRootPart(e)) Then Return True
+            If RecipeJsonNeedsFloor(root.Element(Ns + "adjustments")?.Value) Then Return True
+            Dim block = If(root.Element(Ns + "variants"), root.Element(Ns + "versions"))
+            If block IsNot Nothing Then
+                For Each entry In block.Elements()
+                    If RecipeJsonNeedsFloor(entry.Element(Ns + "adjustments")?.Value) Then Return True
+                Next
+            End If
+            Return False
+        End Function
+
+        ''' <summary>Traegt dieses Rezept-JSON ein Feld, das diese Fassung nicht kennt, oder eines
+        ''' aus <see cref="RecipeFieldsSinceFloor"/> mit einem anderen Wert als ein neues Rezept?
+        ''' Verglichen wird nur die oberste Ebene: dort kommen neue Regler hin.</summary>
+        Friend Shared Function RecipeJsonNeedsFloor(json As String) As Boolean
+            If String.IsNullOrWhiteSpace(json) Then Return False
+            Dim recipe As System.Text.Json.Nodes.JsonObject
+            Try
+                recipe = TryCast(System.Text.Json.Nodes.JsonNode.Parse(json), System.Text.Json.Nodes.JsonObject)
+            Catch
+                Return False
+            End Try
+            If recipe Is Nothing Then Return False
+            Dim known = KnownRecipeFields.Value
+            For Each pair In recipe
+                Dim neutral As System.Text.Json.Nodes.JsonNode = Nothing
+                If Not known.TryGetValue(pair.Key, neutral) Then Return True
+                If RecipeFieldsSinceFloor.Contains(pair.Key, StringComparer.OrdinalIgnoreCase) AndAlso
+                   Not System.Text.Json.Nodes.JsonNode.DeepEquals(pair.Value, neutral) Then Return True
+            Next
+            Return False
+        End Function
+
+        ''' <summary>Die Felder, die diese Fassung schreibt, mit ihrem Wert in einem neuen Rezept.
+        ''' Gross und klein wie beim Lesen gleich (PropertyNameCaseInsensitive).</summary>
+        Private Shared ReadOnly KnownRecipeFields As New Lazy(Of Dictionary(Of String, System.Text.Json.Nodes.JsonNode))(
+            Function()
+                Dim result As New Dictionary(Of String, System.Text.Json.Nodes.JsonNode)(StringComparer.OrdinalIgnoreCase)
+                Dim neutral = TryCast(System.Text.Json.Nodes.JsonNode.Parse(FpxService.SerializeAdjustments(New ImageAdjustments())),
+                                      System.Text.Json.Nodes.JsonObject)
+                If neutral IsNot Nothing Then
+                    For Each pair In neutral
+                        result(pair.Key) = pair.Value?.DeepClone()
+                    Next
+                End If
+                Return result
+            End Function)
 
         ''' <summary>Der Katalog fuer das Schreiben nach einer fremden Aenderung: jedes Feld, das auf
         ''' der Platte anders ist als beim Lesen, kommt von der Platte (es ist juenger als unser
@@ -882,6 +1007,10 @@ Namespace Services
                                 New XAttribute("format", "fpx-json"),
                                 New XCData(json)),
                             variantsBlock))
+                    ' Was eine neuere Fassung an die Wurzel gehaengt hat, kennt hier niemand und baut
+                    ' es deshalb auch nicht neu: es geht unveraendert mit (siehe ForeignRootParts).
+                    doc.Root.Add(ForeignRootParts(rawPath))
+                    doc.Root.SetAttributeValue("version", FormatVersionFor(doc.Root))
 
                     target = SidecarPathFor(rawPath)
                     ' Eine Nachbardatei je Vorgang: eine feste ".tmp" teilten sich zwei Instanzen, die
@@ -2057,8 +2186,13 @@ Namespace Services
                 ' Der RAW-Pfad geht mit: trägt die Sidecar ein absolutes crs:Temperature ohne
                 ' crs:AsShotTemperature, holt der Import die Aufnahmetemperatur aus der RAW-Datei
                 ' selbst, statt D65 anzunehmen.
-                Dim look = XmpPresetService.LoadLook(xmpPath, imagePath:=rawPath)
-                If look Is Nothing OrElse Not HasAnyAdjustment(look) Then Return False
+                Dim xmpText = File.ReadAllText(xmpPath)
+                Dim look = XmpPresetService.LoadLookFromText(xmpText, imagePath:=rawPath)
+                ' Die Retusche gehoert zu den eigenen Einstellungen des Fotos und kommt nur hier
+                ' mit, nie aus einem Preset (siehe XmpRetouchService). Eine Datei, die nur
+                ' Staubstellen traegt, ist ebenso bearbeitet wie eine mit Reglern.
+                Dim spots = If(look Is Nothing, 0, XmpRetouchService.AddToRecipe(look, xmpText, rawPath))
+                If look Is Nothing OrElse (spots = 0 AndAlso Not HasAnyAdjustment(look)) Then Return False
                 ' Nur anlegen, wenn noch immer keine .fpxmp da ist: zwischen der Pruefung oben und
                 ' hier kann eine entstanden sein, und ein eigenes Rezept wird NIE ueberschrieben.
                 ' Bearbeitet: die Uebernahme laeuft nur, wenn die fremde Datei Regler setzt.
@@ -2084,7 +2218,8 @@ Namespace Services
                 Dim xmp = ForeignCatalogService.DevelopAsXmp(entry)
                 If String.IsNullOrEmpty(xmp) Then Return False
                 Dim look = XmpPresetService.LoadLookFromText(xmp, imagePath:=rawPath)
-                If look Is Nothing OrElse Not HasAnyAdjustment(look) Then Return False
+                Dim spots = If(look Is Nothing, 0, XmpRetouchService.AddToRecipe(look, xmp, rawPath))
+                If look Is Nothing OrElse (spots = 0 AndAlso Not HasAnyAdjustment(look)) Then Return False
                 Return TryWrite(rawPath, look, requireAbsent:=True, edited:=True)
             Catch ex As Exception
                 DiagnosticLogService.LogException("ForeignCatalog.Entwicklung", ex)
@@ -2191,7 +2326,7 @@ Namespace Services
                                         Globalization.CultureInfo.InvariantCulture, version) Then
                     Return SidecarReadResult.Unreadable
                 End If
-                If version < 1 OrElse version > VariantsFormatVersion Then Return SidecarReadResult.Unreadable
+                If version < 1 OrElse version > FloorFormatVersion Then Return SidecarReadResult.Unreadable
                 ' Ein Variantsblock, den wir nicht verstehen, macht die ganze Datei unlesbar: sonst
                 ' schriebe der naechste Schreiber sie ohne ihn zurueck.
                 Dim ignoredVariants As VariantSet = Nothing
@@ -2464,7 +2599,7 @@ Namespace Services
                 Dim invariant = Globalization.CultureInfo.InvariantCulture
                 Dim version As Integer
                 If Not Integer.TryParse(root.Attribute("version")?.Value, Globalization.NumberStyles.Integer, invariant, version) Then Return Nothing
-                If version < 1 OrElse version > VariantsFormatVersion Then Return Nothing
+                If version < 1 OrElse version > FloorFormatVersion Then Return Nothing
                 Dim catalogNode = root.Element(Ns + "catalog")
                 Dim variantId = VariantKey.IdOf(rawPath)
                 If variantId.Length > 0 Then
