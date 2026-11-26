@@ -12520,8 +12520,8 @@
   <data name="Werkzeugleiste_78b91335" xml:space="preserve">
     <value>Werkbalk</value>
   </data>
-  <data name="Nur_Symbole_spart_am_meisten_Platz_f_r_das_Bild__d7b28d4e" xml:space="preserve">
-    <value>Alleen symbolen laat de meeste ruimte over voor de afbeelding; de groepen zijn dan gescheiden door streepjes in plaats van koppen. Met tekst staat de balk open en breed naast het paneel. Automatisch houdt de balk smal en klapt hem boven de afbeelding open zodra de aanwijzer er even boven blijft staan - de ruimte voor de afbeelding blijft hetzelfde.</value>
+  <data name="Nur_Symbole_spart_am_meisten_Platz_f_r_das_Bild__1664a739" xml:space="preserve">
+    <value>Alleen symbolen laat de meeste ruimte over voor de afbeelding; de groepen zijn dan gescheiden door streepjes in plaats van koppen. Met tekst staat de balk open en breed naast het paneel. Automatisch houdt de balk smal en klapt hem boven de afbeelding open zodra de aanwijzer er even boven blijft staan. De ruimte voor de afbeelding blijft hetzelfde.</value>
   </data>
   <data name="Nur_Symbole_c4a487b7" xml:space="preserve">
     <value>Alleen symbolen</value>

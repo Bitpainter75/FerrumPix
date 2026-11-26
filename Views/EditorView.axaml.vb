@@ -1806,18 +1806,51 @@ Namespace Views
         '''
         ''' Die aeusserste Kante der Leiste steht in beiden Zustaenden still; gewachsen wird nach
         ''' innen, ueber das Bild. Deshalb ruehrt sich kein Symbol, wenn die Leiste klappt.</summary>
+        ''' <summary>Was die Werkzeugleiste aussen am Panel dessen Spalte zuschlaegt; 0 sonst.</summary>
+        Private _toolSelectorPanelExtra As Double = 0.0
+
         Private Sub ApplyToolSelectorLayout()
             Dim vm = TryCast(DataContext, EditorViewModel)
             Dim stage = Me.FindControl(Of Border)("EditorStageBorder")
             If vm Is Nothing OrElse stage Is Nothing Then Return
 
             Dim film = FilmstripPlacement.ContentInset(vm.FilmstripPosition, vm.ShowFilmstrip)
-            Dim seite = vm.ToolSelectorReservedWidth
             Dim links = vm.IsToolSelectorOnLeft
+            Dim panelLinks = vm.IsAdjustmentsPanelOnLeft
+
+            ' AUSSEN AM PANEL: eine feste Seite, auf der zugleich das Anpassungspanel steht, meint den
+            ' Fensterrand und nicht die Kante der Buehne. Links ist das die Lage von frueher - Leiste
+            ' ganz links, das Panel direkt daneben -, und "Links" ist die Vorgabe; ohne diesen Fall
+            ' saehe ein Editor mit linkem Panel nach dem Update anders aus als vorher, und "Links"
+            ' waere dort dasselbe wie "Mit Anpassungen". Die Leiste steht dann in der Spalte des
+            ' Panels, und das Panel rueckt um ihre Breite nach innen.
+            Dim aussen = Not String.Equals(vm.ToolSelectorSide, AppSettingsService.ToolSelectorSideWithAdjustments, StringComparison.Ordinal) AndAlso
+                         links = panelLinks
+            Dim reserviert = vm.ToolSelectorReservedWidth
+            Dim seite = If(aussen, 0.0, reserviert)
+
+            Dim panel = Me.FindControl(Of Border)("AdjustmentsPanelBorder")
+            If panel IsNot Nothing Then
+                panel.Margin = If(Not aussen, New Thickness(0),
+                                  If(links, New Thickness(reserviert, 0, 0, 0), New Thickness(0, 0, reserviert, 0)))
+            End If
+            ' Die Spalte des Panels waechst um die Leiste: sonst ginge ihre Breite vom Panel ab und
+            ' es unterschritte seine Mindestbreite. Der Ziehrand rechnet denselben Zuschlag wieder
+            ' heraus (OnAdjustmentsPanelSplitterDragCompleted).
+            _toolSelectorPanelExtra = If(aussen, reserviert, 0.0)
+            Dim root = Me.FindControl(Of Grid)("EditorRootGrid")
+            If root IsNot Nothing AndAlso root.ColumnDefinitions.Count >= 2 Then
+                Dim spalte = root.ColumnDefinitions(If(panelLinks, 0, 1))
+                spalte.MinWidth = AdjustmentsPanelWidth + _toolSelectorPanelExtra
+                spalte.MaxWidth = EditorViewModel.AdjustmentsPanelMaxWidth + _toolSelectorPanelExtra
+                spalte.Width = New GridLength(vm.AdjustmentsPanelWidth + _toolSelectorPanelExtra)
+            End If
 
             Dim leiste = Me.FindControl(Of Border)("ToolSelectorBorder")
             If leiste IsNot Nothing Then
-                leiste.Margin = New Thickness(0, film.Top, 0, film.Bottom)
+                SetGridColumn(leiste, If(aussen, If(panelLinks, 0, 1), If(panelLinks, 1, 0)))
+                ' Aussen steht sie neben dem Panel und nicht neben dem Filmstreifen der Buehne.
+                leiste.Margin = If(aussen, New Thickness(0), New Thickness(0, film.Top, 0, film.Bottom))
                 ' Voll qualifiziert: der Name gehoert hier zugleich der Eigenschaft des Controls,
                 ' und VB nimmt sonst die Eigenschaft statt der Aufzaehlung (Warnung BC42025).
                 leiste.HorizontalAlignment = If(links, Avalonia.Layout.HorizontalAlignment.Left,
@@ -4985,7 +5018,8 @@ Namespace Views
             Dim root = Me.FindControl(Of Grid)("EditorRootGrid")
             If vm Is Nothing OrElse root Is Nothing OrElse root.ColumnDefinitions.Count < 2 Then Return
             Dim panelColumn = If(vm.IsAdjustmentsPanelOnLeft, 0, 1)
-            Dim gezogen = root.ColumnDefinitions(panelColumn).ActualWidth
+            ' Ohne den Zuschlag fuer eine Werkzeugleiste aussen am Panel (ApplyToolSelectorLayout).
+            Dim gezogen = root.ColumnDefinitions(panelColumn).ActualWidth - _toolSelectorPanelExtra
             If gezogen <= 0 Then Return
             vm.StoreAdjustmentsPanelWidth(gezogen)
         End Sub

@@ -5323,15 +5323,24 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Wie die Werkzeugleiste zeigt: automatisch, nur Symbole, oder immer mit Text.
-        ''' Aus den Einstellungen (EditorToolSelectorMode); ein unlesbarer Wert faellt auf die
-        ''' Vorgabe zurueck.</summary>
+        ''' <summary>Werkzeugleiste eingeklappt: nur Symbole, keine Beschriftungen. Gemerkt in den
+        ''' Einstellungen (EditorToolSidebarCollapsed), umgeschaltet ueber den Knopf in der Fusszeile
+        ''' oder ueber den Modus im Einstellungsdialog. Im automatischen Modus ist das der Zustand,
+        ''' in den die Leiste zurueckfaellt, wenn die Automatik abgeschaltet wird.</summary>
+        Public ReadOnly Property IsToolSidebarCollapsed As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso _mainVm.Settings.EditorToolSidebarCollapsed
+            End Get
+        End Property
+
+        ''' <summary>Wie die Werkzeugleiste zeigt: automatisch, nur Symbole, oder immer mit Text. Eine
+        ''' Sicht auf den Klappzustand und die Automatik (SettingsViewModel.EditorToolSelectorMode).</summary>
         Public ReadOnly Property ToolSelectorMode As String
             Get
                 If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then
-                    Return AppSettingsService.ToolSelectorModeDefault
+                    Return AppSettingsService.ToolSelectorModeExpanded
                 End If
-                Return AppSettingsService.NormalizeToolSelectorMode(_mainVm.Settings.EditorToolSelectorMode)
+                Return _mainVm.Settings.EditorToolSelectorMode
             End Get
         End Property
 
@@ -19543,6 +19552,7 @@ Namespace ViewModels
         Public ReadOnly Property ResetNegativeCommand As ICommand
         Public ReadOnly Property ToggleInfoSidebarCommand As ICommand
         Public ReadOnly Property ToggleLayersPanelCommand As ICommand
+        Public ReadOnly Property ToggleToolSidebarCommand As ICommand
         Public ReadOnly Property SetLayersPanelTabCommand As ICommand
         Public ReadOnly Property BackToViewerCommand As ICommand
         ''' <summary>Der Haus-Knopf der Werkzeugleiste, Ziel nach AppSettings.EditorHomeTarget.</summary>
@@ -20293,6 +20303,19 @@ Namespace ViewModels
                                                                    _mainVm.Settings.EditorLayersPanelExpanded = Not _mainVm.Settings.EditorLayersPanelExpanded
                                                                    Me.RaisePropertyChanged(NameOf(IsLayersPanelVisible))
                                                                End Sub)
+            ' Der Knopf legt die Leiste FEST: aus dem gerade sichtbaren Zustand in den anderen, und
+            ' die Automatik geht dabei aus. Wer im automatischen Modus klickt, will die Leiste so
+            ' oder so stehen haben und nicht weiter dem Zeiger ueberlassen.
+            ToggleToolSidebarCommand = ReactiveCommand.Create(Sub()
+                                                                  If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
+                                                                  Dim zeigtText = AreToolSidebarLabelsVisible
+                                                                  CancelToolSelectorHover()
+                                                                  _mainVm.Settings.EditorToolSelectorAuto = False
+                                                                  _mainVm.Settings.EditorToolSidebarCollapsed = zeigtText
+                                                                  Me.RaisePropertyChanged(NameOf(IsToolSidebarCollapsed))
+                                                                  Me.RaisePropertyChanged(NameOf(AreToolSidebarLabelsVisible))
+                                                                  Me.RaisePropertyChanged(NameOf(ToolSidebarWidth))
+                                                              End Sub)
             SetLayersPanelTabCommand = ReactiveCommand.Create(Of String)(Sub(tabName)
                                                                               If String.Equals(tabName, "History", StringComparison.OrdinalIgnoreCase) Then
                                                                                   SelectedLayersPanelTab = LayersPanelTab.History

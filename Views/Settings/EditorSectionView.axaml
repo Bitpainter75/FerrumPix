@@ -249,7 +249,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Werkzeugleiste" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Nur Symbole spart am meisten Platz für das Bild; die Gruppen sind dann durch Striche getrennt statt beschriftet. Mit Text steht die Leiste offen und breit neben dem Panel. Automatisch bleibt die Leiste schmal und klappt über dem Bild auf, sobald der Zeiger eine kurze Weile darüber steht - der Platz für das Bild bleibt dabei unverändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Nur Symbole spart am meisten Platz für das Bild; die Gruppen sind dann durch Striche getrennt statt beschriftet. Mit Text steht die Leiste offen und breit neben dem Panel. Automatisch bleibt die Leiste schmal und klappt über dem Bild auf, sobald der Zeiger eine kurze Weile darüber steht. Der Platz für das Bild bleibt dabei unverändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                 <Button Classes="ghost"

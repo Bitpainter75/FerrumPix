@@ -108,7 +108,8 @@ Namespace ViewModels
         Private _scopeInAdjustmentPanels As Boolean = False
         Private _editorLayersPanelExpanded As Boolean = False
         Private _editorLayerThumbnails As Boolean = True
-        Private _editorToolSelectorMode As String = AppSettingsService.ToolSelectorModeDefault
+        Private _editorToolSidebarCollapsed As Boolean = False
+        Private _editorToolSelectorAuto As Boolean = False
         Private _editorToolSelectorSide As String = AppSettingsService.ToolSelectorSideDefault
         Private _editorAdjustmentsPanelWidth As Double = EditorViewModel.AdjustmentsPanelDefaultWidth
         Private _editorSaveAsNamePattern As String = "{name}_fx"
@@ -229,7 +230,8 @@ Namespace ViewModels
         Private _savedEditorFitBehavior As String = "Always"
         Private _savedEditorFitMargin As Integer = 0
         Private _savedEditorStartupTool As String = "Adjust"
-        Private _savedEditorToolSelectorMode As String = AppSettingsService.ToolSelectorModeDefault
+        Private _savedEditorToolSidebarCollapsed As Boolean = False
+        Private _savedEditorToolSelectorAuto As Boolean = False
         Private _savedEditorToolSelectorSide As String = AppSettingsService.ToolSelectorSideDefault
         Private _savedEditorAdjustmentsPanelOnLeft As Boolean = False
         Private _savedEditorAdjustmentsScrollBarAlwaysVisible As Boolean = False
@@ -3146,46 +3148,86 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Wie der Editor seine Werkzeugleiste zeigt: automatisch, nur Symbole oder immer mit
-        ''' Text. Aus dem Einstellungsdialog; ein unlesbarer Wert faellt auf die Vorgabe.
-        '''
-        ''' Anders als die Info-Leiste und das Ebenen-Panel ist das ein Schalter im Dialog und kein
-        ''' Umschalter in der Leiste selbst: ein Knopf mit zwei Stellungen kann drei Modi nicht
-        ''' darstellen. Der Wechsel laesst den ausgewaehlten Knopf, seine Werte und den Stand des
-        ''' Bildlaufes unveraendert; nur ein ausstehender Zeigerlauf wird verworfen.</summary>
-        Public Property EditorToolSelectorMode As String
+        ''' <summary>Werkzeugleiste des Editors eingeklappt (nur Symbole). Gemerkter Bedienzustand wie
+        ''' Info-Leiste/Ebenen-Panel, umgeschaltet ueber den Knopf in der Fusszeile; der Dialog setzt
+        ''' ihn ueber den Modus "Nur Symbole" bzw. "Mit Text" (EditorToolSelectorMode).</summary>
+        Public Property EditorToolSidebarCollapsed As Boolean
             Get
-                Return _editorToolSelectorMode
+                Return _editorToolSidebarCollapsed
             End Get
-            Set(value As String)
-                Dim normal = AppSettingsService.NormalizeToolSelectorMode(value)
-                If String.Equals(_editorToolSelectorMode, normal, StringComparison.Ordinal) Then Return
-                Me.RaiseAndSetIfChanged(_editorToolSelectorMode, normal)
-                Me.RaisePropertyChanged(NameOf(IsToolSelectorAuto))
-                Me.RaisePropertyChanged(NameOf(IsToolSelectorCompact))
-                Me.RaisePropertyChanged(NameOf(IsToolSelectorExpanded))
+            Set(value As Boolean)
+                If _editorToolSidebarCollapsed = value Then Return
+                Me.RaiseAndSetIfChanged(_editorToolSidebarCollapsed, value)
+                RaiseToolSelectorModeChanged()
                 _mainVm?.RefreshLayoutBindings()
                 SaveLayoutSettings()
             End Set
         End Property
 
+        ''' <summary>Die Werkzeugleiste klappt unter dem Zeiger automatisch auf. Ab Werk aus.</summary>
+        Public Property EditorToolSelectorAuto As Boolean
+            Get
+                Return _editorToolSelectorAuto
+            End Get
+            Set(value As Boolean)
+                If _editorToolSelectorAuto = value Then Return
+                Me.RaiseAndSetIfChanged(_editorToolSelectorAuto, value)
+                RaiseToolSelectorModeChanged()
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Wie der Editor seine Werkzeugleiste zeigt: automatisch, nur Symbole oder immer mit
+        ''' Text. NUR EINE SICHT auf zwei gespeicherte Werte, den Klappzustand des Knopfes und die
+        ''' Automatik; gespeichert wird der Modus selbst nicht. So ueberlebt der gemerkte Klappzustand
+        ''' jedes Update, und der Knopf in der Fusszeile bleibt der Weg, die Leiste festzulegen.
+        '''
+        ''' Setzen: "Auto" schaltet nur die Automatik ein und laesst den Klappzustand stehen.
+        ''' "Compact" und "Expanded" schalten sie aus und setzen den Klappzustand. Ein unbekannter
+        ''' Wert aendert nichts.</summary>
+        Public Property EditorToolSelectorMode As String
+            Get
+                Return AppSettingsService.ToolSelectorModeOf(_editorToolSelectorAuto, _editorToolSidebarCollapsed)
+            End Get
+            Set(value As String)
+                Dim mode = If(value, "").Trim()
+                If String.Equals(mode, AppSettingsService.ToolSelectorModeAuto, StringComparison.OrdinalIgnoreCase) Then
+                    EditorToolSelectorAuto = True
+                ElseIf String.Equals(mode, AppSettingsService.ToolSelectorModeCompact, StringComparison.OrdinalIgnoreCase) Then
+                    EditorToolSelectorAuto = False
+                    EditorToolSidebarCollapsed = True
+                ElseIf String.Equals(mode, AppSettingsService.ToolSelectorModeExpanded, StringComparison.OrdinalIgnoreCase) Then
+                    EditorToolSelectorAuto = False
+                    EditorToolSidebarCollapsed = False
+                End If
+            End Set
+        End Property
+
+        Private Sub RaiseToolSelectorModeChanged()
+            Me.RaisePropertyChanged(NameOf(EditorToolSelectorMode))
+            Me.RaisePropertyChanged(NameOf(IsToolSelectorAuto))
+            Me.RaisePropertyChanged(NameOf(IsToolSelectorCompact))
+            Me.RaisePropertyChanged(NameOf(IsToolSelectorExpanded))
+        End Sub
+
         ''' <summary>Die drei Knoepfe des Schalters leuchten nach demselben Muster wie die der
         ''' Panelseite: einer von dreien, keiner laesst sich abschalten.</summary>
         Public ReadOnly Property IsToolSelectorAuto As Boolean
             Get
-                Return String.Equals(_editorToolSelectorMode, AppSettingsService.ToolSelectorModeAuto, StringComparison.Ordinal)
+                Return String.Equals(EditorToolSelectorMode, AppSettingsService.ToolSelectorModeAuto, StringComparison.Ordinal)
             End Get
         End Property
 
         Public ReadOnly Property IsToolSelectorCompact As Boolean
             Get
-                Return String.Equals(_editorToolSelectorMode, AppSettingsService.ToolSelectorModeCompact, StringComparison.Ordinal)
+                Return String.Equals(EditorToolSelectorMode, AppSettingsService.ToolSelectorModeCompact, StringComparison.Ordinal)
             End Get
         End Property
 
         Public ReadOnly Property IsToolSelectorExpanded As Boolean
             Get
-                Return String.Equals(_editorToolSelectorMode, AppSettingsService.ToolSelectorModeExpanded, StringComparison.Ordinal)
+                Return String.Equals(EditorToolSelectorMode, AppSettingsService.ToolSelectorModeExpanded, StringComparison.Ordinal)
             End Get
         End Property
 
@@ -5552,7 +5594,8 @@ Namespace ViewModels
             _scopeInAdjustmentPanels = _appSettings.ScopeInAdjustmentPanels
             _editorLayersPanelExpanded = _appSettings.EditorLayersPanelExpanded
             _editorLayerThumbnails = _appSettings.EditorLayerThumbnails
-            _editorToolSelectorMode = AppSettingsService.NormalizeToolSelectorMode(_appSettings.EditorToolSelectorMode)
+            _editorToolSidebarCollapsed = _appSettings.EditorToolSidebarCollapsed
+            _editorToolSelectorAuto = _appSettings.EditorToolSelectorAuto
             _editorToolSelectorSide = AppSettingsService.NormalizeToolSelectorSide(_appSettings.EditorToolSelectorSide)
             _editorAdjustmentsPanelWidth = EditorViewModel.ClampAdjustmentsPanelWidth(_appSettings.EditorAdjustmentsPanelWidth)
             _editorDenoiseStrength = EditorViewModel.ClampDenoiseStrength(_appSettings.EditorDenoiseStrength)
@@ -5713,8 +5756,8 @@ Namespace ViewModels
             SetEditorFitBehaviorCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorFitBehavior = m)
             SetDefaultSaveFormatCommand = ReactiveCommand.Create(Of String)(Sub(m) DefaultSaveFormat = m)
             SetEditorStartupToolCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorStartupTool = m)
-            ' Der Modus kommt als Name aus dem AXAML. NormalizeToolSelectorMode haelt die Vorgabe
-            ' fuer jeden Wert, der keiner der drei Namen ist.
+            ' Der Modus kommt als Name aus dem AXAML. EditorToolSelectorMode setzt daraus Automatik und
+            ' Klappzustand; ein unbekannter Name aendert nichts.
             SetEditorToolSelectorModeCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorToolSelectorMode = m)
             SetEditorToolSelectorSideCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorToolSelectorSide = m)
             ' Zwei Knoepfe wie sonst auch, der Wert selbst ist aber ein Ja/Nein: alles ausser "Left"
@@ -5923,7 +5966,8 @@ Namespace ViewModels
             _savedEditorFitBehavior = _editorFitBehavior
             _savedEditorFitMargin = _editorFitMargin
             _savedEditorStartupTool = _editorStartupTool
-            _savedEditorToolSelectorMode = _editorToolSelectorMode
+            _savedEditorToolSidebarCollapsed = _editorToolSidebarCollapsed
+            _savedEditorToolSelectorAuto = _editorToolSelectorAuto
             _savedEditorToolSelectorSide = _editorToolSelectorSide
             _savedEditorAdjustmentsPanelOnLeft = _editorAdjustmentsPanelOnLeft
             _savedEditorAdjustmentsScrollBarAlwaysVisible = _editorAdjustmentsScrollBarAlwaysVisible
@@ -6157,7 +6201,10 @@ Namespace ViewModels
             EditorFitBehavior = _savedEditorFitBehavior
             EditorFitMargin = _savedEditorFitMargin
             EditorStartupTool = _savedEditorStartupTool
-            EditorToolSelectorMode = _savedEditorToolSelectorMode
+            ' Der Klappzustand gehoert dazu, weil der Modus im Dialog ihn setzt: Abbrechen nimmt das
+            ' mit zurueck.
+            EditorToolSidebarCollapsed = _savedEditorToolSidebarCollapsed
+            EditorToolSelectorAuto = _savedEditorToolSelectorAuto
             EditorToolSelectorSide = _savedEditorToolSelectorSide
             EditorAdjustmentsPanelOnLeft = _savedEditorAdjustmentsPanelOnLeft
             EditorAdjustmentsScrollBarAlwaysVisible = _savedEditorAdjustmentsScrollBarAlwaysVisible
@@ -6318,10 +6365,10 @@ Namespace ViewModels
 
         Private Sub ResetToDefaults()
             ' Die Staerke des Entrauschens gehoert dazu: sie hat eine Vorgabe, und "auf
-            ' Standardeinstellungen zuruecksetzen" soll sie wiederherstellen. Die Breite des
-            ' Anpassungspanels bleibt ausgenommen - gemerkte Bedienung ohne Vorgabe, die jemand
-            ' gewaehlt haette. Der Modus der Werkzeugleiste gehoert dazu: er ist ein Schalter mit
-            ' klarer Vorgabe, kein gemerkter Zufallsstand.
+            ' Standardeinstellungen zuruecksetzen" soll sie wiederherstellen. Die Panelbreite und
+            ' der Klappzustand der Werkzeugleiste bleiben ausgenommen - beides ist gemerkte
+            ' Bedienung ohne Vorgabe, die jemand gewaehlt haette. Die Automatik der Leiste und ihre
+            ' Seite gehoeren dazu: das sind Schalter des Dialogs mit klarer Vorgabe.
             EditorDenoiseStrength = EditorViewModel.DefaultDenoiseStrength
             ThemeMode = "Dark"
             WindowButtonsSide = WindowButtonSideService.SideSystem
@@ -6333,7 +6380,7 @@ Namespace ViewModels
             EditorFitBehavior = "Always"
             EditorFitMargin = 0
             EditorStartupTool = "Adjust"
-            EditorToolSelectorMode = AppSettingsService.ToolSelectorModeDefault
+            EditorToolSelectorAuto = False
             EditorToolSelectorSide = AppSettingsService.ToolSelectorSideDefault
             EditorAdjustmentsPanelOnLeft = False
             EditorAdjustmentsScrollBarAlwaysVisible = False
@@ -6862,7 +6909,8 @@ Namespace ViewModels
                                           s.EditorInfoSidebarExpanded = _editorInfoSidebarExpanded
                                           s.EditorLayersPanelExpanded = _editorLayersPanelExpanded
                                           s.EditorLayerThumbnails = _editorLayerThumbnails
-                                          s.EditorToolSelectorMode = _editorToolSelectorMode
+                                          s.EditorToolSidebarCollapsed = _editorToolSidebarCollapsed
+                                          s.EditorToolSelectorAuto = _editorToolSelectorAuto
                                           s.EditorToolSelectorSide = _editorToolSelectorSide
                                           s.EditorAdjustmentsPanelWidth = _editorAdjustmentsPanelWidth
                                           s.EditorDenoiseStrength = _editorDenoiseStrength

@@ -1458,6 +1458,7 @@ Namespace ViewModels
             ' Die Werkzeugleiste: der Modus hat keinen Knopf in der Leiste, sondern steht in den
             ' Einstellungen, und was an Zeigerzeit noch ausstand, gehoert dem alten Modus nicht mehr.
             Editor?.CancelToolSelectorHover()
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsToolSidebarCollapsed))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AreToolSidebarLabelsVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolGroupHeadingOpacity))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AreToolGroupSeparatorsVisible))

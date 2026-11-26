@@ -12520,8 +12520,8 @@
   <data name="Werkzeugleiste_78b91335" xml:space="preserve">
     <value>Værktøjslinje</value>
   </data>
-  <data name="Nur_Symbole_spart_am_meisten_Platz_f_r_das_Bild__d7b28d4e" xml:space="preserve">
-    <value>Kun ikoner sparer mest plads til billedet; grupperne er så adskilt af streger i stedet for navne. Med tekst står linjen åben og bred ved siden af panelet. Automatisk holder linjen smal og folder den op over billedet, så snart markøren har stået en kort stund over den - pladsen til billedet forbliver uændret.</value>
+  <data name="Nur_Symbole_spart_am_meisten_Platz_f_r_das_Bild__1664a739" xml:space="preserve">
+    <value>Kun ikoner sparer mest plads til billedet; grupperne er så adskilt af streger i stedet for navne. Med tekst står linjen åben og bred ved siden af panelet. Automatisk holder linjen smal og folder den op over billedet, så snart markøren har stået en kort stund over den. Pladsen til billedet forbliver uændret.</value>
   </data>
   <data name="Nur_Symbole_c4a487b7" xml:space="preserve">
     <value>Kun ikoner</value>

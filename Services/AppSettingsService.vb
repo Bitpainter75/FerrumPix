@@ -795,19 +795,26 @@ Namespace Services
         ''' Abschaltbar, weil die Miniaturen Arbeit machen: ein Bild-Objekt wird dafuer aus seiner
         ''' Datei gelesen, und bei vielen Bildebenen ist der erste Aufbau des Panels spuerbar.</summary>
         Public Property EditorLayerThumbnails As Boolean = True
-        ''' <summary>Wie der Editor seine Werkzeugleiste zeigt: automatisch, nur Symbole oder immer
-        ''' mit Text. Der Modus hat einen Schalter auf der Einstellungsseite, anders als die Info-Leiste
-        ''' und das Ebenen-Panel: ein Knopf mit zwei Stellungen kann drei Modi nicht darstellen, und ein
-        ''' dritter Knopf in der Leiste waere ein zweiter Weg fuer dieselbe Sache.</summary>
-        Public Property EditorToolSelectorMode As String = AppSettingsService.ToolSelectorModeDefault
-        ''' <summary>Wo die Werkzeugleiste steht: immer links, immer rechts, oder auf der Seite des
-        ''' Anpassungspanels. Ab Werk die Seite des Panels, also genau wie bisher.
+        ''' Linke Werkzeugleiste des Editors eingeklappt (nur Symbole, keine Beschriftungen) -
+        ''' gemerkter Bedienzustand wie die Info-Leiste, der Umschalter sitzt in der Fusszeile.
+        ''' Bleibt die Grundlage der Modi "Nur Symbole" und "Mit Text" im Einstellungsdialog.
+        Public Property EditorToolSidebarCollapsed As Boolean = False
+        ''' <summary>Die Werkzeugleiste klappt automatisch auf: schmal, bis der Zeiger eine kurze Weile
+        ''' auf ihr steht, dann ueber dem Bild breit. Ab Werk aus, die Leiste verhaelt sich also wie
+        ''' bisher nach dem Klappknopf.
         '''
-        ''' Der Grund fuer die eigene Wahl: die Seite des Panels war bisher zugleich die Seite der
-        ''' Leiste, und beides ist nicht dasselbe. Wer die Regler rechts bedient, will die Auswahl
-        ''' nicht links haben; aber wer das Panel umzieht, will die Leiste moeglichst doch wieder da
-        ''' haben, wo er sie immer hatte. Ein Knopf in der Leiste selbst kann das nicht leisten: er
-        ''' hat zwei Stellungen, die Wahl hier hat drei.</summary>
+        ''' Ein eigener Wert NEBEN dem Klappzustand und kein dreistufiger Modus an seiner Stelle: der
+        ''' Klappzustand ist gemerkte Bedienung, die ein Update unveraendert ueberleben muss. Der
+        ''' Modus im Dialog ist nur eine Sicht auf beide Werte (SettingsViewModel.EditorToolSelectorMode),
+        ''' und der Klappknopf legt die Leiste fest und schaltet die Automatik damit ab.</summary>
+        Public Property EditorToolSelectorAuto As Boolean = False
+        ''' <summary>Wo die Werkzeugleiste steht: immer links, immer rechts, oder auf der Seite des
+        ''' Anpassungspanels. Ab Werk links, also genau wie bisher: die Leiste stand immer am linken
+        ''' Rand, das Panel wahlweise daneben oder rechts der Buehne.
+        '''
+        ''' Der Grund fuer die eigene Wahl: wer die Regler rechts bedient, faehrt fuer jeden
+        ''' Werkzeugwechsel quer ueber das Bild. Ein Knopf in der Leiste selbst kann das nicht
+        ''' leisten: er hat zwei Stellungen, die Wahl hier hat drei.</summary>
         Public Property EditorToolSelectorSide As String = AppSettingsService.ToolSelectorSideDefault
         ''' <summary>Breite des Anpassungspanels im Editor, in Punkten. Gemerkter Bedienzustand wie
         ''' die eingeklappte Werkzeugleiste: gezogen wird sie am Rand des Panels, nicht im
@@ -1563,7 +1570,6 @@ Namespace Services
                 settings.RawDemosaicAlgorithm = NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
                 NormalizeMacGraphicsSettings(settings)
                 settings.PickerReadout = NormalizePickerReadout(settings.PickerReadout)
-                settings.EditorToolSelectorMode = NormalizeToolSelectorMode(settings.EditorToolSelectorMode)
                 settings.EditorToolSelectorSide = NormalizeToolSelectorSide(settings.EditorToolSelectorSide)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.ViewerDoubleClickTarget = NormalizeViewerDoubleClickTarget(settings.ViewerDoubleClickTarget)
@@ -1817,7 +1823,6 @@ Namespace Services
                 settings.RawDemosaicAlgorithm = NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
                 NormalizeMacGraphicsSettings(settings)
                 settings.PickerReadout = NormalizePickerReadout(settings.PickerReadout)
-                settings.EditorToolSelectorMode = NormalizeToolSelectorMode(settings.EditorToolSelectorMode)
                 settings.EditorToolSelectorSide = NormalizeToolSelectorSide(settings.EditorToolSelectorSide)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.ViewerDoubleClickTarget = NormalizeViewerDoubleClickTarget(settings.ViewerDoubleClickTarget)
@@ -3093,33 +3098,22 @@ Namespace Services
             Return MacRenderingModeDefault
         End Function
 
-        ''' <summary>Die Werkzeugleiste des Editors zeigt ab Werk automatisch: schmal, bis der
-        ''' Zeiger ueber ihr steht. Der Modus sitzt als Schalter auf der Einstellungsseite, weil ein
-        ''' Knopf mit zwei Stellungen die drei Modi nicht darstellen kann.</summary>
-        Public Const ToolSelectorModeDefault As String = "Auto"
-
-        ''' <summary>Die waehlbaren Modi der Werkzeugleiste, in der Reihenfolge der Auswahlliste. Die
-        ''' Namen liegen in der settings.json und sind keine Anzeigetexte.</summary>
-        Public Shared ReadOnly ToolSelectorModeChoices As String() = {"Auto", "Compact", "Expanded"}
-
+        ''' <summary>Die drei Modi der Werkzeugleiste, wie der Einstellungsdialog sie zeigt. Sie
+        ''' werden NICHT gespeichert: gespeichert sind der Klappzustand (EditorToolSidebarCollapsed)
+        ''' und die Automatik (EditorToolSelectorAuto), der Modus ist eine Sicht auf beide.</summary>
         Public Const ToolSelectorModeAuto As String = "Auto"
         Public Const ToolSelectorModeCompact As String = "Compact"
         Public Const ToolSelectorModeExpanded As String = "Expanded"
 
-        ''' <summary>Macht aus jedem Wert einen der drei Modi: leer oder unbekannt wird die Vorgabe,
-        ''' damit ein verstuemmelter Bestand die Leiste nicht unbedienbar macht.</summary>
-        Public Shared Function NormalizeToolSelectorMode(value As String) As String
-            If String.IsNullOrWhiteSpace(value) Then Return ToolSelectorModeDefault
-            Dim trimmed = value.Trim()
-            For Each choice In ToolSelectorModeChoices
-                If String.Equals(choice, trimmed, StringComparison.OrdinalIgnoreCase) Then Return choice
-            Next
-            Return ToolSelectorModeDefault
+        ''' <summary>Der Modus aus den beiden gespeicherten Werten.</summary>
+        Public Shared Function ToolSelectorModeOf(auto As Boolean, collapsed As Boolean) As String
+            If auto Then Return ToolSelectorModeAuto
+            Return If(collapsed, ToolSelectorModeCompact, ToolSelectorModeExpanded)
         End Function
 
-        ''' <summary>Die Werkzeugleiste steht ab Werk da, wo das Anpassungspanel steht. Das ist genau
-        ''' das bisherige Verhalten: die Leiste hatte immer die Seite des Panels.</summary>
-        Public Const ToolSelectorSideDefault As String = "WithAdjustments"
+        ''' <summary>Die Werkzeugleiste steht ab Werk links, wie sie immer stand; mit dem Klappzustand
+        ''' "aus" und abgeschalteter Automatik sieht der Editor nach dem Update aus wie vorher.</summary>
+        Public Const ToolSelectorSideDefault As String = "Left"
 
         ''' <summary>Die waehlbaren Seiten der Werkzeugleiste, in der Reihenfolge der Auswahlliste. Die
         ''' Namen liegen in der settings.json und sind keine Anzeigetexte.</summary>
