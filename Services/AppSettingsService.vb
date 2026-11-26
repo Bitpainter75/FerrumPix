@@ -798,6 +798,15 @@ Namespace Services
         ''' Linke Werkzeugleiste des Editors eingeklappt (nur Symbole, keine Beschriftungen) -
         ''' gemerkter Bedienzustand wie die Info-Leiste, der Umschalter sitzt in der Leiste selbst.
         Public Property EditorToolSidebarCollapsed As Boolean = False
+        ''' <summary>Dichte der linken Werkzeugleiste: normal, compact oder tiny.
+        '''
+        ''' Warum eine Einstellung im Dialog und kein Knopf an der Leiste selbst: die Leiste ist
+        ''' schmal, ein weiterer Umschalter haette sie noch enger gemacht. Ausserdem will man die
+        ''' Dichte einmal einstellen und vergessen - wie beim Schriftgrad, dessen Verfahren hier
+        ''' Pate steht.
+        '''
+        ''' compact nimmt nur vertikal Abstand heraus; tiny nimmt ausserdem Breite weg.</summary>
+        Public Property EditorToolSidebarDensity As String = AppSettingsService.PanelDensityNormal
         ''' <summary>Breite des Anpassungspanels im Editor, in Punkten. Gemerkter Bedienzustand wie
         ''' die eingeklappte Werkzeugleiste: gezogen wird sie am Rand des Panels, nicht im
         ''' Einstellungsdialog.
@@ -806,6 +815,15 @@ Namespace Services
         ''' darf das Panel weiterhin bis zur Mindestbreite schrumpfen; vorhandene, bewusst schmal
         ''' gezogene Einstellungen bleiben daher unveraendert.</summary>
         Public Property EditorAdjustmentsPanelWidth As Double = ViewModels.EditorViewModel.AdjustmentsPanelDefaultWidth
+        ''' <summary>Dichte des Anpassungspanels: normal, compact oder tiny.
+        '''
+        ''' Bewusst eine zweite, unabhaengige Einstellung: das Panel steht voller Regler, und wer dort
+        ''' Platz spart, will deshalb noch lange nicht die schmale Werkzeugleiste. Die beiden Fragen
+        ''' haengen nicht miteinander zusammen.
+        '''
+        ''' tiny wirkt auch auf die Breite: das Panel wird schmaler, indem die gespeicherte Breite
+        ''' beim Anzeigen verkleinert wird - siehe EditorViewModel.AdjustmentsPanelWidth.</summary>
+        Public Property EditorAdjustmentsDensity As String = AppSettingsService.PanelDensityNormal
         ''' <summary>Zuletzt gewaehlte Staerke fuer das Entrauschen mit Modell, 0 bis 100.
         '''
         ''' Gemerkt wird sie beim START eines Laufs und nicht bei jeder Reglerbewegung: das Speichern
@@ -1581,6 +1599,8 @@ Namespace Services
                 settings.LastBatchRenamePattern = NormalizeBatchRenamePattern(settings.LastBatchRenamePattern)
                 settings.EditorSaveAsNamePattern = NormalizeEditorSaveAsNamePattern(settings.EditorSaveAsNamePattern)
                 settings.EditorAdjustmentsPanelWidth = ViewModels.EditorViewModel.MigrateAdjustmentsPanelWidth(settings.EditorAdjustmentsPanelWidth)
+                settings.EditorToolSidebarDensity = NormalizePanelDensity(settings.EditorToolSidebarDensity)
+                settings.EditorAdjustmentsDensity = NormalizePanelDensity(settings.EditorAdjustmentsDensity)
                 settings.LastBatchRenameStart = NormalizeBatchRenameStart(settings.LastBatchRenameStart)
                 settings.LastBatchRenameStep = NormalizeBatchRenameStep(settings.LastBatchRenameStep)
                 settings.LastBatchResizeWidth = NormalizeBatchResizeDimension(settings.LastBatchResizeWidth)
@@ -1833,6 +1853,8 @@ Namespace Services
                 settings.LastBatchRenamePattern = NormalizeBatchRenamePattern(settings.LastBatchRenamePattern)
                 settings.EditorSaveAsNamePattern = NormalizeEditorSaveAsNamePattern(settings.EditorSaveAsNamePattern)
                 settings.EditorAdjustmentsPanelWidth = ViewModels.EditorViewModel.MigrateAdjustmentsPanelWidth(settings.EditorAdjustmentsPanelWidth)
+                settings.EditorToolSidebarDensity = NormalizePanelDensity(settings.EditorToolSidebarDensity)
+                settings.EditorAdjustmentsDensity = NormalizePanelDensity(settings.EditorAdjustmentsDensity)
                 settings.LastBatchRenameStart = NormalizeBatchRenameStart(settings.LastBatchRenameStart)
                 settings.LastBatchRenameStep = NormalizeBatchRenameStep(settings.LastBatchRenameStep)
                 settings.LastBatchResizeWidth = NormalizeBatchResizeDimension(settings.LastBatchResizeWidth)
@@ -2633,6 +2655,31 @@ Namespace Services
                     Return value.Trim().ToUpperInvariant()
                 Case Else
                     Return "#F08A1A"
+            End Select
+        End Function
+
+        ' Die drei Dichtestufen von Werkzeugleiste und Anpassungspanel. Dieselben Strings stecken in
+        ' der Datei, in den Einstellungen und in den Ressourcenschluesseln des Themes
+        ' (FP.Density.<Feld>.<Stufe>) - eine einzige Schreibweise, damit niemand raten muss,
+        ' welches Wort als Schluesselteil gesucht wird. Sie stehen hier neben dem Pruefer, der sie
+        ' erzwungen hat; die Einstellungen in AppSettings greifen mit dem Klassennamen darauf zu.
+        Public Const PanelDensityNormal As String = "normal"
+        Public Const PanelDensityCompact As String = "compact"
+        Public Const PanelDensityTiny As String = "tiny"
+
+        ''' <summary>Schreibt eine Dichte auf eine der drei bekannten Stufen.
+        '''
+        ''' Unbekannt oder leer faellt auf normal zurueck: Die Stufe ist Teil des Schluessels fuer
+        ''' eine Ressource des Themes, und ein unbekannter Wert haette gar keine Masse zur Folge -
+        ''' Leiste und Panel stuenden ohne Groessenangabe da.</summary>
+        Public Shared Function NormalizePanelDensity(value As String) As String
+            Select Case If(value, "").Trim().ToLowerInvariant()
+                Case PanelDensityCompact
+                    Return PanelDensityCompact
+                Case PanelDensityTiny
+                    Return PanelDensityTiny
+                Case Else
+                    Return PanelDensityNormal
             End Select
         End Function
 
