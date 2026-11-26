@@ -129,7 +129,8 @@ Namespace Services
 
             list.Add(E("clarity", "details", "Klarheit", "Clarity"))
             list.Add(E("structure", "details", "Struktur", "Structure"))
-            list.Add(E("haze", "details", "Dunst", "Haze"))
+            ' Die Fassung des Dunstes geht mit dem Dunst: eingefuegt sieht er aus wie in der Quelle.
+            list.Add(E("haze", "details", "Dunst", "Haze", "HazeModel"))
             list.Add(E("glow", "details", "Glühen", "Glow"))
             list.Add(E("blur", "details", "Weichzeichnen", "Blur"))
 
@@ -158,7 +159,8 @@ Namespace Services
 
             ' Rauschen, Farbrauschen und Staub/Kratzer haben keinen Regler mehr; ein altes Rezept
             ' traegt sie, und sie gehen mit der Staerke der Koernung.
-            list.Add(E("amount", "grain", "Stärke", "Grain", "AddNoise", "ColorNoiseAdd", "DustScratches"))
+            ' Die Fassung der Koernung geht mit der Staerke: eingefuegt sieht das Korn aus wie in der Quelle.
+            list.Add(E("amount", "grain", "Stärke", "Grain", "GrainModel", "AddNoise", "ColorNoiseAdd", "DustScratches"))
             list.Add(E("size", "grain", "Größe", "GrainSize"))
             list.Add(E("roughness", "grain", "Rauheit", "GrainFrequency"))
             list.Add(E("color", "grain", "Farbe", "GrainColor"))
@@ -319,6 +321,10 @@ Namespace Services
                 For Each field In entry.Fields
                     Dim p = PropertyOf(field)
                     If p Is Nothing Then Continue For
+                    ' Die Fassung des Dunstes allein macht den Eintrag nicht abweichend, der Dunst schon.
+                    If field = NameOf(ImageAdjustments.HazeModel) Then Continue For
+                    ' Ebenso die Fassung der Koernung.
+                    If field = NameOf(ImageAdjustments.GrainModel) Then Continue For
                     If Not Object.Equals(p.GetValue(recipe), p.GetValue(neutral)) Then
                         result.Add(entry)
                         Exit For

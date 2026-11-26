@@ -1164,6 +1164,15 @@
                              Tapped="OnVideoViewTapped"/>
             <icons:MpvVideoSurface Name="TheVideoSurface" Grid.Row="0"
                              IsVisible="False"/>
+            <!-- Die Kachel des Films, bis er zum ersten Mal laeuft (ViewerViewModelVideoPoster.vb).
+                 Ueber der abholenden Flaeche liegt sie von selbst; die native liegt ueber allem und
+                 wird solange aus dem Bild geschoben (UpdateVideoPosterCover). -->
+            <Image Name="VideoPoster" Grid.Row="0"
+                   Source="{Binding VideoPosterImage, Converter={x:Static icons:ColorManagedBitmapConverter.Instance}}"
+                   IsVisible="{Binding ShowVideoPoster}"
+                   IsHitTestVisible="False"
+                   Stretch="Uniform"
+                   RenderOptions.BitmapInterpolationMode="MediumQuality" />
             <Border Grid.Row="0"
                     Background="Transparent"
                     PointerMoved="OnGlobalPointerActivity"

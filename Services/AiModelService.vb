@@ -186,19 +186,41 @@ Namespace Services
         ''' beim Hochfahren einmal liest und dann festhaelt.
         '''
         ''' Unter Windows laeuft die Telemetrie ueber den Ereignisdienst des Betriebssystems und
-        ''' hoert auf die Variable ausdruecklich nicht - dort wirkt weiterhin der Aufruf unten.
+        ''' hoert auf diese Variable nicht. Auch der Abschaltaufruf unten kommt dort zu spaet: den
+        ''' Ereignisanbieter meldet die Laufzeit schon im Konstruktor der Umgebung an. Der einzige
+        ''' Schalter, den die Windows-Bibliothek davor liest, ist <c>ORT_RUNNING_UNIT_TESTS</c>
+        ''' (in <c>windows/telemetry.cc</c>: dann wird der Anbieter gar nicht erst angemeldet).
+        ''' Nachgesehen in der ausgelieferten <c>onnxruntime.dll</c> 1.31.1: die Zeichenkette
+        ''' steht genau einmal darin, neben der Abfrage des Prozessornamens, und gelesen wird ueber
+        ''' <c>GetEnvironmentVariableA</c> - die echte Prozessumgebung, die
+        ''' <c>Environment.SetEnvironmentVariable</c> unter Windows setzt. Bei jedem Wechsel der
+        ''' Laufzeit neu pruefen, das haelt die
+        ''' Pruefung "Telemetrie der Modell-Laufzeit" fest.
         ''' Was ein Nutzer mit seinen Fotos tut, geht niemanden ausser ihm etwas an.</summary>
         Public Shared Sub SuppressRuntimeTelemetry()
             If _telemetryEnvSet Then Return
             _telemetryEnvSet = True
             Try
-                Environment.SetEnvironmentVariable("ORT_DISABLE_TELEMETRY", "1")
+                For Each pair In RuntimeTelemetryOptOut(OperatingSystem.IsWindows())
+                    Environment.SetEnvironmentVariable(pair.Key, pair.Value)
+                Next
                 If Not OperatingSystem.IsWindows() Then NativeSetEnv("ORT_DISABLE_TELEMETRY", "1", 1)
             Catch
                 ' Fehlt libc unter diesem Namen, bleibt es beim Aufruf in CheckRuntime. Ein
                 ' Fehlschlag hier darf den Start nicht aufhalten.
             End Try
         End Sub
+
+        ''' <summary>Die Umgebungsvariablen, mit denen die Laufzeit ihre Telemetrie unterlaesst, je
+        ''' Plattform. Unter Linux und macOS der Riegel fuer den Uploader, unter Windows zusaetzlich
+        ''' der Schalter, der die Anmeldung beim Ereignisdienst verhindert.</summary>
+        Friend Shared Function RuntimeTelemetryOptOut(windows As Boolean) As IReadOnlyList(Of KeyValuePair(Of String, String))
+            Dim pairs As New List(Of KeyValuePair(Of String, String)) From {
+                New KeyValuePair(Of String, String)("ORT_DISABLE_TELEMETRY", "1")
+            }
+            If windows Then pairs.Add(New KeyValuePair(Of String, String)("ORT_RUNNING_UNIT_TESTS", "1"))
+            Return pairs
+        End Function
 
         Private Shared Sub CheckRuntime()
             SyncLock _lock

@@ -180,7 +180,7 @@ and checksums of each. flatpak-builder places their license texts in
   Copyright (c) Contributors to the OpenEXR Project
   Used under the BSD 3-Clause License, with the additional grant in PATENTS
   https://github.com/AcademySoftwareFoundation/openexr
-  Reads EXR files. Built from the unmodified OpenEXR 3.5.4 source release,
+  Reads EXR files. Built from the unmodified OpenEXR 3.5.5 source release,
   which carries three libraries that are compiled into it: libdeflate (MIT
   License, https://github.com/ebiggers/libdeflate), OpenJPH (BSD 2-Clause
   License, https://github.com/aous72/OpenJPH) and zstd (BSD 3-Clause License,

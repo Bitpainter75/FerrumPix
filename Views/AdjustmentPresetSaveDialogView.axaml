@@ -58,6 +58,7 @@
                             <CheckBox Classes="no-translate"
                                       IsThreeState="False"
                                       IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                      IsEnabled="{Binding IsAvailable}"
                                       Content="{Binding Label}"
                                       FontWeight="SemiBold"
                                       VerticalAlignment="Center"/>
@@ -86,8 +87,13 @@
                                       Margin="28,0,0,6">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
+                                    <!-- Was das Ziel nicht tragen kann, ist ausgegraut und ohne
+                                         Haken; der Kurzhinweis sagt warum (BlockReason). -->
                                     <CheckBox Classes="no-translate"
-                                              IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                              IsChecked="{Binding ShownChecked, Mode=TwoWay}"
+                                              IsEnabled="{Binding IsAvailable}"
+                                              ToolTip.Tip="{Binding BlockReason}"
+                                              ToolTip.ShowOnDisabled="True"
                                               Content="{Binding Label}"/>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -96,5 +102,54 @@
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
+
+        <!-- Das Ziel kommt zuletzt: erst steht die Auswahl der Regler, dann graut das Ziel aus,
+             was es nicht tragen kann. XMP und LUT gehen in eine Datei an einem frei gewaehlten
+             Ort; die Ziele und der Hinweis kommen uebersetzt aus dem ViewModel. -->
+        <StackPanel Spacing="8" IsVisible="{Binding ShowsTargetChoice}">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                <TextBlock Text="Speichern als" VerticalAlignment="Center"
+                           Foreground="{DynamicResource FP.Text.Secondary}"/>
+                <ComboBox Grid.Column="1" Classes="no-translate"
+                          ItemsSource="{Binding Targets}"
+                          SelectedItem="{Binding SelectedTarget, Mode=TwoWay}"
+                          MinHeight="36"
+                          HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Classes="no-translate" Text="{Binding Label}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </Grid>
+            <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10" IsVisible="{Binding ShowsGridSize}">
+                <TextBlock Text="Gitterpunkte je Achse" VerticalAlignment="Center"
+                           Foreground="{DynamicResource FP.Text.Secondary}"/>
+                <ComboBox Grid.Column="1" Classes="no-translate"
+                          ItemsSource="{Binding LutGridSizes}"
+                          SelectedItem="{Binding SelectedGridSize, Mode=TwoWay}"
+                          MinHeight="36" MinWidth="90"
+                          ToolTip.Tip="Mehr Punkte geben feinere Übergänge und eine größere Datei."/>
+            </Grid>
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" IsVisible="{Binding ShowsFile}">
+                <TextBlock Text="Datei" VerticalAlignment="Center"
+                           Foreground="{DynamicResource FP.Text.Secondary}"/>
+                <TextBox Grid.Column="1" Classes="no-translate"
+                         Text="{Binding TargetFilePath, Mode=TwoWay}" MinHeight="36"/>
+                <Button Grid.Column="2"
+                        Classes="icon-btn"
+                        Width="38" Height="36"
+                        Click="OnBrowseTargetFileClick"
+                        ToolTip.Tip="Datei wählen">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-open.svg" Width="18" Height="18"/>
+                </Button>
+            </Grid>
+            <TextBlock Classes="no-translate"
+                       Text="{Binding TargetHint}"
+                       IsVisible="{Binding ShowsTargetHint}"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource FP.Text.Secondary}"
+                       FontSize="{DynamicResource FP.Font.Small}"/>
+        </StackPanel>
     </StackPanel>
 </UserControl>

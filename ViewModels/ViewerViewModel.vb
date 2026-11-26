@@ -3823,6 +3823,10 @@ Namespace ViewModels
                 '
                 ' Ein erster Ladeauftrag, der mangels Ausgabeflaeche liegen blieb, geht weiterhin
                 ' nicht verloren: den holt LoadPending nach (StartPendingVideoAutoplay).
+                '
+                ' Bis der Film laeuft, steht seine Kachel ueber der Flaeche: sonst zeigte sie das
+                ' erste Bild, und das ist bei vielen Filmen schwarz (ViewerViewModelVideoPoster.vb).
+                BeginVideoPoster(_currentImagePath)
                 LoadVideo(_currentImagePath)
                 Return
             End If
@@ -4458,6 +4462,7 @@ Namespace ViewModels
         Private Sub EnsureMediaPlayer()
             If _mediaPlayer IsNot Nothing Then Return
             If Not IsVideoPlaybackAvailable Then Return
+            IsVideoOutputConfigured = False
             Try
                 _mediaPlayer = New MpvPlayer(AppSettingsService.Load().VideoHardwareAcceleration)
                 _mediaPlayer.SetMuted(_isVideoMuted)
@@ -4577,6 +4582,8 @@ Namespace ViewModels
             ' Wer den Spieler anhaelt, beendet auch ein laufendes Bewegtbild: sonst bliebe die
             ' Videoflaeche ueber dem Standbild stehen, ohne dass noch etwas laeuft.
             EndMotionPlayback(stopPlayer:=False)
+            ' Der Film verlaesst die Flaeche; zeigt man ihn wieder, beginnt sein Standbild neu.
+            ClearVideoPoster()
             If _mediaPlayer Is Nothing Then Return
             Try
                 _mediaPlayer.Stop()
@@ -4596,6 +4603,7 @@ Namespace ViewModels
                 _mediaPlayer.Dispose()
                 _mediaPlayer = Nothing
             End If
+            IsVideoOutputConfigured = False
         End Sub
 
         Private Sub DetachMediaPlayerHandlers(player As MpvPlayer)
@@ -4628,6 +4636,7 @@ Namespace ViewModels
                 AddHandler player.MuteChanged, AddressOf OnMute
                 AddHandler player.InitializationFailed, AddressOf OnFailed
                 AddHandler player.PlaybackTerminated, AddressOf OnTerminated
+                AddHandler player.VideoOutputConfiguredChanged, AddressOf OnVideoOutputConfigured
             End Sub
 
             Public Sub Detach()
@@ -4639,6 +4648,11 @@ Namespace ViewModels
                 RemoveHandler Player.MuteChanged, AddressOf OnMute
                 RemoveHandler Player.InitializationFailed, AddressOf OnFailed
                 RemoveHandler Player.PlaybackTerminated, AddressOf OnTerminated
+                RemoveHandler Player.VideoOutputConfiguredChanged, AddressOf OnVideoOutputConfigured
+            End Sub
+
+            Private Sub OnVideoOutputConfigured(configured As Boolean)
+                _owner.OnVideoOutputConfiguredChanged(Player, configured)
             End Sub
 
             Private Sub OnTime(seconds As Double)
@@ -4697,6 +4711,8 @@ Namespace ViewModels
             If _videoDurationSeconds > 0 Then target = Math.Min(target, _videoDurationSeconds)
             _ignoreVideoTimeUpdatesUntilUtc = DateTime.UtcNow.AddMilliseconds(250)
             _mediaPlayer.Seek(target)
+            ' Wer springt, will die Stelle sehen und nicht mehr das Standbild.
+            EndVideoPoster()
             VideoPositionSeconds = target
         End Sub
 
@@ -4708,6 +4724,7 @@ Namespace ViewModels
                                          If _isVideoScrubbing Then Return
                                          If DateTime.UtcNow < _ignoreVideoTimeUpdatesUntilUtc Then Return
                                          VideoPositionSeconds = seconds
+                                         NoteVideoPlaybackProgress(seconds, player.IsPlaying)
                                      End Sub)
         End Sub
 
@@ -4718,6 +4735,7 @@ Namespace ViewModels
                                           ' nimmt dem jetzigen nichts weg.
                                           If Not IsCurrentPlayer(player) Then Return
                                           _videoPlaybackRuntimeFailed = True
+                                          EndVideoPoster()
                                           _pendingVideoAutoplay = False
                                           IsVideoPlaying = False
                                           _isVideoEnded = False
@@ -4745,6 +4763,7 @@ Namespace ViewModels
                                           _pendingVideoAutoplay = False
                                           IsVideoPlaying = False
                                           _isVideoEnded = True
+                                          EndVideoPoster()
                                           ShutdownVideo()
                                           Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
                                       End Sub)
@@ -4798,6 +4817,7 @@ Namespace ViewModels
                                               Return
                                           End If
                                           _isVideoEnded = True
+                                          EndVideoPoster()
                                           Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
                                           IsVideoPlaying = False
                                           VideoPositionSeconds = VideoDurationSeconds
@@ -4808,6 +4828,28 @@ Namespace ViewModels
             Dispatcher.UIThread.Post(Sub()
                                          If Not IsCurrentPlayer(player) Then Return
                                          IsVideoPlaying = Not isPaused AndAlso Not _isVideoEnded
+                                     End Sub)
+        End Sub
+
+        Private _isVideoOutputConfigured As Boolean = False
+
+        ''' <summary>Steht die Bildausgabe des aktuellen Spielers (mpvs <c>vo-configured</c>)? Erst
+        ''' dann darf die Ansicht die native Flaeche fuer das Standbild aus dem Fenster schieben
+        ''' (ViewerView.UpdateVideoPosterCover, MpvPlayer.VideoOutputConfiguredChanged). Falsch mit
+        ''' jedem neuen oder weggeworfenen Spieler.</summary>
+        Public Property IsVideoOutputConfigured As Boolean
+            Get
+                Return _isVideoOutputConfigured
+            End Get
+            Private Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_isVideoOutputConfigured, value)
+            End Set
+        End Property
+
+        Private Sub OnVideoOutputConfiguredChanged(player As MpvPlayer, configured As Boolean)
+            Dispatcher.UIThread.Post(Sub()
+                                         If Not IsCurrentPlayer(player) Then Return
+                                         IsVideoOutputConfigured = configured
                                      End Sub)
         End Sub
 

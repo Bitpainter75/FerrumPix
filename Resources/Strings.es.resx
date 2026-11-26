@@ -12069,11 +12069,11 @@
   <data name="EXR_Dateien_lesen_49df259a" xml:space="preserve">
     <value>Lectura de archivos EXR</value>
   </data>
-  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__7934f082" xml:space="preserve">
-    <value>OpenJPEG lee archivos JPEG 2000, también HTJ2K, y se distribuye bajo la licencia BSD. Windows y Linux la incluyen, el Flatpak la toma de su entorno de ejecución; en macOS todavía falta. Sin ella, solo estos archivos quedan sin abrir.</value>
+  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__e382d8fe" xml:space="preserve">
+    <value>OpenJPEG lee archivos JPEG 2000, también HTJ2K, y se distribuye bajo la licencia BSD. Windows, Linux y macOS la incluyen, el Flatpak la toma de su entorno de ejecución. Sin ella, solo estos archivos quedan sin abrir.</value>
   </data>
-  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_62671d4b" xml:space="preserve">
-    <value>OpenEXR lee archivos EXR y se distribuye bajo la licencia BSD; las bibliotecas incluidas libdeflate, OpenJPH y zstd, bajo las licencias MIT y BSD. Windows, Linux y el Flatpak la incluyen; en macOS todavía falta. Sin ella, solo estos archivos quedan sin abrir.</value>
+  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_c861eac1" xml:space="preserve">
+    <value>OpenEXR lee archivos EXR y se distribuye bajo la licencia BSD; las bibliotecas incluidas libdeflate, OpenJPH y zstd, bajo las licencias MIT y BSD. Windows, Linux, macOS y el Flatpak la incluyen. Sin ella, solo estos archivos quedan sin abrir.</value>
   </data>
   <data name="OpenJPEG_fc68646e" xml:space="preserve">
     <value>OpenJPEG</value>
@@ -12488,5 +12488,83 @@
   </data>
   <data name="Nichts_wurde_umbenannt_91f18288" xml:space="preserve">
     <value>No se ha renombrado nada.</value>
+  </data>
+  <data name="Legt_fest_in_welcher_Reihenfolge_die_Gruppen_in__efc8d637" xml:space="preserve">
+    <value>Define el orden en que aparecen los grupos en la barra de herramientas del editor.</value>
+  </data>
+  <data name="Werkzeugleiste_78b91335" xml:space="preserve">
+    <value>Barra de herramientas</value>
+  </data>
+  <data name="Nur_Symbole_spart_am_meisten_Platz_f_r_das_Bild__1664a739" xml:space="preserve">
+    <value>Solo iconos deja más espacio para la imagen; los grupos quedan separados por rayas en lugar de títulos. Con texto, la barra queda abierta y ancha junto al panel. Automático mantiene la barra estrecha y la despliega sobre la imagen en cuanto el puntero se detiene un momento sobre ella; el espacio para la imagen no cambia.</value>
+  </data>
+  <data name="Nur_Symbole_c4a487b7" xml:space="preserve">
+    <value>Solo iconos</value>
+  </data>
+  <data name="Mit_Text_b34c864f" xml:space="preserve">
+    <value>Con texto</value>
+  </data>
+  <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
+    <value>{name}_fx produce por ejemplo Foto_fx; ### es un contador.</value>
+  </data>
+  <data name="Seite_der_Werkzeugleiste_70a2e880" xml:space="preserve">
+    <value>Lado de la barra de herramientas</value>
+  </data>
+  <data name="Wo_die_Werkzeugleiste_steht_immer_links_immer_re_f3efb3e4" xml:space="preserve">
+    <value>Dónde está la barra de herramientas: siempre a la izquierda, siempre a la derecha, o en el lado del panel de ajustes. En el lado del panel quedan juntos la elección de herramienta y los controles de la herramienta elegida. Un lado fijo deja la barra en su sitio aunque el panel de ajustes cambie de lado.</value>
+  </data>
+  <data name="Mit_Anpassungen_541da366" xml:space="preserve">
+    <value>Con ajustes</value>
+  </data>
+  <data name="H_ngt_vom_Ort_im_Bild_ab_und_passt_in_keine_LUT_06971464" xml:space="preserve">
+    <value>Depende de la posición en la imagen y no cabe en una LUT.</value>
+  </data>
+  <data name="Das_Filmnegativ_misst_seine_Grundfarbe_am_Bild_u_56d2dfa7" xml:space="preserve">
+    <value>El negativo de película mide su color base en la imagen y no cabe en una LUT.</value>
+  </data>
+  <data name="Wirkt_beim_Entwickeln_der_RAW_und_passt_in_keine_a547a376" xml:space="preserve">
+    <value>Actúa al revelar el RAW y no cabe en una LUT.</value>
+  </data>
+  <data name="Der_Rahmen_hat_in_einem_XMP_Preset_kein_Gegenst__9e90fed1" xml:space="preserve">
+    <value>El marco no tiene equivalente en un ajuste XMP.</value>
+  </data>
+  <data name="FerrumPix_Anpassung_02bfa9b2" xml:space="preserve">
+    <value>Ajuste de FerrumPix</value>
+  </data>
+  <data name="Das_XMP_Preset_lesen_auch_andere_Entwickler_Regl_e8a6060c" xml:space="preserve">
+    <value>Otros reveladores RAW también pueden leer el ajuste XMP. Los controles sin equivalente se guardan en una sección propia que solo lee FerrumPix.</value>
+  </data>
+  <data name="Eine_LUT_tr_gt_nur_Regler_die_jeden_Bildpunkt_f__bed91772" xml:space="preserve">
+    <value>Una LUT solo contiene controles que cambian cada píxel por separado. Iluminaciones, sombras y blancos se rigen por el brillo de esta imagen, por eso la LUT encaja mejor con imágenes parecidas.</value>
+  </data>
+  <data name="Belichtung_und_Wei_abgleich_wirken_bei_einer_RAW_117535d8" xml:space="preserve">
+    <value>En un RAW, la exposición y el balance de blancos actúan al revelar y faltan en la LUT.</value>
+  </data>
+  <data name="Anpassung_speichern_als_59f73b3e" xml:space="preserve">
+    <value>Guardar ajuste como</value>
+  </data>
+  <data name="Den_Ordner_gibt_es_nicht_0_76cd6749" xml:space="preserve">
+    <value>La carpeta no existe: {0}</value>
+  </data>
+  <data name="Die_Datei_0_gibt_es_schon_Soll_sie_ersetzt_werde_d00e9b88" xml:space="preserve">
+    <value>El archivo {0} ya existe. ¿Reemplazarlo?</value>
+  </data>
+  <data name="Die_Datei_lie_sich_nicht_schreiben_0_29e3bcf1" xml:space="preserve">
+    <value>No se pudo escribir el archivo: {0}</value>
+  </data>
+  <data name="LUT_gespeichert_0_60ecaef8" xml:space="preserve">
+    <value>LUT guardada: {0}</value>
+  </data>
+  <data name="XMP_Preset_gespeichert_0_51a229d8" xml:space="preserve">
+    <value>Ajuste XMP guardado: {0}</value>
+  </data>
+  <data name="Speichern_als_efffd1d6" xml:space="preserve">
+    <value>Guardar como</value>
+  </data>
+  <data name="Gitterpunkte_je_Achse_ff5b824e" xml:space="preserve">
+    <value>Puntos de cuadrícula por eje</value>
+  </data>
+  <data name="Mehr_Punkte_geben_feinere_berg_nge_und_eine_gr_e_87716011" xml:space="preserve">
+    <value>Más puntos dan transiciones más finas y un archivo más grande.</value>
   </data>
 </root>

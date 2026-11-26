@@ -290,6 +290,29 @@ Namespace Services
 
         Private Const OlympusDistortionTag As Integer = &H150A
         Private Const OlympusChromaticAberrationTag As Integer = &H150C
+        Private Const OlympusShadingCompensationTag As Integer = &H50C
+        Private Const PanasonicShadingCompensationTag As Integer = &H8A
+
+        ''' <summary>Hat die Kamera die Randabschattung schon in die Rohdaten gerechnet? Olympus und
+        ''' OM vermerken das in den Kameraeinstellungen (0x050C), Panasonic im Herstellerteil
+        ''' (0x008A), jeweils 1 fuer an. Fehlt das Feld (aeltere Gehaeuse, Kompakte, DNG), heisst das
+        ''' nein.
+        '''
+        ''' <para>WARUM: die Vignettierung eines Profils ist an Rohdaten OHNE diesen Ausgleich gemessen
+        ''' (Lensfun verlangt das fuer jede Kalibrierung). Auf eine schon ausgeglichene Aufnahme gelegt,
+        ''' hellt sie den Rand ein zweites Mal auf; am Bestand trugen 28 Dateien mit gesetztem Feld eine
+        ''' Profilvignettierung von 0,17 bis 2,25 Blenden in der Ecke.</para></summary>
+        Public Shared Function CameraCorrectedShading(directories As IEnumerable(Of Directory)) As Boolean
+            If directories Is Nothing Then Return False
+            Dim value As Integer
+            For Each d In directories
+                If TypeOf d Is MetadataExtractor.Formats.Exif.Makernotes.OlympusCameraSettingsMakernoteDirectory AndAlso
+                   d.TryGetInt32(OlympusShadingCompensationTag, value) Then Return value = 1
+                If TypeOf d Is MetadataExtractor.Formats.Exif.Makernotes.PanasonicMakernoteDirectory AndAlso
+                   d.TryGetInt32(PanasonicShadingCompensationTag, value) Then Return value = 1
+            Next
+            Return False
+        End Function
 
         ' Die Formeln werden an so vielen gleichmaessig verteilten Stellen ausgewertet; linear
         ' dazwischen bleibt der Fehler unter einem Zehntelpixel.

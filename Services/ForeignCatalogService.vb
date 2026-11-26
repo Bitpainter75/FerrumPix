@@ -821,8 +821,8 @@ Namespace Services
         ''' ToneCurvePV2012 = { 0, 0, 255, 255 }, ... }") in ein XMP mit denselben Schluesseln:
         ''' Zahlen, Texte und Wahrheitswerte als crs:-Attribute, Zahlenlisten als rdf:Seq (Kurven als
         ''' Paare "x, y", wie sie in einer XMP stehen), Textlisten ebenso, das Profil (Look) als
-        ''' eigener Block. Listen von Tabellen (lokale Korrekturen, Retusche) bleiben aussen vor; sie
-        ''' liest auch der XMP-Weg nicht.</summary>
+        ''' eigener Block, die Retusche als verschachtelte Liste wie in einer XMP. Die uebrigen Listen
+        ''' von Tabellen (lokale Korrekturen) bleiben aussen vor.</summary>
         Friend Shared Function LuaDevelopToXmp(luaText As String) As String
             Dim root = TryCast(ParseLua(luaText), LuaTable)
             If root Is Nothing OrElse root.Named.Count = 0 Then Return ""
@@ -838,6 +838,12 @@ Namespace Services
                 End If
                 If String.Equals(pair.Key, "Look", StringComparison.Ordinal) Then
                     AppendLook(elements, table)
+                    Continue For
+                End If
+                ' Die Retusche als dieselbe verschachtelte Liste, die eine XMP traegt: gelesen wird
+                ' sie dann von XmpRetouchService wie aus einer Beistelldatei.
+                If RetouchListKeys.Contains(pair.Key) Then
+                    AppendNestedList(elements, pair.Key, table)
                     Continue For
                 End If
                 If table.Named.Count > 0 OrElse table.Items.Count = 0 Then Continue For
@@ -866,6 +872,42 @@ Namespace Services
                    "<rdf:Description rdf:about="""" xmlns:crs=""http://ns.adobe.com/camera-raw-settings/1.0/""" & attributes.ToString() & ">" &
                    elements.ToString() & "</rdf:Description></rdf:RDF></x:xmpmeta>"
         End Function
+
+        ''' <summary>Die Listen der Retusche, die als verschachtelte Struktur uebersetzt werden. Die
+        ''' uebrigen Listen von Tabellen (lokale Korrekturen) bleiben aussen vor.</summary>
+        Private Shared ReadOnly RetouchListKeys As New HashSet(Of String)(StringComparer.Ordinal) From {"RetouchAreas", "RetouchInfo"}
+
+        ''' <summary>Eine Liste als rdf:Seq: ein Text wird ein li mit Text, eine Tabelle ein li mit
+        ''' einer rdf:Description, deren einfache Werte Attribute und deren Listen wieder Elemente
+        ''' sind (so stehen Masks und Dabs in einer XMP). Tiefe begrenzt: mehr als vier Ebenen
+        ''' kommen in der Retusche nicht vor.</summary>
+        Private Shared Sub AppendNestedList(elements As StringBuilder, key As String, table As LuaTable, Optional depth As Integer = 0)
+            If depth > 4 OrElse Not IsPlainName(key) Then Return
+            elements.Append("<crs:").Append(key).Append("><rdf:Seq>")
+            For Each item In table.Items
+                Dim inner = TryCast(item, LuaTable)
+                If inner Is Nothing Then
+                    Dim scalar = ScalarText(item)
+                    If scalar IsNot Nothing Then elements.Append("<rdf:li>").Append(EscapeXml(scalar)).Append("</rdf:li>")
+                    Continue For
+                End If
+                Dim attributes As New StringBuilder()
+                Dim children As New StringBuilder()
+                For Each pair In inner.Named
+                    If Not IsPlainName(pair.Key) Then Continue For
+                    Dim nested = TryCast(pair.Value, LuaTable)
+                    If nested Is Nothing Then
+                        Dim scalar = ScalarText(pair.Value)
+                        If scalar IsNot Nothing Then attributes.Append(" crs:").Append(pair.Key).Append("=""").Append(EscapeXml(scalar)).Append(""""c)
+                    ElseIf nested.Items.Count > 0 Then
+                        AppendNestedList(children, pair.Key, nested, depth + 1)
+                    End If
+                Next
+                elements.Append("<rdf:li><rdf:Description").Append(attributes.ToString()).Append(">").
+                         Append(children.ToString()).Append("</rdf:Description></rdf:li>")
+            Next
+            elements.Append("</rdf:Seq></crs:").Append(key).Append(">"c)
+        End Sub
 
         ''' <summary>Das Profil: Name, Staerke und ob die Staerke gilt als Attribute, die Gruppe als
         ''' Alternative. Die Gruppe steht als Text oder als Tabelle mit Sprachschluesseln.</summary>

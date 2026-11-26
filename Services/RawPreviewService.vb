@@ -174,8 +174,311 @@ Namespace Services
                 ' SD10 ist keines.
                 If X3fPreviewService.IsSupportedX3f(filePath) Then Return X3fPreviewService.ExtractPreview(filePath)
 
-                ' Fuer alle anderen: die Datei nach dem groessten eingebetteten und anzeigbaren
-                ' JPEG absuchen.
+                ' Fuer alle anderen ZUERST gezielt ueber die Dateistruktur: ein paar Kilobyte
+                ' Verzeichnis und dann genau das eine JPEG, statt bis zu 16 MB zu lesen. Erst wenn
+                ' dort keine anzeigetaugliche Vorschau liegt, wird die Datei abgesucht.
+                Dim located = TryLocatePreview(filePath)
+                If located IsNot Nothing Then Return located
+                Return ScanForJpeg(filePath)
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        ' ── Gezielt ueber die Dateistruktur ──────────────────────────────────────
+        ' Erst die Struktur, dann wenige gezielte Lesezugriffe. Die meisten
+        ' RAWs sind TIFF-Abkoemmlinge (CR2, NEF, ARW, DNG, ORF, RW2, PEF, SRW, 3FR, ERF, ...): ihre
+        ' Vorschau steht als JPEGInterchangeFormat, als einzelner JPEG-Streifen eines Verzeichnisses
+        ' oder (Panasonic) als JpgFromRaw im Kopf. Fujifilm nennt Ort und Laenge im festen Kopf der
+        ' RAF. Was nur in einer MakerNote liegt (Olympus, aeltere Nikon und Pentax), findet dieser
+        ' Weg nicht; dann ist sein Fund klein, und der Scanner uebernimmt.
+
+        ''' <summary>Was der gezielte Weg ueber eine Datei herausfand, fuer die Messung im
+        ''' Pruefstand: wie viele Bytes er gelesen hat und ob er eine Vorschau lieferte.</summary>
+        Friend NotInheritable Class LocateTrace
+            Public BytesRead As Long
+            Public Candidates As Integer
+        End Class
+
+        ''' <summary>Die groesste anzeigetaugliche Vorschau, gefunden ueber die Dateistruktur, oder
+        ''' Nothing, wenn die Datei keine bekannte Struktur hat oder ihr groesster Fund kuerzer als
+        ''' <see cref="MinDisplayEdge"/> ist. Nothing heisst "Scanner fragen", nicht "keine
+        ''' Vorschau".</summary>
+        Friend Shared Function TryLocatePreview(filePath As String, Optional trace As LocateTrace = Nothing) As MemoryStream
+            Try
+                Using fs As New FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096)
+                    Return LocatePreview(fs, trace)
+                End Using
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        Private Const MaxLocatedPreviewBytes As Long = 64L * 1024 * 1024
+        Private Const MaxLocateIfds As Integer = 32
+        Private Const MaxLocateEntries As Integer = 1000
+
+        Friend Shared Function LocatePreview(fs As Stream, Optional trace As LocateTrace = Nothing) As MemoryStream
+            Dim ranges = LocatePreviewRanges(fs, trace)
+            If ranges Is Nothing OrElse ranges.Count = 0 Then Return Nothing
+
+            ' Jeden Fund am Kopf pruefen: anzeigbare Rahmenart, Masse. Das kostet je Fund einige
+            ' Kilobyte, nicht das ganze Bild.
+            Dim best As (Offset As Long, Length As Long, Edge As Integer) = (0, 0, 0)
+            Dim seen As New HashSet(Of Long)()
+            For Each r In ranges
+                If r.Length < 8192 OrElse r.Length > MaxLocatedPreviewBytes OrElse Not seen.Add(r.Offset) Then Continue For
+                If r.Offset < 0 OrElse r.Offset + r.Length > fs.Length Then Continue For
+                Dim width = 0, height = 0
+                If Not TryReadLocatedFrame(fs, r.Offset, r.Length, width, height, trace) Then Continue For
+                If trace IsNot Nothing Then trace.Candidates += 1
+                ' Wie der Scanner: das laengste JPEG gewinnt.
+                If r.Length > best.Length Then best = (r.Offset, r.Length, Math.Max(width, height))
+            Next
+            If best.Length = 0 OrElse best.Edge < MinDisplayEdge Then Return Nothing
+
+            Dim data = ReadRange(fs, best.Offset, CInt(best.Length), trace)
+            If data Is Nothing Then Return Nothing
+            ' Die angegebene Laenge kann Fuellbytes hinter dem Ende tragen; auf das Ende (EOI)
+            ' kuerzen wie der Scanner.
+            Dim exact = WalkJpegLength(data, 0)
+            If exact > 0 AndAlso exact < data.Length Then Return New MemoryStream(data, 0, exact, False)
+            Return New MemoryStream(data, 0, data.Length, False)
+        End Function
+
+        ''' <summary>Die Stellen, an denen die Struktur der Datei ein JPEG nennt. Nothing, wenn die
+        ''' Datei weder TIFF-artig noch eine RAF ist.</summary>
+        Private Shared Function LocatePreviewRanges(fs As Stream, trace As LocateTrace) As List(Of (Offset As Long, Length As Long))
+            Dim header = ReadRange(fs, 0, 100, trace)
+            If header Is Nothing OrElse header.Length < 16 Then Return Nothing
+            Dim result As New List(Of (Offset As Long, Length As Long))()
+
+            ' Fujifilm: "FUJIFILMCCD-RAW " und an Stelle 84 Ort und Laenge des JPEG (gross-endian).
+            If Text.Encoding.ASCII.GetString(header, 0, 16) = "FUJIFILMCCD-RAW " Then
+                If header.Length < 92 Then Return Nothing
+                result.Add((ReadU32At(header, 84, False), ReadU32At(header, 88, False)))
+                Return result
+            End If
+
+            Dim little As Boolean
+            If header(0) = &H49 AndAlso header(1) = &H49 Then
+                little = True
+            ElseIf header(0) = &H4D AndAlso header(1) = &H4D Then
+                little = False
+            Else
+                Return Nothing
+            End If
+            ' 42 fuer TIFF, 0x55 fuer Panasonic RW2, "RO"/"RS" fuer Olympus ORF.
+            Dim magic = ReadU16At(header, 2, little)
+            If magic <> 42 AndAlso magic <> &H55 AndAlso magic <> &H4F52 AndAlso magic <> &H5352 Then Return Nothing
+
+            Dim pending As New Queue(Of Long)()
+            Dim visited As New HashSet(Of Long)()
+            pending.Enqueue(ReadU32At(header, 4, little))
+            Do While pending.Count > 0 AndAlso visited.Count < MaxLocateIfds
+                Dim offset = pending.Dequeue()
+                If offset < 8 OrElse offset >= fs.Length OrElse Not visited.Add(offset) Then Continue Do
+                Dim countBytes = ReadRange(fs, offset, 2, trace)
+                If countBytes Is Nothing Then Continue Do
+                Dim count = ReadU16At(countBytes, 0, little)
+                If count <= 0 OrElse count > MaxLocateEntries Then Continue Do
+                Dim entries = ReadRange(fs, offset + 2, count * 12 + 4, trace)
+                If entries Is Nothing Then Continue Do
+                Dim nextIfd = ReadU32At(entries, count * 12, little)
+                If nextIfd > 0 Then pending.Enqueue(nextIfd)
+
+                Dim jpegStart As Long = -1, jpegLength As Long = -1
+                Dim compression = 0
+                Dim stripOffsets As Long() = Nothing, stripCounts As Long() = Nothing
+                For i = 0 To count - 1
+                    Dim e = i * 12
+                    Dim tag = ReadU16At(entries, e, little)
+                    Dim type = ReadU16At(entries, e + 2, little)
+                    Dim n = ReadU32At(entries, e + 4, little)
+                    Select Case tag
+                        Case &H201 : jpegStart = EntryValue(entries, e, type, little)
+                        Case &H202 : jpegLength = EntryValue(entries, e, type, little)
+                        Case &H103 : compression = CInt(EntryValue(entries, e, type, little))
+                        Case &H111 : stripOffsets = EntryValues(fs, entries, e, type, n, little, trace)
+                        Case &H117 : stripCounts = EntryValues(fs, entries, e, type, n, little, trace)
+                        Case &H2E, &H127
+                            ' Panasonic JpgFromRaw (0x2E) und, bei neueren Gehaeusen (G9 II, GH6),
+                            ' JpgFromRaw2 (0x127) in voller Groesse: je ein Wert vom Typ UNDEFINED,
+                            ' der das JPEG selbst ist. Ohne den zweiten gewann dort das 1920er.
+                            If type = 7 AndAlso n > 4 Then result.Add((ReadU32At(entries, e + 8, little), n))
+                        Case &H14A
+                            Dim subs = EntryValues(fs, entries, e, type, n, little, trace)
+                            If subs IsNot Nothing Then
+                                For Each s In subs
+                                    pending.Enqueue(s)
+                                Next
+                            End If
+                        Case &H8769
+                            pending.Enqueue(EntryValue(entries, e, type, little))
+                        Case &H927C
+                            ' Olympus legt die Vorschau in die MakerNote, nicht in ein Verzeichnis.
+                            If n > 16 Then AddOlympusPreview(fs, ReadU32At(entries, e + 8, little), result, trace)
+                    End Select
+                Next
+                If jpegStart > 0 AndAlso jpegLength > 0 Then result.Add((jpegStart, jpegLength))
+                ' Ein Verzeichnis, dessen Bild ein einzelner JPEG-Streifen ist (DNG-Vorschau, NEF).
+                ' Verlustfrei gepackte Sensordaten sortiert danach die Pruefung der Rahmenart aus.
+                If (compression = 6 OrElse compression = 7) AndAlso stripOffsets IsNot Nothing AndAlso
+                   stripCounts IsNot Nothing AndAlso stripOffsets.Length = 1 AndAlso stripCounts.Length = 1 Then
+                    result.Add((stripOffsets(0), stripCounts(0)))
+                End If
+            Loop
+            Return result
+        End Function
+
+        ''' <summary>Rahmenart und Masse eines gefundenen JPEG, Segment fuer Segment ueber die Datei
+        ''' gelesen: je Segment nur seine vier Kopfbytes. Nicht ueber TryReadFrameHeader, das nur die
+        ''' ersten 8 KB ansieht: bei Panasonic steht vor dem Rahmenkopf ein Exif-Block samt
+        ''' Vorschaubild von gut 60 KB, und jeder RW2-Fund fiel dort durch.</summary>
+        Private Shared Function TryReadLocatedFrame(fs As Stream, start As Long, length As Long,
+                                                    ByRef width As Integer, ByRef height As Integer,
+                                                    trace As LocateTrace) As Boolean
+            width = 0
+            height = 0
+            Dim soi = ReadRange(fs, start, 2, trace)
+            If soi Is Nothing OrElse soi(0) <> &HFF OrElse soi(1) <> &HD8 Then Return False
+            Dim pos = start + 2
+            Dim limit = start + length
+            For hop = 1 To 64
+                If pos + 4 > limit Then Return False
+                Dim seg = ReadRange(fs, pos, 4, trace)
+                If seg Is Nothing OrElse seg(0) <> &HFF Then Return False
+                Dim marker = seg(1)
+                If marker = &HFF Then
+                    pos += 1
+                    Continue For
+                End If
+                If marker >= &HC0 AndAlso marker <= &HCF AndAlso
+                   marker <> &HC4 AndAlso marker <> &HC8 AndAlso marker <> &HCC Then
+                    ' Nur Grundform, erweiterte und fortschreitende Codierung sind anzeigbar.
+                    If marker <> &HC0 AndAlso marker <> &HC1 AndAlso marker <> &HC2 Then Return False
+                    Dim frame = ReadRange(fs, pos + 5, 4, trace)
+                    If frame Is Nothing Then Return False
+                    height = CInt(frame(0)) * 256 + CInt(frame(1))
+                    width = CInt(frame(2)) * 256 + CInt(frame(3))
+                    Return width > 0 AndAlso height > 0
+                End If
+                If marker = &HDA OrElse marker = &HD9 Then Return False
+                If (marker >= &HD0 AndAlso marker <= &HD7) OrElse marker = &H01 Then
+                    pos += 2
+                    Continue For
+                End If
+                Dim segLen = CInt(seg(2)) * 256 + CInt(seg(3))
+                If segLen < 2 Then Return False
+                pos += 2 + segLen
+            Next
+            Return False
+        End Function
+
+        ''' <summary>Die Vorschau einer Olympus-MakerNote neuer Form ("OLYMPUS", Byte-Folge, 3): das
+        ''' Verzeichnis beginnt 12 Bytes danach, alle Stellen zaehlen ab dem Anfang der MakerNote.
+        ''' Unter Eintrag 0x2020 (Kameraeinstellungen) stehen Anfang (0x0101) und Laenge (0x0102)
+        ''' des JPEG. Die alte Form ("OLYMP") kennt das nicht; dort sucht der Scanner.</summary>
+        Private Shared Sub AddOlympusPreview(fs As Stream, noteStart As Long,
+                                             result As List(Of (Offset As Long, Length As Long)),
+                                             trace As LocateTrace)
+            Dim head = ReadRange(fs, noteStart, 12, trace)
+            If head Is Nothing OrElse Text.Encoding.ASCII.GetString(head, 0, 8) <> "OLYMPUS" & ChrW(0) Then Return
+            Dim little As Boolean
+            If head(8) = &H49 AndAlso head(9) = &H49 Then
+                little = True
+            ElseIf head(8) = &H4D AndAlso head(9) = &H4D Then
+                little = False
+            Else
+                Return
+            End If
+            Dim settings = ReadNoteIfdValue(fs, noteStart, noteStart + 12, &H2020, little, trace)
+            If settings <= 0 Then Return
+            Dim start = ReadNoteIfdValue(fs, noteStart, noteStart + settings, &H101, little, trace)
+            Dim length = ReadNoteIfdValue(fs, noteStart, noteStart + settings, &H102, little, trace)
+            If start > 0 AndAlso length > 0 Then result.Add((noteStart + start, length))
+        End Sub
+
+        ''' <summary>Der Wert (oder die Stelle) eines Eintrags in einem Verzeichnis der MakerNote,
+        ''' -1 wenn er fehlt.</summary>
+        Private Shared Function ReadNoteIfdValue(fs As Stream, noteStart As Long, ifdOffset As Long, wanted As Integer,
+                                                 little As Boolean, trace As LocateTrace) As Long
+            Dim countBytes = ReadRange(fs, ifdOffset, 2, trace)
+            If countBytes Is Nothing Then Return -1
+            Dim count = ReadU16At(countBytes, 0, little)
+            If count <= 0 OrElse count > MaxLocateEntries Then Return -1
+            Dim entries = ReadRange(fs, ifdOffset + 2, count * 12, trace)
+            If entries Is Nothing Then Return -1
+            For i = 0 To count - 1
+                Dim e = i * 12
+                If ReadU16At(entries, e, little) <> wanted Then Continue For
+                Dim type = ReadU16At(entries, e + 2, little)
+                If type = 3 Then Return ReadU16At(entries, e + 8, little)
+                Return ReadU32At(entries, e + 8, little)
+            Next
+            Return -1
+        End Function
+
+        Private Shared Function ReadRange(fs As Stream, offset As Long, length As Integer, trace As LocateTrace) As Byte()
+            If offset < 0 OrElse length <= 0 OrElse offset >= fs.Length Then Return Nothing
+            length = CInt(Math.Min(length, fs.Length - offset))
+            Dim buffer(length - 1) As Byte
+            fs.Position = offset
+            Dim read = 0
+            Do While read < length
+                Dim n = fs.Read(buffer, read, length - read)
+                If n <= 0 Then Exit Do
+                read += n
+            Loop
+            If trace IsNot Nothing Then trace.BytesRead += read
+            If read < length Then Return Nothing
+            Return buffer
+        End Function
+
+        Private Shared Function EntryValue(entries As Byte(), e As Integer, type As Integer, little As Boolean) As Long
+            Select Case type
+                Case 3 : Return ReadU16At(entries, e + 8, little)
+                Case 4, 13 : Return ReadU32At(entries, e + 8, little)
+                Case Else : Return 0
+            End Select
+        End Function
+
+        Private Shared Function EntryValues(fs As Stream, entries As Byte(), e As Integer, type As Integer,
+                                            count As Long, little As Boolean, trace As LocateTrace) As Long()
+            Dim size = If(type = 3, 2, If(type = 4 OrElse type = 13, 4, 0))
+            If size = 0 OrElse count <= 0 OrElse count > 4096 Then Return Nothing
+            Dim total = CInt(count) * size
+            Dim raw As Byte()
+            Dim start As Integer
+            If total <= 4 Then
+                raw = entries
+                start = e + 8
+            Else
+                raw = ReadRange(fs, ReadU32At(entries, e + 8, little), total, trace)
+                If raw Is Nothing Then Return Nothing
+                start = 0
+            End If
+            Dim values(CInt(count) - 1) As Long
+            For i = 0 To CInt(count) - 1
+                values(i) = If(size = 2, ReadU16At(raw, start + i * 2, little), ReadU32At(raw, start + i * 4, little))
+            Next
+            Return values
+        End Function
+
+        Private Shared Function ReadU16At(b As Byte(), o As Integer, little As Boolean) As Integer
+            Return If(little, b(o) Or (CInt(b(o + 1)) << 8), (CInt(b(o)) << 8) Or b(o + 1))
+        End Function
+
+        Private Shared Function ReadU32At(b As Byte(), o As Integer, little As Boolean) As Long
+            If little Then
+                Return CLng(b(o)) Or (CLng(b(o + 1)) << 8) Or (CLng(b(o + 2)) << 16) Or (CLng(b(o + 3)) << 24)
+            End If
+            Return (CLng(b(o)) << 24) Or (CLng(b(o + 1)) << 16) Or (CLng(b(o + 2)) << 8) Or CLng(b(o + 3))
+        End Function
+
+        ''' <summary>Fuer die Messung: der alte Weg allein, ohne den gezielten davor.</summary>
+        Friend Shared Function ScanOnly(filePath As String) As MemoryStream
+            Try
                 Return ScanForJpeg(filePath)
             Catch
                 Return Nothing

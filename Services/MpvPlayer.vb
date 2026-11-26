@@ -3,6 +3,7 @@ Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.Runtime.InteropServices
 Imports System.Threading
+Imports System.Threading.Tasks
 
 Namespace Services
 
@@ -36,6 +37,44 @@ Namespace Services
         Private Const PropDuration As ULong = 2UL
         Private Const PropPause As ULong = 3UL
         Private Const PropMute As ULong = 4UL
+        Private Const PropVid As ULong = 5UL
+        Private Const PropVoConfigured As ULong = 6UL
+
+        ''' <summary>MPV_ERROR_VO_INIT_FAILED (client.h): die Bildausgabe liess sich nicht aufbauen.</summary>
+        Friend Const MpvErrorVoInitFailed As Integer = -15
+
+        ''' <summary>MPV_ERROR_NOTHING_TO_PLAY (client.h): weder Bild noch Ton blieb uebrig.</summary>
+        Friend Const MpvErrorNothingToPlay As Integer = -16
+
+        ''' <summary>So lange wartet der Spieler, bevor er nach einer gescheiterten Bildausgabe neu
+        ''' laedt. Das Scheitern kam im Diagnoseprotokoll gleich nach dem Ankommen eines frischen
+        ''' Fensters; ein Neuladen im selben Augenblick traefe dasselbe Fenster im selben Zustand.</summary>
+        Private Const VideoOutputRetryDelayMilliseconds As Integer = 300
+
+        ''' <summary>Zaehlt jeden Ladebefehl an mpv. Eine Meldung ueber eine gescheiterte
+        ''' Bildausgabe merkt sich den Stand, und das Neuladen gilt nur, wenn seitdem kein anderer
+        ''' Film geladen wurde. Geschrieben vom Befehlsfaden, gelesen auch vom Ereignisfaden.</summary>
+        Private _loadGeneration As Long = 0
+
+        ''' <summary>Darf der zuletzt geladene Film nach einer gescheiterten Bildausgabe noch einmal
+        ''' geladen werden? Wahr nach jedem gewoehnlichen Laden, falsch nach dem Neuladen selbst:
+        ''' daran haengt, dass es GENAU EINMAL geschieht und nie zur Schleife wird. Geschrieben vom
+        ''' Befehlsfaden, gelesen auch vom Ereignisfaden.</summary>
+        Private _videoOutputRetryAvailable As Boolean = False
+
+        ''' <summary>Hat die Bildausgabe seit dem Beginn des laufenden Films einen Fehler gemeldet?
+        ''' Geschrieben vom Ereignisfaden, gelesen nach der Pause von einem Zeitgeber.</summary>
+        Private _videoOutputErrorSinceStart As Boolean = False
+
+        ''' <summary>Fuer welchen Stand von <see cref="_loadGeneration"/> das Neuladen schon
+        ''' eingereiht ist. Nur ueber Interlocked.</summary>
+        Private _videoOutputRetryScheduledFor As Long = -1
+
+        ''' <summary>NUR FUER DEN PRUEFSTAND: Optionen, die nach den eigenen und vor
+        ''' mpv_initialize gesetzt werden, vor <see cref="Start"/> per Reflexion belegt. Damit laesst
+        ''' sich die Bildausgabe ohne Fenstersystem gezielt scheitern lassen (eine Grafikschnittstelle,
+        ''' zu der kein Kontext passt) und das Neuladen danach messen. Die Anwendung setzt hier nichts.</summary>
+        Private _diagnosticOptions As KeyValuePair(Of String, String)() = Array.Empty(Of KeyValuePair(Of String, String))()
 
         ''' <summary>Schützt den Zustand, der zwischen Anzeige-, Befehls- und Ereignisfaden geteilt
         ''' wird. Über einem libmpv-Aufruf darf diese Sperre NIE gehalten werden: sonst wartet der
@@ -116,6 +155,14 @@ Namespace Services
         Public Event PauseChanged(isPaused As Boolean)
         Public Event MuteChanged(isMuted As Boolean)
         Public Event EndReached(reason As Integer, [error] As Integer)
+
+        ''' <summary>mpv meldet, ob seine Bildausgabe steht (Eigenschaft <c>vo-configured</c>).
+        '''
+        ''' WOFUER: der Betrachter schiebt die native Flaeche fuer das Standbild aus dem Hauptfenster
+        ''' (ViewerView.UpdateVideoPosterCover), und zwar erst, wenn diese Meldung wahr ist: mpv soll
+        ''' seine Ausgabe auf einem Fenster an seinem Platz aufbauen. Im Protokoll zeigt die Meldung
+        ''' ausserdem, ob ein Film ueberhaupt eine Bildausgabe bekommen hat.</summary>
+        Public Event VideoOutputConfiguredChanged(configured As Boolean)
 
         ''' <summary>Ein Ladebefehl ist WIRKLICH an mpv gegangen. Feuert nicht, wenn der Riegel in
         ''' <see cref="LoadCore"/> ein zweites Laden desselben Films abgewiesen hat.
@@ -448,7 +495,10 @@ Namespace Services
             End Try
         End Sub
 
-        Private Sub LoadCore(path As String, Optional force As Boolean = False)
+        ''' <param name="isVideoOutputRetry">Das eine Neuladen nach einer gescheiterten Bildausgabe
+        ''' (<see cref="RetryAfterVideoOutputFailureCore"/>). Danach gibt es fuer diesen Film keinen
+        ''' weiteren Versuch.</param>
+        Private Sub LoadCore(path As String, Optional force As Boolean = False, Optional isVideoOutputRetry As Boolean = False)
             ' DASSELBE ZWEIMAL ZU LADEN IST EIN ABSTURZ, und der Riegel dagegen steht HIER.
             '
             ' Zwei "loadfile ... replace" kurz hintereinander bauen mpv um, waehrend der Zeichenfaden
@@ -489,6 +539,10 @@ Namespace Services
             ' VOR dem Befehl gezaehlt: mpvs "start-file" kann eintreffen, bevor der Aufruf zurueck ist.
             Volatile.Write(_lastLoadTimestamp, Diagnostics.Stopwatch.GetTimestamp())
             Interlocked.Increment(_loadsAwaitingStart)
+            ' Ebenso vor dem Befehl: die Bildausgabe kann scheitern, bevor der Aufruf zurueck ist,
+            ' und die Meldung darueber muss schon den neuen Stand sehen.
+            Interlocked.Increment(_loadGeneration)
+            Volatile.Write(_videoOutputRetryAvailable, Not isVideoOutputRetry)
             If CommandAsyncRaw(_handle, "loadfile", path, "replace") < 0 Then
                 If Interlocked.Decrement(_loadsAwaitingStart) < 0 Then Volatile.Write(_loadsAwaitingStart, 0)
                 LogState("Laden abgewiesen")
@@ -520,6 +574,125 @@ Namespace Services
             ' Die Regel dazu steht seit dem Riegel in LoadCore und wird hier nicht zweitgefasst:
             ' zwei Fassungen derselben Regel laufen auseinander.
             LoadCore(path)
+        End Sub
+
+        ''' <summary>Was nach einer gescheiterten Bildausgabe zu tun ist.</summary>
+        Friend Enum VideoOutputRetryDecision
+            ''' <summary>Denselben Film einmal neu laden.</summary>
+            Retry
+            ''' <summary>Das eine Neuladen ist schon geschehen; es bleibt beim Ton ohne Bild.</summary>
+            AlreadyRetried
+            ''' <summary>Seit der Meldung wurde ein anderer Film geladen; sie gilt nicht mehr.</summary>
+            Superseded
+            ''' <summary>Nichts geladen (gestoppt) oder kein Ausgabeziel mehr.</summary>
+            NothingToRetry
+        End Enum
+
+        ''' <summary>Die Entscheidung nach einer gescheiterten Bildausgabe, ohne libmpv und ohne
+        ''' Fenster, damit der Pruefstand sie messen kann; der echte Fehlerweg braucht ein Fenster
+        ''' des Fenstersystems und ist nur ueber die Zeile im Diagnoseprotokoll zu beobachten.</summary>
+        ''' <param name="failedGeneration">Stand von <see cref="_loadGeneration"/>, als das Scheitern gemeldet wurde.</param>
+        ''' <param name="currentGeneration">Stand jetzt.</param>
+        ''' <param name="loadedPath">Was jetzt geladen ist.</param>
+        ''' <param name="retryAvailable">Ob fuer den geladenen Film noch ein Neuladen offen ist.</param>
+        ''' <param name="readyForPlayback">Ob mpv steht und ein Ausgabeziel kennt.</param>
+        Friend Shared Function DecideVideoOutputRetry(failedGeneration As Long, currentGeneration As Long,
+                                                     loadedPath As String, retryAvailable As Boolean,
+                                                     readyForPlayback As Boolean) As VideoOutputRetryDecision
+            If failedGeneration <> currentGeneration Then Return VideoOutputRetryDecision.Superseded
+            If String.IsNullOrEmpty(loadedPath) OrElse Not readyForPlayback Then Return VideoOutputRetryDecision.NothingToRetry
+            If Not retryAvailable Then Return VideoOutputRetryDecision.AlreadyRetried
+            Return VideoOutputRetryDecision.Retry
+        End Function
+
+        ''' <summary>Hat mpv den Film beendet, weil die Bildausgabe nicht aufzubauen war? So endet
+        ''' ein Film OHNE Tonspur: mpv hat nach dem Wegfall des Bildes nichts mehr zu spielen.
+        '''
+        ''' <para>An mpv 0.42 gemessen kommt dabei NICHT VO_INIT_FAILED (-15) an, sondern
+        ''' NOTHING_TO_PLAY (-16): mpv vermerkt erst den Fehler der Bildausgabe und ueberschreibt
+        ''' ihn, wenn es feststellt, dass keine Spur mehr uebrig ist. -16 kommt ebenso bei einem
+        ''' fehlenden Decoder; deshalb zaehlt es nur zusammen mit einem Fehler aus dem Modul der
+        ''' Bildausgabe seit dem Beginn des Films. -15 selbst gilt immer, falls eine andere Fassung
+        ''' es unveraendert durchreicht.</para></summary>
+        Friend Shared Function IsVideoOutputInitEnd(reason As Integer, errorCode As Integer, outputErrorSinceStart As Boolean) As Boolean
+            If reason <> CInt(MpvInterop.MpvEndFileReason.Error) Then Return False
+            Return errorCode = MpvErrorVoInitFailed OrElse
+                   (outputErrorSinceStart AndAlso errorCode = MpvErrorNothingToPlay)
+        End Function
+
+        ''' <summary>Hat mpv die Bildspur abgewaehlt, weil die Bildausgabe scheiterte? So endet es
+        ''' bei einem Film MIT Tonspur: mpv meldet kein Ende und keinen Fehlercode, spielt den Ton
+        ''' weiter und setzt "vid" auf "no" (an mpv 0.42 nachgemessen). Dasselbe tut es bei einem
+        ''' fehlenden Decoder und bei einer Datei ohne Bildspur; dort hilft kein Neuladen. Die
+        ''' beiden trennt, dass vorher ein Fehler aus dem Modul der Bildausgabe kam
+        ''' (<see cref="MpvInterop.IsVideoOutputError"/>).</summary>
+        Friend Shared Function IsVideoTrackDroppedByOutput(vidValue As String, outputErrorSinceStart As Boolean) As Boolean
+            Return outputErrorSinceStart AndAlso String.Equals(vidValue, "no", StringComparison.Ordinal)
+        End Function
+
+        ''' <summary>Vom Ereignisfaden: mpv hat die Bildspur abgewaehlt (<paramref name="vidValue"/>)
+        ''' oder den Film mit einem Fehler beendet (<paramref name="endReason"/> ab 0). Ob es die
+        ''' Bildausgabe war, wird erst nach einer kurzen Pause entschieden: die Protokollmeldungen
+        ''' von mpv laufen ueber einen eigenen Puffer und kommen NACH dem Ende an (am Pruefstand
+        ''' gesehen, ein Film ohne Tonspur). Danach wird das Neuladen auf dem Befehlsfaden
+        ''' eingereiht; der Ereignisfaden ruft selbst nichts von libmpv, und gewartet wird nicht auf
+        ''' dem Befehlsfaden.
+        '''
+        ''' War es nicht die Bildausgabe, geht ein Ende so an die Anzeige, wie es kam, nur um die
+        ''' Pause spaeter. Ist inzwischen ein anderer Film geladen, gilt die Meldung nicht mehr.</summary>
+        Private Sub CheckVideoOutputFailureLater(vidValue As String, endReason As Integer, endError As Integer)
+            Dim generation = Interlocked.Read(_loadGeneration)
+            Task.Delay(VideoOutputRetryDelayMilliseconds).ContinueWith(
+                Sub(t)
+                    If Interlocked.Read(_loadGeneration) <> generation Then Return
+                    Dim outputError = Volatile.Read(_videoOutputErrorSinceStart)
+                    If endReason >= 0 Then
+                        If IsVideoOutputInitEnd(endReason, endError, outputError) Then
+                            EnqueueVideoOutputRetry(generation, "Ende mit Fehler " & endError.ToString(CultureInfo.InvariantCulture))
+                        Else
+                            RaiseEvent EndReached(endReason, endError)
+                        End If
+                    ElseIf IsVideoTrackDroppedByOutput(vidValue, outputError) Then
+                        EnqueueVideoOutputRetry(generation, "Bildspur abgewaehlt")
+                    End If
+                End Sub)
+        End Sub
+
+        ''' <summary>Reiht das Neuladen fuer diesen Stand der Ladezaehlung EINMAL ein: ein Film ohne
+        ''' Tonspur meldet beides, die abgewaehlte Bildspur und das Ende.</summary>
+        Private Sub EnqueueVideoOutputRetry(generation As Long, cause As String)
+            If Interlocked.Exchange(_videoOutputRetryScheduledFor, generation) = generation Then Return
+            Enqueue(Sub() RetryAfterVideoOutputFailureCore(generation, cause))
+        End Sub
+
+        ''' <summary>Laedt den Film nach einer gescheiterten Bildausgabe GENAU EINMAL neu.
+        '''
+        ''' <para>Beobachtet unter Linux auf dem Weg ueber "wid": gleich nach dem Laden in ein
+        ''' Fenster meldet mpv "Could not make context current", der Ton laeuft, das Bild fehlt, und
+        ''' beim naechsten Laden klappt es. Das Neuladen geht durch <see cref="LoadCore"/> wie jedes
+        ''' andere: es setzt die Pause, meldet das Laden (die Anzeige faengt von vorn an) und spielt,
+        ''' wenn abgespielt werden soll. Gescheitert ist es am Anfang des Films, verloren geht also
+        ''' hoechstens der erste Augenblick Ton.</para>
+        '''
+        ''' <para>Der Riegel gegen das zweite Laden desselben Films wird dabei mit "force"
+        ''' uebergangen. Seine Gefahr ist ein Umbau, waehrend der Zeichenfaden noch Bilder der ersten
+        ''' Fassung holt; hier gibt es keine Bilder, die Ausgabe kam ja nicht zustande, und dazwischen
+        ''' liegt die Pause.</para></summary>
+        Private Sub RetryAfterVideoOutputFailureCore(failedGeneration As Long, cause As String)
+            Dim decision = DecideVideoOutputRetry(failedGeneration, Interlocked.Read(_loadGeneration), _loadedPath,
+                                                  Volatile.Read(_videoOutputRetryAvailable), ReadyForPlayback())
+            Select Case decision
+                Case VideoOutputRetryDecision.Retry
+                    Dim path = _loadedPath
+                    LogState($"Bildausgabe gescheitert ({cause}), lade einmal neu")
+                    LoadCore(path, force:=True, isVideoOutputRetry:=True)
+                Case VideoOutputRetryDecision.AlreadyRetried
+                    LogState($"Bildausgabe auch nach dem Neuladen gescheitert ({cause}), kein weiterer Versuch")
+                Case VideoOutputRetryDecision.Superseded
+                    LogState($"Bildausgabe gescheitert ({cause}), inzwischen ein anderer Film, kein Neuladen")
+                Case Else
+                    LogState($"Bildausgabe gescheitert ({cause}), nichts mehr geladen, kein Neuladen")
+            End Select
         End Sub
 
         ''' <summary>Spielt mpv gerade? Wahr, wenn ein Film geladen ist und die Pause aufgehoben
@@ -616,10 +789,19 @@ Namespace Services
                     SetOptionStringRaw("hwdec", If(_enableHardwareAcceleration, "auto-safe", "no"))
                     If OperatingSystem.IsLinux() Then
                         SetOptionStringRaw("vo", "gpu")
-                        SetOptionStringRaw("gpu-context", "x11egl")
+                        ' Erst EGL, dann GLX: mpv probiert die Liste der Reihe nach und nimmt den
+                        ' ersten Kontext, der sich aufbauen laesst. Seit dem 2026-11-25 scheiterte EGL
+                        ' auf dem Fenster der Videoflaeche bei jedem Film mit "Could not make context
+                        ' current" (XWayland, NVIDIA); ohne Ausweichweg blieb das Bild schwarz und nur
+                        ' der Ton lief.
+                        SetOptionStringRaw("gpu-context", "x11egl,x11")
                     End If
                     SetOptionStringRaw("wid", WindowHandleToUnsignedString(_windowHandle))
                 End If
+
+                For Each extra In _diagnosticOptions
+                    SetOptionStringRaw(extra.Key, extra.Value)
+                Next
 
                 Dim result = MpvInterop.Initialize(_handle)
                 If result < 0 Then Throw New InvalidOperationException($"libmpv konnte nicht initialisiert werden ({result}).")
@@ -630,6 +812,12 @@ Namespace Services
                 ObservePropertyRaw(PropDuration, "duration", MpvInterop.MpvFormat.Double)
                 ObservePropertyRaw(PropPause, "pause", MpvInterop.MpvFormat.Flag)
                 ObservePropertyRaw(PropMute, "mute", MpvInterop.MpvFormat.Flag)
+                ' Faellt die Bildspur weg, weil die Bildausgabe scheiterte, setzt mpv "vid" auf
+                ' "no" und spielt den Ton weiter (siehe IsVideoTrackDroppedByOutput).
+                ObservePropertyRaw(PropVid, "vid", MpvInterop.MpvFormat.String)
+                ' Ob die Bildausgabe steht: erst danach darf die native Flaeche fuer das Standbild
+                ' aus dem Fenster (siehe VideoOutputConfiguredChanged).
+                ObservePropertyRaw(PropVoConfigured, "vo-configured", MpvInterop.MpvFormat.Flag)
 
                 Dim muted As Boolean
                 SyncLock _syncRoot
@@ -767,6 +955,7 @@ Namespace Services
                     Case MpvInterop.MpvEventId.None
                     Case MpvInterop.MpvEventId.StartFile
                         loggedMessages = 0
+                        Volatile.Write(_videoOutputErrorSinceStart, False)
                         ' Der neue Film beginnt: ab hier gehoeren die Meldungen ihm.
                         '
                         ' Abgezogen wird, was seit dem zuletzt begonnenen Eintrag an Eintraegen
@@ -786,6 +975,9 @@ Namespace Services
                         End If
                         If Interlocked.Add(_loadsAwaitingStart, -CInt(begun)) < 0 Then Volatile.Write(_loadsAwaitingStart, 0)
                     Case MpvInterop.MpvEventId.LogMessage
+                        ' Auch jenseits der Grenze unten: ob die Bildausgabe gescheitert ist,
+                        ' entscheidet ueber das Neuladen und nicht ueber das Protokoll.
+                        If MpvInterop.IsVideoOutputError(ev) Then Volatile.Write(_videoOutputErrorSinceStart, True)
                         ' Je Datei eine begrenzte Zahl: eine Datei, die bei jedem Bild warnt, soll
                         ' das Protokoll nicht fuellen. Die ersten Meldungen sind die, die den
                         ' Grund nennen.
@@ -800,7 +992,19 @@ Namespace Services
                         Dim endData = Marshal.PtrToStructure(Of MpvInterop.MpvEventEndFile)(ev.Data)
                         ' Das Ende des ERSETZTEN Films, waehrend der naechste schon geladen gemeldet
                         ' ist, geht niemanden mehr an (siehe _loadsAwaitingStart).
-                        If Not AwaitingNewFile() Then RaiseEvent EndReached(CInt(endData.Reason), endData.Error)
+                        If Not AwaitingNewFile() Then
+                            ' Ein Film ohne Tonspur, dessen Bildausgabe scheiterte: mpv beendet ihn.
+                            ' Steht das eine Neuladen noch offen, ist das kein Ende fuer die Anzeige.
+                            ' Entschieden wird nach der Pause (CheckVideoOutputFailureLater): der
+                            ' Fehler der Bildausgabe kann erst nach dem Ende im Protokoll ankommen.
+                            ' Gefragt wird hier deshalb nur, ob es die Bildausgabe sein KANN.
+                            If IsVideoOutputInitEnd(CInt(endData.Reason), endData.Error, True) AndAlso
+                               Volatile.Read(_videoOutputRetryAvailable) Then
+                                CheckVideoOutputFailureLater(Nothing, CInt(endData.Reason), endData.Error)
+                            Else
+                                RaiseEvent EndReached(CInt(endData.Reason), endData.Error)
+                            End If
+                        End If
                     Case MpvInterop.MpvEventId.Shutdown
                         ' mpv beendet sich selbst - etwa weil eine Ausgabe wegfiel. Der Handle ist
                         ' danach nur noch zum Wegwerfen gut, und wer das nicht erfährt, schickt
@@ -839,6 +1043,17 @@ Namespace Services
                         _isMuted = muted
                     End SyncLock
                     RaiseEvent MuteChanged(muted)
+                Case PropVid
+                    If prop.Format <> MpvInterop.MpvFormat.String OrElse prop.Data = IntPtr.Zero Then Return
+                    If AwaitingNewFile() Then Return
+                    Dim textPtr = Marshal.ReadIntPtr(prop.Data)
+                    Dim vid = If(textPtr = IntPtr.Zero, Nothing, Marshal.PtrToStringUTF8(textPtr))
+                    If String.Equals(vid, "no", StringComparison.Ordinal) Then CheckVideoOutputFailureLater(vid, -1, 0)
+                Case PropVoConfigured
+                    If prop.Format <> MpvInterop.MpvFormat.Flag OrElse prop.Data = IntPtr.Zero Then Return
+                    Dim configured = Marshal.ReadInt32(prop.Data) <> 0
+                    DiagnosticLogService.LogAlways("VideoPlayback.Weg", If(configured, "Bildausgabe steht", "Bildausgabe abgebaut"))
+                    RaiseEvent VideoOutputConfiguredChanged(configured)
             End Select
         End Sub
 

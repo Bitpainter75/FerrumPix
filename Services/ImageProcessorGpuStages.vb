@@ -2704,6 +2704,136 @@ half4 main(float2 p) {
 }
 "
 
+        ''' <summary>ApplyGrainFilm (Koernung in Fassung 1): die Gitterwerte entstehen auf dem
+        ''' Prozessor (GrainFilmNode, Bitoperationen kann der Shader nicht) und liegen als Textur
+        ''' auf der Karte, je zwei Felder in einer; geglaettet, gewichtet und aufgetragen wird auf der
+        ''' Karte. Textur A traegt die erste Lage und Rot, B Gruen und Blau, C die zweite Lage.</summary>
+        Private Shared Function GrainFilmOnGpu(amount As Single, sizeAmount As Single, freqAmount As Single,
+                                               colorAmount As Single) As Func(Of GRContext, SKImage, SKSurface)
+            If Clamp(amount, 0, 1) <= 0 Then Return Nothing
+            Return Function(gr, image)
+                       Dim w = image.Width, h = image.Height
+                       Dim plan = GrainFilmPlanFor(w, h, amount, sizeAmount, freqAmount, colorAmount)
+                       Dim spacing = plan.Spacing
+                       Dim lattice = Function(fieldSpacing As Double, firstSeed As UInteger, secondSeed As UInteger, kind As String) As SKImage
+                                         Dim starts As Integer() = Nothing, weights As Single() = Nothing
+                                         Dim nx As Integer, ny As Integer
+                                         GrainFilmAxis(w, fieldSpacing, starts, weights, nx)
+                                         GrainFilmAxis(h, fieldSpacing, starts, weights, ny)
+                                         Dim key = $"{nx}x{ny}:{firstSeed}:{secondSeed}"
+                                         ' Werte bis 3: geviertelt, damit sie in die Festkommatextur passen.
+                                         Return NoiseFieldTexture(gr, kind, key,
+                                             Function() NoisePairImage(nx, ny,
+                                                 Sub(j, first, second)
+                                                     For i = 0 To nx - 1
+                                                         first(i) = GrainFilmNode(i, j, firstSeed) / 4.0
+                                                         second(i) = If(secondSeed = 0UI, 0.0, GrainFilmNode(i, j, secondSeed) / 4.0)
+                                                     Next
+                                                 End Sub))
+                                     End Function
+                       Dim latticeA = lattice(spacing, GrainFilmSeeds(0), If(plan.HasColor, GrainFilmSeeds(2), 0UI), "Koernung Fassung 1 A")
+                       Dim latticeB = If(plan.HasColor, lattice(spacing, GrainFilmSeeds(3), GrainFilmSeeds(4), "Koernung Fassung 1 B"), latticeA)
+                       Dim latticeC = If(plan.HasSecond, lattice(spacing * 2.0, GrainFilmSeeds(1), 0UI, "Koernung Fassung 1 C"), latticeA)
+                       If latticeA Is Nothing OrElse latticeB Is Nothing OrElse latticeC Is Nothing Then Return Nothing
+                       Dim effect = StageEffect("Koernung Fassung 1", NoiseFieldCommon & GrainFilmShader)
+                       Dim u = New SKRuntimeEffectUniforms(effect)
+                       u("spacing1") = CSng(spacing)
+                       u("spacing2") = CSng(spacing * 2.0)
+                       u("amplitude") = CSng(plan.Amplitude)
+                       u("firstWeight") = CSng(plan.FirstWeight)
+                       u("secondWeight") = CSng(plan.SecondWeight)
+                       u("colorMix") = CSng(plan.ColorMix)
+                       u("colorNorm") = CSng(plan.ColorNorm)
+                       u("colorWeight") = CSng(plan.ColorWeight)
+                       u("bellGamma") = CSng(GrainFilmBellGamma)
+                       u("bellPower") = CSng(GrainFilmBellPower)
+                       Return DrawStage(gr, w, h, effect, u, ("src", image), ("latA", latticeA), ("latB", latticeB), ("latC", latticeC))
+                   End Function
+        End Function
+
+        ' GrainFilmAxis im Shader: die vier Gewichte einer Achse, schon auf eine Streuung von 1
+        ' gebracht, und der erste Gitterpunkt. p ist die Mitte des Bildpunkts (x + 0,5).
+        Private Const GrainFilmShader As String = "
+uniform shader src;
+uniform shader latA;
+uniform shader latB;
+uniform shader latC;
+uniform float spacing1;
+uniform float spacing2;
+uniform float amplitude;
+uniform float firstWeight;
+uniform float secondWeight;
+uniform float colorMix;
+uniform float colorNorm;
+uniform float colorWeight;
+uniform float bellGamma;
+uniform float bellPower;
+float axisStart(float p, float spacing) {
+    float u = spacing < 1.0 ? p - 0.5 : p / spacing;
+    return floor(u + 0.0001);
+}
+float4 axisWeights(float p, float spacing) {
+    float fine = spacing < 1.0 ? 1.0 : 0.0;
+    float u = fine > 0.5 ? p - 0.5 : p / spacing;
+    float t = u - floor(u + 0.0001);
+    if (t < 0.0) t = 0.0;
+    float t2 = t * t;
+    float t3 = t2 * t;
+    float4 w = float4((1.0 - t) * (1.0 - t) * (1.0 - t), 3.0 * t3 - 6.0 * t2 + 4.0,
+                      -3.0 * t3 + 3.0 * t2 + 3.0 * t + 1.0, t3) / 6.0;
+    float beta = fine > 0.5 ? 1.0 - spacing : 0.0;
+    w = w * (1.0 - beta) + float4(0.0, beta, 0.0, 0.0);
+    return w / sqrt(dot(w, w));
+}
+half4 latticeAt(int which, float2 q) {
+    if (which == 0) return latA.eval(q);
+    if (which == 1) return latB.eval(q);
+    return latC.eval(q);
+}
+// Die beiden Felder einer Textur an der Stelle p: Summe ueber vier mal vier Gitterpunkte.
+float2 fieldPair(int which, float2 p, float spacing) {
+    float2 start = float2(axisStart(p.x, spacing), axisStart(p.y, spacing));
+    float4 wx = axisWeights(p.x, spacing);
+    float4 wy = axisWeights(p.y, spacing);
+    float2 sum = float2(0.0);
+    for (int b = 0; b < 4; b++) {
+        float2 rowSum = float2(0.0);
+        for (int a = 0; a < 4; a++) {
+            half4 t = latticeAt(which, start + float2(float(a), float(b)) + 0.5);
+            rowSum += wx[a] * float2(noiseValue(t.xy), noiseValue(t.zw));
+        }
+        sum += wy[b] * rowSum;
+    }
+    return sum * 4.0;
+}
+float grainChannel(float v, float noise, float amp) {
+    float room = max(0.0, min(v, 255.0 - v));
+    if (room < 0.001) return v;
+    float x = clamp(noise * amp / room, -20.0, 20.0);
+    return v + room * (1.0 - 2.0 / (exp(2.0 * x) + 1.0));
+}
+half4 main(float2 p) {
+    float4 b = toBytes(src.eval(p));
+    float3 c = unpremulBytes(b);
+    float2 a = fieldPair(0, p, spacing1);
+    float mono = firstWeight * a.x;
+    if (secondWeight != 0.0) mono += secondWeight * fieldPair(2, p, spacing2).x;
+    float3 n = float3(mono);
+    if (colorMix > 0.0) {
+        float2 gb = fieldPair(1, p, spacing1);
+        float keep = (1.0 - colorMix) * mono;
+        float scale = colorMix * colorWeight;
+        n = (float3(keep) + scale * float3(a.y, gb.x, gb.y)) * colorNorm;
+    }
+    float y = clamp((0.299 * c.r + 0.587 * c.g + 0.114 * c.b) / 255.0, 0.0, 1.0);
+    float yg = pow(y, bellGamma);
+    float amp = amplitude * pow(max(0.0, 4.0 * yg * (1.0 - yg)), bellPower);
+    float3 o = float3(clampByte(grainChannel(c.r, n.r, amp)), clampByte(grainChannel(c.g, n.g, amp)),
+                      clampByte(grainChannel(c.b, n.b, amp)));
+    return writePremul(o, b.a);
+}
+"
+
         ''' <summary>ApplyAddNoise: je Kanal ein Zufallswert aus dem Strom, Zeile fuer Zeile.</summary>
         Private Shared Function AddNoiseOnGpu(amount As Single) As Func(Of GRContext, SKImage, SKSurface)
             Dim strength = Clamp(amount, 0, 1)
@@ -2983,8 +3113,9 @@ half4 main(float2 p) {
 
         ''' <summary>ApplyAddedHaze: die Zellmittel entstehen auf der Karte, die Karte des
         ''' hinzugefuegten Dunstes rechnet AddedHazeMap wie fuer den Prozessor, gemischt wird auf der
-        ''' Karte.</summary>
-        Private Shared Function HazeOnGpu(amount As Single) As Func(Of GRContext, SKImage, SKSurface)
+        ''' Karte. Die Farbe des Schleiers je nach Fassung (<paramref name="hazeModel"/>) kommt aus
+        ''' AddedHazeMap und geht als Uniform "veil" an den Shader.</summary>
+        Private Shared Function HazeOnGpu(amount As Single, hazeModel As Integer) As Func(Of GRContext, SKImage, SKSurface)
             Dim strength = Math.Max(0.0, Math.Min(1.0, CDbl(Clamp(amount, -1, 1))))
             If strength <= 0.001 Then Return Nothing
             Return Function(gr, image)
@@ -2999,7 +3130,7 @@ half4 main(float2 p) {
                        If Not DehazeCellMeansOnGpu(gr, image, lw, lh, lowR, lowG, lowB, lowOwn) Then Return Nothing
                        Dim veil As Double() = Nothing
                        Dim lightFactor As Double
-                       Dim map = AddedHazeMap(lowR, lowG, lowB, lowOwn, lw, lh, veil, lightFactor)
+                       Dim map = AddedHazeMap(lowR, lowG, lowB, lowOwn, lw, lh, hazeModel, veil, lightFactor)
                        Dim m = New Single(count - 1) {}
                        For i = 0 To count - 1
                            m(i) = CSng(map(i))

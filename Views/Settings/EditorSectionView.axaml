@@ -164,7 +164,7 @@
                         <StackPanel Spacing="8">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660">
                                 <TextBlock Text="Reihenfolge der Werkzeuggruppen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Legt fest, in welcher Reihenfolge die Gruppen in der linken Werkzeugleiste des Editors stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Legt fest, in welcher Reihenfolge die Gruppen in der Werkzeugleiste des Editors stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <!-- Breit genug, dass die längste Gruppenbeschriftung nicht bis an die
                                  Pfeilknöpfe heranläuft - „Transformieren" braucht in mehreren
@@ -244,6 +244,58 @@
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Werkzeugleiste" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Nur Symbole spart am meisten Platz für das Bild; die Gruppen sind dann durch Striche getrennt statt beschriftet. Mit Text steht die Leiste offen und breit neben dem Panel. Automatisch bleibt die Leiste schmal und klappt über dem Bild auf, sobald der Zeiger eine kurze Weile darüber steht. Der Platz für das Bild bleibt dabei unverändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsToolSelectorAuto}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorToolSelectorModeCommand}"
+                                        CommandParameter="Auto">Automatisch</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsToolSelectorCompact}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorToolSelectorModeCommand}"
+                                        CommandParameter="Compact">Nur Symbole</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsToolSelectorExpanded}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorToolSelectorModeCommand}"
+                                        CommandParameter="Expanded">Mit Text</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Seite der Werkzeugleiste" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Wo die Werkzeugleiste steht: immer links, immer rechts, oder auf der Seite des Anpassungspanels. Auf der Seite des Panels liegen die Werkzeugauswahl und die Regler des gewählten Werkzeugs beieinander. Eine feste Seite lässt die Leiste stehen, auch wenn das Anpassungspanel umzieht." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <!-- Links steht links, Rechts steht rechts: die Knopfreihe zeigt damit
+                                 dasselbe, was sie einstellt. Umgekehrt liest sie sich verdreht.
+                                 "Mit Anpassungen" steht in der Mitte, weil sie keine eigene Seite
+                                 ist, sondern der Seite des Panels folgt. -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsToolSelectorSideLeft}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorToolSelectorSideCommand}"
+                                        CommandParameter="Left">Links</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsToolSelectorSideWithAdjustments}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorToolSelectorSideCommand}"
+                                        CommandParameter="WithAdjustments">Mit Anpassungen</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsToolSelectorSideRight}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorToolSelectorSideCommand}"
+                                        CommandParameter="Right">Rechts</Button>
+                            </StackPanel>
                         </Grid>
 
                         <Separator Background="{DynamicResource FP.Border.Normal}" Height="1" Margin="0,6,0,0"/>

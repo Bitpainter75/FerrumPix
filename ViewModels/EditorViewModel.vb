@@ -300,6 +300,15 @@ Namespace ViewModels
         Private _noiseReductionMethod As NoiseReductionMethod = NoiseReductionMethod.AdaptiveGuided
         Private _dustScratches As Double = 0
         Private _haze As Double = 0
+        ''' Fassung des hinzugefuegten Dunstes (ImageAdjustments.HazeModel): ein geladenes Rezept
+        ''' bringt seine mit, neu hinzugefuegter Dunst bekommt die aktuelle (Haze). Ins Rezept geht
+        ''' sie nur bei hinzugefuegtem Dunst, sonst als 0 (BuildAdjustmentsFromFields); die
+        ''' Zuruecksetzer, die nur _haze leeren, brauchen sie deshalb nicht anzufassen.
+        Private _hazeModel As Integer = 0
+        ''' Die Fassung des Dunstes, bevor der Regler auf genau 0 ging; -1 ohne. Holt der Regler von
+        ''' dort wieder Dunst, gilt sie weiter (Haze). Ein negativer Wert und jedes Laden eines
+        ''' Rezepts vergessen sie.
+        Private _hazeModelBeforeZero As Integer = -1
         Private _addNoise As Double = 0
         Private _structure As Double = 0
         Private _glow As Double = 0
@@ -315,6 +324,16 @@ Namespace ViewModels
         Private _grainSize As Double = 0
         Private _grainFrequency As Double = 0
         Private _grainColor As Double = 0
+        ''' Fassung der Koernung (ImageAdjustments.GrainModel), wie _hazeModel: ein geladenes Rezept
+        ''' bringt seine mit, neu hinzugefuegtes Korn bekommt die aktuelle (Grain). Ins Rezept geht
+        ''' sie nur mit Korn, sonst als 0 (BuildAdjustmentsFromFields).
+        Private _grainModel As Integer = 0
+        ''' Die Fassung der Koernung, bevor der Regler auf 0 ging; -1 ohne. Holt der Regler von dort
+        ''' wieder Korn, gilt sie weiter (Grain). Jedes Laden eines Rezepts vergisst sie.
+        Private _grainModelBeforeZero As Integer = -1
+        ''' Groesse und Rauheit, mit denen neues Korn in Fassung 1 beginnt (Grain).
+        Private Const FreshGrainSize As Double = 25
+        Private Const FreshGrainRoughness As Double = 50
         Private _clarity As Double = 0
         Private _negativeEnabled As Boolean = False
         Private _negativeMonochrome As Boolean = False
@@ -2421,6 +2440,16 @@ Namespace ViewModels
             ' der gespeicherten Stärke. Sonst leerte der Pfeil nur den Namen.
             If applied Is Nothing OrElse Not String.Equals(applied.FilterPreset, current.FilterPreset, StringComparison.Ordinal) Then
                 applied = FilterPreviewAdjustments(current, current.FilterPreset, current.FilterStrength)
+                ' Eine aeltere Bearbeitung traegt das Korn des Looks in Fassung 0, mit dessen alten
+                ' Werten (ImageAdjustments.BuiltInLookGrainFilm). Verglichen wird dann mit diesen,
+                ' sonst bliebe das Korn beim Zuruecksetzen stehen.
+                If applied IsNot Nothing AndAlso current.Grain > 0 AndAlso current.GrainModel = 0 Then
+                    Dim legacy = ImageAdjustments.CreateBuiltInLook(current.FilterPreset, current.FilterStrength, 0)
+                    If legacy IsNot Nothing Then
+                        applied.Grain = legacy.Grain : applied.GrainSize = legacy.GrainSize
+                        applied.GrainFrequency = legacy.GrainFrequency : applied.GrainModel = 0
+                    End If
+                End If
             End If
             Dim target = current.Clone()
             If applied IsNot Nothing AndAlso String.Equals(applied.FilterPreset, current.FilterPreset, StringComparison.Ordinal) Then
@@ -5367,22 +5396,224 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Linke Werkzeugleiste eingeklappt: nur Symbole, keine Beschriftungen. Gemerkt in
-        ''' den Einstellungen (EditorToolSidebarCollapsed), umgeschaltet über den Knopf in der Leiste.</summary>
+        ''' <summary>Werkzeugleiste eingeklappt: nur Symbole, keine Beschriftungen. Gemerkt in den
+        ''' Einstellungen (EditorToolSidebarCollapsed), umgeschaltet ueber den Knopf in der Fusszeile
+        ''' oder ueber den Modus im Einstellungsdialog. Im automatischen Modus ist das der Zustand,
+        ''' in den die Leiste zurueckfaellt, wenn die Automatik abgeschaltet wird.</summary>
         Public ReadOnly Property IsToolSidebarCollapsed As Boolean
             Get
                 Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso _mainVm.Settings.EditorToolSidebarCollapsed
             End Get
         End Property
 
-        Public ReadOnly Property AreToolSidebarLabelsVisible As Boolean
+        ''' <summary>Wie die Werkzeugleiste zeigt: automatisch, nur Symbole, oder immer mit Text. Eine
+        ''' Sicht auf den Klappzustand und die Automatik (SettingsViewModel.EditorToolSelectorMode).</summary>
+        Public ReadOnly Property ToolSelectorMode As String
             Get
-                Return Not IsToolSidebarCollapsed
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then
+                    Return AppSettingsService.ToolSelectorModeExpanded
+                End If
+                Return _mainVm.Settings.EditorToolSelectorMode
             End Get
         End Property
 
-        ''' <summary>Steht das Anpassungspanel links neben der Werkzeugleiste statt rechts neben der
-        ''' Bühne? Aus den Einstellungen (EditorAdjustmentsPanelOnLeft), ab Werk aus.
+        ''' <summary>Wo die Werkzeugleiste steht: immer links, immer rechts, oder auf der Seite des
+        ''' Anpassungspanels. Aus den Einstellungen (EditorToolSelectorSide); ein unlesbarer Wert
+        ''' faellt auf die Vorgabe zurueck.</summary>
+        Public ReadOnly Property ToolSelectorSide As String
+            Get
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then
+                    Return AppSettingsService.ToolSelectorSideDefault
+                End If
+                Return AppSettingsService.NormalizeToolSelectorSide(_mainVm.Settings.EditorToolSelectorSide)
+            End Get
+        End Property
+
+        ''' <summary>Steht die Werkzeugleiste links? Entscheidet die Spalten jeder Werkzeugzeile und die
+        ''' Richtung ihrer Ausrichtung (ToolIconColumn, ToolLabelColumn, ToolSelectorContentAlignment).
+        '''
+        ''' Sie fragt die SEITE DER LEISTE ab und nicht die Seite des Anpassungspanels. Beides war
+        ''' bisher dasselbe; seit es eine eigene Wahl ist, gilt die Seite der Leiste - und nur in der
+        ''' Einstellung "Mit Anpassungen" ist das wieder die Seite des Panels.</summary>
+        Public ReadOnly Property IsToolSelectorOnLeft As Boolean
+            Get
+                Select Case ToolSelectorSide
+                    Case AppSettingsService.ToolSelectorSideLeft : Return True
+                    Case AppSettingsService.ToolSelectorSideRight : Return False
+                    Case Else : Return IsAdjustmentsPanelOnLeft
+                End Select
+            End Get
+        End Property
+
+        ''' <summary>Steht der Zeiger ueber der Werkzeugleiste? Nur der automatische Modus macht
+        ''' daraus Beschriftungen. Bewusst der Zeiger und nicht der Fokus: das Abfahren der Leiste
+        ''' darf keinem Werkzeug die Tastatur wegnehmen.</summary>
+        Private _toolSelectorHovered As Boolean = False
+
+        ''' <summary>Zeitnehmer fuer das spaete Auf- und Zuklappen. Ein Zeitnehmer statt eines
+        ''' sofortigen Umschaltens: wer ueber die Leiste faehrt, ohne etwas zu wollen, soll nicht
+        ''' jedes Mal sehen, wie das Bild seitlich springt.</summary>
+        Private _toolSelectorHoverTimer As DispatcherTimer
+
+        ''' <summary>Wartezeit, bis die Leiste unter dem Zeiger aufgeklappt erscheint.</summary>
+        Friend Const ToolSelectorExpandDelayMs As Integer = 200
+        ''' <summary>Wartezeit bis zum Zuklappen, in derselben Groessenordnung: asymmetrisch waere
+        ''' entweder ein nervoeses Zufappen oder ein traeges Aufklappen.</summary>
+        Friend Const ToolSelectorCollapseDelayMs As Integer = 200
+
+        ''' <summary>Der Zeiger steht ueber der Werkzeugleiste: die Wartezeit beginnt von vorn. Steht
+        ''' die Leiste schon offen, tut sie nichts - die Hande wandern ueber die Knopfe, und niemand
+        ''' soll sehen, wie sie vor jedem Knopf von neuem zaehlt.</summary>
+        Public Sub BeginToolSelectorHover()
+            If _toolSelectorHovered Then
+                ' Zurueck auf die offene Leiste, bevor sie zuklappte: das ausstehende Zuklappen
+                ' entfaellt, sonst schloesse sie sich unter dem Zeiger.
+                If _toolSelectorHoverTimer IsNot Nothing Then _toolSelectorHoverTimer.Stop()
+                Return
+            End If
+            StartToolSelectorTimer(ToolSelectorExpandDelayMs)
+        End Sub
+
+        ''' <summary>Der Zeiger hat die Werkzeugleiste verlassen. War das Aufklappen noch ausstehend,
+        ''' entfaellt es ersatzlos, ohne dass irgendwo etwas geklappt haette.</summary>
+        Public Sub EndToolSelectorHover()
+            If Not _toolSelectorHovered Then
+                If _toolSelectorHoverTimer IsNot Nothing Then _toolSelectorHoverTimer.Stop()
+                Return
+            End If
+            StartToolSelectorTimer(ToolSelectorCollapseDelayMs)
+        End Sub
+
+        Private Sub StartToolSelectorTimer(zeitMs As Integer)
+            If _toolSelectorHoverTimer Is Nothing Then
+                _toolSelectorHoverTimer = New DispatcherTimer()
+                AddHandler _toolSelectorHoverTimer.Tick, AddressOf OnToolSelectorHoverTimer
+            End If
+            _toolSelectorHoverTimer.Interval = TimeSpan.FromMilliseconds(zeitMs)
+            _toolSelectorHoverTimer.Stop()
+            _toolSelectorHoverTimer.Start()
+        End Sub
+
+        Private Sub OnToolSelectorHoverTimer(sender As Object, e As EventArgs)
+            If _toolSelectorHoverTimer IsNot Nothing Then _toolSelectorHoverTimer.Stop()
+            SetToolSelectorHovered(Not _toolSelectorHovered)
+        End Sub
+
+        ''' <summary>Nach einer Umschaltung des Modus gilt der alte Zeigerstand nicht mehr: ein
+        ''' ausstehender Lauf waeme in den neuen Modus hinein. Der Stand geht in die Ruhelage des
+        ''' neuen Modus zurueck.</summary>
+        Public Sub CancelToolSelectorHover()
+            If _toolSelectorHoverTimer IsNot Nothing Then _toolSelectorHoverTimer.Stop()
+            SetToolSelectorHovered(False)
+        End Sub
+
+        Private Sub SetToolSelectorHovered(value As Boolean)
+            If _toolSelectorHovered = value Then Return
+            _toolSelectorHovered = value
+            Me.RaisePropertyChanged(NameOf(AreToolSidebarLabelsVisible))
+            Me.RaisePropertyChanged(NameOf(ToolRowColumnSpacing))
+            Me.RaisePropertyChanged(NameOf(ToolGroupHeadingOpacity))
+            Me.RaisePropertyChanged(NameOf(AreToolGroupSeparatorsVisible))
+            Me.RaisePropertyChanged(NameOf(ToolSidebarWidth))
+        End Sub
+
+        ''' <summary>Zeigt die Werkzeugleiste gerade ihre Beschriftungen?
+        '''
+        ''' Der feste Modus sagt es allein; nur der automatische haengt am Zeiger. Frueher haengte das
+        ''' noch an der Seite des Anpassungspanels: links sollte die Leiste immer breit bleiben. Das war
+        ''' ein Irrtum. Die Symbole springen gerade nicht, wenn die Leiste schmaler wird, weil sie an
+        ''' der Kante sitzen, die sich nie bewegt (siehe ToolIconColumn) - und genau deshalb gilt das
+        ''' Einklappen auf beiden Seiten gleich gut. Der Preis ist dasselbe: die schmale Leiste liegt
+        ''' im automatischen Modus ueber einem Stueck Bild. Dafuer steht das Bild, wenn die Leiste
+        ''' unter dem Zeiger aufklappt.</summary>
+        Public ReadOnly Property AreToolSidebarLabelsVisible As Boolean
+            Get
+                Select Case ToolSelectorMode
+                    Case AppSettingsService.ToolSelectorModeCompact : Return False
+                    Case AppSettingsService.ToolSelectorModeExpanded : Return True
+                    Case Else : Return _toolSelectorHovered
+                End Select
+            End Get
+        End Property
+
+        ''' <summary>Spalte des Zeilenrasters fuer das Symbol: die Kante der Leiste, die sich nie
+        ''' bewegt. Die Leiste haengt aussen an der Buehne; steht sie links, ist das der linke Rand,
+        ''' steht sie rechts, der rechte. An dieser Kante bleibt das Symbol auch dann, wenn sein Text
+        ''' fehlt oder eine Uebersetzung breiter ist.</summary>
+        Public ReadOnly Property ToolIconColumn As Integer
+            Get
+                Return If(IsToolSelectorOnLeft, 0, 1)
+            End Get
+        End Property
+
+        ''' <summary>Spalte des Zeilenrasters fuer die Beschriftung: die Seite gegenueber dem Symbol,
+        ''' also die, die nach aussen zeigt. Siehe ToolIconColumn.</summary>
+        Public ReadOnly Property ToolLabelColumn As Integer
+            Get
+                Return If(IsToolSelectorOnLeft, 1, 0)
+            End Get
+        End Property
+
+        ''' <summary>Ausrichtung des Knopfinhalts an dieselbe Kante wie das Symbol. Ohne sie zentrete
+        ''' der Inhalt in der Zeile, und das Symbol wanderte mit der Breite seiner Beschriftung.</summary>
+        Public ReadOnly Property ToolSelectorContentAlignment As Avalonia.Layout.HorizontalAlignment
+            Get
+                Return If(IsToolSelectorOnLeft, Avalonia.Layout.HorizontalAlignment.Left,
+                                          Avalonia.Layout.HorizontalAlignment.Right)
+            End Get
+        End Property
+
+        ''' <summary>Der Abstand zwischen Symbol und Beschriftung in einer Werkzeugzeile. Er gilt nur,
+        ''' wenn es in der Zeile wirklich beide gibt.
+        '''
+        ''' In der schmalen Leiste ist die Beschriftung ausgeblendet; ihre Spalte bleibt mit der Breite
+        ''' 0 stehen, der Spaltenabstand wird aber trotzdem gerechnet. Er liegt dann zwischen dem
+        ''' Symbol und der Kante, an der es sitzt, und drueckt das Symbol um zehn Punkte weiter nach
+        ''' aussen - hinaus ueber die Innenrandangabe des Knopfes. Nach innen faellt derselbe Abstand
+        ''' nicht auf: dort liegt er hinter dem Symbol und ist bloss toter Raum.
+        '''
+        ''' Das war der Unterschied zwischen den beiden Seiten. Links stand das Symbol ruhig und
+        ''' mittig; rechts klebte es an der Aussenkante und rueckte beim Aufklappen zehn Punkte nach
+        ''' innen. Ohne Abstand in der schmalen Leiste verhalten sich beide Seiten gleich.
+        '''
+        ''' Der Wert haengt am selben Stand wie AreToolSidebarLabelsVisible und wird dort mit
+        ''' geweckt (SetToolSelectorHovered, RefreshLayoutBindings).</summary>
+        Public ReadOnly Property ToolRowColumnSpacing As Double
+            Get
+                Return If(AreToolSidebarLabelsVisible, 10.0, 0.0)
+            End Get
+        End Property
+
+        ''' <summary>Ausrichtung der Gruppenueberschriften: an die Symbolkante, also an dieselbe Kante
+        ''' wie die Zeilen darunter. Links steht die Ueberschrift damit linksbuendig ueber Symbol und
+        ''' Text, wie sie immer stand; rechts spiegelt sich das. Unsichtbar statt weggenommen bleibt
+        ''' trotzdem (ToolGroupHeadingOpacity).</summary>
+        Public ReadOnly Property ToolGroupHeadingAlignment As Avalonia.Layout.HorizontalAlignment
+            Get
+                Return ToolSelectorContentAlignment
+            End Get
+        End Property
+
+        ''' <summary>Die Deckkraft der Gruppenueberschriften. Unsichtbar statt weggenommen ist der
+        ''' ganze Trick gegen das Springen: die Zeile behaelt ihren Platz, und kein Symbol unterhalb
+        ''' einer Gruppe macht einen Sprung nach oben. Waere die Zeile weg, wanderten alle Symbole
+        ''' darunter.</summary>
+        Public ReadOnly Property ToolGroupHeadingOpacity As Double
+            Get
+                Return If(AreToolSidebarLabelsVisible, 1.0, 0.0)
+            End Get
+        End Property
+
+        ''' <summary>In der schmalen Leiste stehen die Trennlinien dort, wo sonst die
+        ''' Gruppenueberschriften stehen.</summary>
+        Public ReadOnly Property AreToolGroupSeparatorsVisible As Boolean
+            Get
+                Return Not AreToolSidebarLabelsVisible
+            End Get
+        End Property
+
+        ''' <summary>Steht das Anpassungspanel links von der Bearbeitungsflaeche statt rechts? Aus den
+        ''' Einstellungen (EditorAdjustmentsPanelOnLeft), ab Werk aus.
         '''
         ''' Die Ansicht setzt daraufhin die Spalten des Wurzelrasters um, siehe
         ''' UpdateAdjustmentsPanelSide in EditorView.</summary>
@@ -5419,30 +5650,67 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Breite der linken Werkzeugleiste. Eingeklappt bleibt genau Platz für die Symbole
-        ''' samt Knopf-Innenabstand (Leisten-Padding 8+8, Knopf-Padding 10, Symbol 18). Ausgeklappt
-        ''' waechst sie mit der Schriftgroesse mit: bei fester Breite schnitt der laengste Eintrag
-        ''' ("Drehen und Verzerren") ab einem Schriftversatz von etwa +3 sein letztes Wort ab, und das
-        ''' sah aus wie ein fehlender Text. Zehn Punkt je Schriftpunkt decken den laengsten Eintrag ab.
-        '''
-        ''' Die Dichtestufe Winzig aendert auch die Waagerechte. Sie nimmt aber dem Text nichts weg,
-        ''' sondern nur dem Blendwerk drumherum: die beiden Innenabstaende werden schmaler, der Text
-        ''' behaelt genau so viel Platz wie vorher. Deshalb ist die enge Breite nicht einfach ein
-        ''' kleinerer Ausschnitt, sondern dieselbe Textbreite plus der engere Rahmen:
-        '''   eng  = 5 (Leiste) + 6 (Knopf) + 18 (Symbol) + 10 (Abstand) + 6 (Knopf) + 5 (Leiste) = 50
-        '''   weit = 8 + 10 + 18 + 10 + 10 + 8 = 64, also 190 - 64 = 126 Punkte fuer den Text
-        ''' Winzig bleibt damit 176 breit: 50 Blendwerk + 126 Text. Kompakt aendert nichts an der
-        ''' Breite - dort ist nur die Höhe enger.</summary>
+        ''' <summary>Steht die Werkzeugleiste auf der dichtesten Stufe? Winzig verengt den RAHMEN um
+        ''' Symbol und Text, nicht den Text selbst - die Rechnung steht bei ExpandedToolSelectorWidth.
+        ''' Kompakt aendert nur die Hoehe und laesst die Breite unberuehrt.</summary>
+        Private ReadOnly Property IsToolDensityTiny As Boolean
+            Get
+                Dim stufe = _mainVm?.Settings?.EditorToolSidebarDensity
+                Return String.Equals(stufe, AppSettingsService.PanelDensityTiny, StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' <summary>Breite der Werkzeugleiste im Zustand, den sie gerade zeigt: ausgeklappt Platz
+        ''' fuer Symbol und Beschriftung, eingeklappt genau Platz fuer das Symbol samt
+        ''' Innenabstaenden. Die beiden Zahlen stehen bei CompactToolSelectorWidth und
+        ''' ExpandedToolSelectorWidth; dort steht auch, was die Dichtestufe damit macht.</summary>
         Public ReadOnly Property ToolSidebarWidth As Double
             Get
-                Dim tiny = _mainVm?.Settings?.EditorToolSidebarDensity
-                Dim isTiny = String.Equals(tiny, AppSettingsService.PanelDensityTiny, StringComparison.OrdinalIgnoreCase)
-                If IsToolSidebarCollapsed Then
-                    ' eng zusammen: 5 (Leiste) + 6 (Knopf) + 18 (Symbol) + 6 (Knopf) + 5 (Leiste) = 40
-                    Return If(isTiny, 40.0, 54.0)
+                Return If(AreToolSidebarLabelsVisible, ExpandedToolSelectorWidth, CompactToolSelectorWidth)
+            End Get
+        End Property
+
+        ''' <summary>Breite, die die Werkzeugleiste dem Bild dauernd wegnimmt.
+        '''
+        ''' Im festen Modus "nur Symbole" und im festen "mit Text" ist das ihre jeweilige Breite. Nur im
+        ''' automatischen Modus bleibt sie bei der schmalen, und zwar auf beiden Seiten gleich: das
+        ''' Aufklappen unter dem Zeiger liegt UEBER dem Bild und darf ihm nichts wegnehmen, sonst
+        ''' wuerde beim Fahren ueber die Leiste das Bild springen (siehe den Hinweis auf
+        ''' ApplyToolSelectorLayout in EditorView).</summary>
+        Public ReadOnly Property ToolSelectorReservedWidth As Double
+            Get
+                If ToolSelectorMode = AppSettingsService.ToolSelectorModeAuto Then
+                    Return CompactToolSelectorWidth
                 End If
-                Dim baseWidth = If(isTiny, 176.0, 190.0)
-                Return baseWidth + Math.Max(0, FontScaleService.CurrentOffset) * 10.0
+                Return ToolSidebarWidth
+            End Get
+        End Property
+
+        ''' <summary>Schmaler Zustand der Werkzeugleiste. Bei 54: Leisten-Padding 8+8,
+        ''' Knopf-Padding 10+10, Symbol 18. Winzig nimmt beides enger:
+        '''   eng zusammen: 5 (Leiste) + 6 (Knopf) + 18 (Symbol) + 6 (Knopf) + 5 (Leiste) = 40</summary>
+        Public ReadOnly Property CompactToolSelectorWidth As Double
+            Get
+                Return If(IsToolDensityTiny, 40.0, 54.0)
+            End Get
+        End Property
+
+        ''' <summary>Breite der ausgeklappten Leiste: bei normaler und kompakter Dichte 190. Der
+        ''' Zuschlag je Schriftpunkt steht hier, weil der laengste Eintrag ("Drehen und Verzerren")
+        ''' bei fester Breite ab einem Schriftversatz von etwa +3 sein letztes Wort abschnitt, und das
+        ''' sah aus wie ein fehlender Text. Zehn Punkt je Schriftpunkt decken den laengsten Eintrag ab.
+        '''
+        ''' Winzig aendert auch die Waagerechte. Die Stufe nimmt aber dem Text nichts weg, sondern nur
+        ''' dem Blendwerk drumherum: die beiden Innenabstaende werden schmaler, der Text behaelt genau
+        ''' so viel Platz wie vorher. Deshalb ist die enge Breite nicht einfach ein kleinerer
+        ''' Ausschnitt, sondern dieselbe Textbreite plus der engere Rahmen:
+        '''   weit = 8 + 10 + 18 + 10 + 10 + 8 = 64, also 190 - 64 = 126 Punkte fuer den Text
+        '''   eng  = 5 (Leiste) + 6 (Knopf) + 18 (Symbol) + 10 (Abstand) + 6 (Knopf) + 5 (Leiste) = 50
+        ''' Winzig bleibt damit 176 breit: 50 Blendwerk + 126 Text.</summary>
+        Public ReadOnly Property ExpandedToolSelectorWidth As Double
+            Get
+                Dim basis = If(IsToolDensityTiny, 176.0, 190.0)
+                Return basis + Math.Max(0, FontScaleService.CurrentOffset) * 10.0
             End Get
         End Property
 
@@ -7651,7 +7919,28 @@ Namespace ViewModels
                 Return _haze
             End Get
             Set(value As Double)
-                SetUndoableDouble(_haze, Math.Max(-100, Math.Min(100, value)), NameOf(Haze))
+                Dim clamped = Math.Max(-100, Math.Min(100, value))
+                ' Die Fassung VOR dem Setzen: SetUndoableDouble rendert ein markiertes Objekt sofort.
+                ' Den Stand fuer Rueckgaengig verfaelscht das nicht, denn sie aendert sich nur, wenn
+                ' bisher kein Dunst hinzugefuegt war, und dann geht sie ohnehin als 0 ins Rezept. Zurueck
+                ' auf null bleibt das Feld stehen und wird beim Bauen des Rezepts zu 0.
+                ' AUF NULL UND ZURUECK bleibt die Fassung: der Einzelvergleich am Regler setzt den
+                ' Standardwert 0 und holt den Wert danach zurueck, und das ist derselbe Dunst. Ohne das
+                ' kaeme ein alter Dunst nach dem Vergleich in der neuen Rechnung. Wer dagegen ueber null
+                ' hinweg ins Entfernen zieht, hat den Dunst aufgegeben: danach ist er neu.
+                If clamped > 0 Then
+                    If _haze = 0 AndAlso _hazeModelBeforeZero >= 0 Then
+                        _hazeModel = _hazeModelBeforeZero
+                    Else
+                        _hazeModel = ImageAdjustments.HazeModelAfter(_haze, _hazeModel, clamped)
+                    End If
+                    _hazeModelBeforeZero = -1
+                ElseIf clamped < 0 Then
+                    _hazeModelBeforeZero = -1
+                ElseIf _haze > 0 Then
+                    _hazeModelBeforeZero = _hazeModel
+                End If
+                SetUndoableDouble(_haze, clamped, NameOf(Haze))
             End Set
         End Property
 
@@ -8684,7 +8973,38 @@ Namespace ViewModels
                 Return _grain
             End Get
             Set(value As Double)
-                SetUndoableDouble(_grain, Math.Max(0, Math.Min(100, value)), NameOf(Grain))
+                Dim clamped = Math.Max(0, Math.Min(100, value))
+                ' Die Fassung VOR dem Setzen, wie beim Dunst (Haze): aus null heraus bekommt neues Korn
+                ' die aktuelle, schon vorhandenes behaelt seine. AUF NULL UND ZURUECK bleibt sie: der
+                ' Einzelvergleich am Regler setzt den Standardwert 0 und holt den Wert danach zurueck,
+                ' und das ist dasselbe Korn.
+                Dim freshGrain = False
+                If clamped > 0 Then
+                    If _grain = 0 AndAlso _grainModelBeforeZero >= 0 Then
+                        _grainModel = _grainModelBeforeZero
+                    Else
+                        freshGrain = _grain <= 0
+                        _grainModel = ImageAdjustments.GrainModelAfter(_grain, _grainModel, clamped)
+                    End If
+                    _grainModelBeforeZero = -1
+                ElseIf _grain > 0 Then
+                    _grainModelBeforeZero = _grainModel
+                End If
+                ' STARTWERTE FUER NEUES KORN: entsteht Korn in Fassung 1 aus null heraus und stehen
+                ' Groesse und Rauheit beide noch auf 0, beginnt es bei Groesse 25 und Rauheit 50. Auf
+                ' Groesse 0 waere es in Fassung 1 so fein, dass es sich in der eingepassten Ansicht
+                ' fast wegmittelt. Ein Look oder ein Preset setzt Groesse und Rauheit gleich danach
+                ' selbst (ApplyLookAdjustments), geladene Rezepte laufen nicht ueber diesen Setter.
+                ' EIN Schritt fuer Rueckgaengig: der Stand wird vor allen drei Werten gesichert, und
+                ' SetUndoableDouble legt fuer dieselbe Eigenschaft keinen zweiten an.
+                If freshGrain AndAlso _grainModel >= 1 AndAlso _grainSize = 0 AndAlso _grainFrequency = 0 Then
+                    CaptureUndoState(NameOf(Grain))
+                    _grainSize = FreshGrainSize
+                    _grainFrequency = FreshGrainRoughness
+                    Me.RaisePropertyChanged(NameOf(GrainSize))
+                    Me.RaisePropertyChanged(NameOf(GrainFrequency))
+                End If
+                SetUndoableDouble(_grain, clamped, NameOf(Grain))
             End Set
         End Property
 
@@ -19017,7 +19337,18 @@ Namespace ViewModels
             Return New AdjustmentPresetSaveDialogViewModel(_adjustmentPresetNameDraft,
                                                            AdjustmentEntries.NonNeutralEntries(transferable), hasFrame,
                                                            _adjustmentPresetFolders,
-                                                           If(_selectedAdjustmentPreset?.Folder, ""))
+                                                           If(_selectedAdjustmentPreset?.Folder, ""),
+                                                           isRaw:=IsRawForAdjustmentExport(),
+                                                           recipe:=transferable,
+                                                           exportFolder:=AppSettingsService.Load().AdjustmentExportFolder)
+        End Function
+
+        ''' <summary>Kommt das geoeffnete Bild aus einer RAW-Datei? Dann wirken Belichtung und
+        ''' Weissabgleich in der RAW-Stufe vor der Kette und fehlen in einer LUT. Gefragt wird die
+        ''' Datei, nicht ob gerade gebackener Inhalt darauf liegt: auch dann stammen Belichtung und
+        ''' Weissabgleich des Rezepts aus dem Entwickeln.</summary>
+        Private Function IsRawForAdjustmentExport() As Boolean
+            Return Not String.IsNullOrEmpty(RenderSourcePath) AndAlso RawPreviewService.IsSupportedRaw(RenderSourcePath)
         End Function
 
         ''' <summary>Der Knopf "Speichern": der Dialog mit Name, Ordner und Auswahl, danach das
@@ -19032,10 +19363,69 @@ Namespace ViewModels
             Await SaveAdjustmentPresetFromDialogAsync(dialog)
         End Function
 
-        ''' <summary>Speichert, was im bestaetigten Dialog steht.</summary>
+        ''' <summary>Speichert, was im bestaetigten Dialog steht: als eigene Anpassung, als
+        ''' XMP-Preset oder als LUT.</summary>
         Public Async Function SaveAdjustmentPresetFromDialogAsync(dialog As AdjustmentPresetSaveDialogViewModel) As Task(Of Boolean)
             If dialog Is Nothing OrElse dialog.IsPaste OrElse Not dialog.CanConfirm Then Return False
+            Select Case dialog.Target
+                Case AdjustmentSaveTarget.Xmp, AdjustmentSaveTarget.Lut
+                    Return Await ExportAdjustmentFileAsync(dialog)
+            End Select
             Return Await SaveAdjustmentPresetAsync(dialog.Name, dialog.SelectedEntries(), dialog.FolderPath)
+        End Function
+
+        ''' <summary>Schreibt die gewaehlten Regler als XMP-Preset (XmpPresetWriter) oder als LUT
+        ''' (CubeLutWriter) in die Datei des Dialogs. Eine vorhandene Datei wird nur nach Rueckfrage
+        ''' ersetzt, ausser der Dateidialog hat schon danach gefragt. Der Ordner wird fuer das
+        ''' naechste Mal gemerkt.
+        '''
+        ''' Die LUT rechnet mit der Helligkeit des geoeffneten Bildes (ToneReference): gemessen hier
+        ''' auf dem Faden der Oberflaeche an der Vorschauquelle, die nur er wechselt; das Gitter
+        ''' laeuft danach im Hintergrund.</summary>
+        ''' <returns>Ob geschrieben wurde.</returns>
+        Public Async Function ExportAdjustmentFileAsync(dialog As AdjustmentPresetSaveDialogViewModel) As Task(Of Boolean)
+            If Not HasDocument OrElse dialog Is Nothing Then Return False
+            Dim targetPath = If(dialog.TargetFilePath, "").Trim()
+            Dim presetName = If(dialog.Name, "").Trim()
+            If targetPath.Length = 0 OrElse presetName.Length = 0 Then Return False
+            Dim folder = IO.Path.GetDirectoryName(targetPath)
+            If String.IsNullOrEmpty(folder) OrElse Not Directory.Exists(folder) Then
+                StatusText = String.Format(LocalizationService.T("Den Ordner gibt es nicht: {0}"), folder)
+                Return False
+            End If
+            If File.Exists(targetPath) AndAlso Not dialog.FileConfirmedByPicker AndAlso _mainVm IsNot Nothing Then
+                Dim overwrite = Await _mainVm.ShowConfirmAsync(LocalizationService.T("Anpassung speichern"),
+                    String.Format(LocalizationService.T("Die Datei {0} gibt es schon. Soll sie ersetzt werden?"), IO.Path.GetFileName(targetPath)),
+                    "Ersetzen", "Abbrechen")
+                If Not overwrite Then Return False
+            End If
+
+            Dim entries = dialog.SelectedEntries()
+            Dim transferable = GetCurrentAdjustments().ExtractTransferableAdjustments()
+            Dim isLut = dialog.Target = AdjustmentSaveTarget.Lut
+            Try
+                If isLut Then
+                    Dim recipe = AdjustmentEntries.Extract(transferable, entries)
+                    Dim gridSize = dialog.SelectedGridSize
+                    Dim reference As ImageProcessor.ToneReference = Nothing
+                    If _previewSource IsNot Nothing AndAlso recipe.ReadsImageStatistics() Then
+                        reference = ImageProcessor.MeasureToneReference(_previewSource)
+                    End If
+                    Await Task.Run(Sub() CubeLutWriter.WriteFile(targetPath, presetName, gridSize,
+                                                                 CubeLutWriter.BuildTable(recipe, gridSize, reference)))
+                Else
+                    Await Task.Run(Function() XmpPresetWriter.WriteFile(targetPath, presetName, transferable, entries))
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.ExportAdjustmentFile", ex)
+                StatusText = String.Format(LocalizationService.T("Die Datei ließ sich nicht schreiben: {0}"), ex.Message)
+                Return False
+            End Try
+            AppSettingsService.Update(Sub(s) s.AdjustmentExportFolder = folder)
+            StatusText = String.Format(If(isLut, LocalizationService.T("LUT gespeichert: {0}"),
+                                              LocalizationService.T("XMP-Preset gespeichert: {0}")),
+                                       IO.Path.GetFileName(targetPath))
+            Return True
         End Function
 
         ''' <summary>Der Knopf "Verwalten": das Fenster mit Ordnerbaum und Anpassungen. Danach
@@ -20125,9 +20515,15 @@ Namespace ViewModels
                                                                    _mainVm.Settings.EditorLayersPanelExpanded = Not _mainVm.Settings.EditorLayersPanelExpanded
                                                                    Me.RaisePropertyChanged(NameOf(IsLayersPanelVisible))
                                                                End Sub)
+            ' Der Knopf legt die Leiste FEST: aus dem gerade sichtbaren Zustand in den anderen, und
+            ' die Automatik geht dabei aus. Wer im automatischen Modus klickt, will die Leiste so
+            ' oder so stehen haben und nicht weiter dem Zeiger ueberlassen.
             ToggleToolSidebarCommand = ReactiveCommand.Create(Sub()
                                                                   If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
-                                                                  _mainVm.Settings.EditorToolSidebarCollapsed = Not _mainVm.Settings.EditorToolSidebarCollapsed
+                                                                  Dim zeigtText = AreToolSidebarLabelsVisible
+                                                                  CancelToolSelectorHover()
+                                                                  _mainVm.Settings.EditorToolSelectorAuto = False
+                                                                  _mainVm.Settings.EditorToolSidebarCollapsed = zeigtText
                                                                   Me.RaisePropertyChanged(NameOf(IsToolSidebarCollapsed))
                                                                   Me.RaisePropertyChanged(NameOf(AreToolSidebarLabelsVisible))
                                                                   Me.RaisePropertyChanged(NameOf(ToolSidebarWidth))
@@ -21096,6 +21492,41 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Das Symbol des Werkzeugs, dasselbe wie sein Knopf in der Werkzeugleiste
+        ''' (EditorView.axaml). Wer die Leiste kennt, erkennt das Ziel der Wechseltaste am Symbol,
+        ''' bevor er den Namen liest.</summary>
+        Private Shared Function SwitcherToolIcon(tool As EditorTool) As String
+            Dim name As String
+            Select Case tool
+                Case EditorTool.Adjust : name = "sun"
+                Case EditorTool.Color : name = "intersect-three"
+                Case EditorTool.Details : name = "sliders-horizontal"
+                Case EditorTool.Effects : name = "sparkle"
+                Case EditorTool.Filters : name = "palette"
+                Case EditorTool.AllAdjustments : name = "sliders"
+                Case EditorTool.Extensions : name = "puzzle-piece"
+                Case EditorTool.Transform : name = "crop"
+                Case EditorTool.Resize : name = "frame-corners"
+                Case EditorTool.Warp : name = "perspective"
+                Case EditorTool.Selection : name = "cursor"
+                Case EditorTool.Mask : name = "mask-happy"
+                Case Else : Return Nothing
+            End Select
+            Return "avares://FerrumPix/Assets/Icons/phosphor/regular/" & name & ".svg"
+        End Function
+
+        Public ReadOnly Property PreviousSwitcherToolIcon As String
+            Get
+                Return SwitcherToolIcon(NeighborSwitcherTool(-1))
+            End Get
+        End Property
+
+        Public ReadOnly Property NextSwitcherToolIcon As String
+            Get
+                Return SwitcherToolIcon(NeighborSwitcherTool(1))
+            End Get
+        End Property
+
         ''' <summary>Zum Nachbarwerkzeug im Kreis wechseln, ueber denselben Weg wie die Knoepfe der
         ''' Werkzeugleiste. False ausserhalb des Kreises (dann bleibt die Taste unbehandelt).</summary>
         Public Function GoToNeighborSwitcherTool(direction As Integer) As Boolean
@@ -21106,7 +21537,8 @@ Namespace ViewModels
         End Function
 
         Public Sub RaiseToolSwitcherChanged()
-            For Each n In {NameOf(ShowToolSwitcher), NameOf(PreviousSwitcherToolLabel), NameOf(NextSwitcherToolLabel)}
+            For Each n In {NameOf(ShowToolSwitcher), NameOf(PreviousSwitcherToolLabel), NameOf(NextSwitcherToolLabel),
+                           NameOf(PreviousSwitcherToolIcon), NameOf(NextSwitcherToolIcon)}
                 Me.RaisePropertyChanged(n)
             Next
         End Sub
@@ -26222,6 +26654,7 @@ Namespace ViewModels
                 .NoiseReductionMethod = _noiseReductionMethod,
                 .DustScratches = CSng(_dustScratches),
                 .Haze = CSng(_haze),
+                .HazeModel = If(_haze > 0, _hazeModel, 0),
                 .AddNoise = CSng(_addNoise),
                 .[Structure] = CSng(_structure),
                 .Glow = CSng(_glow),
@@ -26236,6 +26669,7 @@ Namespace ViewModels
                 .GrainSize = CSng(_grainSize),
                 .GrainFrequency = CSng(_grainFrequency),
                 .GrainColor = CSng(_grainColor),
+                .GrainModel = If(_grain > 0, _grainModel, 0),
                 .Clarity = CSng(_clarity),
                 .NegativeEnabled = _negativeEnabled AndAlso Not (forPreview AndAlso _suppressNegativeForPick),
                 .NegativeMonochrome = _negativeMonochrome,
@@ -27850,6 +28284,8 @@ Namespace ViewModels
             _noiseReductionMethod = adj.NoiseReductionMethod
             _dustScratches = adj.DustScratches
             _haze = adj.Haze
+            _hazeModel = adj.HazeModel
+            _hazeModelBeforeZero = -1
             _addNoise = adj.AddNoise
             _structure = adj.[Structure]
             _glow = adj.Glow
@@ -27864,6 +28300,8 @@ Namespace ViewModels
             _grainSize = adj.GrainSize
             _grainFrequency = adj.GrainFrequency
             _grainColor = adj.GrainColor
+            _grainModel = adj.GrainModel
+            _grainModelBeforeZero = -1
             _clarity = adj.Clarity
             _negativeEnabled = adj.NegativeEnabled
             _negativeMonochrome = adj.NegativeMonochrome
@@ -28473,6 +28911,8 @@ Namespace ViewModels
             _grainSize = 0
             _grainFrequency = 0
             _grainColor = 0
+            _grainModel = 0
+            _grainModelBeforeZero = -1
             _clarity = 0
             ' VOLLSTAENDIGKEIT: diese Felder fehlten hier und ueberlebten damit
             ' den Bildwechsel - Bild B erbte Dunst/Staub/Kalibrierung/Vignettenform/Weissabgleich
@@ -28484,6 +28924,8 @@ Namespace ViewModels
             ' Kalibrierung einer RAW gehen dort auf ihre Startwerte statt auf Null.
             _dustScratches = 0
             _haze = 0
+            _hazeModel = 0
+            _hazeModelBeforeZero = -1
             _addNoise = 0
             _structure = 0
             _glow = 0
@@ -34104,6 +34546,13 @@ Namespace ViewModels
                 ' braucht der Import die Aufnahmetemperatur dieses Fotos als Bezug.
                 Dim look = XmpPresetService.LoadLook(xmpPath, imagePath:=_currentImagePath)
                 If look Is Nothing Then Return
+                ' Ein Preset mit Feldliste (aus "Anpassung speichern") verhaelt sich wie eine
+                ' gespeicherte Anpassung mit dieser Auswahl.
+                Dim presetFields = XmpPresetService.LoadPresetFields(xmpPath)
+                If presetFields IsNot Nothing Then
+                    ApplyXmpPresetWithFields(xmpPath, look, presetFields)
+                    Return
+                End If
 
                 PushUndo(LocalizationService.T("Preset angewendet"))
                 ' Der Stand VOR dem Preset, fuer die Preset-Staerke (nach PushUndo: das beendet eine
@@ -34148,6 +34597,27 @@ Namespace ViewModels
             Catch ex As Exception
                 StatusText = LocalizationService.T("XMP-Preset konnte nicht geladen werden: ") & ex.Message
             End Try
+        End Sub
+
+        ''' <summary>Ein XMP-Preset mit Feldliste (XmpPresetWriter): derselbe Schritt wie beim
+        ''' Anwenden einer gespeicherten Anpassung (<see cref="ApplyAdjustmentPreset"/>). Nur die
+        ''' gewaehlten Regler ersetzen die des Bildes, auch mit dem Neutralwert; alles andere bleibt,
+        ''' auch eine geladene LUT. Ohne Staerkeregler, wie die gespeicherte Anpassung.</summary>
+        Private Sub ApplyXmpPresetWithFields(xmpPath As String, look As ImageAdjustments, presetFields As List(Of String))
+            DropAdjustmentPresetHover()
+            PushUndo(LocalizationService.T("Preset angewendet"))
+            Dim target = GetCurrentAdjustments()
+            ApplyPresetLook(target, look, presetFields)
+            ApplyAdjustments(target)
+            MeasurePendingFilmNegativeGrayBalance()
+            _hasChanges = True
+            Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+            RaiseResetButtonStateChanged()
+            RaiseExtendedAdjustmentProperties()
+            SetLastAppliedXmpPreset(xmpPath)
+            StatusText = LocalizationService.T("XMP-Preset angewendet")
+            SchedulePreviewForCurrentTarget()
+            BeginLookRenderWait()
         End Sub
 
         ' ── Preset-Staerke ──────────────────────────────────────────────────────────────────
@@ -34237,6 +34707,10 @@ Namespace ViewModels
         Friend Shared Function BlendPresetAmount(before As ImageAdjustments, after As ImageAdjustments, k As Double) As ImageAdjustments
             Dim result = after.Clone()
             For Each p In ImageAdjustments.PixelAdjustmentProperties()
+                ' Die Fassung des Dunstes ist keine Zahl zum Mischen, sie folgt unten dem Dunst.
+                If p.Name = NameOf(ImageAdjustments.HazeModel) Then Continue For
+                ' Ebenso die Fassung der Koernung.
+                If p.Name = NameOf(ImageAdjustments.GrainModel) Then Continue For
                 Dim a = p.GetValue(before)
                 Dim b = p.GetValue(after)
                 If Equals(a, b) Then Continue For
@@ -34254,6 +34728,11 @@ Namespace ViewModels
                     p.SetValue(result, If(k > 0.005, b, a))
                 End If
             Next
+            ' Gemischter Dunst rechnet in der Fassung des Presets, solange es Dunst hinzufuegt; sonst
+            ' in der des Stands davor.
+            result.HazeModel = If(result.Haze <= 0, 0, If(after.Haze > 0 AndAlso k > 0.005, after.HazeModel, before.HazeModel))
+            ' Dasselbe fuer das Korn: es rechnet in der Fassung des Presets, solange das Korn bringt.
+            result.GrainModel = If(result.Grain <= 0, 0, If(after.Grain > 0 AndAlso k > 0.005, after.GrainModel, before.GrainModel))
             Return result
         End Function
 
@@ -34473,6 +34952,10 @@ Namespace ViewModels
             Clarity = look.Clarity
             [Structure] = look.[Structure]
             Haze = look.Haze
+            ' Mit dem Dunst seine Fassung: der Look hat sie schon nach der einen Regel gesetzt
+            ' (ImageAdjustments.HazeModelAfter); die Regel des Reglers oben kennt nur den Wert.
+            If look.Haze > 0 Then _hazeModel = look.HazeModel
+            _hazeModelBeforeZero = -1
             Vibrance = look.Vibrance
             Saturation = look.Saturation
             Sharpness = look.Sharpness
@@ -34488,6 +34971,9 @@ Namespace ViewModels
             ' bliebe ein eingefaerbtes Rauschen unter einem frisch geladenen Look stehen.
             ColorNoiseAdd = look.ColorNoiseAdd
             Grain = look.Grain
+            ' Mit dem Korn seine Fassung, wie beim Dunst oben (ImageAdjustments.GrainModelAfter).
+            If look.Grain > 0 Then _grainModel = look.GrainModel
+            _grainModelBeforeZero = -1
             GrainSize = look.GrainSize
             GrainFrequency = look.GrainFrequency
             ' Ohne Adobe-Gegenstueck bringt ein Preset hier immer 0 mit. Zugewiesen wird trotzdem,

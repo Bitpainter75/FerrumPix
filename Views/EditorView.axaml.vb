@@ -1419,6 +1419,17 @@ Namespace Views
                 UpdateInfoSidebarLayoutState()
                 UpdateLayersPanelLayout()
                 UpdateAdjustmentsPanelSide()
+                ' Das spaete Aufklappen der Leiste haengt am Zeiger. Die Anmeldung kommt hierher und
+                ' nicht ins XAML, weil dasselbe Paar auch im Rest der Ansicht so angemeldet wird.
+                Dim leiste = Me.FindControl(Of Border)("ToolSelectorBorder")
+                If leiste IsNot Nothing Then
+                    Const alleWege As RoutingStrategies =
+                        RoutingStrategies.Direct Or RoutingStrategies.Tunnel Or RoutingStrategies.Bubble
+                    leiste.AddHandler(InputElement.PointerEnteredEvent, AddressOf OnToolSelectorPointerEntered,
+                                      alleWege, handledEventsToo:=True)
+                    leiste.AddHandler(InputElement.PointerExitedEvent, AddressOf OnToolSelectorPointerExited,
+                                      alleWege, handledEventsToo:=True)
+                End If
                 UpdateCompactGroups(force:=True)
                 ' Die mittlere Gruppe der Leiste muss neu pruefen, ob ihre Beschriftungen passen,
                 ' sobald sich eine der drei Gruppen oder die Ansicht selbst in der Breite aendert.
@@ -1776,9 +1787,110 @@ Namespace Views
                                      Me.FindControl(Of Border)("FilmstripSideSlot"),
                                      position, vm.ShowFilmstrip)
             _filmstripController.IsVertical = FilmstripPlacement.IsVertical(position)
-            Dim stage = Me.FindControl(Of Border)("EditorStageBorder")
-            If stage IsNot Nothing Then stage.Margin = FilmstripPlacement.ContentInset(position, vm.ShowFilmstrip)
+            ApplyToolSelectorLayout()
             _filmstripController.ScrollToCurrent()
+        End Sub
+
+        ''' <summary>Was die Werkzeugleiste aussen am Panel dessen Spalte zuschlaegt; 0 sonst.</summary>
+        Private _toolSelectorPanelExtra As Double = 0.0
+
+        ''' <summary>Setzt die Werkzeugleiste an ihren Platz und schirmt das Bild gegen sie ab.
+        '''
+        ''' Die Leiste liegt UEBER der Bildflaeche, nicht in einer eigenen Spalte des Wurzelrasters -
+        ''' genau wie der seitliche Filmstreifen (siehe FilmstripPlacement). Was sie dem Bild wegnimmt,
+        ''' ist deshalb eine Randangabe an der Buehne. Die steht nicht im XAML, weil sie von zwei
+        ''' Dingen abhaengt: der Seite, die fuer die Leiste gewaehlt ist, und der Breite, die sie
+        ''' reserviert. Die Seite der Leiste ist seit der gleichnamigen Einstellung nicht mehr
+        ''' automatisch die Seite des Anpassungspanels.
+        '''
+        ''' Reserviert ist im automatischen Modus nur die schmale Breite. Klappt die Leiste unter dem
+        ''' Zeiger auf, aendert sich hier nichts: weder Bildflaeche noch Zoom, Einpassen, Pan-Stand
+        ''' oder die Panels rechts. Die Leiste waechst nur ueber das Bild hinaus.
+        '''
+        ''' Die aeusserste Kante der Leiste steht in beiden Zustaenden still; gewachsen wird nach
+        ''' innen, ueber das Bild. Deshalb ruehrt sich kein Symbol, wenn die Leiste klappt.</summary>
+        Private Sub ApplyToolSelectorLayout()
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim stage = Me.FindControl(Of Border)("EditorStageBorder")
+            If vm Is Nothing OrElse stage Is Nothing Then Return
+
+            Dim film = FilmstripPlacement.ContentInset(vm.FilmstripPosition, vm.ShowFilmstrip)
+            Dim onLeft = vm.IsToolSelectorOnLeft
+            Dim panelOnLeft = vm.IsAdjustmentsPanelOnLeft
+
+            ' AUSSEN AM PANEL: eine feste Seite, auf der zugleich das Anpassungspanel steht, meint den
+            ' Fensterrand und nicht die Kante der Buehne. Links ist das die Lage von frueher - Leiste
+            ' ganz links, das Panel direkt daneben -, und "Links" ist die Vorgabe; ohne diesen Fall
+            ' saehe ein Editor mit linkem Panel nach dem Update anders aus als vorher, und "Links"
+            ' waere dort dasselbe wie "Mit Anpassungen". Die Leiste steht dann in der Spalte des
+            ' Panels, und das Panel rueckt um ihre Breite nach innen.
+            Dim outsidePanel = Not String.Equals(vm.ToolSelectorSide, AppSettingsService.ToolSelectorSideWithAdjustments, StringComparison.Ordinal) AndAlso
+                               onLeft = panelOnLeft
+            Dim reservedWidth = vm.ToolSelectorReservedWidth
+            Dim stageInset = If(outsidePanel, 0.0, reservedWidth)
+
+            Dim panel = Me.FindControl(Of Border)("AdjustmentsPanelBorder")
+            If panel IsNot Nothing Then
+                panel.Margin = If(Not outsidePanel, New Thickness(0),
+                                  If(onLeft, New Thickness(reservedWidth, 0, 0, 0), New Thickness(0, 0, reservedWidth, 0)))
+            End If
+            ' Die Spalte des Panels waechst um die Leiste: sonst ginge ihre Breite vom Panel ab und
+            ' es unterschritte seine Mindestbreite. Der Ziehrand rechnet denselben Zuschlag wieder
+            ' heraus (OnAdjustmentsPanelSplitterDragCompleted).
+            _toolSelectorPanelExtra = If(outsidePanel, reservedWidth, 0.0)
+            Dim root = Me.FindControl(Of Grid)("EditorRootGrid")
+            If root IsNot Nothing AndAlso root.ColumnDefinitions.Count >= 2 Then
+                Dim panelColumnDefinition = root.ColumnDefinitions(If(panelOnLeft, 0, 1))
+                panelColumnDefinition.MinWidth = vm.AdjustmentsPanelColumnMinWidth + _toolSelectorPanelExtra
+                panelColumnDefinition.MaxWidth = vm.AdjustmentsPanelColumnMaxWidth + _toolSelectorPanelExtra
+                panelColumnDefinition.Width = New GridLength(vm.AdjustmentsPanelWidth + _toolSelectorPanelExtra)
+            End If
+
+            Dim toolBar = Me.FindControl(Of Border)("ToolSelectorBorder")
+            If toolBar IsNot Nothing Then
+                SetGridColumn(toolBar, If(outsidePanel, If(panelOnLeft, 0, 1), If(panelOnLeft, 1, 0)))
+                ' Aussen steht sie neben dem Panel und nicht neben dem Filmstreifen der Buehne.
+                toolBar.Margin = If(outsidePanel, New Thickness(0), New Thickness(0, film.Top, 0, film.Bottom))
+                ' Voll qualifiziert: der Name gehoert hier zugleich der Eigenschaft des Controls,
+                ' und VB nimmt sonst die Eigenschaft statt der Aufzaehlung (Warnung BC42025).
+                toolBar.HorizontalAlignment = If(onLeft, Avalonia.Layout.HorizontalAlignment.Left,
+                                                         Avalonia.Layout.HorizontalAlignment.Right)
+                ' Die Trennlinie der Leiste zeigt zum Bild, also an ihre innere Kante.
+                toolBar.BorderThickness = If(onLeft, New Thickness(0, 0, 1, 0), New Thickness(1, 0, 0, 0))
+            End If
+
+            ' Der seitliche Streifen rueckt von der Leiste weg ans Bild. Ein wagerechter oben braucht
+            ' keinen seitlichen Rand: er liegt quer ueber ihr, und die Leiste beginnt unter ihm.
+            Dim sideInset = If(onLeft, New Thickness(stageInset, 0, 0, 0), New Thickness(0, 0, stageInset, 0))
+            Dim filmstripSlot = Me.FindControl(Of Border)("FilmstripSideSlot")
+            If filmstripSlot IsNot Nothing Then
+                filmstripSlot.Margin = If(FilmstripPlacement.IsVertical(vm.FilmstripPosition), sideInset, New Thickness(0))
+            End If
+
+            ' Kopf- und Fussgruppe stehen mittig zum Bild, nicht zum Fenster, und ruecken mit.
+            Dim headerButtons = Me.FindControl(Of StackPanel)("StageHeaderButtons")
+            If headerButtons IsNot Nothing Then headerButtons.Margin = sideInset
+            Dim footerButtons = Me.FindControl(Of StackPanel)("StageFooterButtons")
+            If footerButtons IsNot Nothing Then
+                footerButtons.Margin = If(onLeft, New Thickness(stageInset, 0, 0, 6), New Thickness(0, 0, stageInset, 6))
+            End If
+
+            stage.Margin = If(onLeft,
+                             New Thickness(film.Left + stageInset, film.Top, film.Right, film.Bottom),
+                             New Thickness(film.Left, film.Top, film.Right + stageInset, film.Bottom))
+        End Sub
+
+        ' Der Zeiger allein, kein Klick und kein Fokus: die Leiste darf keinem Werkzeug die Tastatur
+        ' wegnehmen. PointerEntered und PointerExited sind Direct und laufen nicht zu den Knopfchen
+        ' hinein - darueber hinwegzufahren hoert sich an, als staende der Zeiger weiter auf der Leiste.
+        Private Sub OnToolSelectorPointerEntered(sender As Object, e As PointerEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm IsNot Nothing Then vm.BeginToolSelectorHover()
+        End Sub
+
+        Private Sub OnToolSelectorPointerExited(sender As Object, e As PointerEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm IsNot Nothing Then vm.EndToolSelectorHover()
         End Sub
 
         ''' STUFE 2: Region-Blits schreiben in DIESELBE WriteableBitmap-Instanz - fuer das Binding
@@ -2091,6 +2203,13 @@ Namespace Views
                     ' Dieselbe Stelle setzt Seite UND Breite: das Panel steht in einer Spalte, und
                     ' beide Angaben beschreiben dieselbe Spalte.
                     UpdateAdjustmentsPanelSide()
+                Case NameOf(EditorViewModel.AreToolSidebarLabelsVisible),
+                     NameOf(EditorViewModel.ToolSelectorSide)
+                    ' Die enge Leiste nimmt dem Bild nichts weg, sie steht darueber. Was sie reserviert,
+                    ' ist deshalb eine Randangabe an der Buehne, und die muss nach der Umschaltung neu
+                    ' gesetzt werden. Dasselbe gilt fuer die Seite der Leiste selbst: sie ist seit der
+                    ' gleichnamigen Einstellung unabhaengig von der Seite des Anpassungspanels.
+                    ApplyToolSelectorLayout()
                 Case NameOf(EditorViewModel.EditorGridSize)
                     UpdateGridOverlay()
                 Case NameOf(EditorViewModel.EditorShowGrid)
@@ -4862,8 +4981,8 @@ Namespace Views
 
         ''' <summary>Die beiden rechten Spalten von EditorRootGrid: das Ebenenpanel, ganz rechts das
         ''' Infopanel (wie in Galerie und Betrachter). Muss zur Reihenfolge im XAML passen.</summary>
-        Private Const LayersPanelColumn As Integer = 3
-        Private Const InfoSidebarColumn As Integer = 4
+        Private Const LayersPanelColumn As Integer = 2
+        Private Const InfoSidebarColumn As Integer = 3
         ''' <summary>Muss die Breite der InfoSidebarView im XAML sein (320). Stand hier 300, ragte
         ''' das Panel zentriert je 10 Pixel aus seiner Spalte und deckte links den Rand und den
         ''' Rollbalken des Ebenenpanels ab.</summary>
@@ -4892,14 +5011,15 @@ Namespace Views
         Private Sub OnAdjustmentsPanelSplitterDragCompleted(sender As Object, e As VectorEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
             Dim root = Me.FindControl(Of Grid)("EditorRootGrid")
-            If vm Is Nothing OrElse root Is Nothing OrElse root.ColumnDefinitions.Count < 3 Then Return
-            Dim panelColumn = If(vm.IsAdjustmentsPanelOnLeft, 1, 2)
-            Dim gezogen = root.ColumnDefinitions(panelColumn).ActualWidth
+            If vm Is Nothing OrElse root Is Nothing OrElse root.ColumnDefinitions.Count < 2 Then Return
+            Dim panelColumn = If(vm.IsAdjustmentsPanelOnLeft, 0, 1)
+            ' Ohne den Zuschlag fuer eine Werkzeugleiste aussen am Panel (ApplyToolSelectorLayout).
+            Dim gezogen = root.ColumnDefinitions(panelColumn).ActualWidth - _toolSelectorPanelExtra
             If gezogen <= 0 Then Return
             vm.StoreAdjustmentsPanelWidth(gezogen)
         End Sub
 
-        ''' <summary>Tauscht Bühne und Anpassungspanel zwischen Spalte 1 und 2, je nach Einstellung
+        ''' <summary>Tauscht Bühne und Anpassungspanel zwischen Spalte 0 und 1, je nach Einstellung
         ''' (EditorAdjustmentsPanelOnLeft). Links steht das Panel dann direkt neben der
         ''' Werkzeugleiste, und die Hand wandert beim Werkzeugwechsel nicht mehr quer über den
         ''' Schirm.
@@ -4909,11 +5029,11 @@ Namespace Views
         Private Sub UpdateAdjustmentsPanelSide()
             Dim vm = TryCast(DataContext, EditorViewModel)
             Dim root = Me.FindControl(Of Grid)("EditorRootGrid")
-            If root Is Nothing OrElse root.ColumnDefinitions.Count < 3 Then Return
+            If root Is Nothing OrElse root.ColumnDefinitions.Count < 2 Then Return
 
             Dim onLeft = vm IsNot Nothing AndAlso vm.IsAdjustmentsPanelOnLeft
-            Dim panelColumn = If(onLeft, 1, 2)
-            Dim stageColumn = If(onLeft, 2, 1)
+            Dim panelColumn = If(onLeft, 0, 1)
+            Dim stageColumn = If(onLeft, 1, 0)
 
             ' Die Breite kommt aus den Einstellungen und ist dort geklemmt; die Stufe Winzig zieht davon
             ' ihre Punkte ab. Die Grenzen stehen zusaetzlich an der SPALTE: der Ziehrand verhandelt
@@ -4950,11 +5070,15 @@ Namespace Views
             End If
 
             SetGridColumn(Me.FindControl(Of Border)("EditorStageBorder"), stageColumn)
+            SetGridColumn(Me.FindControl(Of Border)("ToolSelectorBorder"), stageColumn)
             SetGridColumn(Me.FindControl(Of Border)("FilmstripSideSlot"), stageColumn)
             SetGridColumn(Me.FindControl(Of StackPanel)("StageHeaderButtons"), stageColumn)
             SetGridColumn(Me.FindControl(Of StackPanel)("StageFooterButtons"), stageColumn)
             ' Die Mitte der Buehne liegt jetzt woanders, ohne dass sich eine Groesse aendert.
             QueueStageHeaderLabelsFit()
+            ' Die Seite des Panels entscheidet auch, an welcher Kante die Werkzeugleiste haengt und in
+            ' welche Richtung sie waechst. Beides steht erst fest, wenn die Spalten vertauscht sind.
+            ApplyToolSelectorLayout()
         End Sub
 
         ' Grid.SetColumn wirft bei Nothing; gefunden wird hier aber ueber Namen.

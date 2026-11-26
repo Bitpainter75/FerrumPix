@@ -44,6 +44,10 @@
              Schluessel: fehlt eine Variante, gilt die Norm, und genau das ist bei
              Tool.ButtonPadding der Fall - compact aendert die Waagerechte nicht.
 
+             Die Randmaesse der Ueberschrift sind auf beiden Seiten gleich gewaehlt: die
+             Ueberschrift steht je nach Stand der Werkzeugleiste auch rechtsbuendig, und ein Rand
+             nur links gaebe ihr dann keinen Abstand zum Rand mehr.
+
              Die Adjust-Schluessel wirken nur INNERHALB des Anpassungspanels: die Klasse
              adjustment-group steht ausser dort auch in Dialogen (Export, Grossenanderung) und in den
              Einstellungsabschnitten, und die sollen von der Dichtewahl des Panels unberuehrt
@@ -58,9 +62,9 @@
         <Thickness x:Key="FP.Density.Tool.ButtonPadding.tiny">6,0</Thickness>
         <x:Double x:Key="FP.Density.Tool.ItemSpacing">2</x:Double>
         <x:Double x:Key="FP.Density.Tool.ItemSpacing.tiny">1</x:Double>
-        <Thickness x:Key="FP.Density.Tool.HeaderMargin">10,10,0,4</Thickness>
-        <Thickness x:Key="FP.Density.Tool.HeaderMargin.compact">8,6,0,3</Thickness>
-        <Thickness x:Key="FP.Density.Tool.HeaderMargin.tiny">6,4,0,2</Thickness>
+        <Thickness x:Key="FP.Density.Tool.HeaderMargin">10,10,10,4</Thickness>
+        <Thickness x:Key="FP.Density.Tool.HeaderMargin.compact">8,6,8,3</Thickness>
+        <Thickness x:Key="FP.Density.Tool.HeaderMargin.tiny">6,4,6,2</Thickness>
         <Thickness x:Key="FP.Density.Tool.SidebarPadding">8,8</Thickness>
         <Thickness x:Key="FP.Density.Tool.SidebarPadding.compact">8,6</Thickness>
         <Thickness x:Key="FP.Density.Tool.SidebarPadding.tiny">5,4</Thickness>
@@ -957,7 +961,10 @@
         <Setter Property="Padding" Value="{DynamicResource FP.Density.Tool.ButtonPadding}"/>
         <Setter Property="Height" Value="{DynamicResource FP.Density.Tool.ButtonHeight}"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
-        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <!-- Die Ausrichtung des Inhalts steht an jedem Knopf selbst und nicht hier: sie haengt an der
+             Seite des Anpassungspanels und ist die Kante, an der das Symbol sitzt (ToolIconColumn und
+             ToolSelectorContentAlignment im Editor-Modell). Hier gehoert nur hin, was fuer beide Seiten
+             gleich ist. -->
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>

@@ -2109,12 +2109,13 @@ Namespace Services
         End Function
 
         ''' <summary>Dunst: positiv fuegt Dunst hinzu (<see cref="ApplyAddedHaze"/>), negativ entfernt
-        ''' ihn (<see cref="ApplyDehaze"/>). Beide wirken oertlich.</summary>
-        Private Shared Function ApplyHaze(source As SKBitmap, amount As Single) As SKBitmap
+        ''' ihn (<see cref="ApplyDehaze"/>). Beide wirken oertlich. <paramref name="hazeModel"/> ist
+        ''' die Fassung des Rezepts (ImageAdjustments.HazeModel), nur das Hinzufuegen kennt sie.</summary>
+        Private Shared Function ApplyHaze(source As SKBitmap, amount As Single, hazeModel As Integer) As SKBitmap
             Dim strength = Clamp(amount, -1, 1)
             If Math.Abs(strength) <= 0.001F Then Return source
             If strength < 0 Then Return ApplyDehaze(source, -strength)
-            Return ApplyAddedHaze(source, strength)
+            Return ApplyAddedHaze(source, strength, hazeModel)
         End Function
 
         ' ── Dunst hinzufuegen ──────────────────────────────────────────────────────────────────
@@ -2129,7 +2130,11 @@ Namespace Services
         ' Kanals der Bildpunkte, relativ zum Dunstlicht, im Minimum ueber 5 mal 5 Zellen (sonst
         ' laesen die Luecken in Gras oder Laub als klar) und weichgezeichnet ueber ein Zehntel der
         ' kurzen Kante, ergibt die Karte des hinzugefuegten Dunstes. Danach geht jeder Bildpunkt
-        ' ein Stueck zum Schleier, der die Helligkeit des Dunstlichts hat, leicht kuehl getoent.
+        ' ein Stueck zum Schleier, der die Helligkeit des Dunstlichts hat. Seine Farbe haengt an der
+        ' Fassung des Rezepts (ImageAdjustments.HazeModel): in Fassung 0 leicht kuehl getoent, in
+        ' Fassung 1 die Farbe des Dunstlichts als Median der dunstigsten 0,17 Prozent; die Referenz
+        ' folgt mit ihrem Schleier dem Dunstlicht (Reglereichung/ergebnisse/dunstfarbe.txt: dE00
+        ' der Wirkung bei -100 im Median von 8,52 auf 7,45, an farbigem Dunstlicht von 9,98 auf 8,01).
         '
         ' GEMISCHT wird auf den Gammawerten hoch AddedHazePower: darin liegen dunkle Werte naeher am
         ' Schleier, und die Tiefen heben sich so wenig mehr als die Mitten, wie bei der Referenz
@@ -2138,7 +2143,9 @@ Namespace Services
         ' DNG-Konverter gesucht (Diagnostics/Reglereichung/dunst_modell.py): Abstand der Wirkung
         ' bei -100, -50, -25 von 15,9, 9,6, 5,5 auf rund 10,5, 5,1, 2,7.
         Private Const AddedHazeFloor As Double = 0.5
-        Private Const AddedHazeScale As Double = 4.0
+        ''' Ein Feld statt einer Konstanten, damit die Reglereichung die Skala verstellen kann
+        ''' (Messschalter REGLER_DUNST_SKALA); die Anwendung setzt sie nie.
+        Private Shared AddedHazeScale As Double = 4.0
         Private Const AddedHazeExponent As Double = 1.3
         Private Const AddedHazeLight As Double = 0.7
         Private Const AddedHazeCeiling As Double = 0.97
@@ -2147,10 +2154,27 @@ Namespace Services
         Private Const AddedHazePatch As Integer = 2
         Private Const AddedHazeBlurFraction As Double = 0.1
         Private Const AddedHazeGuideEpsilon As Double = 0.01
-        ' Der Schleier ist leicht kuehl, wie gestreutes Licht; je Kanal Rot, Gruen, Blau.
+        ' Fassung 0: der Schleier ist leicht kuehl, wie gestreutes Licht; je Kanal Rot, Gruen, Blau.
         Private Shared ReadOnly AddedHazeTint As Double() = {0.96, 1.0, 1.03}
+        ' Die Farbe des Schleiers: 0 die feste Toenung AddedHazeTint (Fassung 0); 1 die Farbe des
+        ' gemessenen Dunstlichts als Mittel der dunstigsten 0,1 Prozent (DehazeAtmosphere), nur fuer
+        ' die Reglereichung; 2 dieselbe als Median der dunstigsten 0,17 Prozent
+        ' (AddedHazeMedianAtmosphere, Fassung 1). Das Mittel bleibt als Messvariante: eine kleine
+        ' helle farbige Flaeche zieht es (Lichterkette, Bluete), den Median nicht.
+        Private Const AddedHazeVeilFixedTint As Integer = 0
+        Private Const AddedHazeVeilMean As Integer = 1
+        Private Const AddedHazeVeilMedian As Integer = 2
+        ''' Nur fuer die Reglereichung (Messschalter REGLER_DUNST_FARBE), in der Anwendung immer -1:
+        ''' -1 die Fassung des Rezepts entscheidet; 0, 1 oder 2 erzwingen die Farbe des Schleiers
+        ''' fuer jedes Rezept (siehe AddedHazeVeilFixedTint), damit sich beide Fassungen und das
+        ''' Mittel an denselben Stellungen messen lassen.
+        Private Shared AddedHazeVeilOverride As Integer = -1
+        ' Nur fuer den Median: Anteil der dunstigsten Zellen und Umgebung des dunkelsten
+        ' Kanals als Anteil der langen Kante.
+        Private Const AddedHazeMedianFraction As Double = 0.0017
+        Private Const AddedHazeMedianPatchFraction As Double = 0.005
 
-        Private Shared Function ApplyAddedHaze(source As SKBitmap, amount As Single) As SKBitmap
+        Private Shared Function ApplyAddedHaze(source As SKBitmap, amount As Single, hazeModel As Integer) As SKBitmap
             Dim strength = Math.Max(0.0, Math.Min(1.0, CDbl(amount)))
             If strength <= 0.001 Then Return source
             Dim width = source.Width, height = source.Height
@@ -2172,7 +2196,7 @@ Namespace Services
                 HazeCellMeans(srcBuf, stride, ri, gi, bi, ai, width, height, lw, lh, lowR, lowG, lowB, lowOwn)
                 Dim veil As Double() = Nothing
                 Dim lightFactor As Double
-                Dim map = AddedHazeMap(lowR, lowG, lowB, lowOwn, lw, lh, veil, lightFactor)
+                Dim map = AddedHazeMap(lowR, lowG, lowB, lowOwn, lw, lh, hazeModel, veil, lightFactor)
 
                 Dim powLut(255) As Double
                 For v = 0 To 255
@@ -2225,9 +2249,10 @@ Namespace Services
         ''' <summary>Die Karte des hinzugefuegten Dunstes auf der verkleinerten Kopie, dazu der Schleier
         ''' im Mischraum (je Kanal) und der Faktor aus der Helligkeit des Dunstlichts, mit dem die
         ''' Karte je Bildpunkt malgenommen wird. Eigene Funktion, weil der Weg ueber die Grafikkarte
-        ''' die Zellmittel dort bildet und hier weiterrechnet.</summary>
+        ''' die Zellmittel dort bildet und hier weiterrechnet. <paramref name="hazeModel"/> ist die
+        ''' Fassung des Rezepts (ImageAdjustments.HazeModel) und waehlt die Farbe des Schleiers.</summary>
         Friend Shared Function AddedHazeMap(lowR As Double(), lowG As Double(), lowB As Double(), lowOwn As Double(),
-                                            lw As Integer, lh As Integer, ByRef veil As Double(),
+                                            lw As Integer, lh As Integer, hazeModel As Integer, ByRef veil As Double(),
                                             ByRef lightFactor As Double) As Double()
             Dim count = lw * lh
             Dim atmR, atmG, atmB As Double
@@ -2252,6 +2277,24 @@ Namespace Services
             map = GuidedFilter(guide, map, lw, lh, 2, AddedHazeGuideEpsilon)
 
             Dim brightness = Math.Max(0.0001, (linR + linG + linB) / 3.0)
+            Dim veilColor = If(AddedHazeVeilOverride >= 0, AddedHazeVeilOverride,
+                               If(hazeModel >= 1, AddedHazeVeilMedian, AddedHazeVeilFixedTint))
+            If veilColor <> AddedHazeVeilFixedTint Then
+                ' Der Schleier in der Farbe des gemessenen Dunstlichts, auf die Helligkeit des
+                ' Dunstlichts (Mittel der dunstigsten 0,1 Prozent) gebracht.
+                Dim tone = If(veilColor = AddedHazeVeilMedian, AddedHazeMedianAtmosphere(lowR, lowG, lowB, lw, lh), New Double() {linR, linG, linB})
+                Dim toneScale = brightness / Math.Max(0.0001, (tone(0) + tone(1) + tone(2)) / 3.0)
+                Dim linearVeil(2) As Double
+                For c = 0 To 2
+                    linearVeil(c) = Math.Max(0.0001, tone(c)) * toneScale
+                Next
+                lightFactor = Math.Pow((linearVeil(0) + linearVeil(1) + linearVeil(2)) / 3.0, AddedHazeLight)
+                veil = New Double(2) {}
+                For c = 0 To 2
+                    veil(c) = Math.Pow(LinearToSrgb(Math.Min(1.0, linearVeil(c))), AddedHazePower)
+                Next
+                Return map
+            End If
             Dim tintMean = (AddedHazeTint(0) + AddedHazeTint(1) + AddedHazeTint(2)) / 3.0
             lightFactor = Math.Pow(brightness * tintMean, AddedHazeLight)
             veil = New Double(2) {}
@@ -2259,6 +2302,37 @@ Namespace Services
                 veil(c) = Math.Pow(LinearToSrgb(Math.Min(1.0, brightness * AddedHazeTint(c))), AddedHazePower)
             Next
             Return map
+        End Function
+
+        ''' <summary>Fuer den Schleier der Fassung 1 (AddedHazeVeilMedian): das Dunstlicht im Licht als
+        ''' Median je Kanal der dunstigsten Zellen (hoechster dunkelster Kanal, erodiert ueber
+        ''' AddedHazeMedianPatchFraction der langen Kante, Anteil AddedHazeMedianFraction).</summary>
+        Private Shared Function AddedHazeMedianAtmosphere(lowR As Double(), lowG As Double(), lowB As Double(),
+                                                          lw As Integer, lh As Integer) As Double()
+            Dim count = lw * lh
+            Dim linear(2)() As Double
+            For c = 0 To 2
+                linear(c) = New Double(count - 1) {}
+            Next
+            Dim minChannel(count - 1) As Double
+            For i = 0 To count - 1
+                linear(0)(i) = SrgbToLinear(lowR(i))
+                linear(1)(i) = SrgbToLinear(lowG(i))
+                linear(2)(i) = SrgbToLinear(lowB(i))
+                minChannel(i) = Math.Min(linear(0)(i), Math.Min(linear(1)(i), linear(2)(i)))
+            Next
+            Dim patch = Math.Max(1, CInt(Math.Round(Math.Max(lw, lh) * AddedHazeMedianPatchFraction)))
+            Dim dark = MinFilter(minChannel, lw, lh, patch)
+            Dim taken = Math.Max(1, CInt(Math.Ceiling(count * AddedHazeMedianFraction)))
+            Dim order = Enumerable.Range(0, count).OrderByDescending(Function(i) dark(i)).Take(taken).ToArray()
+            Dim result(2) As Double
+            For c = 0 To 2
+                Dim channel = linear(c)
+                Dim values = order.Select(Function(i) channel(i)).OrderBy(Function(v) v).ToArray()
+                Dim middle = values.Length \ 2
+                result(c) = If(values.Length Mod 2 = 1, values(middle), (values(middle - 1) + values(middle)) / 2.0)
+            Next
+            Return result
         End Function
 
         Private Shared Function SrgbToLinear(v As Double) As Double
@@ -3576,6 +3650,47 @@ Namespace Services
         Private Shared ReadOnly _cubeLutCache As New Dictionary(Of String, Lut3DData)(StringComparer.OrdinalIgnoreCase)
         Private Shared ReadOnly _cubeLutCacheLock As New Object()
 
+        ''' <summary>Groesste .cube-Datei, die gelesen wird. Die groesste zulaessige Tabelle
+        ''' (MaxCube3DSize hoch drei Zeilen mit je drei Zahlen) braucht als Text rund 450 MB; die
+        ''' Grenze laesst dafuer Platz und haelt alles darueber vom Lesen fern.</summary>
+        Private Const MaxCubeFileBytes As Long = 768L * 1024L * 1024L
+
+        ''' <summary>Darf diese Datei als LUT gelesen werden? Der Pfad kommt aus dem Rezept, und ein
+        ''' Rezept kann aus fremder Hand stammen (Projektbuendel, Beistelldatei, Vorlage). Deshalb:
+        '''
+        ''' <para>NETZPFADE (\\server\freigabe, //server, \\?\, \\.\) nur, wenn genau diese Datei in der
+        ''' eigenen LUT-Liste steht (AppSettings.LutPresets). Unter Windows meldet schon die Frage, ob
+        ''' die Datei existiert, den Nutzer am fremden Server an; ein Rezept duerfte das sonst
+        ''' ausloesen. Die eigene Sammlung auf einer Freigabe bleibt so nutzbar.</para>
+        '''
+        ''' <para>NUR DATEIEN MIT INHALT bis <see cref="MaxCubeFileBytes"/>. Geraete, FIFOs und
+        ''' Pseudodateien melden die Groesse 0: /dev/zero liess das Lesen auf ueber 2 GB anwachsen,
+        ''' eine FIFO hielt den Renderfaden fuer immer an. Eine leere Datei ist ohnehin keine LUT.
+        ''' Hinter einem symbolischen Verweis zaehlt das Endziel.</para></summary>
+        Friend Shared Function IsLoadableLutPath(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            Dim trimmed = path.Trim()
+            If trimmed.StartsWith("\\", StringComparison.Ordinal) OrElse trimmed.StartsWith("//", StringComparison.Ordinal) Then
+                Dim own = AppSettingsService.Load()?.LutPresets
+                If own Is Nothing OrElse Not own.Any(Function(p) p IsNot Nothing AndAlso PathIdentity.AreSame(p.Path, trimmed)) Then Return False
+            End If
+            Try
+                Dim info As New FileInfo(trimmed)
+                If Not info.Exists Then Return False
+                ' FileInfo nennt bei einem symbolischen Verweis die Groesse des VERWEISES; ein
+                ' Verweis auf /dev/zero kam so durch (gemessen 8,6 GB). Deshalb das Endziel pruefen.
+                If info.LinkTarget IsNot Nothing Then
+                    Dim target = TryCast(info.ResolveLinkTarget(returnFinalTarget:=True), FileInfo)
+                    If target Is Nothing OrElse Not target.Exists Then Return False
+                    info = target
+                End If
+                Dim length = info.Length
+                Return length > 0 AndAlso length <= MaxCubeFileBytes
+            Catch
+                Return False
+            End Try
+        End Function
+
         ''' Lädt und parst eine .cube-Datei (3D, 1D oder 3D mit vorgeschalteter 1D-Kurve, siehe
         ''' ParseCubeLut). Ergebnis wird pro Dateipfad gecacht, da eine LUT beim
         ''' Ziehen an einem Stärke-Regler sonst bei jedem Preview-Frame neu von der Platte geparst würde.
@@ -3589,7 +3704,7 @@ Namespace Services
         ''' Faeden dieselbe Datei gleichzeitig lesen; das kostet einmal doppelte Arbeit und ist
         ''' ungefaehrlich, weil beide dasselbe Ergebnis haben und der Erste im Cache gewinnt.
         Private Shared Function LoadCubeLut(path As String) As Lut3DData
-            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return Nothing
+            If Not IsLoadableLutPath(path) Then Return Nothing
 
             SyncLock _cubeLutCacheLock
                 Dim cached As Lut3DData = Nothing
@@ -3617,6 +3732,17 @@ Namespace Services
                 Return parsed
             End SyncLock
         End Function
+
+        ''' <summary>Vergisst den gemerkten Inhalt einer .cube-Datei, nachdem FerrumPix sie selbst
+        ''' (neu) geschrieben hat (CubeLutWriter). Steht dieselbe Datei als LUT in einem Rezept,
+        ''' rechnet die Kette danach mit dem neuen Inhalt statt mit dem alten.</summary>
+        Friend Shared Sub ForgetCubeLut(path As String)
+            If String.IsNullOrWhiteSpace(path) Then Return
+            SyncLock _cubeLutCacheLock
+                _cubeLutCache.Remove(path)
+                _cubeLutCache.Remove(path.Trim())
+            End SyncLock
+        End Sub
 
         ''' <summary>Kantenlaenge der Tabelle, in die eine 1D-LUT, eine Vorstufe oder ein anderer
         ''' Eingangsbereich eingerechnet wird. 64 ist die groesste uebliche Kante; an einer
@@ -4136,6 +4262,335 @@ Namespace Services
                     Next
                 End Sub)
 
+            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
+            Return result
+            Finally
+                ReturnPooledBuffer(srcBuf)
+                ReturnPooledBuffer(dstBuf)
+            End Try
+        End Function
+
+        ' ── Koernung, Fassung 1 (ImageAdjustments.GrainModel) ─────────────────────
+        '
+        ' EIN WEICHES RAUSCHFELD AM BILD statt harter Zellen in Bildpunkten. Je Feld ein Gitter von
+        ' Zufallswerten (Summe dreier gleichverteilter Werte aus einem Ortshash, also fast eine
+        ' Glocke), dazwischen kubisch geglaettet (B-Spline). Der Gitterabstand ist ein Anteil der
+        ' kurzen Kante des Bildes, das die Stufe sieht: die Vorschau, der Export in jeder Groesse und
+        ' das Zoom-Detail tasten dasselbe Feld nur feiner oder groeber ab.
+        '
+        ' UNTER EINEM BILDPUNKT JE KORN mittelt sich das Feld weg, wie beim flaechentreuen
+        ' Verkleinern des fertigen Bildes. Die Staerke sinkt dann um GrainFilmPixelAverage (gemessen:
+        ' L / Wurzel(L^2 + 0,25) fuer das hier gebaute Feld, L in Bildpunkten), und das Gitter
+        ' wird auf einen Punkt je Bildpunkt gelegt, gemischt mit dem ungeglaetteten Wert. Das Muster
+        ' ist dort nicht mehr dasselbe, wohl aber seine Staerke.
+        '
+        ' DIE STAERKE NACH DER HELLIGKEIT (GrainFilmBell): in den Mitten am staerksten, zu Schwarz und
+        ' Weiss hin auslaufend, nie ganz null. Nahe 0 und 255 wird das Korn weich und symmetrisch
+        ' auf den Abstand zur Grenze gestaucht (GrainFilmChannel, tanh): nichts wird einseitig
+        ' abgeschnitten, und der Mittelwert bleibt, wo er war. Die Rauheit mischt eine zweite
+        ' Lage mit doppeltem Abstand ein, die Farbe drei eigene Felder je Kanal. Groesse, Rauheit und
+        ' Staerke sind auf die Werte von crs:GrainSize, crs:GrainFrequency und crs:GrainAmount
+        ' geeicht (Messung in Plaene/KORN_ECHTER.md).
+        '
+        ' Ein Weg fuer alle drei: der 8-Bit-Weg hier, der tiefe Weg (ApplyGrainFilmDeep) und die
+        ' Karte (GrainFilmOnGpu) rechnen dasselbe Feld aus denselben Gitterwerten.
+
+        ''' <summary>Gitterabstand der ersten Lage als Anteil der kurzen Kante, bei Groesse 0 und
+        ''' Zuwachs bis Groesse 100.</summary>
+        Private Const GrainFilmSpacingBase As Double = 0.0001
+        Private Const GrainFilmSpacingSlope As Double = 0.0000068
+        ''' <summary>Gewicht der zweiten, doppelt so groben Lage bei Rauheit 100.</summary>
+        Private Const GrainFilmRoughnessMix As Double = 0.5
+        ''' <summary>Streuung in 8-Bit-Stufen in den Mitten bei Staerke 0 und Zuwachs bis 100.</summary>
+        Private Const GrainFilmAmplitudeBase As Double = 1.6
+        Private Const GrainFilmAmplitudeSlope As Double = 0.185
+        ''' <summary>Form der Glocke ueber der Helligkeit Y (0 bis 1): (4 Yg (1 - Yg)) hoch
+        ''' GrainFilmBellPower mit Yg = Y hoch GrainFilmBellGamma; der Gipfel liegt bei Y 0,35.</summary>
+        Private Const GrainFilmBellGamma As Double = 0.66
+        Private Const GrainFilmBellPower As Double = 0.25
+        ''' <summary>Startwerte der Felder: erste Lage, zweite Lage, Rot, Gruen, Blau.</summary>
+        Private Shared ReadOnly GrainFilmSeeds As UInteger() = {&H3C6EF372UI, &HA54FF53AUI, &H510E527FUI, &H9B05688CUI, &H1F83D9ABUI}
+
+        ''' <summary>Was die Stufe aus den vier Reglern und der Bildgroesse macht.</summary>
+        Friend NotInheritable Class GrainFilmPlan
+            ''' <summary>Gitterabstand der ersten Lage in Punkten der Stufe (die zweite hat den doppelten).</summary>
+            Public Spacing As Double
+            ''' <summary>Streuung in den Mitten, in 8-Bit-Stufen, fuer ein grobes Feld; die Mittelung im
+            ''' Bildpunkt steckt in den Gewichten der Lagen.</summary>
+            Public Amplitude As Double
+            ''' <summary>Gewichte der beiden Lagen, zusammen auf eine Streuung von 1 gebracht, je mit
+            ''' der Mittelung ihrer Lage.</summary>
+            Public FirstWeight As Double
+            Public SecondWeight As Double
+            ''' <summary>Anteil der Farbfelder und der Ausgleich auf gleiche Gesamtstaerke.</summary>
+            Public ColorMix As Double
+            Public ColorNorm As Double
+            ''' <summary>Gewicht der Farbfelder (Mittelung der ersten Lage).</summary>
+            Public ColorWeight As Double
+            ''' <summary>Die Felder in dieser Reihenfolge: erste Lage, zweite Lage (bei Rauheit), dann
+            ''' Rot, Gruen, Blau (bei Farbe).</summary>
+            Public Fields As New List(Of (Spacing As Double, Seed As UInteger))()
+            Public ReadOnly Property HasSecond As Boolean
+                Get
+                    Return SecondWeight <> 0
+                End Get
+            End Property
+            Public ReadOnly Property HasColor As Boolean
+                Get
+                    Return ColorMix > 0
+                End Get
+            End Property
+        End Class
+
+        ''' <summary>Wie stark ein Feld mit Gitterabstand <paramref name="spacing"/> (in Bildpunkten)
+        ''' nach dem Mitteln ueber einen Bildpunkt noch streut, bezogen auf das ungemittelte Feld.
+        ''' Gemessen an diesem Feld bei achtfacher Abtastung: Kehrwert 0,5 trifft L 0,25 bis 4 auf
+        ''' 0,02 genau.</summary>
+        Friend Shared Function GrainFilmPixelAverage(spacing As Double) As Double
+            Return spacing / Math.Sqrt(spacing * spacing + 0.25)
+        End Function
+
+        Friend Shared Function GrainFilmPlanFor(width As Integer, height As Integer, amount As Single, sizeAmount As Single,
+                                                freqAmount As Single, colorAmount As Single) As GrainFilmPlan
+            Dim strength = CDbl(Clamp(amount, 0, 1))
+            Dim size = CDbl(Clamp(sizeAmount, 0, 1)) * 100.0
+            Dim roughness = CDbl(Clamp(freqAmount, 0, 1))
+            Dim plan = New GrainFilmPlan()
+            Dim shortEdge = Math.Max(1, Math.Min(width, height))
+            plan.Spacing = (GrainFilmSpacingBase + GrainFilmSpacingSlope * size) * shortEdge
+            Dim first = GrainFilmPixelAverage(plan.Spacing)
+            Dim second = GrainFilmPixelAverage(plan.Spacing * 2.0)
+            Dim mix = roughness * GrainFilmRoughnessMix
+            Dim norm = 1.0 / Math.Sqrt((1.0 - mix) * (1.0 - mix) + mix * mix)
+            plan.FirstWeight = (1.0 - mix) * norm * first
+            plan.SecondWeight = mix * norm * second
+            plan.Amplitude = (GrainFilmAmplitudeBase + GrainFilmAmplitudeSlope * strength * 100.0)
+            plan.ColorMix = CDbl(Clamp(colorAmount, 0, 1))
+            plan.ColorNorm = If(plan.ColorMix <= 0, 1.0,
+                                1.0 / Math.Sqrt((1.0 - plan.ColorMix) * (1.0 - plan.ColorMix) + plan.ColorMix * plan.ColorMix))
+            plan.ColorWeight = first
+            plan.Fields.Add((plan.Spacing, GrainFilmSeeds(0)))
+            If plan.HasSecond Then plan.Fields.Add((plan.Spacing * 2.0, GrainFilmSeeds(1)))
+            If plan.HasColor Then
+                For c = 2 To 4
+                    plan.Fields.Add((plan.Spacing, GrainFilmSeeds(c)))
+                Next
+            End If
+            Return plan
+        End Function
+
+        ''' <summary>Ein Gitterwert: drei gleichverteilte Zehn-Bit-Werte aus einem Ortshash, summiert und
+        ''' auf eine Streuung von 1 gebracht (Bereich -3 bis 3). Indizes ab 0. Gerechnet in ULong und
+        ''' nach jedem Schritt auf 32 Bit maskiert, wie GrainNoiseAt: VB prueft Ueberlaeufe.</summary>
+        Friend Shared Function GrainFilmNode(i As Integer, j As Integer, seed As UInteger) As Single
+            Dim h As ULong = (CULng(CUInt(i)) * 2654435761UL) And &HFFFFFFFFUL
+            h = h Xor ((CULng(CUInt(j)) * 2246822519UL) And &HFFFFFFFFUL) Xor CULng(seed)
+            h = ((h Xor (h >> 16)) * 2246822519UL) And &HFFFFFFFFUL
+            h = ((h Xor (h >> 13)) * 3266489917UL) And &HFFFFFFFFUL
+            h = h Xor (h >> 16)
+            Dim sum = CInt(h And 1023UL) + CInt((h >> 10) And 1023UL) + CInt((h >> 20) And 1023UL)
+            Return CSng((sum - 1534.5) / 512.0)
+        End Function
+
+        ''' <summary>Die Abtastung eines Feldes entlang einer Achse: je Stelle der erste der vier
+        ''' Gitterpunkte (Index ab 0) und vier Gewichte, schon auf eine Streuung von 1 gebracht.
+        ''' Ab einem Gitterabstand von einem Punkt liegt Gitterpunkt i bei i mal Abstand (Mitte des
+        ''' Bildpunkts x bei x + 0,5); darunter liegt je Bildpunkt ein Gitterpunkt, und die Gewichte
+        ''' mischen den ungeglaetteten Wert mit dem Anteil 1 - Abstand dazu.</summary>
+        Friend Shared Sub GrainFilmAxis(count As Integer, spacing As Double, ByRef starts As Integer(),
+                                        ByRef weights As Single(), ByRef nodes As Integer)
+            starts = New Integer(count - 1) {}
+            weights = New Single(count * 4 - 1) {}
+            Dim fine = spacing < 1.0
+            Dim beta = If(fine, 1.0 - spacing, 0.0)
+            For x = 0 To count - 1
+                Dim u = If(fine, CDbl(x), (x + 0.5) / spacing)
+                Dim i0 = CInt(Math.Floor(u))
+                Dim t = u - i0
+                Dim t2 = t * t, t3 = t2 * t
+                Dim w0 = (1.0 - t) * (1.0 - t) * (1.0 - t) / 6.0
+                Dim w1 = (3.0 * t3 - 6.0 * t2 + 4.0) / 6.0
+                Dim w2 = (-3.0 * t3 + 3.0 * t2 + 3.0 * t + 1.0) / 6.0
+                Dim w3 = t3 / 6.0
+                w0 *= 1.0 - beta : w1 = w1 * (1.0 - beta) + beta : w2 *= 1.0 - beta : w3 *= 1.0 - beta
+                Dim norm = 1.0 / Math.Sqrt(w0 * w0 + w1 * w1 + w2 * w2 + w3 * w3)
+                starts(x) = i0
+                weights(x * 4) = CSng(w0 * norm) : weights(x * 4 + 1) = CSng(w1 * norm)
+                weights(x * 4 + 2) = CSng(w2 * norm) : weights(x * 4 + 3) = CSng(w3 * norm)
+            Next
+            nodes = If(count > 0, starts(count - 1) + 4, 0)
+        End Sub
+
+        ''' <summary>Rechnet die Felder eines Plans zeilenweise und gibt je Zeile ein Feld je
+        ''' Eintrag von <see cref="GrainFilmPlan.Fields"/> an <paramref name="body"/> (Laenge
+        ''' <paramref name="width"/>). In Baendern von 16 Zeilen nebeneinander; jedes Band zieht
+        ''' die Gitterzeilen, die es braucht, einmal. Das Ergebnis haengt nicht an der Aufteilung.</summary>
+        Friend Shared Sub ForEachGrainFilmRow(width As Integer, height As Integer, plan As GrainFilmPlan,
+                                              body As Action(Of Integer, Single()()))
+            If width <= 0 OrElse height <= 0 Then Return
+            Const BandRows As Integer = 16
+            Dim fieldCount = plan.Fields.Count
+            Dim xStarts = New Integer(fieldCount - 1)() {}, xWeights = New Single(fieldCount - 1)() {}
+            Dim yStarts = New Integer(fieldCount - 1)() {}, yWeights = New Single(fieldCount - 1)() {}
+            Dim columns = New Integer(fieldCount - 1) {}
+            For f = 0 To fieldCount - 1
+                Dim rowsUnused As Integer
+                GrainFilmAxis(width, plan.Fields(f).Spacing, xStarts(f), xWeights(f), columns(f))
+                GrainFilmAxis(height, plan.Fields(f).Spacing, yStarts(f), yWeights(f), rowsUnused)
+            Next
+            Dim bandCount = (height + BandRows - 1) \ BandRows
+            Dim band = Sub(b As Integer)
+                           Dim y0 = b * BandRows
+                           Dim y1 = Math.Min(height, y0 + BandRows)
+                           Dim rows = New Single(fieldCount - 1)() {}
+                           Dim lattices = New Single(fieldCount - 1)() {}
+                           Dim firstRow = New Integer(fieldCount - 1) {}
+                           Dim columnSums = New Single(fieldCount - 1)() {}
+                           ' Aus dem Pool: je Band einige Megabyte, bei 45 Megapixeln rund 300 Baender.
+                           For f = 0 To fieldCount - 1
+                               rows(f) = ArrayPool(Of Single).Shared.Rent(width)
+                               Dim nx = columns(f)
+                               Dim jLo = yStarts(f)(y0)
+                               Dim jHi = yStarts(f)(y1 - 1) + 3
+                               firstRow(f) = jLo
+                               Dim lattice = ArrayPool(Of Single).Shared.Rent((jHi - jLo + 1) * nx)
+                               Dim seed = plan.Fields(f).Seed
+                               For j = jLo To jHi
+                                   Dim offset = (j - jLo) * nx
+                                   For i = 0 To nx - 1
+                                       lattice(offset + i) = GrainFilmNode(i, j, seed)
+                                   Next
+                               Next
+                               lattices(f) = lattice
+                               columnSums(f) = ArrayPool(Of Single).Shared.Rent(nx)
+                           Next
+                           For y = y0 To y1 - 1
+                               For f = 0 To fieldCount - 1
+                                   Dim nx = columns(f)
+                                   Dim lattice = lattices(f)
+                                   Dim col = columnSums(f)
+                                   Dim yw = yWeights(f)
+                                   Dim baseRow = (yStarts(f)(y) - firstRow(f)) * nx
+                                   Dim a0 = yw(y * 4), a1 = yw(y * 4 + 1), a2 = yw(y * 4 + 2), a3 = yw(y * 4 + 3)
+                                   For i = 0 To nx - 1
+                                       Dim k = baseRow + i
+                                       col(i) = a0 * lattice(k) + a1 * lattice(k + nx) + a2 * lattice(k + 2 * nx) + a3 * lattice(k + 3 * nx)
+                                   Next
+                                   Dim xs = xStarts(f), xw = xWeights(f), row = rows(f)
+                                   For x = 0 To width - 1
+                                       Dim s = xs(x)
+                                       Dim o = x * 4
+                                       row(x) = xw(o) * col(s) + xw(o + 1) * col(s + 1) + xw(o + 2) * col(s + 2) + xw(o + 3) * col(s + 3)
+                                   Next
+                               Next
+                               body(y, rows)
+                           Next
+                           For f = 0 To fieldCount - 1
+                               ArrayPool(Of Single).Shared.Return(rows(f))
+                               ArrayPool(Of Single).Shared.Return(lattices(f))
+                               ArrayPool(Of Single).Shared.Return(columnSums(f))
+                           Next
+                       End Sub
+            If CLng(width) * height < ParallelPixelThreshold Then
+                For b = 0 To bandCount - 1
+                    band(b)
+                Next
+            Else
+                Parallel.For(0, bandCount, band)
+            End If
+        End Sub
+
+        ''' <summary>Gewicht der Staerke ueber der Helligkeit Y (0 bis 1), als Tabelle mit 4096
+        ''' Stufen, linear dazwischen. Die Karte rechnet dieselbe Formel ohne Tabelle.</summary>
+        Private Shared ReadOnly GrainFilmBellTable As Single() = BuildGrainFilmBellTable()
+
+        Private Shared Function BuildGrainFilmBellTable() As Single()
+            Dim table = New Single(4096) {}
+            For i = 0 To 4096
+                table(i) = CSng(GrainFilmBellExact(i / 4096.0))
+            Next
+            Return table
+        End Function
+
+        Friend Shared Function GrainFilmBellExact(y As Double) As Double
+            Dim yg = Math.Pow(Math.Max(0.0, Math.Min(1.0, y)), GrainFilmBellGamma)
+            Return Math.Pow(Math.Max(0.0, 4.0 * yg * (1.0 - yg)), GrainFilmBellPower)
+        End Function
+
+        Friend Shared Function GrainFilmBell(y As Single) As Single
+            Dim p = Math.Max(0.0F, Math.Min(1.0F, y)) * 4096.0F
+            Dim i = Math.Min(4095, CInt(Math.Floor(p)))
+            Dim t = p - i
+            Return GrainFilmBellTable(i) + (GrainFilmBellTable(i + 1) - GrainFilmBellTable(i)) * t
+        End Function
+
+        ''' <summary>Das Korn eines Bildpunkts je Kanal aus den Feldzeilen, in Einheiten der Streuung
+        ''' (vor Staerke und Glocke).</summary>
+        Friend Shared Sub GrainFilmNoise(plan As GrainFilmPlan, rows As Single()(), x As Integer,
+                                         ByRef nr As Single, ByRef ng As Single, ByRef nb As Single)
+            Dim mono = plan.FirstWeight * rows(0)(x)
+            If plan.HasSecond Then mono += plan.SecondWeight * rows(1)(x)
+            If Not plan.HasColor Then
+                nr = CSng(mono) : ng = nr : nb = nr
+                Return
+            End If
+            Dim c0 = If(plan.HasSecond, 2, 1)
+            Dim keep = (1.0 - plan.ColorMix) * mono
+            Dim colorScale = plan.ColorMix * plan.ColorWeight
+            nr = CSng((keep + colorScale * rows(c0)(x)) * plan.ColorNorm)
+            ng = CSng((keep + colorScale * rows(c0 + 1)(x)) * plan.ColorNorm)
+            nb = CSng((keep + colorScale * rows(c0 + 2)(x)) * plan.ColorNorm)
+        End Sub
+
+        ''' <summary>Ein Kanal mit Korn: der Ausschlag weich auf den Abstand zu 0 und 255
+        ''' gestaucht (room mal tanh von Ausschlag durch room). Ungerade, also bleibt der Mittelwert;
+        ''' kleine Ausschlaege gehen fast unveraendert durch, keiner reicht ueber die Grenze. Auf
+        ''' der Karte dieselbe Formel mit tanh aus exp.</summary>
+        Friend Shared Function GrainFilmChannel(value As Single, noise As Single, amplitude As Single) As Single
+            Dim room = Math.Max(0.0, Math.Min(CDbl(value), 255.0 - value))
+            If room < 0.001 Then Return value
+            Dim x = noise * amplitude / room
+            ' Fern der Grenzen ist der Ausschlag klein gegen room: die Reihe bis x^5 liegt dort
+            ' unter 2e-5 relativ neben tanh und spart die teure Funktion fast ueberall.
+            If Math.Abs(x) < 0.3 Then
+                Dim x2 = x * x
+                Return CSng(value + room * x * (1.0 - x2 / 3.0 + x2 * x2 * 2.0 / 15.0))
+            End If
+            Return CSng(value + room * Math.Tanh(x))
+        End Function
+
+        ''' <summary>Koernung in Fassung 1 auf dem 8-Bit-Bild, siehe oben.</summary>
+        Private Shared Function ApplyGrainFilm(source As SKBitmap, amount As Single, sizeAmount As Single,
+                                               freqAmount As Single, colorAmount As Single) As SKBitmap
+            If Clamp(amount, 0, 1) <= 0 Then Return source
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Dim srcBuf As Byte() = Nothing, dstBuf As Byte() = Nothing
+            Dim stride, ri, gi, bi, ai As Integer
+            Dim sLen = 0
+            Try
+            If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
+            dstBuf = PlanePool(Of Byte).Rent(sLen)
+            If stride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
+            Dim w = source.Width, h = source.Height
+            Dim plan = GrainFilmPlanFor(w, h, amount, sizeAmount, freqAmount, colorAmount)
+            Dim amplitude = CSng(plan.Amplitude)
+            Dim sourceBytes = srcBuf, targetBytes = dstBuf
+            ForEachGrainFilmRow(w, h, plan,
+                Sub(y, rows)
+                    Dim rowOffset = y * stride
+                    For x As Integer = 0 To w - 1
+                        Dim o = rowOffset + x * 4
+                        Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                        ReadUnpremultiplied(sourceBytes, o, ri, gi, bi, ai, cr, cg, cb, a)
+                        Dim nr As Single, ng As Single, nb As Single
+                        GrainFilmNoise(plan, rows, x, nr, ng, nb)
+                        Dim amp = amplitude * GrainFilmBell((0.299F * cr + 0.587F * cg + 0.114F * cb) / 255.0F)
+                        WritePremultiplied(targetBytes, o, ri, gi, bi, ai,
+                                           ClampToByte(GrainFilmChannel(cr, nr, amp)),
+                                           ClampToByte(GrainFilmChannel(cg, ng, amp)),
+                                           ClampToByte(GrainFilmChannel(cb, nb, amp)), a)
+                    Next
+                End Sub)
             Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
             Return result
             Finally

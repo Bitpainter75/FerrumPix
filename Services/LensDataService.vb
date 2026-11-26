@@ -169,6 +169,9 @@ Namespace Services
             ''' Vignettierung und mit ihr an- und abgeschaltet. Gelten im linearen Bild nach dem
             ''' Demosaic (RawDecodeService.Convert16Rows). Nothing ohne.
             Public Property GainMaps As DngGainMapService.PlaneGainMaps
+            ''' Die Kamera hat die Randabschattung schon in die Rohdaten gerechnet; die Vignettierung
+            ''' des Profils ist deshalb weggelassen (siehe FindCorrectionForFile).
+            Public Property CameraCorrectedShading As Boolean
 
             Public ReadOnly Property HasAnything As Boolean
                 Get
@@ -1141,6 +1144,19 @@ Namespace Services
                         End If
                     End If
                 End If
+                ' HAT DIE KAMERA DEN RAND SCHON AUFGEHELLT, entfaellt die Vignettierung des Profils;
+                ' Verzeichnung und Farbquerfehler bleiben. Gilt auch fuer ein von Hand gewaehltes
+                ' Objektiv: der Ausgleich steckt in den Rohdaten, gleich welches Profil daneben steht
+                ' (CameraLensCorrectionService.CameraCorrectedShading). Olympus und Panasonic tragen
+                ' selbst keine Vignettierung in den Kameradaten, Karten aus einer DNG-Liste gibt es
+                ' bei ihnen nicht; was hier wegfaellt, stammt also immer aus der Sammlung.
+                If result IsNot Nothing AndAlso result.HasVignetting AndAlso
+                   CameraLensCorrectionService.CameraCorrectedShading(directories) Then
+                    result.HasVignetting = False
+                    result.Vk1 = 0.0 : result.Vk2 = 0.0 : result.Vk3 = 0.0
+                    result.VignettingKnots = Nothing
+                    result.CameraCorrectedShading = True
+                End If
             Catch
                 result = Nothing
             End Try
@@ -1168,6 +1184,7 @@ Namespace Services
                 .HasVignetting = k.HasVignetting, .Vk1 = k.Vk1, .Vk2 = k.Vk2, .Vk3 = k.Vk3,
                 .VignettingKnots = k.VignettingKnots, .KnotAxisScale = k.KnotAxisScale,
                 .GainMaps = k.GainMaps,
+                .CameraCorrectedShading = k.CameraCorrectedShading,
                 .DistortionStrength = k.DistortionStrength,
                 .ChromaticAberrationStrength = k.ChromaticAberrationStrength,
                 .VignettingStrength = k.VignettingStrength}

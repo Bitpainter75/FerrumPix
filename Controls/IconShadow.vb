@@ -109,6 +109,13 @@ Namespace Controls
             Return New Rect(Bounds.Size).Contains(point)
         End Function
 
+        ' Avalonia gibt seit 12.2 fuer die Pruefung mit einer Flaeche einen vorgegebenen Rumpf mit
+        ' Empty vor; VB.NET uebernimmt solche Ruempfe nicht und verlangt die Methode ausdruecklich.
+        ' Dieselbe Antwort wie der vorgegebene Rumpf, das Verhalten bleibt also wie vorher.
+        Public Function HitTest(geometry As Avalonia.Media.Geometry) As Avalonia.Media.IntersectionResult Implements ICustomHitTest.HitTest
+            Return Avalonia.Media.IntersectionResult.Empty
+        End Function
+
     End Class
 
     ''' <summary>Zeichnet ein Schattenbild direkt in Skia. Avalonias Bitmap kennt kein reines
@@ -134,6 +141,13 @@ Namespace Controls
 
         Public Function HitTest(p As Point) As Boolean Implements ICustomDrawOperation.HitTest
             Return False
+        End Function
+
+        ' Avalonia gibt seit 12.2 fuer die Pruefung mit einer Flaeche einen vorgegebenen Rumpf mit
+        ' Empty vor; VB.NET uebernimmt solche Ruempfe nicht und verlangt die Methode ausdruecklich.
+        ' Dieselbe Antwort wie der vorgegebene Rumpf, das Verhalten bleibt also wie vorher.
+        Public Function HitTest(geometry As Avalonia.Media.Geometry) As Avalonia.Media.IntersectionResult Implements ICustomDrawOperation.HitTest
+            Return Avalonia.Media.IntersectionResult.Empty
         End Function
 
         Public Overloads Function Equals(other As ICustomDrawOperation) As Boolean Implements IEquatable(Of ICustomDrawOperation).Equals
