@@ -12896,4 +12896,10 @@
   <data name="Hier_liegen_die_im_Editor_gespeicherten_Anpassun_d58c017e" xml:space="preserve">
     <value>편집기에서 저장한 보정이 여기에 있으며, 각각 별도의 파일이고 각 폴더는 실제 폴더입니다. 이 폴더는 데이터 폴더에 속하며 함께 옮겨집니다.</value>
   </data>
+  <data name="Das_Bild_zu_dieser_Beistelldatei_ist_nicht_angek_be4acd4c" xml:space="preserve">
+    <value>이 사이드카 파일의 이미지가 도착하지 않았습니다</value>
+  </data>
+  <data name="Im_Editor_ist_inzwischen_ein_anderes_Bild_offen__31ee6a86" xml:space="preserve">
+    <value>편집기에 다른 이미지가 열려 있어 파일을 삽입하지 않았습니다</value>
+  </data>
 </root>

@@ -12852,4 +12852,10 @@
   <data name="Hier_liegen_die_im_Editor_gespeicherten_Anpassun_d58c017e" xml:space="preserve">
     <value>Qui si trovano le regolazioni salvate nell'editor, ciascuna come file a sé, ogni cartella come vera cartella. La cartella fa parte della cartella dei dati e si sposta con essa.</value>
   </data>
+  <data name="Das_Bild_zu_dieser_Beistelldatei_ist_nicht_angek_be4acd4c" xml:space="preserve">
+    <value>L'immagine di questo file collaterale non è arrivata</value>
+  </data>
+  <data name="Im_Editor_ist_inzwischen_ein_anderes_Bild_offen__31ee6a86" xml:space="preserve">
+    <value>Nell'editor è ora aperta un'altra immagine, il file non è stato inserito</value>
+  </data>
 </root>

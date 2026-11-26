@@ -12871,4 +12871,10 @@
   <data name="Hier_liegen_die_im_Editor_gespeicherten_Anpassun_d58c017e" xml:space="preserve">
     <value>The adjustments saved in the editor live here, each as its own file, each folder as a real folder. The folder belongs to the data folder and moves with it.</value>
   </data>
+  <data name="Das_Bild_zu_dieser_Beistelldatei_ist_nicht_angek_be4acd4c" xml:space="preserve">
+    <value>The image for this sidecar file did not arrive</value>
+  </data>
+  <data name="Im_Editor_ist_inzwischen_ein_anderes_Bild_offen__31ee6a86" xml:space="preserve">
+    <value>Another image is now open in the editor, the file was not inserted</value>
+  </data>
 </root>

@@ -49,9 +49,12 @@ Namespace Views
                     If point.HasValue AndAlso target Is Me AndAlso editor IsNot Nothing AndAlso
                        _modeViews.TryGetValue(editor, view) AndAlso
                        TryCast(view, EditorView)?.TryGetLayerDropPercent(Me, point.Value, x, y) = True Then
+                        ' Das Bild, auf das abgelegt wurde: wechselt es waehrend des Hochladens,
+                        ' kommt die Ebene nicht in das dann offene.
+                        Dim document = editor.CurrentImagePath
                         Return BrowserUploadTarget.AsLayer(
                             Function(path, index) editor.InsertUploadedFileAsLayerAsync(path, x + index * BrowserLayerCascadePercent,
-                                                                                        y + index * BrowserLayerCascadePercent))
+                                                                                        y + index * BrowserLayerCascadePercent, document))
                     End If
                     Return FolderOfShownImage(editor?.CurrentImagePath)
                 Case AppMode.Viewer

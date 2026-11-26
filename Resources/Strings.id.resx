@@ -12896,4 +12896,10 @@
   <data name="Hier_liegen_die_im_Editor_gespeicherten_Anpassun_d58c017e" xml:space="preserve">
     <value>Di sini ada penyesuaian yang disimpan di editor, masing-masing sebagai berkas sendiri, setiap folder sebagai folder sungguhan. Folder ini bagian dari folder data dan ikut pindah bersamanya.</value>
   </data>
+  <data name="Das_Bild_zu_dieser_Beistelldatei_ist_nicht_angek_be4acd4c" xml:space="preserve">
+    <value>Gambar untuk file sidecar ini tidak sampai</value>
+  </data>
+  <data name="Im_Editor_ist_inzwischen_ein_anderes_Bild_offen__31ee6a86" xml:space="preserve">
+    <value>Gambar lain kini terbuka di editor, file tidak disisipkan</value>
+  </data>
 </root>

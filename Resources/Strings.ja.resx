@@ -12892,4 +12892,10 @@
   <data name="Hier_liegen_die_im_Editor_gespeicherten_Anpassun_d58c017e" xml:space="preserve">
     <value>エディターで保存した調整がここにあります。それぞれが個別のファイルで、フォルダーは実際のフォルダーです。このフォルダーはデータフォルダーの一部で、一緒に移動します。</value>
   </data>
+  <data name="Das_Bild_zu_dieser_Beistelldatei_ist_nicht_angek_be4acd4c" xml:space="preserve">
+    <value>このサイドカーファイルの画像が届きませんでした</value>
+  </data>
+  <data name="Im_Editor_ist_inzwischen_ein_anderes_Bild_offen__31ee6a86" xml:space="preserve">
+    <value>エディターで別の画像が開かれたため、ファイルは挿入されませんでした</value>
+  </data>
 </root>

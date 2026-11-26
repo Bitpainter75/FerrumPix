@@ -536,12 +536,34 @@ Namespace Services
         End Sub
 
         ''' <summary>Fragt die Anwendung nach dem Ziel. Ein offener Dialog sperrt alles darunter,
-        ''' auch das Ablegen: wohin die Datei gehoert, waere dann eine Frage an das falsche Fenster.</summary>
-        Private Shared Function ResolveUploadTarget(x As Double, y As Double, hasPoint As Boolean) As BrowserUploadTarget
+        ''' auch das Ablegen: wohin die Datei gehoert, waere dann eine Frage an das falsche Fenster.
+        '''
+        ''' EIN ZIEL JE ABLEGEN. Gefragt wird bei der ersten Datei; alle weiteren desselben Ablegens
+        ''' gehen dorthin, auch wenn inzwischen die Galerie einen anderen Ordner oder der Editor ein
+        ''' anderes Bild zeigt. Abgelegt wurde dort, nicht dort, wo der Nutzer waehrend des
+        ''' Hochladens hinsieht. Eine Ebene prueft beim Einsetzen, ob ihr Bild noch offen ist.</summary>
+        Private Shared Function ResolveUploadTarget(x As Double, y As Double, hasPoint As Boolean, batch As String) As BrowserUploadTarget
             Dim windows = VisibleWindows()
             If windows.Any(Function(w) w.Owner IsNot Nothing) Then
                 Return BrowserUploadTarget.Refused(LocalizationService.T("Erst den offenen Dialog schließen"))
             End If
+            If batch.Length > 0 Then
+                SyncLock Batches
+                    Dim known As UploadBatch = Nothing
+                    If Batches.TryGetValue(batch, known) AndAlso known.Target IsNot Nothing Then Return known.Target
+                End SyncLock
+            End If
+            Dim resolved = ResolveUploadTargetNow(x, y, hasPoint)
+            If batch.Length > 0 AndAlso resolved.Problem.Length = 0 Then
+                SyncLock Batches
+                    BatchFor(batch).Target = resolved
+                End SyncLock
+            End If
+            Return resolved
+        End Function
+
+        Private Shared Function ResolveUploadTargetNow(x As Double, y As Double, hasPoint As Boolean) As BrowserUploadTarget
+            Dim windows = VisibleWindows()
             Dim win As Window = Nothing
             Dim local As Point? = Nothing
             If hasPoint Then
@@ -768,8 +790,8 @@ Namespace Services
             SyncLock Offers
                 Offers.Clear()
             End SyncLock
-            SyncLock BatchRenames
-                BatchRenames.Clear()
+            SyncLock Batches
+                Batches.Clear()
                 BatchOrder.Clear()
             End SyncLock
             UploadTargetResolver = Nothing

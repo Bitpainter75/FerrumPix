@@ -30222,15 +30222,22 @@ Namespace ViewModels
         ''' Ebenenbilder dieses Dokuments wandert (<see cref="CreateSelectionAssetTempPath"/>), wie ein
         ''' Bild aus der Zwischenablage: sie hat sonst keinen Ort auf diesem Rechner, gehoert nicht in
         ''' den Fotoordner, wird beim Speichern als .fpx eingebettet und beim Dokumentwechsel mit
-        ''' geraeumt. Im eigenen Unterordner, damit sie ihren Namen behaelt; die Ebene heisst danach.</summary>
-        Public Async Function InsertUploadedFileAsLayerAsync(uploadedPath As String, xPercent As Double, yPercent As Double) As Task
-            If Not CanInsertAsLayer(uploadedPath) Then Return
+        ''' geraeumt. Im eigenen Unterordner, damit sie ihren Namen behaelt; die Ebene heisst danach.
+        '''
+        ''' False, wenn inzwischen ein anderes Bild offen ist als <paramref name="expectedDocument"/>,
+        ''' das beim Ablegen offene: Hochladen dauert, und die Ebene gehoert nicht in das Bild, das
+        ''' der Nutzer in der Zeit geoeffnet hat. Die Datei bleibt dann unberuehrt.</summary>
+        Public Async Function InsertUploadedFileAsLayerAsync(uploadedPath As String, xPercent As Double, yPercent As Double,
+                                                             expectedDocument As String) As Task(Of Boolean)
+            If Not String.Equals(If(expectedDocument, ""), If(_currentImagePath, ""), StringComparison.Ordinal) Then Return False
+            If Not CanInsertAsLayer(uploadedPath) Then Return True
             Dim assetFolder = IO.Path.Combine(IO.Path.GetDirectoryName(CreateSelectionAssetTempPath("upload")),
                                               "upload_" & Guid.NewGuid().ToString("N"))
             IO.Directory.CreateDirectory(assetFolder)
             Dim kept = IO.Path.Combine(assetFolder, IO.Path.GetFileName(uploadedPath))
             IO.File.Move(uploadedPath, kept)
             Await InsertFileAsLayerAtAsync(kept, xPercent, yPercent)
+            Return True
         End Function
 
         ''' <summary>Das Bild, das der Betrachter von dieser Datei zeigt, in voller Aufloesung als

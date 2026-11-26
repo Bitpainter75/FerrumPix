@@ -12852,4 +12852,10 @@
   <data name="Hier_liegen_die_im_Editor_gespeicherten_Anpassun_d58c017e" xml:space="preserve">
     <value>Aquí están los ajustes guardados en el editor, cada uno como archivo propio, cada carpeta como carpeta real. La carpeta forma parte de la carpeta de datos y se traslada con ella.</value>
   </data>
+  <data name="Das_Bild_zu_dieser_Beistelldatei_ist_nicht_angek_be4acd4c" xml:space="preserve">
+    <value>La imagen de este archivo adjunto no llegó</value>
+  </data>
+  <data name="Im_Editor_ist_inzwischen_ein_anderes_Bild_offen__31ee6a86" xml:space="preserve">
+    <value>En el editor ya hay otra imagen abierta, el archivo no se insertó</value>
+  </data>
 </root>

@@ -377,15 +377,11 @@ function pump() {
     return;
   }
   const item = queue.shift();
-  // Zu gross: gar nicht erst senden. Der Server wiese die Datei ab, bevor er sie liest, und
-  // manche Browser meldeten dann nur einen Abbruch statt des Grundes.
-  if (item.file.size > Number(texts.maxBytes || Infinity)) {
-    setRow(item.row, 'failed', text('tooLarge'));
-    finished++;
-    bytesDone += item.file.size;
-    pump();
-    return;
-  }
+  // Auch eine zu grosse Datei geht als Anfrage hinaus: der Server weist sie am Kopf ab, bevor er
+  // ein Byte liest, und merkt sich, dass dieses Bild des Ablegens nicht ankam. Seine
+  // Beistelldatei landet sonst neben einem gleichnamigen anderen Bild im Ordner. Manche Browser
+  // melden dabei nur einen Abbruch statt des Grundes; den Grund setzt deshalb die Seite.
+  const tooLarge = item.file.size > Number(texts.maxBytes || Infinity);
   const request = new XMLHttpRequest();
   current = { item, request, loaded: 0 };
   const query = 'name=' + encodeURIComponent(item.file.name) + '&x=' + item.x + '&y=' + item.y +
@@ -412,9 +408,9 @@ function pump() {
     let answer = {};
     try { answer = JSON.parse(request.responseText); } catch (error) { }
     if (request.status === 200 && answer.ok) finish('done', text('done'));
-    else finish('failed', answer.error || text('failed'));
+    else finish('failed', answer.error || (tooLarge ? text('tooLarge') : text('failed')));
   };
-  request.onerror = () => finish('failed', text('interrupted'));
+  request.onerror = () => finish('failed', tooLarge ? text('tooLarge') : text('interrupted'));
   request.onabort = () => finish('failed', text('cancelled'));
   request.send(item.file);
   updatePanel();
