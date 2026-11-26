@@ -34,6 +34,45 @@
         <x:Double x:Key="FP.Glyph.Large">14</x:Double>
         <x:Double x:Key="FP.Glyph.XLarge">16</x:Double>
 
+                <!-- Dichte von Werkzeugleiste und Anpassungspanel. Ohne diese Zahlen stuenden die
+             Abstaende in den einzelnen Markup-Dateien verstreut; hier stehen sie einmal, und
+             PanelDensityService tauscht sie zur Laufzeit gegen die Variante der gewaehlten Stufe -
+             dasselbe Verfahren, mit dem FontScaleService FP.Font.* verschiebt.
+
+             Der Schluessel OHNE Stufe traegt die Norm, also den Stand ohne jede Dichtewahl; die
+             Stufe dahinter (.compact, .tiny) ist die Variante. Nicht jede Stufe hat jeden
+             Schluessel: fehlt eine Variante, gilt die Norm, und genau das ist bei
+             Tool.ButtonPadding der Fall - compact aendert die Waagerechte nicht.
+
+             Ausgeschrieben statt per Verweis auf die Farben und einander, weil ein Verweis auf
+             einen spaeter erklaerten Schluessel innerhalb desselben Woerterbuchs ins Leere liefe. -->
+        <x:Double x:Key="FP.Density.Tool.ButtonHeight">36</x:Double>
+        <x:Double x:Key="FP.Density.Tool.ButtonHeight.compact">30</x:Double>
+        <x:Double x:Key="FP.Density.Tool.ButtonHeight.tiny">24</x:Double>
+        <Thickness x:Key="FP.Density.Tool.ButtonPadding">10,0</Thickness>
+        <Thickness x:Key="FP.Density.Tool.ButtonPadding.tiny">6,0</Thickness>
+        <x:Double x:Key="FP.Density.Tool.ItemSpacing">2</x:Double>
+        <x:Double x:Key="FP.Density.Tool.ItemSpacing.tiny">1</x:Double>
+        <Thickness x:Key="FP.Density.Tool.HeaderMargin">10,10,0,4</Thickness>
+        <Thickness x:Key="FP.Density.Tool.HeaderMargin.compact">8,6,0,3</Thickness>
+        <Thickness x:Key="FP.Density.Tool.HeaderMargin.tiny">6,4,0,2</Thickness>
+        <Thickness x:Key="FP.Density.Tool.SidebarPadding">8,8</Thickness>
+        <Thickness x:Key="FP.Density.Tool.SidebarPadding.compact">8,6</Thickness>
+        <Thickness x:Key="FP.Density.Tool.SidebarPadding.tiny">5,4</Thickness>
+
+        <Thickness x:Key="FP.Density.Adjust.GroupPadding">10,8</Thickness>
+        <Thickness x:Key="FP.Density.Adjust.GroupPadding.compact">10,5</Thickness>
+        <Thickness x:Key="FP.Density.Adjust.GroupPadding.tiny">9,3</Thickness>
+        <Thickness x:Key="FP.Density.Adjust.GroupMargin">0,7,0,0</Thickness>
+        <Thickness x:Key="FP.Density.Adjust.GroupMargin.compact">0,4,0,0</Thickness>
+        <Thickness x:Key="FP.Density.Adjust.GroupMargin.tiny">0,3,0,0</Thickness>
+        <Thickness x:Key="FP.Density.Adjust.ContentMargin">0,8,0,0</Thickness>
+        <Thickness x:Key="FP.Density.Adjust.ContentMargin.compact">0,4,0,0</Thickness>
+        <Thickness x:Key="FP.Density.Adjust.ContentMargin.tiny">0,2,0,0</Thickness>
+        <x:Double x:Key="FP.Density.Adjust.SliderHeight">36</x:Double>
+        <x:Double x:Key="FP.Density.Adjust.SliderHeight.compact">28</x:Double>
+        <x:Double x:Key="FP.Density.Adjust.SliderHeight.tiny">24</x:Double>
+
         <SolidColorBrush x:Key="FP.Bg.Root" Color="#0B0E11"/>
         <SolidColorBrush x:Key="FP.Bg.Dark" Color="#0E1216"/>
         <SolidColorBrush x:Key="FP.Bg.Panel" Color="#11161B"/>
