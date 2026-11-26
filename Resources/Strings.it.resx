@@ -7886,6 +7886,21 @@
   <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
     <value>Mostra in alto sulla miniatura della striscia un pollice verde in su per le foto tenute e un pollice rosso in giù per quelle scartate. Le foto scartate restano attenuate anche senza il segno.</value>
   </data>
+  <data name="Dichte_der_Werkzeugleiste_bfa93a40" xml:space="preserve">
+    <value>Densità della barra degli strumenti</value>
+  </data>
+  <data name="Wie_eng_die_Werkzeuge_untereinander_stehen_Kompa_8464cdfe" xml:space="preserve">
+    <value>Quanto gli strumenti sono stretti uno sotto l'altro. Compatta toglie solo altezza, così sullo schermo entrano più strumenti. Minuscola toglie anche larghezza, così la barra diventa più stretta.</value>
+  </data>
+  <data name="Dichte_des_Anpassungspanels_eb6d4188" xml:space="preserve">
+    <value>Densità del pannello delle regolazioni</value>
+  </data>
+  <data name="Wie_eng_die_Gruppen_des_Anpassungspanels_unterei_3d3faab2" xml:space="preserve">
+    <value>Quanto i gruppi del pannello delle regolazioni sono stretti uno sotto l'altro. Compatta toglie solo altezza, così se ne vedono di più. Minuscola toglie anche larghezza, così il pannello diventa più stretto.</value>
+  </data>
+  <data name="Winzig_19c86a4c" xml:space="preserve">
+    <value>Minuscola</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Rimuovere {0} '{1}' dall’elenco? Il file verrà conservato.</value>
   </data>

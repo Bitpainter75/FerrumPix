@@ -7926,6 +7926,21 @@
   <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
     <value>Toont bovenaan de filmstriptegel een groene duim omhoog bij bewaarde en een rode duim omlaag bij afgewezen foto's. Afgewezen foto's blijven ook zonder het teken gedimd.</value>
   </data>
+  <data name="Dichte_der_Werkzeugleiste_bfa93a40" xml:space="preserve">
+    <value>Dichtheid van de werkbalk</value>
+  </data>
+  <data name="Wie_eng_die_Werkzeuge_untereinander_stehen_Kompa_8464cdfe" xml:space="preserve">
+    <value>Hoe dicht de tools onder elkaar staan. Compact haalt alleen hoogte weg zodat er meer tools op het scherm passen. Minuscule haalt ook breedte weg waardoor de balk zelf smaller wordt.</value>
+  </data>
+  <data name="Dichte_des_Anpassungspanels_eb6d4188" xml:space="preserve">
+    <value>Dichtheid van het aanpassingspaneel</value>
+  </data>
+  <data name="Wie_eng_die_Gruppen_des_Anpassungspanels_unterei_3d3faab2" xml:space="preserve">
+    <value>Hoe dicht de groepen van het aanpassingspaneel onder elkaar staan. Compact haalt alleen hoogte weg zodat er meer groepen te zien zijn. Minuscule haalt ook breedte weg waardoor het paneel zelf smaller wordt.</value>
+  </data>
+  <data name="Winzig_19c86a4c" xml:space="preserve">
+    <value>Minuscule</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>{0} '{1}' uit de lijst verwijderen? Het bestand zelf blijft behouden.</value>
   </data>

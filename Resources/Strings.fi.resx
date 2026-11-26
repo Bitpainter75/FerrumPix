@@ -7926,6 +7926,21 @@
   <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
     <value>Näyttää filminauhan ruudun yläreunassa vihreän peukalon ylös säilytetyille ja punaisen peukalon alas hylätyille kuville. Hylätyt kuvat pysyvät himmennettyinä myös ilman merkkiä.</value>
   </data>
+  <data name="Dichte_der_Werkzeugleiste_bfa93a40" xml:space="preserve">
+    <value>Työkalupalkin tiheys</value>
+  </data>
+  <data name="Wie_eng_die_Werkzeuge_untereinander_stehen_Kompa_8464cdfe" xml:space="preserve">
+    <value>Kuinka tiheässä työkalut ovat toistensa alla. Tiivis poistaa vain korkeutta, jotta ruudulle mahtuu useampi työkalu. Erittäin tiivis poistaa myös leveyden, jolloin palkista tulee kapeampi.</value>
+  </data>
+  <data name="Dichte_des_Anpassungspanels_eb6d4188" xml:space="preserve">
+    <value>Säätöpaneelin tiheys</value>
+  </data>
+  <data name="Wie_eng_die_Gruppen_des_Anpassungspanels_unterei_3d3faab2" xml:space="preserve">
+    <value>Kuinka tiheässä säätöpaneelin ryhmät ovat toistensa alla. Tiivis poistaa vain korkeutta, jotta ryhmiä näkyy useampia. Erittäin tiivis poistaa myös leveyden, jolloin paneeli itse on kapeampi.</value>
+  </data>
+  <data name="Winzig_19c86a4c" xml:space="preserve">
+    <value>Erittäin tiivis</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Poistetaanko {0} '{1}' luettelosta? Itse tiedosto säilytetään.</value>
   </data>

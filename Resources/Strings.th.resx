@@ -7926,6 +7926,21 @@
   <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
     <value>แสดงนิ้วโป้งชี้ขึ้นสีเขียวบนภาพที่เก็บไว้ และนิ้วโป้งชี้ลงสีแดงบนภาพที่ปฏิเสธที่ด้านบนของไทล์ในแถบฟิล์ม ภาพที่ปฏิเสธยังคงหรี่อยู่แม้ไม่มีสัญลักษณ์</value>
   </data>
+  <data name="Dichte_der_Werkzeugleiste_bfa93a40" xml:space="preserve">
+    <value>ความหนาแน่นของแถบเครื่องมือ</value>
+  </data>
+  <data name="Wie_eng_die_Werkzeuge_untereinander_stehen_Kompa_8464cdfe" xml:space="preserve">
+    <value>เครื่องมือวางชิดกันใต้กันมากเพียงใด แบบกระชับลดเฉพาะความสูงเพื่อให้เครื่องมืออยู่บนจอได้มากขึ้น แบบจิ๋วลดความกว้างด้วย ทำให้แถบแคบลง</value>
+  </data>
+  <data name="Dichte_des_Anpassungspanels_eb6d4188" xml:space="preserve">
+    <value>ความหนาแน่นของแผงปรับแต่ง</value>
+  </data>
+  <data name="Wie_eng_die_Gruppen_des_Anpassungspanels_unterei_3d3faab2" xml:space="preserve">
+    <value>กลุ่มในแผงปรับแต่งวางชิดกันมากเพียงใด แบบกระชับลดเฉพาะความสูงเพื่อให้เห็นกลุ่มได้มากขึ้น แบบจิ๋วลดความกว้างด้วย ทำให้แผงแคบลง</value>
+  </data>
+  <data name="Winzig_19c86a4c" xml:space="preserve">
+    <value>จิ๋ว</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>ลบ {0} '{1}' ออกจากรายการหรือไม่ ตัวไฟล์เองจะยังอยู่</value>
   </data>

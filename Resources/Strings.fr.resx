@@ -7886,6 +7886,21 @@
   <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
     <value>Affiche en haut de la vignette de la pellicule un pouce vert levé pour les photos conservées et un pouce rouge baissé pour les photos rejetées. Les photos rejetées restent assombries même sans le signe.</value>
   </data>
+  <data name="Dichte_der_Werkzeugleiste_bfa93a40" xml:space="preserve">
+    <value>Densité de la barre d'outils</value>
+  </data>
+  <data name="Wie_eng_die_Werkzeuge_untereinander_stehen_Kompa_8464cdfe" xml:space="preserve">
+    <value>À quel point les outils sont serrés les uns sous les autres. Compact ne retire que la hauteur, pour que davantage d'outils tiennent à l'écran. Minuscule retire aussi la largeur, pour que la barre elle-même devienne plus étroite.</value>
+  </data>
+  <data name="Dichte_des_Anpassungspanels_eb6d4188" xml:space="preserve">
+    <value>Densité du panneau de réglages</value>
+  </data>
+  <data name="Wie_eng_die_Gruppen_des_Anpassungspanels_unterei_3d3faab2" xml:space="preserve">
+    <value>À quel point les groupes du panneau de réglages sont serrés les uns sous les autres. Compact ne retire que la hauteur, pour que davantage de groupes restent visibles. Minuscule retire aussi la largeur, pour que le panneau lui-même devienne plus étroit.</value>
+  </data>
+  <data name="Winzig_19c86a4c" xml:space="preserve">
+    <value>Minuscule</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Supprimer {0} '{1}' de la liste ? Le fichier lui-même sera conservé.</value>
   </data>

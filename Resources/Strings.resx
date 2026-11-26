@@ -7887,6 +7887,21 @@
   <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
     <value>Shows a green thumbs up on kept and a red thumbs down on rejected pictures at the top of the filmstrip tile. Rejected pictures stay dimmed even without the mark.</value>
   </data>
+  <data name="Dichte_der_Werkzeugleiste_bfa93a40" xml:space="preserve">
+    <value>Density of the tool bar</value>
+  </data>
+  <data name="Wie_eng_die_Werkzeuge_untereinander_stehen_Kompa_8464cdfe" xml:space="preserve">
+    <value>How closely the tools stand below one another. Compact takes out height only, so that more tools fit on the screen. Tiny takes out width as well, so that the bar itself becomes narrower.</value>
+  </data>
+  <data name="Dichte_des_Anpassungspanels_eb6d4188" xml:space="preserve">
+    <value>Density of the adjustments panel</value>
+  </data>
+  <data name="Wie_eng_die_Gruppen_des_Anpassungspanels_unterei_3d3faab2" xml:space="preserve">
+    <value>How closely the groups of the adjustments panel stand below one another. Compact takes out height only, so that more groups are visible. Tiny takes out width as well, so that the panel itself becomes narrower.</value>
+  </data>
+  <data name="Winzig_19c86a4c" xml:space="preserve">
+    <value>Tiny</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Remove {0} '{1}' from the list? The file itself will be kept.</value>
   </data>

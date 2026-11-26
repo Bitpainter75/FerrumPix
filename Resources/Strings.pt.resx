@@ -7885,6 +7885,21 @@
   <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
     <value>Mostra no topo da miniatura da tira de filmes um polegar verde para cima nas mantidas e um polegar vermelho para baixo nas rejeitadas. As rejeitadas continuam escuras mesmo sem a marca.</value>
   </data>
+  <data name="Dichte_der_Werkzeugleiste_bfa93a40" xml:space="preserve">
+    <value>Densidade da barra de ferramentas</value>
+  </data>
+  <data name="Wie_eng_die_Werkzeuge_untereinander_stehen_Kompa_8464cdfe" xml:space="preserve">
+    <value>Quão juntas estão as ferramentas uma sob a outra. Compacto tira só altura, para caberem mais ferramentas no ecrã. Minúsculo tira também largura, para que a própria barra fique mais estreita.</value>
+  </data>
+  <data name="Dichte_des_Anpassungspanels_eb6d4188" xml:space="preserve">
+    <value>Densidade do painel de ajustes</value>
+  </data>
+  <data name="Wie_eng_die_Gruppen_des_Anpassungspanels_unterei_3d3faab2" xml:space="preserve">
+    <value>Quão juntos estão os grupos do painel de ajustes um sob o outro. Compacto tira só altura, para se verem mais grupos. Minúsculo tira também largura, para que o próprio painel fique mais estreito.</value>
+  </data>
+  <data name="Winzig_19c86a4c" xml:space="preserve">
+    <value>Minúsculo</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Remover {0} '{1}' da lista? O próprio ficheiro será mantido.</value>
   </data>

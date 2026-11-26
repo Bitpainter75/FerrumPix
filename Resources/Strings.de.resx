@@ -7886,6 +7886,21 @@
   <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
     <value>Zeigt oben auf der Filmstreifen-Kachel einen grünen Daumen nach oben für behaltene und einen roten Daumen nach unten für verworfene Bilder. Verworfene Bilder bleiben auch ohne das Zeichen gedimmt.</value>
   </data>
+  <data name="Dichte_der_Werkzeugleiste_bfa93a40" xml:space="preserve">
+    <value>Dichte der Werkzeugleiste</value>
+  </data>
+  <data name="Wie_eng_die_Werkzeuge_untereinander_stehen_Kompa_8464cdfe" xml:space="preserve">
+    <value>Wie eng die Werkzeuge untereinander stehen. Kompakt nimmt nur Höhe heraus, damit mehr Werkzeuge auf den Schirm passen. Winzig nimmt außerdem Breite, damit die Leiste selbst schmäler wird.</value>
+  </data>
+  <data name="Dichte_des_Anpassungspanels_eb6d4188" xml:space="preserve">
+    <value>Dichte des Anpassungspanels</value>
+  </data>
+  <data name="Wie_eng_die_Gruppen_des_Anpassungspanels_unterei_3d3faab2" xml:space="preserve">
+    <value>Wie eng die Gruppen des Anpassungspanels untereinander stehen. Kompakt nimmt nur Höhe heraus, damit mehr Gruppen zu sehen sind. Winzig nimmt außerdem Breite, damit das Panel selbst schmäler wird.</value>
+  </data>
+  <data name="Winzig_19c86a4c" xml:space="preserve">
+    <value>Winzig</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Soll {0} '{1}' aus der Liste entfernt werden? Die Datei selbst bleibt erhalten.</value>
   </data>

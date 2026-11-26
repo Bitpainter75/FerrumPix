@@ -7926,6 +7926,21 @@
   <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
     <value>Visar överst på miniatyren i filmremsan en grön tumme upp för behållna och en röd tumme ned för avvisade bilder. Avvisade bilder förblir nedtonade även utan märket.</value>
   </data>
+  <data name="Dichte_der_Werkzeugleiste_bfa93a40" xml:space="preserve">
+    <value>Täthet i verktygsfältet</value>
+  </data>
+  <data name="Wie_eng_die_Werkzeuge_untereinander_stehen_Kompa_8464cdfe" xml:space="preserve">
+    <value>Hur tätt verktygen står under varandra. Kompakt tar bara höjd, så fler verktyg får plats på skärmen. Mycket litet tar också bredd, så själva fältet blir smalare.</value>
+  </data>
+  <data name="Dichte_des_Anpassungspanels_eb6d4188" xml:space="preserve">
+    <value>Täthet i justeringspanelen</value>
+  </data>
+  <data name="Wie_eng_die_Gruppen_des_Anpassungspanels_unterei_3d3faab2" xml:space="preserve">
+    <value>Hur tätt grupperna i justeringspanelen står under varandra. Kompakt tar bara höjd, så fler grupper syns. Mycket litet tar också bredd, så själva panelen blir smalare.</value>
+  </data>
+  <data name="Winzig_19c86a4c" xml:space="preserve">
+    <value>Mycket litet</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Ta bort {0} '{1}' från listan? Själva filen behålls.</value>
   </data>

@@ -7926,6 +7926,21 @@
   <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
     <value>Viser øverst på rutene i filmstripen en grønn tommel opp for beholdte og en rød tommel ned for forkastede bilder. Forkastede bilder forblir dempet også uten merket.</value>
   </data>
+  <data name="Dichte_der_Werkzeugleiste_bfa93a40" xml:space="preserve">
+    <value>Tetthet i verktøylinjen</value>
+  </data>
+  <data name="Wie_eng_die_Werkzeuge_untereinander_stehen_Kompa_8464cdfe" xml:space="preserve">
+    <value>Hvor tett verktøyene står under hverandre. Kompakt tar bare høyde, så flere verktøy får plass på skjermen. Bitteliten tar også bredde, så selve linjen blir smallere.</value>
+  </data>
+  <data name="Dichte_des_Anpassungspanels_eb6d4188" xml:space="preserve">
+    <value>Tetthet i justeringspanelet</value>
+  </data>
+  <data name="Wie_eng_die_Gruppen_des_Anpassungspanels_unterei_3d3faab2" xml:space="preserve">
+    <value>Hvor tett gruppene i justeringspanelet står under hverandre. Kompakt tar bare høyde, så flere grupper er synlige. Bitteliten tar også bredde, så selve panelet blir smallere.</value>
+  </data>
+  <data name="Winzig_19c86a4c" xml:space="preserve">
+    <value>Bitteliten</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Fjerne {0} '{1}' fra listen? Selve filen beholdes.</value>
   </data>

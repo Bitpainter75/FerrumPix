@@ -7926,6 +7926,21 @@
   <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
     <value>Pokazuje u góry kafelka paska filmowego zielony kciuk w górę przy zachowanych i czerwony kciuk w dół przy odrzuconych zdjęciach. Odrzucone zdjęcia pozostają przyciemnione także bez znaku.</value>
   </data>
+  <data name="Dichte_der_Werkzeugleiste_bfa93a40" xml:space="preserve">
+    <value>Gęstość paska narzędzi</value>
+  </data>
+  <data name="Wie_eng_die_Werkzeuge_untereinander_stehen_Kompa_8464cdfe" xml:space="preserve">
+    <value>Jak blisko stoją pod sobą narzędzia. Kompaktowo zabiera tylko wysokość, żeby na ekranie zmieściło się więcej narzędzi. Drobny zabiera też szerokość, więc sam pasek jest węższy.</value>
+  </data>
+  <data name="Dichte_des_Anpassungspanels_eb6d4188" xml:space="preserve">
+    <value>Gęstość panelu korekt</value>
+  </data>
+  <data name="Wie_eng_die_Gruppen_des_Anpassungspanels_unterei_3d3faab2" xml:space="preserve">
+    <value>Jak blisko stoją pod sobą grupy panelu korekt. Kompaktowo zabiera tylko wysokość, żeby było widać więcej grup. Drobny zabiera też szerokość, więc sam panel jest węższy.</value>
+  </data>
+  <data name="Winzig_19c86a4c" xml:space="preserve">
+    <value>Drobny</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Usunąć {0} '{1}' z listy? Sam plik zostanie zachowany.</value>
   </data>

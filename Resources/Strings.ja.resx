@@ -7926,6 +7926,21 @@
   <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
     <value>フィルムストリップのタイルの上部に、採用した写真には緑の親指アップ、不採用の写真には赤の親指ダウンを表示します。不採用の写真は印がなくても暗く表示されたままです。</value>
   </data>
+  <data name="Dichte_der_Werkzeugleiste_bfa93a40" xml:space="preserve">
+    <value>ツールバーの詰め具合</value>
+  </data>
+  <data name="Wie_eng_die_Werkzeuge_untereinander_stehen_Kompa_8464cdfe" xml:space="preserve">
+    <value>ツールを互いにどれだけ詰めて並べるか。コンパクトは高さだけ詰め、より多くのツールが画面に収まります。極小は幅も詰め、バー自体が細くなります。</value>
+  </data>
+  <data name="Dichte_des_Anpassungspanels_eb6d4188" xml:space="preserve">
+    <value>調整パネルの詰め具合</value>
+  </data>
+  <data name="Wie_eng_die_Gruppen_des_Anpassungspanels_unterei_3d3faab2" xml:space="preserve">
+    <value>調整パネルのグループを互いにどれだけ詰めて並べるか。コンパクトは高さだけ詰め、より多くのグループが見えます。極小は幅も詰め、パネル自体が細くなります。</value>
+  </data>
+  <data name="Winzig_19c86a4c" xml:space="preserve">
+    <value>極小</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>{0}「{1}」をリストから削除しますか？ ファイル自体は保持されます。</value>
   </data>

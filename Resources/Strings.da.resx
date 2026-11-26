@@ -7926,6 +7926,21 @@
   <data name="Zeigt_oben_auf_der_Filmstreifen_Kachel_einen_gr__d7b6a164" xml:space="preserve">
     <value>Viser øverst på feltet i filmstriben en grøn tommelfinger op for beholdte og en rød tommelfinger ned for forkastede billeder. Forkastede billeder forbliver dæmpede, også uden mærket.</value>
   </data>
+  <data name="Dichte_der_Werkzeugleiste_bfa93a40" xml:space="preserve">
+    <value>Tæthed i værktøjslinjen</value>
+  </data>
+  <data name="Wie_eng_die_Werkzeuge_untereinander_stehen_Kompa_8464cdfe" xml:space="preserve">
+    <value>Hvor tæt værktøjerne står under hinanden. Kompakt tager kun højde, så der er plads til flere værktøjer på skærmen. Lille tager også bredde, så selve linjen bliver smallere.</value>
+  </data>
+  <data name="Dichte_des_Anpassungspanels_eb6d4188" xml:space="preserve">
+    <value>Tæthed i justeringspanelet</value>
+  </data>
+  <data name="Wie_eng_die_Gruppen_des_Anpassungspanels_unterei_3d3faab2" xml:space="preserve">
+    <value>Hvor tæt grupperne i justeringspanelet står under hinanden. Kompakt tager kun højde, så der ses flere grupper. Lille tager også bredde, så selve panelet bliver smallere.</value>
+  </data>
+  <data name="Winzig_19c86a4c" xml:space="preserve">
+    <value>Lille</value>
+  </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Fjern {0} '{1}' fra listen? Selve filen bevares.</value>
   </data>
