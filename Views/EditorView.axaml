@@ -496,7 +496,7 @@
         <!-- GESPERRT, solange ein langer Vorgang laeuft - genau wie die Regler rechts. Ein
              Werkzeugwechsel mitten im Entrauschen fuehrt sonst zu einem Bild, dessen Zustand
              niemand mehr erklaeren kann. -->
-        <Border Grid.Row="1" Grid.Column="0" Classes="sidebar" Padding="8,8" Width="{Binding ToolSidebarWidth}"
+        <Border Grid.Row="1" Grid.Column="0" Classes="sidebar" Padding="{DynamicResource FP.Density.Tool.SidebarPadding}" Width="{Binding ToolSidebarWidth}"
                 IsEnabled="{Binding IsInteractionAllowed}">
             <!-- Keine Bildlaufleiste: sie lag 13 Punkte breit ueber den Knoepfen, in der
                  eingeklappten Leiste ueber einem Drittel jedes Symbols. Reicht die Hoehe nicht,
@@ -519,7 +519,7 @@
                      Knopf gleich hoch ist und überall derselbe Abstand steht. Ohne Rundung sitzt
                      jede Zeile exakt auf ihrem Bruchteil, und alle Abstände sind gleich. Nur die
                      Liste, nicht der Rahmen der Leiste: dessen Kante soll scharf bleiben. -->
-                <StackPanel Spacing="2" UseLayoutRounding="False">
+                <StackPanel Spacing="{DynamicResource FP.Density.Tool.ItemSpacing}" UseLayoutRounding="False">
                     <!-- Die drei Werkzeuggruppen liegen in einem Raster mit drei Zeilen: welche
                          Gruppe oben steht, sagt die Einstellung (Zeilennummer je Gruppe). Ein
                          gestapeltes Panel könnte das nicht - eine Reihenfolge lässt sich nicht
@@ -530,10 +530,10 @@
                          Leiste sind die Überschriften ausgeblendet, und ein ausgeblendetes Kind
                          zaehlt im StackPanel auch nicht für den Abstand - genau dort sassen die
                          Symbole je Gruppenwechsel 2 px enger als sonst. -->
-                    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="2">
-                    <StackPanel Grid.Row="{Binding ToolGroupRowTransform}" Spacing="2">
+                    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="{DynamicResource FP.Density.Tool.ItemSpacing}">
+                    <StackPanel Grid.Row="{Binding ToolGroupRowTransform}" Spacing="{DynamicResource FP.Density.Tool.ItemSpacing}">
                     <TextBlock Text="TRANSFORMIEREN" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
-                               FontWeight="SemiBold" Margin="10,10,0,4" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                               FontWeight="SemiBold" Margin="{DynamicResource FP.Density.Tool.HeaderMargin}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Transformieren"
                             Command="{Binding SetToolCommand}"
@@ -573,9 +573,9 @@
                     </Button>
                     </StackPanel>
 
-                    <StackPanel Grid.Row="{Binding ToolGroupRowAdjust}" Spacing="2">
+                    <StackPanel Grid.Row="{Binding ToolGroupRowAdjust}" Spacing="{DynamicResource FP.Density.Tool.ItemSpacing}">
                     <TextBlock Text="ANPASSUNGEN" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
-                               FontWeight="SemiBold" Margin="10,10,0,4" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                               FontWeight="SemiBold" Margin="{DynamicResource FP.Density.Tool.HeaderMargin}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                     <!-- KOMPAKTMODUS (Einstellung EditorCompactAdjustments): ein Werkzeug statt der fuenf
                          darunter, die dann ausgeblendet sind (ShowsToolAdjust und die anderen). -->
                     <Button Classes="tool-btn-row"
@@ -666,12 +666,12 @@
                     </Button>
                     </StackPanel>
 
-                    <StackPanel Grid.Row="{Binding ToolGroupRowTools}" Spacing="2">
+                    <StackPanel Grid.Row="{Binding ToolGroupRowTools}" Spacing="{DynamicResource FP.Density.Tool.ItemSpacing}">
                     <!-- Die Werkzeuge stehen hier einzeln, statt hinter den Sammelknöpfen "Text und Bild"
                          und "Malen" zu liegen: ein Klick wählt direkt das Werkzeug, mit dem gearbeitet
                          wird. Die zugehörigen Panels rechts zeigen nur noch dessen Einstellungen. -->
                     <TextBlock Text="WERKZEUGE" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
-                               FontWeight="SemiBold" Margin="10,10,0,4" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                               FontWeight="SemiBold" Margin="{DynamicResource FP.Density.Tool.HeaderMargin}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Auswahl"
                             Command="{Binding SetToolCommand}"

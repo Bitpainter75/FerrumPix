@@ -947,8 +947,10 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="10,0"/>
-        <Setter Property="Height" Value="36"/>
+        <!-- Innenabstand und Hoehe kommen aus der Dichtestufe der Werkzeugleiste, die
+             PanelDensityService im Ressourcenwoerterbuch austauscht. -->
+        <Setter Property="Padding" Value="{DynamicResource FP.Density.Tool.ButtonPadding}"/>
+        <Setter Property="Height" Value="{DynamicResource FP.Density.Tool.ButtonHeight}"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
         <Setter Property="CornerRadius" Value="8"/>

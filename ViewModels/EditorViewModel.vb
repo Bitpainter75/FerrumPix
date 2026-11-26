@@ -5374,11 +5374,26 @@ Namespace ViewModels
         ''' samt Knopf-Innenabstand (Leisten-Padding 8+8, Knopf-Padding 10, Symbol 18). Ausgeklappt
         ''' waechst sie mit der Schriftgroesse mit: bei fester Breite schnitt der laengste Eintrag
         ''' ("Drehen und Verzerren") ab einem Schriftversatz von etwa +3 sein letztes Wort ab, und das
-        ''' sah aus wie ein fehlender Text. Zehn Punkt je Schriftpunkt decken den laengsten Eintrag ab.</summary>
+        ''' sah aus wie ein fehlender Text. Zehn Punkt je Schriftpunkt decken den laengsten Eintrag ab.
+        '''
+        ''' Die Dichtestufe Winzig aendert auch die Waagerechte. Sie nimmt aber dem Text nichts weg,
+        ''' sondern nur dem Blendwerk drumherum: die beiden Innenabstaende werden schmaler, der Text
+        ''' behaelt genau so viel Platz wie vorher. Deshalb ist die enge Breite nicht einfach ein
+        ''' kleinerer Ausschnitt, sondern dieselbe Textbreite plus der engere Rahmen:
+        '''   eng  = 5 (Leiste) + 6 (Knopf) + 18 (Symbol) + 10 (Abstand) + 6 (Knopf) + 5 (Leiste) = 50
+        '''   weit = 8 + 10 + 18 + 10 + 10 + 8 = 64, also 190 - 64 = 126 Punkte fuer den Text
+        ''' Winzig bleibt damit 176 breit: 50 Blendwerk + 126 Text. Kompakt aendert nichts an der
+        ''' Breite - dort ist nur die Höhe enger.</summary>
         Public ReadOnly Property ToolSidebarWidth As Double
             Get
-                If IsToolSidebarCollapsed Then Return 54.0
-                Return 190.0 + Math.Max(0, FontScaleService.CurrentOffset) * 10.0
+                Dim tiny = _mainVm?.Settings?.EditorToolSidebarDensity
+                Dim isTiny = String.Equals(tiny, AppSettingsService.PanelDensityTiny, StringComparison.OrdinalIgnoreCase)
+                If IsToolSidebarCollapsed Then
+                    ' eng zusammen: 5 (Leiste) + 6 (Knopf) + 18 (Symbol) + 6 (Knopf) + 5 (Leiste) = 40
+                    Return If(isTiny, 40.0, 54.0)
+                End If
+                Dim baseWidth = If(isTiny, 176.0, 190.0)
+                Return baseWidth + Math.Max(0, FontScaleService.CurrentOffset) * 10.0
             End Get
         End Property
 
