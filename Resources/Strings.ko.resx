@@ -12518,4 +12518,22 @@
   <data name="Nichts_wurde_umbenannt_91f18288" xml:space="preserve">
     <value>이름이 바뀐 항목이 없습니다.</value>
   </data>
+  <data name="Legt_fest_in_welcher_Reihenfolge_die_Gruppen_in__efc8d637" xml:space="preserve">
+    <value>편집기 도구 모음에서 그룹이 어떤 순서로 놓일지 설정합니다.</value>
+  </data>
+  <data name="Werkzeugleiste_78b91335" xml:space="preserve">
+    <value>도구 모음</value>
+  </data>
+  <data name="Nur_Symbole_spart_am_meisten_Platz_f_r_das_Bild__d7b28d4e" xml:space="preserve">
+    <value>그림만은 이미지에 가장 많은 자리를 남깁니다. 이때 그룹은 이름 대신 선으로 나뉩니다. 글자 포함은 막대를 패널 옆에 넓게 열어 둔 채로 놓습니다. 자동은 막대를 좁게 유지하다 포인터가 잠시 위에 머물면 이미지 위에서 펼쳐 보입니다. 이미지를 위한 자리는 그대로입니다.</value>
+  </data>
+  <data name="Nur_Symbole_c4a487b7" xml:space="preserve">
+    <value>그림만</value>
+  </data>
+  <data name="Mit_Text_b34c864f" xml:space="preserve">
+    <value>그림과 글자</value>
+  </data>
+  <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
+    <value>{name}_fx는 예를 들어 Foto_fx를 만듭니다. ###은 번호입니다.</value>
+  </data>
 </root>

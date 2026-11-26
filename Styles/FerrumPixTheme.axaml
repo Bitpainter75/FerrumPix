@@ -911,10 +911,10 @@
         <Setter Property="Padding" Value="10,0"/>
         <Setter Property="Height" Value="36"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
-        <!-- Rechtsbuendig, und das ist der Grund, warum in jeder Zeile der Text VOR dem Symbol
-             steht: das Symbol ist damit das rechte Kind und sitzt immer an derselben Kante.
-             Faellt der Text weg (eng) oder ist eine Uebersetzung breiter, ruehrt es sich nicht. -->
-        <Setter Property="HorizontalContentAlignment" Value="Right"/>
+        <!-- Die Ausrichtung des Inhalts steht an jedem Knopf selbst und nicht hier: sie haengt an der
+             Seite des Anpassungspanels und ist die Kante, an der das Symbol sitzt (ToolIconColumn und
+             ToolSelectorContentAlignment im Editor-Modell). Hier gehoert nur hin, was fuer beide Seiten
+             gleich ist. -->
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>

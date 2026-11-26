@@ -5396,31 +5396,58 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ToolSidebarWidth))
         End Sub
 
-        ''' <summary>Laesst sich die Leiste ueberhaupt schmaler machen? Nur dann, wenn sie an der
-        ''' dem Bild zugewandten Kante feststeht.
+        ''' <summary>Zeigt die Werkzeugleiste gerade ihre Beschriftungen?
         '''
-        ''' Liegt das Anpassungspanel rechts, sitzt die Leiste am rechten Rand der Buehne: dieser Rand
-        ''' ruehrt sich nicht, und die rechtsbuendigen Symbole stehen in beiden Zustaenden auf
-        ''' demselben Bildpunkt.
-        '''
-        ''' Liegt das Panel links, haengt die Leiste am linken Rand der Buehne und waechst nach rechts:
-        ''' der Rand, an dem die Symbole liegen, wanderte mit der Breite mit. Sie am rechten Rand der
-        ''' Buehne festzumachen waere dagegen ein Abstand vom Panel, also genau das, was verlagert
-        ''' werden sollte. Ohne schmaler werdenden Zustand gibt es dort nichts zu gewinnen.</summary>
-        Public ReadOnly Property ToolSelectorCanNarrow As Boolean
-            Get
-                Return Not IsAdjustmentsPanelOnLeft
-            End Get
-        End Property
-
+        ''' Der feste Modus sagt es allein; nur der automatische haengt am Zeiger. Frueher haengte das
+        ''' noch an der Seite des Anpassungspanels: links sollte die Leiste immer breit bleiben. Das war
+        ''' ein Irrtum. Die Symbole springen gerade nicht, wenn die Leiste schmaler wird, weil sie an
+        ''' der Kante sitzen, die sich nie bewegt (siehe ToolIconColumn) - und genau deshalb gilt das
+        ''' Einklappen auf beiden Seiten gleich gut. Der Preis ist dasselbe: die schmale Leiste liegt
+        ''' im automatischen Modus ueber einem Stueck Bild. Dafuer steht das Bild, wenn die Leiste
+        ''' unter dem Zeiger aufklappt.</summary>
         Public ReadOnly Property AreToolSidebarLabelsVisible As Boolean
             Get
-                If Not ToolSelectorCanNarrow Then Return True
                 Select Case ToolSelectorMode
                     Case AppSettingsService.ToolSelectorModeCompact : Return False
                     Case AppSettingsService.ToolSelectorModeExpanded : Return True
                     Case Else : Return _toolSelectorHovered
                 End Select
+            End Get
+        End Property
+
+        ''' <summary>Spalte des Zeilenrasters fuer das Symbol: die Kante der Leiste, die sich nie
+        ''' bewegt. Die Leiste haengt aussen an der Buehne; steht das Anpassungspanel rechts, ist das
+        ''' der rechte Rand, steht es links, der linke. An dieser Kante bleibt das Symbol auch dann,
+        ''' wenn sein Text fehlt oder eine Uebersetzung breiter ist.</summary>
+        Public ReadOnly Property ToolIconColumn As Integer
+            Get
+                Return If(IsAdjustmentsPanelOnLeft, 0, 1)
+            End Get
+        End Property
+
+        ''' <summary>Spalte des Zeilenrasters fuer die Beschriftung: die Seite gegenueber dem Symbol,
+        ''' also die, die nach aussen zeigt. Siehe ToolIconColumn.</summary>
+        Public ReadOnly Property ToolLabelColumn As Integer
+            Get
+                Return If(IsAdjustmentsPanelOnLeft, 1, 0)
+            End Get
+        End Property
+
+        ''' <summary>Ausrichtung des Knopfinhalts an dieselbe Kante wie das Symbol. Ohne sie zentrete
+        ''' der Inhalt in der Zeile, und das Symbol wanderte mit der Breite seiner Beschriftung.</summary>
+        Public ReadOnly Property ToolSelectorContentAlignment As Avalonia.Layout.HorizontalAlignment
+            Get
+                Return If(IsAdjustmentsPanelOnLeft, Avalonia.Layout.HorizontalAlignment.Left,
+                                             Avalonia.Layout.HorizontalAlignment.Right)
+            End Get
+        End Property
+
+        ''' <summary>Ausrichtung der Gruppenueberschriften: auf die Seite des Textes, also gegenueber
+        ''' der Symbolkante. Unsichtbar statt weggenommen bleibt trotzdem (ToolGroupHeadingOpacity).</summary>
+        Public ReadOnly Property ToolGroupHeadingAlignment As Avalonia.Layout.HorizontalAlignment
+            Get
+                Return If(IsAdjustmentsPanelOnLeft, Avalonia.Layout.HorizontalAlignment.Right,
+                                             Avalonia.Layout.HorizontalAlignment.Left)
             End Get
         End Property
 
@@ -5496,13 +5523,14 @@ Namespace ViewModels
 
         ''' <summary>Breite, die die Werkzeugleiste dem Bild dauernd wegnimmt.
         '''
-        ''' Im festen Modus "nur Symbole" und im festen "mit Text" ist das ihre jeweilige Breite. Nur
-        ''' im automatischen Modus bleibt sie bei der schmalen: das Aufklappen unter dem Zeiger liegt
-        ''' UEBER dem Bild und darf ihm nichts wegnehmen, sonst wuerde beim Fahren ueber die Leiste
-        ''' das Bild springen (siehe den Hinweis auf ApplyToolSelectorLayout in EditorView).</summary>
+        ''' Im festen Modus "nur Symbole" und im festen "mit Text" ist das ihre jeweilige Breite. Nur im
+        ''' automatischen Modus bleibt sie bei der schmalen, und zwar auf beiden Seiten gleich: das
+        ''' Aufklappen unter dem Zeiger liegt UEBER dem Bild und darf ihm nichts wegnehmen, sonst
+        ''' wuerde beim Fahren ueber die Leiste das Bild springen (siehe den Hinweis auf
+        ''' ApplyToolSelectorLayout in EditorView).</summary>
         Public ReadOnly Property ToolSelectorReservedWidth As Double
             Get
-                If ToolSelectorMode = AppSettingsService.ToolSelectorModeAuto AndAlso ToolSelectorCanNarrow Then
+                If ToolSelectorMode = AppSettingsService.ToolSelectorModeAuto Then
                     Return CompactToolSelectorWidth
                 End If
                 Return ToolSidebarWidth

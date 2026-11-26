@@ -1463,6 +1463,11 @@ Namespace ViewModels
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AreToolGroupSeparatorsVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolSidebarWidth))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsAdjustmentsPanelOnLeft))
+            ' Und was auf welcher Seite der Zeile steht: Symbol, Beschriftung und ihre Ausrichtung.
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolIconColumn))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolLabelColumn))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolSelectorContentAlignment))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolGroupHeadingAlignment))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AdjustmentsVerticalScrollBarVisibility))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AdjustmentsScrollBarAutoHide))
             Editor?.RaiseToolSwitcherChanged()

@@ -12472,4 +12472,22 @@
   <data name="Nichts_wurde_umbenannt_91f18288" xml:space="preserve">
     <value>未重命名任何内容。</value>
   </data>
+  <data name="Legt_fest_in_welcher_Reihenfolge_die_Gruppen_in__efc8d637" xml:space="preserve">
+    <value>设定各分组在编辑器工具栏中的排列顺序。</value>
+  </data>
+  <data name="Werkzeugleiste_78b91335" xml:space="preserve">
+    <value>工具栏</value>
+  </data>
+  <data name="Nur_Symbole_spart_am_meisten_Platz_f_r_das_Bild__d7b28d4e" xml:space="preserve">
+    <value>仅图标为图像留出最多的空间；这时各分组用短线而不是标题分隔。带文字时这条栏宽而敞开地立在面板旁边。自动让这条栏保持窄，并在指针在它上方停留一会儿后在图像上方展开——留给图像的空间不变。</value>
+  </data>
+  <data name="Nur_Symbole_c4a487b7" xml:space="preserve">
+    <value>仅图标</value>
+  </data>
+  <data name="Mit_Text_b34c864f" xml:space="preserve">
+    <value>带文字</value>
+  </data>
+  <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
+    <value>{name}_fx 例如生成 Foto_fx；### 是计数器。</value>
+  </data>
 </root>
