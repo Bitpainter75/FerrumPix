@@ -205,7 +205,7 @@ ferrumpix --browser
 ```
 
 ```
-open -a FerrumPix --args --browser
+open -a ferrumpix --args --browser
 ```
 
 Everything that follows works the same way with each of them.
