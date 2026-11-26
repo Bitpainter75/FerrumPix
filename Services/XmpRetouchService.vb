@@ -76,14 +76,16 @@ Namespace Services
             Public Skipped As Integer
         End Class
 
-        ''' <summary>Liest die Ausbesserungsstellen aus dem Text einer XMP. Gibt es RetouchAreas,
-        ''' gelten nur sie; RetouchInfo ist die Form von Fassungen davor und wird nur gelesen, wenn
-        ''' die neue fehlt (eine aktualisierte Datei kann beide tragen).</summary>
+        ''' <summary>Liest die Ausbesserungsstellen aus dem Text einer XMP. Steht RetouchAreas in der
+        ''' Datei, gilt nur sie, AUCH LEER: eine leere Liste heisst "alle Stellen geloescht", und
+        ''' eine daneben stehen gebliebene RetouchInfo braechte sie sonst zurueck. RetouchInfo ist
+        ''' die Form von Fassungen davor und wird nur gelesen, wenn die neue ganz fehlt.</summary>
         Public Shared Function Parse(xmpText As String) As ParseResult
             Dim result As New ParseResult()
             If String.IsNullOrEmpty(xmpText) Then Return result
-            Dim areas = ReadBlock(xmpText, "RetouchAreas")
-            If areas IsNot Nothing AndAlso areas.Count > 0 Then
+            If NamesBlock(xmpText, "RetouchAreas") Then
+                Dim areas = ReadBlock(xmpText, "RetouchAreas")
+                If areas Is Nothing Then Return result
                 For Each item In areas
                     Dim spec = ReadArea(item)
                     If spec Is Nothing Then result.Skipped += 1 Else result.Areas.Add(spec)
@@ -97,6 +99,12 @@ Namespace Services
                 If spec Is Nothing Then result.Skipped += 1 Else result.Areas.Add(spec)
             Next
             Return result
+        End Function
+
+        ''' <summary>Nennt die XMP diesen Block ueberhaupt, als Element (auch leer oder
+        ''' selbstschliessend) oder als Attribut?</summary>
+        Private Shared Function NamesBlock(xmpText As String, name As String) As Boolean
+            Return Regex.IsMatch(xmpText, "<crs:" & name & "[\s/>]|\scrs:" & name & "\s*=")
         End Function
 
         ''' <summary>Die Eintraege der Liste eines Blocks (crs:Name/rdf:Seq/rdf:li), Nothing wenn

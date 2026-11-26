@@ -12479,7 +12479,7 @@
     <value>工具栏</value>
   </data>
   <data name="Nur_Symbole_spart_am_meisten_Platz_f_r_das_Bild__1664a739" xml:space="preserve">
-    <value>仅图标为图像留出最多的空间；这时各分组用短线而不是标题分隔。带文字时这条栏宽而敞开地立在面板旁边。自动让这条栏保持窄，并在指针在它上方停留一会儿后在图像上方展开——留给图像的空间不变。</value>
+    <value>仅图标为图像留出最多的空间；这时各分组用短线而不是标题分隔。带文字时这条栏宽而敞开地立在面板旁边。自动让这条栏保持窄，并在指针在它上方停留一会儿后在图像上方展开，留给图像的空间不变。</value>
   </data>
   <data name="Nur_Symbole_c4a487b7" xml:space="preserve">
     <value>仅图标</value>

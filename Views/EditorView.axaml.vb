@@ -1791,6 +1791,9 @@ Namespace Views
             _filmstripController.ScrollToCurrent()
         End Sub
 
+        ''' <summary>Was die Werkzeugleiste aussen am Panel dessen Spalte zuschlaegt; 0 sonst.</summary>
+        Private _toolSelectorPanelExtra As Double = 0.0
+
         ''' <summary>Setzt die Werkzeugleiste an ihren Platz und schirmt das Bild gegen sie ab.
         '''
         ''' Die Leiste liegt UEBER der Bildflaeche, nicht in einer eigenen Spalte des Wurzelrasters -
@@ -1806,17 +1809,14 @@ Namespace Views
         '''
         ''' Die aeusserste Kante der Leiste steht in beiden Zustaenden still; gewachsen wird nach
         ''' innen, ueber das Bild. Deshalb ruehrt sich kein Symbol, wenn die Leiste klappt.</summary>
-        ''' <summary>Was die Werkzeugleiste aussen am Panel dessen Spalte zuschlaegt; 0 sonst.</summary>
-        Private _toolSelectorPanelExtra As Double = 0.0
-
         Private Sub ApplyToolSelectorLayout()
             Dim vm = TryCast(DataContext, EditorViewModel)
             Dim stage = Me.FindControl(Of Border)("EditorStageBorder")
             If vm Is Nothing OrElse stage Is Nothing Then Return
 
             Dim film = FilmstripPlacement.ContentInset(vm.FilmstripPosition, vm.ShowFilmstrip)
-            Dim links = vm.IsToolSelectorOnLeft
-            Dim panelLinks = vm.IsAdjustmentsPanelOnLeft
+            Dim onLeft = vm.IsToolSelectorOnLeft
+            Dim panelOnLeft = vm.IsAdjustmentsPanelOnLeft
 
             ' AUSSEN AM PANEL: eine feste Seite, auf der zugleich das Anpassungspanel steht, meint den
             ' Fensterrand und nicht die Kante der Buehne. Links ist das die Lage von frueher - Leiste
@@ -1824,60 +1824,60 @@ Namespace Views
             ' saehe ein Editor mit linkem Panel nach dem Update anders aus als vorher, und "Links"
             ' waere dort dasselbe wie "Mit Anpassungen". Die Leiste steht dann in der Spalte des
             ' Panels, und das Panel rueckt um ihre Breite nach innen.
-            Dim aussen = Not String.Equals(vm.ToolSelectorSide, AppSettingsService.ToolSelectorSideWithAdjustments, StringComparison.Ordinal) AndAlso
-                         links = panelLinks
-            Dim reserviert = vm.ToolSelectorReservedWidth
-            Dim seite = If(aussen, 0.0, reserviert)
+            Dim outsidePanel = Not String.Equals(vm.ToolSelectorSide, AppSettingsService.ToolSelectorSideWithAdjustments, StringComparison.Ordinal) AndAlso
+                               onLeft = panelOnLeft
+            Dim reservedWidth = vm.ToolSelectorReservedWidth
+            Dim stageInset = If(outsidePanel, 0.0, reservedWidth)
 
             Dim panel = Me.FindControl(Of Border)("AdjustmentsPanelBorder")
             If panel IsNot Nothing Then
-                panel.Margin = If(Not aussen, New Thickness(0),
-                                  If(links, New Thickness(reserviert, 0, 0, 0), New Thickness(0, 0, reserviert, 0)))
+                panel.Margin = If(Not outsidePanel, New Thickness(0),
+                                  If(onLeft, New Thickness(reservedWidth, 0, 0, 0), New Thickness(0, 0, reservedWidth, 0)))
             End If
             ' Die Spalte des Panels waechst um die Leiste: sonst ginge ihre Breite vom Panel ab und
             ' es unterschritte seine Mindestbreite. Der Ziehrand rechnet denselben Zuschlag wieder
             ' heraus (OnAdjustmentsPanelSplitterDragCompleted).
-            _toolSelectorPanelExtra = If(aussen, reserviert, 0.0)
+            _toolSelectorPanelExtra = If(outsidePanel, reservedWidth, 0.0)
             Dim root = Me.FindControl(Of Grid)("EditorRootGrid")
             If root IsNot Nothing AndAlso root.ColumnDefinitions.Count >= 2 Then
-                Dim spalte = root.ColumnDefinitions(If(panelLinks, 0, 1))
-                spalte.MinWidth = AdjustmentsPanelWidth + _toolSelectorPanelExtra
-                spalte.MaxWidth = EditorViewModel.AdjustmentsPanelMaxWidth + _toolSelectorPanelExtra
-                spalte.Width = New GridLength(vm.AdjustmentsPanelWidth + _toolSelectorPanelExtra)
+                Dim panelColumnDefinition = root.ColumnDefinitions(If(panelOnLeft, 0, 1))
+                panelColumnDefinition.MinWidth = AdjustmentsPanelWidth + _toolSelectorPanelExtra
+                panelColumnDefinition.MaxWidth = EditorViewModel.AdjustmentsPanelMaxWidth + _toolSelectorPanelExtra
+                panelColumnDefinition.Width = New GridLength(vm.AdjustmentsPanelWidth + _toolSelectorPanelExtra)
             End If
 
-            Dim leiste = Me.FindControl(Of Border)("ToolSelectorBorder")
-            If leiste IsNot Nothing Then
-                SetGridColumn(leiste, If(aussen, If(panelLinks, 0, 1), If(panelLinks, 1, 0)))
+            Dim toolBar = Me.FindControl(Of Border)("ToolSelectorBorder")
+            If toolBar IsNot Nothing Then
+                SetGridColumn(toolBar, If(outsidePanel, If(panelOnLeft, 0, 1), If(panelOnLeft, 1, 0)))
                 ' Aussen steht sie neben dem Panel und nicht neben dem Filmstreifen der Buehne.
-                leiste.Margin = If(aussen, New Thickness(0), New Thickness(0, film.Top, 0, film.Bottom))
+                toolBar.Margin = If(outsidePanel, New Thickness(0), New Thickness(0, film.Top, 0, film.Bottom))
                 ' Voll qualifiziert: der Name gehoert hier zugleich der Eigenschaft des Controls,
                 ' und VB nimmt sonst die Eigenschaft statt der Aufzaehlung (Warnung BC42025).
-                leiste.HorizontalAlignment = If(links, Avalonia.Layout.HorizontalAlignment.Left,
-                                                          Avalonia.Layout.HorizontalAlignment.Right)
+                toolBar.HorizontalAlignment = If(onLeft, Avalonia.Layout.HorizontalAlignment.Left,
+                                                         Avalonia.Layout.HorizontalAlignment.Right)
                 ' Die Trennlinie der Leiste zeigt zum Bild, also an ihre innere Kante.
-                leiste.BorderThickness = If(links, New Thickness(0, 0, 1, 0), New Thickness(1, 0, 0, 0))
+                toolBar.BorderThickness = If(onLeft, New Thickness(0, 0, 1, 0), New Thickness(1, 0, 0, 0))
             End If
 
             ' Der seitliche Streifen rueckt von der Leiste weg ans Bild. Ein wagerechter oben braucht
             ' keinen seitlichen Rand: er liegt quer ueber ihr, und die Leiste beginnt unter ihm.
-            Dim rand = If(links, New Thickness(seite, 0, 0, 0), New Thickness(0, 0, seite, 0))
-            Dim streifen = Me.FindControl(Of Border)("FilmstripSideSlot")
-            If streifen IsNot Nothing Then
-                streifen.Margin = If(FilmstripPlacement.IsVertical(vm.FilmstripPosition), rand, New Thickness(0))
+            Dim sideInset = If(onLeft, New Thickness(stageInset, 0, 0, 0), New Thickness(0, 0, stageInset, 0))
+            Dim filmstripSlot = Me.FindControl(Of Border)("FilmstripSideSlot")
+            If filmstripSlot IsNot Nothing Then
+                filmstripSlot.Margin = If(FilmstripPlacement.IsVertical(vm.FilmstripPosition), sideInset, New Thickness(0))
             End If
 
             ' Kopf- und Fussgruppe stehen mittig zum Bild, nicht zum Fenster, und ruecken mit.
-            Dim kopf = Me.FindControl(Of StackPanel)("StageHeaderButtons")
-            If kopf IsNot Nothing Then kopf.Margin = rand
-            Dim fuss = Me.FindControl(Of StackPanel)("StageFooterButtons")
-            If fuss IsNot Nothing Then
-                fuss.Margin = If(links, New Thickness(seite, 0, 0, 6), New Thickness(0, 0, seite, 6))
+            Dim headerButtons = Me.FindControl(Of StackPanel)("StageHeaderButtons")
+            If headerButtons IsNot Nothing Then headerButtons.Margin = sideInset
+            Dim footerButtons = Me.FindControl(Of StackPanel)("StageFooterButtons")
+            If footerButtons IsNot Nothing Then
+                footerButtons.Margin = If(onLeft, New Thickness(stageInset, 0, 0, 6), New Thickness(0, 0, stageInset, 6))
             End If
 
-            stage.Margin = If(links,
-                             New Thickness(film.Left + seite, film.Top, film.Right, film.Bottom),
-                             New Thickness(film.Left, film.Top, film.Right + seite, film.Bottom))
+            stage.Margin = If(onLeft,
+                             New Thickness(film.Left + stageInset, film.Top, film.Right, film.Bottom),
+                             New Thickness(film.Left, film.Top, film.Right + stageInset, film.Bottom))
         End Sub
 
         ' Der Zeiger allein, kein Klick und kein Fokus: die Leiste darf keinem Werkzeug die Tastatur

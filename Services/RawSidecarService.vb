@@ -172,8 +172,12 @@ Namespace Services
         ''' eines neuen Rezepts in der Datei, bekommt sie <see cref="FloorFormatVersion"/>. Die
         ''' Pruefung "Rezeptfelder nach der Schwelle" haelt die Liste gegen den Grundstand aller
         ''' Felder von 0.9.91 (packaging/Diagnostics/rezeptfelder-grundstand.txt): ein neues
-        ''' Feld, das hier fehlt, meldet sie rot.</summary>
-        Friend Shared ReadOnly RecipeFieldsSinceFloor As String() = Array.Empty(Of String)()
+        ''' Feld, das hier fehlt, meldet sie rot.
+        '''
+        ''' HazeModel: kam nach dem Release 0.9.91-1. Ohne Schwelle liesse 0.9.91 ein Rezept mit
+        ''' neuem Dunst beschreibbar, verloere das Feld beim naechsten Stern, und der Dunst kaeme
+        ''' danach in der alten Rechnung.</summary>
+        Friend Shared ReadOnly RecipeFieldsSinceFloor As String() = {"HazeModel"}
         Private Shared ReadOnly Ns As XNamespace = "https://github.com/Bitpainter75/FerrumPix/ns/recipe/1.0"
         Private Shared ReadOnly _writeLock As New Object()
 
@@ -615,7 +619,10 @@ Namespace Services
 
         ''' <summary>Traegt dieses Rezept-JSON ein Feld, das diese Fassung nicht kennt, oder eines
         ''' aus <see cref="RecipeFieldsSinceFloor"/> mit einem anderen Wert als ein neues Rezept?
-        ''' Verglichen wird nur die oberste Ebene: dort kommen neue Regler hin.</summary>
+        ''' Unbekannte Felder zaehlen nur auf der obersten Ebene: dort steht jedes Feld, weil das
+        ''' Rezept vollstaendig geschrieben wird. Die Felder nach der Schwelle zaehlen auch tiefer,
+        ''' in Maskenebenen und Objekten: ein neuer Regler kann dort gesetzt sein, waehrend er oben
+        ''' neutral steht.</summary>
         Friend Shared Function RecipeJsonNeedsFloor(json As String) As Boolean
             If String.IsNullOrWhiteSpace(json) Then Return False
             Dim recipe As System.Text.Json.Nodes.JsonObject
@@ -632,6 +639,36 @@ Namespace Services
                 If RecipeFieldsSinceFloor.Contains(pair.Key, StringComparer.OrdinalIgnoreCase) AndAlso
                    Not System.Text.Json.Nodes.JsonNode.DeepEquals(pair.Value, neutral) Then Return True
             Next
+            For Each pair In recipe
+                If NestedSinceFloorField(pair.Value, known, 0) Then Return True
+            Next
+            Return False
+        End Function
+
+        ''' <summary>Steht unterhalb der obersten Ebene ein Feld aus
+        ''' <see cref="RecipeFieldsSinceFloor"/> mit einem anderen Wert als ein neues Rezept?
+        ''' Tiefe begrenzt, wie bei jedem Lesen fremder Daten.</summary>
+        Private Shared Function NestedSinceFloorField(node As System.Text.Json.Nodes.JsonNode,
+                                                      known As Dictionary(Of String, System.Text.Json.Nodes.JsonNode),
+                                                      depth As Integer) As Boolean
+            If node Is Nothing OrElse depth > 16 OrElse RecipeFieldsSinceFloor.Length = 0 Then Return False
+            Dim asObject = TryCast(node, System.Text.Json.Nodes.JsonObject)
+            If asObject IsNot Nothing Then
+                For Each pair In asObject
+                    Dim neutral As System.Text.Json.Nodes.JsonNode = Nothing
+                    If RecipeFieldsSinceFloor.Contains(pair.Key, StringComparer.OrdinalIgnoreCase) AndAlso
+                       known.TryGetValue(pair.Key, neutral) AndAlso
+                       Not System.Text.Json.Nodes.JsonNode.DeepEquals(pair.Value, neutral) Then Return True
+                    If NestedSinceFloorField(pair.Value, known, depth + 1) Then Return True
+                Next
+                Return False
+            End If
+            Dim asArray = TryCast(node, System.Text.Json.Nodes.JsonArray)
+            If asArray IsNot Nothing Then
+                For Each item In asArray
+                    If NestedSinceFloorField(item, known, depth + 1) Then Return True
+                Next
+            End If
             Return False
         End Function
 

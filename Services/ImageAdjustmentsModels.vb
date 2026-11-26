@@ -267,6 +267,32 @@ Namespace Services
     End Class
 
     Public Class ImageAdjustments
+        Implements System.Text.Json.Serialization.IJsonOnDeserialized
+
+        ''' <summary>Felder, die eine AELTERE Fassung schrieb und die heute bewusst wegfallen. Sie
+        ''' sind keine unbekannten Felder einer neueren Fassung und duerfen deshalb nicht in
+        ''' UnknownFields landen, sonst schriebe jedes Speichern sie fuer immer zurueck.
+        ''' Jedes Feld, das ImageAdjustments je geschrieben hat und heute nicht mehr traegt, gehoert
+        ''' hierher; sonst hebt schon ein altes Rezept die Datei auf die Schwelle
+        ''' (RawSidecarService.FloorFormatVersion), und aeltere Fassungen saehen es unbearbeitet.
+        ''' ToneModel: es gibt nur noch eine Rechnung der Tonregler (FpxService.NormalizeLoadedAdjustments).
+        ''' FarbrauschGrobSkala: heute ColorNoiseCoarseScale. Border*: fruehere Rahmenfelder.
+        ''' SplitToning*: heute die Farbgradierung.</summary>
+        Friend Shared ReadOnly RetiredFieldNames As String() = {
+            "ToneModel", "FarbrauschGrobSkala",
+            "BorderSize", "BorderColor", "BorderCornerRadius", "BorderEffect",
+            "SplitToningBalance", "SplitToningHighlightHue", "SplitToningHighlightSaturation",
+            "SplitToningShadowHue", "SplitToningShadowSaturation"}
+
+        ''' <summary>Nach dem Lesen jeder Instanz, auch der verschachtelten in Maskenebenen und
+        ''' Objekten: ausgemusterte Felder aus UnknownFields nehmen.</summary>
+        Private Sub OnDeserialized() Implements System.Text.Json.Serialization.IJsonOnDeserialized.OnDeserialized
+            If UnknownFields Is Nothing Then Return
+            For Each name In RetiredFieldNames
+                UnknownFields.Remove(name)
+            Next
+            If UnknownFields.Count = 0 Then UnknownFields = Nothing
+        End Sub
 
         ''' <summary>Die eingebauten Filter, in der Reihenfolge, in der sie im Editor stehen. "Keine" ist
         ''' der neutrale Eintrag. Einzige Quelle der Namen: sie sind gleichzeitig die Schlüssel, auf die

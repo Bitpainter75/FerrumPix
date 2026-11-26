@@ -256,6 +256,10 @@ Namespace ViewModels
         ''' sie nur bei hinzugefuegtem Dunst, sonst als 0 (BuildAdjustmentsFromFields); die
         ''' Zuruecksetzer, die nur _haze leeren, brauchen sie deshalb nicht anzufassen.
         Private _hazeModel As Integer = 0
+        ''' Die Fassung des Dunstes, bevor der Regler auf genau 0 ging; -1 ohne. Holt der Regler von
+        ''' dort wieder Dunst, gilt sie weiter (Haze). Ein negativer Wert und jedes Laden eines
+        ''' Rezepts vergessen sie.
+        Private _hazeModelBeforeZero As Integer = -1
         Private _addNoise As Double = 0
         Private _structure As Double = 0
         Private _glow As Double = 0
@@ -5392,7 +5396,12 @@ Namespace ViewModels
         ''' die Leiste schon offen, tut sie nichts - die Hande wandern ueber die Knopfe, und niemand
         ''' soll sehen, wie sie vor jedem Knopf von neuem zaehlt.</summary>
         Public Sub BeginToolSelectorHover()
-            If _toolSelectorHovered Then Return
+            If _toolSelectorHovered Then
+                ' Zurueck auf die offene Leiste, bevor sie zuklappte: das ausstehende Zuklappen
+                ' entfaellt, sonst schloesse sie sich unter dem Zeiger.
+                If _toolSelectorHoverTimer IsNot Nothing Then _toolSelectorHoverTimer.Stop()
+                Return
+            End If
             StartToolSelectorTimer(ToolSelectorExpandDelayMs)
         End Sub
 
@@ -7829,7 +7838,22 @@ Namespace ViewModels
                 ' Den Stand fuer Rueckgaengig verfaelscht das nicht, denn sie aendert sich nur, wenn
                 ' bisher kein Dunst hinzugefuegt war, und dann geht sie ohnehin als 0 ins Rezept. Zurueck
                 ' auf null bleibt das Feld stehen und wird beim Bauen des Rezepts zu 0.
-                If clamped > 0 Then _hazeModel = ImageAdjustments.HazeModelAfter(_haze, _hazeModel, clamped)
+                ' AUF NULL UND ZURUECK bleibt die Fassung: der Einzelvergleich am Regler setzt den
+                ' Standardwert 0 und holt den Wert danach zurueck, und das ist derselbe Dunst. Ohne das
+                ' kaeme ein alter Dunst nach dem Vergleich in der neuen Rechnung. Wer dagegen ueber null
+                ' hinweg ins Entfernen zieht, hat den Dunst aufgegeben: danach ist er neu.
+                If clamped > 0 Then
+                    If _haze = 0 AndAlso _hazeModelBeforeZero >= 0 Then
+                        _hazeModel = _hazeModelBeforeZero
+                    Else
+                        _hazeModel = ImageAdjustments.HazeModelAfter(_haze, _hazeModel, clamped)
+                    End If
+                    _hazeModelBeforeZero = -1
+                ElseIf clamped < 0 Then
+                    _hazeModelBeforeZero = -1
+                ElseIf _haze > 0 Then
+                    _hazeModelBeforeZero = _hazeModel
+                End If
                 SetUndoableDouble(_haze, clamped, NameOf(Haze))
             End Set
         End Property
@@ -28073,6 +28097,7 @@ Namespace ViewModels
             _dustScratches = adj.DustScratches
             _haze = adj.Haze
             _hazeModel = adj.HazeModel
+            _hazeModelBeforeZero = -1
             _addNoise = adj.AddNoise
             _structure = adj.[Structure]
             _glow = adj.Glow
@@ -28708,6 +28733,7 @@ Namespace ViewModels
             _dustScratches = 0
             _haze = 0
             _hazeModel = 0
+            _hazeModelBeforeZero = -1
             _addNoise = 0
             _structure = 0
             _glow = 0
@@ -34705,6 +34731,7 @@ Namespace ViewModels
             ' Mit dem Dunst seine Fassung: der Look hat sie schon nach der einen Regel gesetzt
             ' (ImageAdjustments.HazeModelAfter); die Regel des Reglers oben kennt nur den Wert.
             If look.Haze > 0 Then _hazeModel = look.HazeModel
+            _hazeModelBeforeZero = -1
             Vibrance = look.Vibrance
             Saturation = look.Saturation
             Sharpness = look.Sharpness
