@@ -12492,4 +12492,13 @@
   <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
     <value>{name}_fx donne par exemple Photo_fx ; ### est un compteur.</value>
   </data>
+  <data name="Seite_der_Werkzeugleiste_70a2e880" xml:space="preserve">
+    <value>Côté de la barre d'outils</value>
+  </data>
+  <data name="Wo_die_Werkzeugleiste_steht_immer_links_immer_re_f3efb3e4" xml:space="preserve">
+    <value>Où se trouve la barre d'outils : toujours à gauche, toujours à droite, ou du côté du panneau de réglages. Du côté du panneau, le choix de l'outil et les curseurs de l'outil choisi sont côte à côte. Un côté fixe laisse la barre en place même quand le panneau de réglages change de côté.</value>
+  </data>
+  <data name="Mit_Anpassungen_541da366" xml:space="preserve">
+    <value>Avec réglages</value>
+  </data>
 </root>

@@ -12536,4 +12536,13 @@
   <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
     <value>{name}_fx örneğin Foto_fx üretir; ### bir sayaçtır.</value>
   </data>
+  <data name="Seite_der_Werkzeugleiste_70a2e880" xml:space="preserve">
+    <value>Araç çubuğunun tarafı</value>
+  </data>
+  <data name="Wo_die_Werkzeugleiste_steht_immer_links_immer_re_f3efb3e4" xml:space="preserve">
+    <value>Araç çubuğunun nerede durduğu: hep solda, hep sağda, ya da ayarlama panelinin tarafında. Panelin tarafında araç seçimi ile seçili aracın kaydırıcıları yan yana durur. Sabit bir taraf, ayarlama paneli taşınsa bile araç çubuğunu yerinde bırakır.</value>
+  </data>
+  <data name="Mit_Anpassungen_541da366" xml:space="preserve">
+    <value>Ayarlı</value>
+  </data>
 </root>

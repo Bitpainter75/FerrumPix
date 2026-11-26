@@ -1463,6 +1463,9 @@ Namespace ViewModels
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AreToolGroupSeparatorsVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolSidebarWidth))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsAdjustmentsPanelOnLeft))
+            ' Und auf welcher Seite die Werkzeugleiste jetzt steht. Die Ansicht verankert sie damit
+            ' neu (siehe der Fall in EditorView), und die vier Knopfepaare darunter gelten ebenfalls.
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolSelectorSide))
             ' Und was auf welcher Seite der Zeile steht: Symbol, Beschriftung, ihre Ausrichtung und
             ' der Abstand zwischen beiden. Der faengt in der schmalen Leiste weg; bliebe er, schuebe er
             ' das Symbol dort zehn Punkte nach aussen (siehe ToolRowColumnSpacing).

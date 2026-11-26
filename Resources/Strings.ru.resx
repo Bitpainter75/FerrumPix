@@ -12532,4 +12532,13 @@
   <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
     <value>{name}_fx даёт например Фото_fx; ### — это счётчик.</value>
   </data>
+  <data name="Seite_der_Werkzeugleiste_70a2e880" xml:space="preserve">
+    <value>Сторона панели инструментов</value>
+  </data>
+  <data name="Wo_die_Werkzeugleiste_steht_immer_links_immer_re_f3efb3e4" xml:space="preserve">
+    <value>Где стоит панель инструментов: всегда слева, всегда справа или на стороне панели коррекций. На стороне панели выбор инструмента и ползунки выбранного инструмента стоят рядом. Фиксированная сторона оставляет панель на месте, даже когда панель коррекций переезжает.</value>
+  </data>
+  <data name="Mit_Anpassungen_541da366" xml:space="preserve">
+    <value>С коррекциями</value>
+  </data>
 </root>

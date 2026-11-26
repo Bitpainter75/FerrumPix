@@ -12532,4 +12532,13 @@
   <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
     <value>{name}_fx tworzy na przykład Zdjęcie_fx; ### to licznik.</value>
   </data>
+  <data name="Seite_der_Werkzeugleiste_70a2e880" xml:space="preserve">
+    <value>Strona paska narzędzi</value>
+  </data>
+  <data name="Wo_die_Werkzeugleiste_steht_immer_links_immer_re_f3efb3e4" xml:space="preserve">
+    <value>Gdzie stoi pasek narzędzi: zawsze po lewej, zawsze po prawej, albo po stronie panelu korekt. Po stronie panelu wybór narzędzia i suwaki wybranego narzędzia leżą obok siebie. Stała strona zostawia pasek na miejscu, nawet gdy panel korekt się przeniesie.</value>
+  </data>
+  <data name="Mit_Anpassungen_541da366" xml:space="preserve">
+    <value>Z korektami</value>
+  </data>
 </root>

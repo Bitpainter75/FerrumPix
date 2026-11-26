@@ -5330,6 +5330,34 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Wo die Werkzeugleiste steht: immer links, immer rechts, oder auf der Seite des
+        ''' Anpassungspanels. Aus den Einstellungen (EditorToolSelectorSide); ein unlesbarer Wert
+        ''' faellt auf die Vorgabe zurueck.</summary>
+        Public ReadOnly Property ToolSelectorSide As String
+            Get
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then
+                    Return AppSettingsService.ToolSelectorSideDefault
+                End If
+                Return AppSettingsService.NormalizeToolSelectorSide(_mainVm.Settings.EditorToolSelectorSide)
+            End Get
+        End Property
+
+        ''' <summary>Steht die Werkzeugleiste links? Entscheidet die Spalten jeder Werkzeugzeile und die
+        ''' Richtung ihrer Ausrichtung (ToolIconColumn, ToolLabelColumn, ToolSelectorContentAlignment).
+        '''
+        ''' Sie fragt die SEITE DER LEISTE ab und nicht die Seite des Anpassungspanels. Beides war
+        ''' bisher dasselbe; seit es eine eigene Wahl ist, gilt die Seite der Leiste - und nur in der
+        ''' Einstellung "Mit Anpassungen" ist das wieder die Seite des Panels.</summary>
+        Public ReadOnly Property IsToolSelectorOnLeft As Boolean
+            Get
+                Select Case ToolSelectorSide
+                    Case AppSettingsService.ToolSelectorSideLeft : Return True
+                    Case AppSettingsService.ToolSelectorSideRight : Return False
+                    Case Else : Return IsAdjustmentsPanelOnLeft
+                End Select
+            End Get
+        End Property
+
         ''' <summary>Steht der Zeiger ueber der Werkzeugleiste? Nur der automatische Modus macht
         ''' daraus Beschriftungen. Bewusst der Zeiger und nicht der Fokus: das Abfahren der Leiste
         ''' darf keinem Werkzeug die Tastatur wegnehmen.</summary>
@@ -5417,12 +5445,12 @@ Namespace ViewModels
         End Property
 
         ''' <summary>Spalte des Zeilenrasters fuer das Symbol: die Kante der Leiste, die sich nie
-        ''' bewegt. Die Leiste haengt aussen an der Buehne; steht das Anpassungspanel rechts, ist das
-        ''' der rechte Rand, steht es links, der linke. An dieser Kante bleibt das Symbol auch dann,
-        ''' wenn sein Text fehlt oder eine Uebersetzung breiter ist.</summary>
+        ''' bewegt. Die Leiste haengt aussen an der Buehne; steht sie links, ist das der linke Rand,
+        ''' steht sie rechts, der rechte. An dieser Kante bleibt das Symbol auch dann, wenn sein Text
+        ''' fehlt oder eine Uebersetzung breiter ist.</summary>
         Public ReadOnly Property ToolIconColumn As Integer
             Get
-                Return If(IsAdjustmentsPanelOnLeft, 0, 1)
+                Return If(IsToolSelectorOnLeft, 0, 1)
             End Get
         End Property
 
@@ -5430,7 +5458,7 @@ Namespace ViewModels
         ''' also die, die nach aussen zeigt. Siehe ToolIconColumn.</summary>
         Public ReadOnly Property ToolLabelColumn As Integer
             Get
-                Return If(IsAdjustmentsPanelOnLeft, 1, 0)
+                Return If(IsToolSelectorOnLeft, 1, 0)
             End Get
         End Property
 
@@ -5438,8 +5466,8 @@ Namespace ViewModels
         ''' der Inhalt in der Zeile, und das Symbol wanderte mit der Breite seiner Beschriftung.</summary>
         Public ReadOnly Property ToolSelectorContentAlignment As Avalonia.Layout.HorizontalAlignment
             Get
-                Return If(IsAdjustmentsPanelOnLeft, Avalonia.Layout.HorizontalAlignment.Left,
-                                             Avalonia.Layout.HorizontalAlignment.Right)
+                Return If(IsToolSelectorOnLeft, Avalonia.Layout.HorizontalAlignment.Left,
+                                          Avalonia.Layout.HorizontalAlignment.Right)
             End Get
         End Property
 
@@ -5468,8 +5496,8 @@ Namespace ViewModels
         ''' der Symbolkante. Unsichtbar statt weggenommen bleibt trotzdem (ToolGroupHeadingOpacity).</summary>
         Public ReadOnly Property ToolGroupHeadingAlignment As Avalonia.Layout.HorizontalAlignment
             Get
-                Return If(IsAdjustmentsPanelOnLeft, Avalonia.Layout.HorizontalAlignment.Right,
-                                             Avalonia.Layout.HorizontalAlignment.Left)
+                Return If(IsToolSelectorOnLeft, Avalonia.Layout.HorizontalAlignment.Right,
+                                          Avalonia.Layout.HorizontalAlignment.Left)
             End Get
         End Property
 
@@ -5491,8 +5519,8 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Steht das Anpassungspanel links neben der Werkzeugleiste statt rechts neben der
-        ''' Bühne? Aus den Einstellungen (EditorAdjustmentsPanelOnLeft), ab Werk aus.
+        ''' <summary>Steht das Anpassungspanel links von der Bearbeitungsflaeche statt rechts? Aus den
+        ''' Einstellungen (EditorAdjustmentsPanelOnLeft), ab Werk aus.
         '''
         ''' Die Ansicht setzt daraufhin die Spalten des Wurzelrasters um, siehe
         ''' UpdateAdjustmentsPanelSide in EditorView.</summary>

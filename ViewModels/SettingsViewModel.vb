@@ -109,6 +109,7 @@ Namespace ViewModels
         Private _editorLayersPanelExpanded As Boolean = False
         Private _editorLayerThumbnails As Boolean = True
         Private _editorToolSelectorMode As String = AppSettingsService.ToolSelectorModeDefault
+        Private _editorToolSelectorSide As String = AppSettingsService.ToolSelectorSideDefault
         Private _editorAdjustmentsPanelWidth As Double = EditorViewModel.AdjustmentsPanelDefaultWidth
         Private _editorSaveAsNamePattern As String = "{name}_fx"
         Private _editorDenoiseStrength As Double = EditorViewModel.DefaultDenoiseStrength
@@ -229,6 +230,7 @@ Namespace ViewModels
         Private _savedEditorFitMargin As Integer = 0
         Private _savedEditorStartupTool As String = "Adjust"
         Private _savedEditorToolSelectorMode As String = AppSettingsService.ToolSelectorModeDefault
+        Private _savedEditorToolSelectorSide As String = AppSettingsService.ToolSelectorSideDefault
         Private _savedEditorAdjustmentsPanelOnLeft As Boolean = False
         Private _savedEditorAdjustmentsScrollBarAlwaysVisible As Boolean = False
         Private _savedEditorToolSwitcher As Boolean = False
@@ -3187,6 +3189,50 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Wo der Editor seine Werkzeugleiste hinsetzt: immer links, immer rechts, oder auf
+        ''' der Seite des Anpassungspanels. Aus dem Einstellungsdialog; ein unlesbarer Wert faellt auf
+        ''' die Vorgabe.
+        '''
+        ''' Auch das ist ein Schalter im Dialog und kein Umschalter in der Leiste selbst: ein Knopf mit
+        ''' zwei Stellungen kann drei Seiten nicht darstellen. Der Wechsel laesst den ausgewaehlten
+        ''' Knopf, seine Werte und den Stand des Bildlaufes unveraendert; nur ein ausstehender
+        ''' Zeigerlauf wird verworfen.</summary>
+        Public Property EditorToolSelectorSide As String
+            Get
+                Return _editorToolSelectorSide
+            End Get
+            Set(value As String)
+                Dim normal = AppSettingsService.NormalizeToolSelectorSide(value)
+                If String.Equals(_editorToolSelectorSide, normal, StringComparison.Ordinal) Then Return
+                Me.RaiseAndSetIfChanged(_editorToolSelectorSide, normal)
+                Me.RaisePropertyChanged(NameOf(IsToolSelectorSideLeft))
+                Me.RaisePropertyChanged(NameOf(IsToolSelectorSideWithAdjustments))
+                Me.RaisePropertyChanged(NameOf(IsToolSelectorSideRight))
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Die drei Knoepfe desselben Schalters: einer von dreien, keiner laesst sich
+        ''' abschalten - dasselbe Muster wie bei der Seite des Anpassungspanels.</summary>
+        Public ReadOnly Property IsToolSelectorSideLeft As Boolean
+            Get
+                Return String.Equals(_editorToolSelectorSide, AppSettingsService.ToolSelectorSideLeft, StringComparison.Ordinal)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsToolSelectorSideWithAdjustments As Boolean
+            Get
+                Return String.Equals(_editorToolSelectorSide, AppSettingsService.ToolSelectorSideWithAdjustments, StringComparison.Ordinal)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsToolSelectorSideRight As Boolean
+            Get
+                Return String.Equals(_editorToolSelectorSide, AppSettingsService.ToolSelectorSideRight, StringComparison.Ordinal)
+            End Get
+        End Property
+
         ''' <summary>Zuletzt benutzte Staerke des Entrauschens. Gemerkter Bedienzustand, kein
         ''' Schalter im Dialog - gesetzt wird sie am Regler im Rauschen-Panel.</summary>
         Public Property EditorDenoiseStrength As Double
@@ -4898,6 +4944,7 @@ Namespace ViewModels
         Public ReadOnly Property SetDefaultSaveFormatCommand As ICommand
         Public ReadOnly Property SetEditorStartupToolCommand As ICommand
         Public ReadOnly Property SetEditorToolSelectorModeCommand As ICommand
+        Public ReadOnly Property SetEditorToolSelectorSideCommand As ICommand
         Public ReadOnly Property SetEditorAdjustmentsPanelSideCommand As ICommand
         Public ReadOnly Property SetEditorAdjustmentsScrollBarCommand As ICommand
         Public ReadOnly Property SetPsdTextImportCommand As ICommand
@@ -5506,6 +5553,7 @@ Namespace ViewModels
             _editorLayersPanelExpanded = _appSettings.EditorLayersPanelExpanded
             _editorLayerThumbnails = _appSettings.EditorLayerThumbnails
             _editorToolSelectorMode = AppSettingsService.NormalizeToolSelectorMode(_appSettings.EditorToolSelectorMode)
+            _editorToolSelectorSide = AppSettingsService.NormalizeToolSelectorSide(_appSettings.EditorToolSelectorSide)
             _editorAdjustmentsPanelWidth = EditorViewModel.ClampAdjustmentsPanelWidth(_appSettings.EditorAdjustmentsPanelWidth)
             _editorDenoiseStrength = EditorViewModel.ClampDenoiseStrength(_appSettings.EditorDenoiseStrength)
             _editorAdjustmentsPanelOnLeft = _appSettings.EditorAdjustmentsPanelOnLeft
@@ -5668,6 +5716,7 @@ Namespace ViewModels
             ' Der Modus kommt als Name aus dem AXAML. NormalizeToolSelectorMode haelt die Vorgabe
             ' fuer jeden Wert, der keiner der drei Namen ist.
             SetEditorToolSelectorModeCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorToolSelectorMode = m)
+            SetEditorToolSelectorSideCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorToolSelectorSide = m)
             ' Zwei Knoepfe wie sonst auch, der Wert selbst ist aber ein Ja/Nein: alles ausser "Left"
             ' bedeutet rechts, damit ein unbekannter Parameter nicht auf der linken Seite landet.
             SetEditorAdjustmentsPanelSideCommand = ReactiveCommand.Create(Of String)(
@@ -5875,6 +5924,7 @@ Namespace ViewModels
             _savedEditorFitMargin = _editorFitMargin
             _savedEditorStartupTool = _editorStartupTool
             _savedEditorToolSelectorMode = _editorToolSelectorMode
+            _savedEditorToolSelectorSide = _editorToolSelectorSide
             _savedEditorAdjustmentsPanelOnLeft = _editorAdjustmentsPanelOnLeft
             _savedEditorAdjustmentsScrollBarAlwaysVisible = _editorAdjustmentsScrollBarAlwaysVisible
             _savedEditorToolSwitcher = _editorToolSwitcher
@@ -6108,6 +6158,7 @@ Namespace ViewModels
             EditorFitMargin = _savedEditorFitMargin
             EditorStartupTool = _savedEditorStartupTool
             EditorToolSelectorMode = _savedEditorToolSelectorMode
+            EditorToolSelectorSide = _savedEditorToolSelectorSide
             EditorAdjustmentsPanelOnLeft = _savedEditorAdjustmentsPanelOnLeft
             EditorAdjustmentsScrollBarAlwaysVisible = _savedEditorAdjustmentsScrollBarAlwaysVisible
             EditorToolSwitcher = _savedEditorToolSwitcher
@@ -6283,6 +6334,7 @@ Namespace ViewModels
             EditorFitMargin = 0
             EditorStartupTool = "Adjust"
             EditorToolSelectorMode = AppSettingsService.ToolSelectorModeDefault
+            EditorToolSelectorSide = AppSettingsService.ToolSelectorSideDefault
             EditorAdjustmentsPanelOnLeft = False
             EditorAdjustmentsScrollBarAlwaysVisible = False
             EditorToolSwitcher = False
@@ -6811,6 +6863,7 @@ Namespace ViewModels
                                           s.EditorLayersPanelExpanded = _editorLayersPanelExpanded
                                           s.EditorLayerThumbnails = _editorLayerThumbnails
                                           s.EditorToolSelectorMode = _editorToolSelectorMode
+                                          s.EditorToolSelectorSide = _editorToolSelectorSide
                                           s.EditorAdjustmentsPanelWidth = _editorAdjustmentsPanelWidth
                                           s.EditorDenoiseStrength = _editorDenoiseStrength
                                           s.EditorAdjustmentsPanelOnLeft = _editorAdjustmentsPanelOnLeft

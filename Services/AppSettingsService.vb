@@ -800,6 +800,15 @@ Namespace Services
         ''' und das Ebenen-Panel: ein Knopf mit zwei Stellungen kann drei Modi nicht darstellen, und ein
         ''' dritter Knopf in der Leiste waere ein zweiter Weg fuer dieselbe Sache.</summary>
         Public Property EditorToolSelectorMode As String = AppSettingsService.ToolSelectorModeDefault
+        ''' <summary>Wo die Werkzeugleiste steht: immer links, immer rechts, oder auf der Seite des
+        ''' Anpassungspanels. Ab Werk die Seite des Panels, also genau wie bisher.
+        '''
+        ''' Der Grund fuer die eigene Wahl: die Seite des Panels war bisher zugleich die Seite der
+        ''' Leiste, und beides ist nicht dasselbe. Wer die Regler rechts bedient, will die Auswahl
+        ''' nicht links haben; aber wer das Panel umzieht, will die Leiste moeglichst doch wieder da
+        ''' haben, wo er sie immer hatte. Ein Knopf in der Leiste selbst kann das nicht leisten: er
+        ''' hat zwei Stellungen, die Wahl hier hat drei.</summary>
+        Public Property EditorToolSelectorSide As String = AppSettingsService.ToolSelectorSideDefault
         ''' <summary>Breite des Anpassungspanels im Editor, in Punkten. Gemerkter Bedienzustand wie
         ''' die eingeklappte Werkzeugleiste: gezogen wird sie am Rand des Panels, nicht im
         ''' Einstellungsdialog.
@@ -1555,6 +1564,7 @@ Namespace Services
                 NormalizeMacGraphicsSettings(settings)
                 settings.PickerReadout = NormalizePickerReadout(settings.PickerReadout)
                 settings.EditorToolSelectorMode = NormalizeToolSelectorMode(settings.EditorToolSelectorMode)
+                settings.EditorToolSelectorSide = NormalizeToolSelectorSide(settings.EditorToolSelectorSide)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.ViewerDoubleClickTarget = NormalizeViewerDoubleClickTarget(settings.ViewerDoubleClickTarget)
                 settings.EditorHomeTarget = NormalizeEditorHomeTarget(settings.EditorHomeTarget)
@@ -1808,6 +1818,7 @@ Namespace Services
                 NormalizeMacGraphicsSettings(settings)
                 settings.PickerReadout = NormalizePickerReadout(settings.PickerReadout)
                 settings.EditorToolSelectorMode = NormalizeToolSelectorMode(settings.EditorToolSelectorMode)
+                settings.EditorToolSelectorSide = NormalizeToolSelectorSide(settings.EditorToolSelectorSide)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.ViewerDoubleClickTarget = NormalizeViewerDoubleClickTarget(settings.ViewerDoubleClickTarget)
                 settings.EditorHomeTarget = NormalizeEditorHomeTarget(settings.EditorHomeTarget)
@@ -3104,6 +3115,29 @@ Namespace Services
                 If String.Equals(choice, trimmed, StringComparison.OrdinalIgnoreCase) Then Return choice
             Next
             Return ToolSelectorModeDefault
+        End Function
+
+        ''' <summary>Die Werkzeugleiste steht ab Werk da, wo das Anpassungspanel steht. Das ist genau
+        ''' das bisherige Verhalten: die Leiste hatte immer die Seite des Panels.</summary>
+        Public Const ToolSelectorSideDefault As String = "WithAdjustments"
+
+        ''' <summary>Die waehlbaren Seiten der Werkzeugleiste, in der Reihenfolge der Auswahlliste. Die
+        ''' Namen liegen in der settings.json und sind keine Anzeigetexte.</summary>
+        Public Shared ReadOnly ToolSelectorSideChoices As String() = {"Left", "WithAdjustments", "Right"}
+
+        Public Const ToolSelectorSideLeft As String = "Left"
+        Public Const ToolSelectorSideWithAdjustments As String = "WithAdjustments"
+        Public Const ToolSelectorSideRight As String = "Right"
+
+        ''' <summary>Macht aus jedem Wert eine der drei Seiten: leer oder unbekannt wird die Vorgabe,
+        ''' damit ein verstuemmelter Bestand die Leiste nicht irgendwohin oder gar nicht stellt.</summary>
+        Public Shared Function NormalizeToolSelectorSide(value As String) As String
+            If String.IsNullOrWhiteSpace(value) Then Return ToolSelectorSideDefault
+            Dim trimmed = value.Trim()
+            For Each choice In ToolSelectorSideChoices
+                If String.Equals(choice, trimmed, StringComparison.OrdinalIgnoreCase) Then Return choice
+            Next
+            Return ToolSelectorSideDefault
         End Function
 
         ''' <summary>Die Anzeige neben der Pipette nennt ab Werk Hex-Wert und R G B.</summary>

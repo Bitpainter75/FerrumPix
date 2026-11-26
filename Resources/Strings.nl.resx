@@ -12532,4 +12532,13 @@
   <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
     <value>{name}_fx maakt bijvoorbeeld Foto_fx; ### is een teller.</value>
   </data>
+  <data name="Seite_der_Werkzeugleiste_70a2e880" xml:space="preserve">
+    <value>Zijde van de werkbalk</value>
+  </data>
+  <data name="Wo_die_Werkzeugleiste_steht_immer_links_immer_re_f3efb3e4" xml:space="preserve">
+    <value>Waar de werkbalk staat: altijd links, altijd rechts, of aan de kant van het aanpassingspaneel. Aan de kant van het paneel liggen de keus van het gereedschap en de schuiven van het gekozen gereedschap naast elkaar. Een vaste kant laat de werkbalk staan, ook als het aanpassingspaneel verhuist.</value>
+  </data>
+  <data name="Mit_Anpassungen_541da366" xml:space="preserve">
+    <value>Met aanpassingen</value>
+  </data>
 </root>

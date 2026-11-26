@@ -12532,4 +12532,13 @@
   <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
     <value>{name}_fx luo esimerkiksi Kuva_fx; ### on laskuri.</value>
   </data>
+  <data name="Seite_der_Werkzeugleiste_70a2e880" xml:space="preserve">
+    <value>Työkalupalkin puoli</value>
+  </data>
+  <data name="Wo_die_Werkzeugleiste_steht_immer_links_immer_re_f3efb3e4" xml:space="preserve">
+    <value>Missä työkalupalkki on: aina vasemmalla, aina oikealla tai muokkauspaneelin puolella. Paneelin puolella työkalun valinta ja valitun työkalun liukusäätimet ovat vierekkäin. Kiinteä puoli pitää työkalupalkin paikallaan, vaikka muokkauspaneeli siirtyisi.</value>
+  </data>
+  <data name="Mit_Anpassungen_541da366" xml:space="preserve">
+    <value>Säädöillä</value>
+  </data>
 </root>

@@ -12492,4 +12492,13 @@
   <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
     <value>{name}_fx produce por ejemplo Foto_fx; ### es un contador.</value>
   </data>
+  <data name="Seite_der_Werkzeugleiste_70a2e880" xml:space="preserve">
+    <value>Lado de la barra de herramientas</value>
+  </data>
+  <data name="Wo_die_Werkzeugleiste_steht_immer_links_immer_re_f3efb3e4" xml:space="preserve">
+    <value>Dónde está la barra de herramientas: siempre a la izquierda, siempre a la derecha, o en el lado del panel de ajustes. En el lado del panel quedan juntos la elección de herramienta y los controles de la herramienta elegida. Un lado fijo deja la barra en su sitio aunque el panel de ajustes cambie de lado.</value>
+  </data>
+  <data name="Mit_Anpassungen_541da366" xml:space="preserve">
+    <value>Con ajustes</value>
+  </data>
 </root>

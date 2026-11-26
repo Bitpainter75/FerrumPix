@@ -12532,4 +12532,13 @@
   <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
     <value>{name}_fx vytvoří například Foto_fx; ### je čítač.</value>
   </data>
+  <data name="Seite_der_Werkzeugleiste_70a2e880" xml:space="preserve">
+    <value>Strana panelu nástrojů</value>
+  </data>
+  <data name="Wo_die_Werkzeugleiste_steht_immer_links_immer_re_f3efb3e4" xml:space="preserve">
+    <value>Kde panel nástrojů stojí: vždy vlevo, vždy vpravo, nebo na straně panelu úprav. Na straně panelu leží výběr nástrojů i posuvníky zvoleného nástroje u sebe. Pevná strana ponechá panel nástrojů na místě, i když se panel úprav přesune.</value>
+  </data>
+  <data name="Mit_Anpassungen_541da366" xml:space="preserve">
+    <value>S úpravami</value>
+  </data>
 </root>

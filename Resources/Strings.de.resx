@@ -12510,4 +12510,13 @@
   <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
     <value>{name}_fx erzeugt etwa Foto_fx; ### ist ein Zähler.</value>
   </data>
+  <data name="Seite_der_Werkzeugleiste_70a2e880" xml:space="preserve">
+    <value>Seite der Werkzeugleiste</value>
+  </data>
+  <data name="Wo_die_Werkzeugleiste_steht_immer_links_immer_re_f3efb3e4" xml:space="preserve">
+    <value>Wo die Werkzeugleiste steht: immer links, immer rechts, oder auf der Seite des Anpassungspanels. Auf der Seite des Panels liegen die Werkzeugauswahl und die Regler des gewählten Werkzeugs beieinander. Eine feste Seite lässt die Leiste stehen, auch wenn das Anpassungspanel umzieht.</value>
+  </data>
+  <data name="Mit_Anpassungen_541da366" xml:space="preserve">
+    <value>Mit Anpassungen</value>
+  </data>
 </root>

@@ -12492,4 +12492,13 @@
   <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
     <value>{name}_fx produce ad esempio Foto_fx; ### è un contatore.</value>
   </data>
+  <data name="Seite_der_Werkzeugleiste_70a2e880" xml:space="preserve">
+    <value>Lato della barra degli strumenti</value>
+  </data>
+  <data name="Wo_die_Werkzeugleiste_steht_immer_links_immer_re_f3efb3e4" xml:space="preserve">
+    <value>Dove si trova la barra degli strumenti: sempre a sinistra, sempre a destra, o sul lato del pannello delle regolazioni. Sul lato del pannello, la scelta dello strumento e i cursori dello strumento scelto sono uno accanto all'altro. Un lato fisso lascia la barra dov'è anche quando il pannello si sposta.</value>
+  </data>
+  <data name="Mit_Anpassungen_541da366" xml:space="preserve">
+    <value>Con regolazioni</value>
+  </data>
 </root>

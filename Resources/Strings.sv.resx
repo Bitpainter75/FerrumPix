@@ -12532,4 +12532,13 @@
   <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
     <value>{name}_fx ger exempelvis Foto_fx; ### är en räknare.</value>
   </data>
+  <data name="Seite_der_Werkzeugleiste_70a2e880" xml:space="preserve">
+    <value>Verktygsfältets sida</value>
+  </data>
+  <data name="Wo_die_Werkzeugleiste_steht_immer_links_immer_re_f3efb3e4" xml:space="preserve">
+    <value>Var verktygsfältet sitter: alltid till vänster, alltid till höger, eller på justeringspanelens sida. På panelens sida ligger verktygsvalet och reglagen för det valda verktyget intill varandra. En fast sida låter verktygsfältet stå kvar även när justeringspanelen flyttar.</value>
+  </data>
+  <data name="Mit_Anpassungen_541da366" xml:space="preserve">
+    <value>Med justeringar</value>
+  </data>
 </root>

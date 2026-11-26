@@ -12532,4 +12532,13 @@
   <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
     <value>{name}_fx gir for eksempel Bilde_fx; ### er en teller.</value>
   </data>
+  <data name="Seite_der_Werkzeugleiste_70a2e880" xml:space="preserve">
+    <value>Verktøylinjens side</value>
+  </data>
+  <data name="Wo_die_Werkzeugleiste_steht_immer_links_immer_re_f3efb3e4" xml:space="preserve">
+    <value>Hvor verktøylinja står: alltid til venstre, alltid til høyre, eller på siden av justeringspanelet. På panelets side ligger verktøysvalget og glidebryterne for det valgte verktøyet tett sammen. En fast side lar verktøylinja bli stående selv om justeringspanelet flytter.</value>
+  </data>
+  <data name="Mit_Anpassungen_541da366" xml:space="preserve">
+    <value>Med justeringer</value>
+  </data>
 </root>

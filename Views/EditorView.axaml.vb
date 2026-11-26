@@ -1796,14 +1796,16 @@ Namespace Views
         ''' Die Leiste liegt UEBER der Bildflaeche, nicht in einer eigenen Spalte des Wurzelrasters -
         ''' genau wie der seitliche Filmstreifen (siehe FilmstripPlacement). Was sie dem Bild wegnimmt,
         ''' ist deshalb eine Randangabe an der Buehne. Die steht nicht im XAML, weil sie von zwei
-        ''' Dingen abhaengt: der Seite des Anpassungspanels und der Breite, die die Leiste reserviert.
+        ''' Dingen abhaengt: der Seite, die fuer die Leiste gewaehlt ist, und der Breite, die sie
+        ''' reserviert. Die Seite der Leiste ist seit der gleichnamigen Einstellung nicht mehr
+        ''' automatisch die Seite des Anpassungspanels.
         '''
         ''' Reserviert ist im automatischen Modus nur die schmale Breite. Klappt die Leiste unter dem
         ''' Zeiger auf, aendert sich hier nichts: weder Bildflaeche noch Zoom, Einpassen, Pan-Stand
         ''' oder die Panels rechts. Die Leiste waechst nur ueber das Bild hinaus.
         '''
-        ''' Die Kante, die zum Panel zeigt, steht in beiden Zustaenden still und es wird nach aussen
-        ''' gewachsen - deshalb ruehrt sich kein Symbol, wenn die Leiste klappt.</summary>
+        ''' Die aeusserste Kante der Leiste steht in beiden Zustaenden still; gewachsen wird nach
+        ''' innen, ueber das Bild. Deshalb ruehrt sich kein Symbol, wenn die Leiste klappt.</summary>
         Private Sub ApplyToolSelectorLayout()
             Dim vm = TryCast(DataContext, EditorViewModel)
             Dim stage = Me.FindControl(Of Border)("EditorStageBorder")
@@ -1811,7 +1813,7 @@ Namespace Views
 
             Dim film = FilmstripPlacement.ContentInset(vm.FilmstripPosition, vm.ShowFilmstrip)
             Dim seite = vm.ToolSelectorReservedWidth
-            Dim links = vm.IsAdjustmentsPanelOnLeft
+            Dim links = vm.IsToolSelectorOnLeft
 
             Dim leiste = Me.FindControl(Of Border)("ToolSelectorBorder")
             If leiste IsNot Nothing Then
@@ -2168,10 +2170,12 @@ Namespace Views
                     ' Dieselbe Stelle setzt Seite UND Breite: das Panel steht in einer Spalte, und
                     ' beide Angaben beschreiben dieselbe Spalte.
                     UpdateAdjustmentsPanelSide()
-                Case NameOf(EditorViewModel.AreToolSidebarLabelsVisible)
+                Case NameOf(EditorViewModel.AreToolSidebarLabelsVisible),
+                     NameOf(EditorViewModel.ToolSelectorSide)
                     ' Die enge Leiste nimmt dem Bild nichts weg, sie steht darueber. Was sie reserviert,
                     ' ist deshalb eine Randangabe an der Buehne, und die muss nach der Umschaltung neu
-                    ' gesetzt werden.
+                    ' gesetzt werden. Dasselbe gilt fuer die Seite der Leiste selbst: sie ist seit der
+                    ' gleichnamigen Einstellung unabhaengig von der Seite des Anpassungspanels.
                     ApplyToolSelectorLayout()
                 Case NameOf(EditorViewModel.EditorGridSize)
                     UpdateGridOverlay()

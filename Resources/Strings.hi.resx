@@ -12536,4 +12536,13 @@
   <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
     <value>{name}_fx उदाहरण के लिए Foto_fx बनाता है; ### एक काउंटर है।</value>
   </data>
+  <data name="Seite_der_Werkzeugleiste_70a2e880" xml:space="preserve">
+    <value>टूलबार की ओर</value>
+  </data>
+  <data name="Wo_die_Werkzeugleiste_steht_immer_links_immer_re_f3efb3e4" xml:space="preserve">
+    <value>टूलबार कहाँ खड़ी है: हमेशा बाईं ओर, हमेशा दाईं ओर, या समायोजन पैनल की ओर। पैनल की ओर साधन-चयन और चुने हुए साधन के स्लाइडर साथ-साथ रहते हैं। ओर तय रखने पर टूलबार वहीं रहती है, भले ही समायोजन पैनल बदले।</value>
+  </data>
+  <data name="Mit_Anpassungen_541da366" xml:space="preserve">
+    <value>समायोजनों के साथ</value>
+  </data>
 </root>

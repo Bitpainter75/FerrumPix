@@ -12511,4 +12511,13 @@
   <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
     <value>{name}_fx produces for example Photo_fx; ### is a counter.</value>
   </data>
+  <data name="Seite_der_Werkzeugleiste_70a2e880" xml:space="preserve">
+    <value>Side of the toolbar</value>
+  </data>
+  <data name="Wo_die_Werkzeugleiste_steht_immer_links_immer_re_f3efb3e4" xml:space="preserve">
+    <value>Where the toolbar stands: always on the left, always on the right, or on the side of the adjustments panel. On the panel's side, the tool picker and the sliders of the chosen tool sit side by side. A fixed side keeps the bar where it is even when the adjustments panel moves.</value>
+  </data>
+  <data name="Mit_Anpassungen_541da366" xml:space="preserve">
+    <value>With adjustments</value>
+  </data>
 </root>

@@ -12536,4 +12536,13 @@
   <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
     <value>{name}_fx는 예를 들어 Foto_fx를 만듭니다. ###은 번호입니다.</value>
   </data>
+  <data name="Seite_der_Werkzeugleiste_70a2e880" xml:space="preserve">
+    <value>도구 모음의 위치</value>
+  </data>
+  <data name="Wo_die_Werkzeugleiste_steht_immer_links_immer_re_f3efb3e4" xml:space="preserve">
+    <value>도구 모음이 어디 있는가입니다. 늘 왼쪽, 늘 오른쪽, 또는 조정 패널 쪽. 조정 패널 쪽으로 하면 도구 선택과 고른 도구의 슬라이더가 나란히 놓입니다. 쪽을 정해 두면 조정 패널이 옮겨도 도구 모음은 제자리에 있습니다.</value>
+  </data>
+  <data name="Mit_Anpassungen_541da366" xml:space="preserve">
+    <value>그림과 조정</value>
+  </data>
 </root>

@@ -12490,4 +12490,13 @@
   <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
     <value>{name}_fx 例如生成 Foto_fx；### 是计数器。</value>
   </data>
+  <data name="Seite_der_Werkzeugleiste_70a2e880" xml:space="preserve">
+    <value>工具栏的位置</value>
+  </data>
+  <data name="Wo_die_Werkzeugleiste_steht_immer_links_immer_re_f3efb3e4" xml:space="preserve">
+    <value>工具栏放在哪一侧：始终左侧、始终右侧，或跟随调整面板那一侧。放在面板那一侧时，工具选择与所选工具的滑块相邻。固定一侧后，即使调整面板换边，工具栏也留在原处。</value>
+  </data>
+  <data name="Mit_Anpassungen_541da366" xml:space="preserve">
+    <value>带调整</value>
+  </data>
 </root>

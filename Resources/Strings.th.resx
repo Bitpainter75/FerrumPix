@@ -12536,4 +12536,13 @@
   <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
     <value>{name}_fx จะสร้าง เช่น Foto_fx; ### คือตัวนับ</value>
   </data>
+  <data name="Seite_der_Werkzeugleiste_70a2e880" xml:space="preserve">
+    <value>ด้านของแถบเครื่องมือ</value>
+  </data>
+  <data name="Wo_die_Werkzeugleiste_steht_immer_links_immer_re_f3efb3e4" xml:space="preserve">
+    <value>แถบเครื่องมืออยู่ด้านไหน: ซ้ายเสมอ ขวาเสมอ หรือตามด้านของแผงปรับแต่ง เมื่ออยู่ด้านเดียวกับแผง การเลือกเครื่องมือกับตัวเลื่อนของเครื่องมือที่เลือกจะอยู่ชิดกัน แบบตายตัวจะตรึงแถบเครื่องมือไว้แม้แผงปรับแต่งย้ายด้าน</value>
+  </data>
+  <data name="Mit_Anpassungen_541da366" xml:space="preserve">
+    <value>พร้อมการปรับแต่ง</value>
+  </data>
 </root>
