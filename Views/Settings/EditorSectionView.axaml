@@ -435,6 +435,54 @@
                                           VerticalAlignment="Center"/>
                         </Grid>
 
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Dichte der Werkzeugleiste" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Wie eng die Werkzeuge untereinander stehen. Kompakt nimmt nur Höhe heraus, damit mehr Werkzeuge auf den Schirm passen. Winzig nimmt außerdem Breite, damit die Leiste selbst schmäler wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsToolSidebarNormalMode}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorToolSidebarDensityCommand}"
+                                        CommandParameter="normal">Normal</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsToolSidebarCompactMode}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorToolSidebarDensityCommand}"
+                                        CommandParameter="compact">Kompakt</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsToolSidebarTinyMode}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorToolSidebarDensityCommand}"
+                                        CommandParameter="tiny">Winzig</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Dichte des Anpassungspanels" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Wie eng die Gruppen des Anpassungspanels untereinander stehen. Kompakt nimmt nur Höhe heraus, damit mehr Gruppen zu sehen sind. Winzig nimmt außerdem Breite, damit das Panel selbst schmäler wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsAdjustmentsNormalMode}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorAdjustmentsDensityCommand}"
+                                        CommandParameter="normal">Normal</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsAdjustmentsCompactMode}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorAdjustmentsDensityCommand}"
+                                        CommandParameter="compact">Kompakt</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsAdjustmentsTinyMode}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorAdjustmentsDensityCommand}"
+                                        CommandParameter="tiny">Winzig</Button>
+                            </StackPanel>
+                        </Grid>
+
                         <Separator Background="{DynamicResource FP.Border.Normal}" Height="1" Margin="0,6,0,0"/>
                         <TextBlock Text="Dateien" FontWeight="SemiBold" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}"/>
 

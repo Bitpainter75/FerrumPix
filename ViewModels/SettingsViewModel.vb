@@ -110,6 +110,8 @@ Namespace ViewModels
         Private _editorLayerThumbnails As Boolean = True
         Private _editorToolSidebarCollapsed As Boolean = False
         Private _editorAdjustmentsPanelWidth As Double = EditorViewModel.AdjustmentsPanelDefaultWidth
+        Private _editorToolSidebarDensity As String = AppSettingsService.PanelDensityNormal
+        Private _editorAdjustmentsDensity As String = AppSettingsService.PanelDensityNormal
         Private _editorSaveAsNamePattern As String = "{name}_fx"
         Private _editorDenoiseStrength As Double = EditorViewModel.DefaultDenoiseStrength
         Private _savedEditorDenoiseStrength As Double = EditorViewModel.DefaultDenoiseStrength
@@ -236,6 +238,8 @@ Namespace ViewModels
         Private _savedEditorCompactAdjustments As Boolean = False
         Private _savedEditorCompactAutoCollapse As Boolean = True
         Private _savedEditorCompactGroupOrder As String = ""
+        Private _savedEditorToolSidebarDensity As String = AppSettingsService.PanelDensityNormal
+        Private _savedEditorAdjustmentsDensity As String = AppSettingsService.PanelDensityNormal
         Private _savedEditorToolGroupOrder As String = "Adjust,Transform,Tools"
         Private _savedDefaultSaveFormat As String = "JPG"
         Private _savedEditorSaveAsNamePattern As String = "{name}_fx"
@@ -3153,6 +3157,84 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Dichte der linken Werkzeugleiste: normal, compact oder tiny. Wirkt ohne Neustart,
+        ''' weil PanelDensityService die FP.Density.Tool.*-Werte im Ressourcenwoerterbuch austauscht.
+        ''' Die Breite haengt an einer gelesenen Eigenschaft, die RefreshLayoutBindings meldet.</summary>
+        Public Property EditorToolSidebarDensity As String
+            Get
+                Return _editorToolSidebarDensity
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizePanelDensity(value)
+                If _editorToolSidebarDensity = value Then Return
+                Me.RaiseAndSetIfChanged(_editorToolSidebarDensity, value)
+                Me.RaisePropertyChanged(NameOf(IsToolSidebarNormalMode))
+                Me.RaisePropertyChanged(NameOf(IsToolSidebarCompactMode))
+                Me.RaisePropertyChanged(NameOf(IsToolSidebarTinyMode))
+                PanelDensityService.ApplyTool(value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Dichte des Anpassungspanels: normal, compact oder tiny. Dasselbe Verfahren; hier
+        ''' meldet AdjustmentsPanelWidth, und die Ansicht setzt damit ihre Spalte neu.</summary>
+        Public Property EditorAdjustmentsDensity As String
+            Get
+                Return _editorAdjustmentsDensity
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizePanelDensity(value)
+                If _editorAdjustmentsDensity = value Then Return
+                Me.RaiseAndSetIfChanged(_editorAdjustmentsDensity, value)
+                Me.RaisePropertyChanged(NameOf(IsAdjustmentsNormalMode))
+                Me.RaisePropertyChanged(NameOf(IsAdjustmentsCompactMode))
+                Me.RaisePropertyChanged(NameOf(IsAdjustmentsTinyMode))
+                PanelDensityService.ApplyAdjustments(value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ' Die sechs Abfragen fuer die drei Schaltfloaechen je Flaeche. Wie bei den anderen drei-
+        ' wahligen Einstellungen (Pipette, Entrauschen) fragt jede nach einem der drei Werte; die
+        ' Ansicht hat keinen Vergleich im Markup, sie bindet nur durch.
+        Public ReadOnly Property IsToolSidebarNormalMode As Boolean
+            Get
+                Return String.Equals(_editorToolSidebarDensity, AppSettingsService.PanelDensityNormal, StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsToolSidebarCompactMode As Boolean
+            Get
+                Return String.Equals(_editorToolSidebarDensity, AppSettingsService.PanelDensityCompact, StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsToolSidebarTinyMode As Boolean
+            Get
+                Return String.Equals(_editorToolSidebarDensity, AppSettingsService.PanelDensityTiny, StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsAdjustmentsNormalMode As Boolean
+            Get
+                Return String.Equals(_editorAdjustmentsDensity, AppSettingsService.PanelDensityNormal, StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsAdjustmentsCompactMode As Boolean
+            Get
+                Return String.Equals(_editorAdjustmentsDensity, AppSettingsService.PanelDensityCompact, StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsAdjustmentsTinyMode As Boolean
+            Get
+                Return String.Equals(_editorAdjustmentsDensity, AppSettingsService.PanelDensityTiny, StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
         ''' <summary>Zuletzt benutzte Staerke des Entrauschens. Gemerkter Bedienzustand, kein
         ''' Schalter im Dialog - gesetzt wird sie am Regler im Rauschen-Panel.</summary>
         Public Property EditorDenoiseStrength As Double
@@ -4863,6 +4945,8 @@ Namespace ViewModels
         Public ReadOnly Property SetEditorFitBehaviorCommand As ICommand
         Public ReadOnly Property SetDefaultSaveFormatCommand As ICommand
         Public ReadOnly Property SetEditorStartupToolCommand As ICommand
+        Public ReadOnly Property SetEditorToolSidebarDensityCommand As ICommand
+        Public ReadOnly Property SetEditorAdjustmentsDensityCommand As ICommand
         Public ReadOnly Property SetEditorAdjustmentsPanelSideCommand As ICommand
         Public ReadOnly Property SetEditorAdjustmentsScrollBarCommand As ICommand
         Public ReadOnly Property SetPsdTextImportCommand As ICommand
@@ -5472,6 +5556,8 @@ Namespace ViewModels
             _editorLayerThumbnails = _appSettings.EditorLayerThumbnails
             _editorToolSidebarCollapsed = _appSettings.EditorToolSidebarCollapsed
             _editorAdjustmentsPanelWidth = EditorViewModel.ClampAdjustmentsPanelWidth(_appSettings.EditorAdjustmentsPanelWidth)
+            _editorToolSidebarDensity = AppSettingsService.NormalizePanelDensity(_appSettings.EditorToolSidebarDensity)
+            _editorAdjustmentsDensity = AppSettingsService.NormalizePanelDensity(_appSettings.EditorAdjustmentsDensity)
             _editorDenoiseStrength = EditorViewModel.ClampDenoiseStrength(_appSettings.EditorDenoiseStrength)
             _editorAdjustmentsPanelOnLeft = _appSettings.EditorAdjustmentsPanelOnLeft
             _editorAdjustmentsScrollBarAlwaysVisible = _appSettings.EditorAdjustmentsScrollBarAlwaysVisible
@@ -5630,6 +5716,8 @@ Namespace ViewModels
             SetEditorFitBehaviorCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorFitBehavior = m)
             SetDefaultSaveFormatCommand = ReactiveCommand.Create(Of String)(Sub(m) DefaultSaveFormat = m)
             SetEditorStartupToolCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorStartupTool = m)
+            SetEditorToolSidebarDensityCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorToolSidebarDensity = m)
+            SetEditorAdjustmentsDensityCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorAdjustmentsDensity = m)
             ' Zwei Knoepfe wie sonst auch, der Wert selbst ist aber ein Ja/Nein: alles ausser "Left"
             ' bedeutet rechts, damit ein unbekannter Parameter nicht auf der linken Seite landet.
             SetEditorAdjustmentsPanelSideCommand = ReactiveCommand.Create(Of String)(
@@ -5693,6 +5781,12 @@ Namespace ViewModels
             CleanNextcloudCatalogCommand = ReactiveCommand.Create(Sub() CleanServerCatalog(immich:=False))
             ApplyTheme(_themeMode, _accentColor, _accentStrength)
             FontScaleService.Apply(_fontSizeOffset)
+            ' Die Dichte gleich hier, am selben Ort wie der Schriftgrad: beide tauschen Werte im
+            ' Ressourcenwoerterbuch, und beide muessen getroffen sein, ehe die erste Ansicht gebaut
+            ' wird - sonst standen Leiste und Panel beim ersten Oeffnen in der Norm, obwohl die
+            ' Datei eine andere Stufe kennt.
+            PanelDensityService.ApplyTool(_editorToolSidebarDensity)
+            PanelDensityService.ApplyAdjustments(_editorAdjustmentsDensity)
             LocalizationService.LanguageMode = _languageMode
             LocalizationService.DateFormatMode = _dateFormatMode
             BuildDateFormatOptions()
@@ -5844,6 +5938,8 @@ Namespace ViewModels
             _savedEditorCompactAdjustments = _editorCompactAdjustments
             _savedEditorCompactAutoCollapse = _editorCompactAutoCollapse
             _savedEditorCompactGroupOrder = _editorCompactGroupOrder
+            _savedEditorToolSidebarDensity = _editorToolSidebarDensity
+            _savedEditorAdjustmentsDensity = _editorAdjustmentsDensity
             _savedEditorToolGroupOrder = _editorToolGroupOrder
             _savedDefaultSaveFormat = _defaultSaveFormat
             _savedEditorSaveAsNamePattern = _editorSaveAsNamePattern
@@ -6076,6 +6172,8 @@ Namespace ViewModels
             EditorCompactAdjustments = _savedEditorCompactAdjustments
             EditorCompactAutoCollapse = _savedEditorCompactAutoCollapse
             EditorCompactGroupOrder = _savedEditorCompactGroupOrder
+            EditorToolSidebarDensity = _savedEditorToolSidebarDensity
+            EditorAdjustmentsDensity = _savedEditorAdjustmentsDensity
             EditorToolGroupOrder = _savedEditorToolGroupOrder
             DefaultSaveFormat = _savedDefaultSaveFormat
             EditorSaveAsNamePattern = _savedEditorSaveAsNamePattern
@@ -6250,6 +6348,8 @@ Namespace ViewModels
             EditorCompactAutoCollapse = True
             EditorCompactGroupOrder = ""
             EditorToolGroupOrder = "Adjust,Transform,Tools"
+            EditorToolSidebarDensity = AppSettingsService.PanelDensityNormal
+            EditorAdjustmentsDensity = AppSettingsService.PanelDensityNormal
             DefaultSaveFormat = "JPG"
             EditorSaveAsNamePattern = "{name}_fx"
             StartupImageMode = "Viewer"
@@ -6770,6 +6870,8 @@ Namespace ViewModels
                                           s.EditorLayerThumbnails = _editorLayerThumbnails
                                           s.EditorToolSidebarCollapsed = _editorToolSidebarCollapsed
                                           s.EditorAdjustmentsPanelWidth = _editorAdjustmentsPanelWidth
+                                          s.EditorToolSidebarDensity = _editorToolSidebarDensity
+                                          s.EditorAdjustmentsDensity = _editorAdjustmentsDensity
                                           s.EditorDenoiseStrength = _editorDenoiseStrength
                                           s.EditorAdjustmentsPanelOnLeft = _editorAdjustmentsPanelOnLeft
                                           s.EditorAdjustmentsScrollBarAlwaysVisible = _editorAdjustmentsScrollBarAlwaysVisible
