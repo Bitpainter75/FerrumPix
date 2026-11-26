@@ -1463,7 +1463,10 @@ Namespace ViewModels
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AreToolGroupSeparatorsVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolSidebarWidth))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsAdjustmentsPanelOnLeft))
-            ' Und was auf welcher Seite der Zeile steht: Symbol, Beschriftung und ihre Ausrichtung.
+            ' Und was auf welcher Seite der Zeile steht: Symbol, Beschriftung, ihre Ausrichtung und
+            ' der Abstand zwischen beiden. Der faengt in der schmalen Leiste weg; bliebe er, schuebe er
+            ' das Symbol dort zehn Punkte nach aussen (siehe ToolRowColumnSpacing).
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolRowColumnSpacing))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolIconColumn))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolLabelColumn))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolSelectorContentAlignment))

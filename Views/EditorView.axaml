@@ -557,6 +557,13 @@
                           ToolLabelColumn). Darum steht die Ausrichtung am Knopf und nicht hier in der
                           Breite: das Symbol rueckt auch dann nicht, wenn sein Text fehlt oder eine
                           Uebersetzung breiter ist.
+                          Der Abstand zwischen Symbol und Text gilt nur, wenn es in der Zeile wirklich
+                          beide gibt. In der schmalen Leiste steht die Spalte des Textes weiter mit
+                          der Breite 0; ihr Abstand wird aber trotzdem gerechnet. Er schuebe das
+                          Symbol zehn Punkte weiter nach aussen, ueber die Innenrandangabe des
+                          Knopfes hinaus: links unsichtbar toter Raum hinter dem Symbol, rechts
+                          sichtbar an die Aussenkante geschoben - und beim Aufklappen ein Sprung
+                          nach innen (ToolRowColumnSpacing).
                           Der Preis ist vertikal toter Raum je Gruppe, solange eng ist. Ohne ihn
                           waere der Preis, dass beim Auf- und Zuklappen alle Symbole springen. -->
                     <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="2">
@@ -573,7 +580,7 @@
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Transform"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Transform}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Transformieren" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <!-- Der Rahmen steht fuer das ganze Werkzeug: Zuschneiden, Drehen,
                                  Ausrichten und Spiegeln. Die Schere allein zeigte nur die
@@ -589,7 +596,7 @@
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Resize"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Resize}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Bildgröße" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/frame-corners.svg"
                                            Width="18" Height="18" />
@@ -601,7 +608,7 @@
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Warp"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Warp}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Verzerren" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/perspective.svg"
                                            Width="18" Height="18" />
@@ -625,7 +632,7 @@
                             Command="{Binding SetToolCommand}"
                             CommandParameter="AllAdjustments"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=AllAdjustments}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Anpassungen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sliders.svg"
                                            Width="18" Height="18" />
@@ -638,7 +645,7 @@
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Adjust"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Adjust}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Licht" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sun.svg"
                                            Width="18" Height="18" />
@@ -651,7 +658,7 @@
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Color"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Color}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Farbe" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/intersect-three.svg"
                                            Width="18" Height="18" />
@@ -665,7 +672,7 @@
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Details"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Details}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Details" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sliders-horizontal.svg"
                                            Width="18" Height="18" />
@@ -678,7 +685,7 @@
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Effects"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Effects}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Effekte" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sparkle.svg"
                                            Width="18" Height="18" />
@@ -691,7 +698,7 @@
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Filters"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Filters}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Anpassungen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/palette.svg"
                                            Width="18" Height="18" />
@@ -705,7 +712,7 @@
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Extensions"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Extensions}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Erweiterungen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/puzzle-piece.svg"
                                            Width="18" Height="18" />
@@ -730,7 +737,7 @@
                             CommandParameter="Selection"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Selection}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Selection}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Auswahl" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/cursor.svg"
                                            Width="18" Height="18" />
@@ -743,7 +750,7 @@
                             CommandParameter="Mask"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Mask}"
                             Classes.selected-kind="{Binding IsMaskToolbarAccented}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Maske" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/mask-happy.svg"
                                            Width="18" Height="18" />
@@ -757,7 +764,7 @@
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Light"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Light}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Beleuchtung" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/flashlight.svg"
                                            Width="18" Height="18" />
@@ -771,7 +778,7 @@
                             CommandParameter="Text"
                             Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Text}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Text}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Text" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/text-t.svg" Width="18" Height="18" />
                         </Grid>
@@ -783,7 +790,7 @@
                             CommandParameter="Image"
                             Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Image}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Image}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Bild" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/image.svg" Width="18" Height="18" />
                         </Grid>
@@ -795,7 +802,7 @@
                             CommandParameter="QR"
                             Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=QR}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=QR}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="QR-Code" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/qr-code.svg" Width="18" Height="18" />
                         </Grid>
@@ -807,7 +814,7 @@
                             CommandParameter="Watermark"
                             Classes.active="{Binding PendingInsertKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Watermark}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Watermark}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Wasserzeichen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/copyright.svg" Width="18" Height="18" />
                         </Grid>
@@ -827,7 +834,7 @@
                             CommandParameter="Path"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Path}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Path}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Pfad" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/bezier-curve.svg" Width="18" Height="18" />
                         </Grid>
@@ -840,7 +847,7 @@
                             CommandParameter="Brush"
                             Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Brush}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Brush}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Pinsel" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/paint-brush.svg" Width="18" Height="18" />
                         </Grid>
@@ -855,7 +862,7 @@
                             CommandParameter="ImageBrush"
                             Classes.active="{Binding IsImageBrushMode}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Eraser}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Bildpinsel" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eraser.svg" Width="18" Height="18" />
                         </Grid>
@@ -867,7 +874,7 @@
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Blur"
                             Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Blur}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Verwischen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/drop-half-bottom.svg" Width="18" Height="18" />
                         </Grid>
@@ -879,7 +886,7 @@
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Repair"
                             Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Repair}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Reparaturpinsel" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/custom/repair-brush.svg" Width="18" Height="18" />
                         </Grid>
@@ -891,7 +898,7 @@
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Clone"
                             Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Clone}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Stempel" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/stamp.svg" Width="18" Height="18" />
                         </Grid>
@@ -904,7 +911,7 @@
                             CommandParameter="Insert"
                             Classes.active="{Binding IsGeometryToolSelected}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Insert}">
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="{Binding ToolRowColumnSpacing}">
                             <TextBlock Grid.Column="{Binding ToolLabelColumn}" Text="Formen und Symbole" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                             <icons:SvgIcon Grid.Column="{Binding ToolIconColumn}" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/shapes.svg"
                                            Width="18" Height="18" />

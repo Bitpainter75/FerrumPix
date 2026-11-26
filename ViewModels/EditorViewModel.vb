@@ -5391,6 +5391,7 @@ Namespace ViewModels
             If _toolSelectorHovered = value Then Return
             _toolSelectorHovered = value
             Me.RaisePropertyChanged(NameOf(AreToolSidebarLabelsVisible))
+            Me.RaisePropertyChanged(NameOf(ToolRowColumnSpacing))
             Me.RaisePropertyChanged(NameOf(ToolGroupHeadingOpacity))
             Me.RaisePropertyChanged(NameOf(AreToolGroupSeparatorsVisible))
             Me.RaisePropertyChanged(NameOf(ToolSidebarWidth))
@@ -5439,6 +5440,27 @@ Namespace ViewModels
             Get
                 Return If(IsAdjustmentsPanelOnLeft, Avalonia.Layout.HorizontalAlignment.Left,
                                              Avalonia.Layout.HorizontalAlignment.Right)
+            End Get
+        End Property
+
+        ''' <summary>Der Abstand zwischen Symbol und Beschriftung in einer Werkzeugzeile. Er gilt nur,
+        ''' wenn es in der Zeile wirklich beide gibt.
+        '''
+        ''' In der schmalen Leiste ist die Beschriftung ausgeblendet; ihre Spalte bleibt mit der Breite
+        ''' 0 stehen, der Spaltenabstand wird aber trotzdem gerechnet. Er liegt dann zwischen dem
+        ''' Symbol und der Kante, an der es sitzt, und drueckt das Symbol um zehn Punkte weiter nach
+        ''' aussen - hinaus ueber die Innenrandangabe des Knopfes. Nach innen faellt derselbe Abstand
+        ''' nicht auf: dort liegt er hinter dem Symbol und ist bloss toter Raum.
+        '''
+        ''' Das war der Unterschied zwischen den beiden Seiten. Links stand das Symbol ruhig und
+        ''' mittig; rechts klebte es an der Aussenkante und rueckte beim Aufklappen zehn Punkte nach
+        ''' innen. Ohne Abstand in der schmalen Leiste verhalten sich beide Seiten gleich.
+        '''
+        ''' Der Wert haengt am selben Stand wie AreToolSidebarLabelsVisible und wird dort mit
+        ''' geweckt (SetToolSelectorHovered, RefreshLayoutBindings).</summary>
+        Public ReadOnly Property ToolRowColumnSpacing As Double
+            Get
+                Return If(AreToolSidebarLabelsVisible, 10.0, 0.0)
             End Get
         End Property
 
