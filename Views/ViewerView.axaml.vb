@@ -2103,12 +2103,11 @@ Namespace Views
         ''' etwas mehr, damit auch eine Flaeche am rechten Rand ganz verschwindet; so bleibt der Wert
         ''' auch bei doppelter Punktdichte weit in dem Bereich, den X11 fuer eine Lage zulaesst.
         '''
-        ''' ERST NACH DEM AUFBAU DER BILDAUSGABE (ViewerViewModel.IsVideoOutputConfigured). Baut mpv
-        ''' seine Ausgabe auf, waehrend das Fenster draussen liegt, bekommt es unter Linux keinen
-        ''' OpenGL-Kontext ("Could not make context current"), waehlt die Bildspur ab und spielt nur
-        ''' den Ton; das Neuladen traf dasselbe draussen liegende Fenster und scheiterte genauso. Bis
-        ''' die Ausgabe steht, liegt die Flaeche deshalb an ihrem Platz und zeigt einen Augenblick
-        ''' lang das erste Bild des Films; danach geht sie fuer das Standbild aus dem Weg.
+        ''' ERST NACH DEM AUFBAU DER BILDAUSGABE (ViewerViewModel.IsVideoOutputConfigured): eine
+        ''' Vorsicht, damit mpv seine Ausgabe auf einem Fenster an seinem Platz aufbaut. Bis die
+        ''' Ausgabe steht, zeigt die Flaeche einen Augenblick lang das erste Bild des Films; danach
+        ''' geht sie fuer das Standbild aus dem Weg. (Das schwarze Bild mit Ton seit dem 2026-11-25
+        ''' kam nicht von hier, sondern vom EGL-Kontext, siehe MpvPlayer, gpu-context.)
         '''
         ''' Avalonia setzt das native Fenster nur bei einer Aenderung von Groesse oder Sichtbarkeit
         ''' neu, nicht bei einer Verschiebung; deshalb wird hier ausdruecklich nachgezogen, und bei

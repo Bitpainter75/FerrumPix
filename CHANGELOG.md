@@ -32,9 +32,6 @@
 
 ### Fixes
 
-- On Linux, videos in the viewer could stay black while the sound played. They show their picture
-  again.
-
 - Olympus, OM System and Panasonic pictures taken with the camera's own shading compensation
   switched on no longer get their corners brightened a second time by the lens profile. Distortion
   and colour fringe correction stay as before.

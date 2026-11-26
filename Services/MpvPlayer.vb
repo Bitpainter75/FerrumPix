@@ -159,10 +159,9 @@ Namespace Services
         ''' <summary>mpv meldet, ob seine Bildausgabe steht (Eigenschaft <c>vo-configured</c>).
         '''
         ''' WOFUER: der Betrachter schiebt die native Flaeche fuer das Standbild aus dem Hauptfenster
-        ''' (ViewerView.UpdateVideoPosterCover). Baut mpv seine Ausgabe auf, WAEHREND das Fenster dort
-        ''' draussen liegt, bekommt es unter Linux keinen OpenGL-Kontext ("Could not make context
-        ''' current"), waehlt die Bildspur ab und spielt nur den Ton. Verschoben wird deshalb erst,
-        ''' wenn diese Meldung wahr ist.</summary>
+        ''' (ViewerView.UpdateVideoPosterCover), und zwar erst, wenn diese Meldung wahr ist: mpv soll
+        ''' seine Ausgabe auf einem Fenster an seinem Platz aufbauen. Im Protokoll zeigt die Meldung
+        ''' ausserdem, ob ein Film ueberhaupt eine Bildausgabe bekommen hat.</summary>
         Public Event VideoOutputConfiguredChanged(configured As Boolean)
 
         ''' <summary>Ein Ladebefehl ist WIRKLICH an mpv gegangen. Feuert nicht, wenn der Riegel in
@@ -790,7 +789,12 @@ Namespace Services
                     SetOptionStringRaw("hwdec", If(_enableHardwareAcceleration, "auto-safe", "no"))
                     If OperatingSystem.IsLinux() Then
                         SetOptionStringRaw("vo", "gpu")
-                        SetOptionStringRaw("gpu-context", "x11egl")
+                        ' Erst EGL, dann GLX: mpv probiert die Liste der Reihe nach und nimmt den
+                        ' ersten Kontext, der sich aufbauen laesst. Seit dem 2026-11-25 scheiterte EGL
+                        ' auf dem Fenster der Videoflaeche bei jedem Film mit "Could not make context
+                        ' current" (XWayland, NVIDIA); ohne Ausweichweg blieb das Bild schwarz und nur
+                        ' der Ton lief.
+                        SetOptionStringRaw("gpu-context", "x11egl,x11")
                     End If
                     SetOptionStringRaw("wid", WindowHandleToUnsignedString(_windowHandle))
                 End If
