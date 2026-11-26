@@ -7,7 +7,7 @@
     <StackPanel>
 
         <!-- FARBE (nur Pinsel) - Farbrad kopflos, wie der Farbmischer beim Text-Objekt. -->
-        <Border Classes="adjustment-group" Margin="0,7,0,0" IsVisible="{Binding IsBrushPaintMode}">
+        <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}" IsVisible="{Binding IsBrushPaintMode}">
             <icons:ColorMixer StrokeColor="{Binding BrushColorValue, Mode=TwoWay}"
                               StrokeLabel="Farbe"
                               ShowFill="False"
@@ -15,7 +15,7 @@
         </Border>
 
         <!-- PINSEL (nur Pinsel) - Varianten und Parameter in eigener Gruppe. -->
-        <Border Classes="adjustment-group" Margin="0,7,0,0" IsVisible="{Binding IsBrushPaintMode}">
+        <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}" IsVisible="{Binding IsBrushPaintMode}">
             <Expander Header="{Binding CurrentToolLabel}" icons:ExpanderState.Key="draw-1">
                 <Expander.HeaderTemplate>
                     <DataTemplate>
@@ -26,7 +26,7 @@
                         </StackPanel>
                     </DataTemplate>
                 </Expander.HeaderTemplate>
-                <StackPanel Spacing="2" Margin="0,8,0,0">
+                <StackPanel Spacing="2" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
                     <!-- MALEBENE ANLEGEN wie "Text einfuegen" beim Text-Objekt: derselbe Weg wie der
                          Knopf im Ebenenpanel (EditorViewModel.AddPaintLayer). Die neue Ebene ist
                          danach markiert und der Pinsel bleibt scharf, man malt also sofort darauf. -->
@@ -151,7 +151,7 @@
         <!-- BILDPINSEL: Radierer, Abwedeln, Nachbelichten, Schwamm und Farbe ersetzen in EINER
              Gruppe (EditorViewModelImageBrush.vb). Oben die Art, darunter die gemeinsamen Regler,
              dann was nur zu einer Art gehoert. Der Kopf traegt den Namen der gewaehlten Art. -->
-        <Border Classes="adjustment-group" Margin="0,7,0,0" IsVisible="{Binding IsImageBrushMode}">
+        <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}" IsVisible="{Binding IsImageBrushMode}">
             <Expander Header="{Binding CurrentToolLabel}" icons:ExpanderState.Key="draw-2">
                 <Expander.HeaderTemplate>
                     <DataTemplate>
@@ -162,7 +162,7 @@
                         </StackPanel>
                     </DataTemplate>
                 </Expander.HeaderTemplate>
-                <StackPanel Spacing="2" Margin="0,8,0,0">
+                <StackPanel Spacing="2" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
                     <!-- UMBRECHEND: neun Arten passen nicht in eine Zeile des Panels (295 breit, eine
                          Art braucht 34 und 6 Abstand). Die beiden Radierer nach Farbe stehen gleich
                          hinter dem Radiergummi, zu dem sie gehoeren. -->
@@ -390,7 +390,7 @@
         </Border>
 
         <!-- VERWISCHEN / REPARATURPINSEL / STEMPEL - gemeinsame Retusche-Parameter. -->
-        <Border Classes="adjustment-group" Margin="0,7,0,0" IsVisible="{Binding ShowRetouchAdjustments}">
+        <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}" IsVisible="{Binding ShowRetouchAdjustments}">
             <Expander Header="{Binding CurrentToolLabel}" icons:ExpanderState.Key="draw-3">
                 <Expander.HeaderTemplate>
                     <DataTemplate>
@@ -414,7 +414,7 @@
                         </Grid>
                     </DataTemplate>
                 </Expander.HeaderTemplate>
-                <StackPanel Spacing="2" Margin="0,8,0,0">
+                <StackPanel Spacing="2" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                         <TextBlock Text="Radius" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />

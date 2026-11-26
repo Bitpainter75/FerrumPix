@@ -44,6 +44,11 @@
              Schluessel: fehlt eine Variante, gilt die Norm, und genau das ist bei
              Tool.ButtonPadding der Fall - compact aendert die Waagerechte nicht.
 
+             Die Adjust-Schluessel wirken nur INNERHALB des Anpassungspanels: die Klasse
+             adjustment-group steht ausser dort auch in Dialogen (Export, Grossenanderung) und in den
+             Einstellungsabschnitten, und die sollen von der Dichtewahl des Panels unberuehrt
+             bleiben. Die Regeln dafuer liegen deshalb in der Stilmappe des Panels
+             (AdjustmentsPanelBorder in EditorView.axaml) und nicht hier.
              Ausgeschrieben statt per Verweis auf die Farben und einander, weil ein Verweis auf
              einen spaeter erklaerten Schluessel innerhalb desselben Woerterbuchs ins Leere liefe. -->
         <x:Double x:Key="FP.Density.Tool.ButtonHeight">36</x:Double>

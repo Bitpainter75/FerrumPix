@@ -55,7 +55,7 @@
                                     </Grid>
                                 </DataTemplate>
                             </Expander.HeaderTemplate>
-                            <StackPanel Spacing="2" Margin="0,8,0,0">
+                            <StackPanel Spacing="2" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
                                 <CheckBox Content="{Binding EnabledLabel}" IsChecked="{Binding IsEnabled}"
                                           FontSize="{DynamicResource FP.Font.Small}" Margin="0,0,0,4" />
                                 <!-- Voreinstellungen der Erweiterung: die Wahl uebernimmt den Wertesatz

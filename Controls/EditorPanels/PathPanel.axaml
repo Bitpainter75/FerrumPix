@@ -13,7 +13,7 @@
                 </StackPanel>
             </DataTemplate>
         </Expander.HeaderTemplate>
-        <StackPanel Spacing="8" Margin="0,8,0,0">
+        <StackPanel Spacing="8" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
 
             <!-- WÄHREND DES ZEICHNENS. Der Hinweis steht hier und nicht im Tooltip: das Setzen von
                  Punkten ist die einzige Geste im Editor, die von sich aus nicht aufhört, und ohne

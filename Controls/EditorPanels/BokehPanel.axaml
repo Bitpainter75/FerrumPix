@@ -40,7 +40,7 @@
                  so kam es aus dem Nutzerkreis zurueck: "kann manche Regler nicht anfassen, Fehler
                  oder noch nicht gebaut?". Der Hinweis am gesperrten Element ist der einzige Ort,
                  an dem die Antwort steht. -->
-            <StackPanel Spacing="2" Margin="0,8,0,0" IsEnabled="{Binding CanRequestModels}"
+            <StackPanel Spacing="2" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}" IsEnabled="{Binding CanRequestModels}"
                         ToolTip.Tip="{Binding BokehHint}" ToolTip.ShowOnDisabled="True">
                 <!-- Die Pipette legt "Scharf von" und "Scharf bis" um die Tiefe der angeklickten
                      Stelle: die Vorgaben setzen voraus, dass das Motiv das Naechste im Bild ist.

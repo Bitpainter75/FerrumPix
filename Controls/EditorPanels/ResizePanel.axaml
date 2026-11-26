@@ -28,7 +28,7 @@
                 </Grid>
             </DataTemplate>
         </Expander.HeaderTemplate>
-        <StackPanel Spacing="8" Margin="0,8,0,0">
+        <StackPanel Spacing="8" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
             <!-- DeferTextCommit: das Getippte zaehlt erst beim Verlassen des Feldes. Sonst zieht
                  die gekoppelte Kante schon bei jedem einzelnen Anschlag nach und springt
                  unterwegs durch Zwischenstaende, die niemand gemeint hat.
@@ -185,7 +185,7 @@
                         </StackPanel>
                     </DataTemplate>
                 </Expander.HeaderTemplate>
-                <StackPanel Spacing="8" Margin="0,8,0,0">
+                <StackPanel Spacing="8" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
                     <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
                         <TextBlock Text="Modell" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -256,7 +256,7 @@
                         </Grid>
                     </DataTemplate>
                 </Expander.HeaderTemplate>
-                <StackPanel Spacing="8" Margin="0,8,0,0">
+                <StackPanel Spacing="8" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
                     <Grid ColumnDefinitions="92,*,Auto" VerticalAlignment="Center">
                         <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -430,7 +430,7 @@
                         </Grid>
                     </DataTemplate>
                 </Expander.HeaderTemplate>
-                <StackPanel Spacing="6" Margin="0,8,0,0">
+                <StackPanel Spacing="6" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
                     <!-- Die drei haeufigsten Faelle direkt, der Waehler daneben fuer alles andere. -->
                     <!-- Die erste Spalte ist breiter: "Transparent" ist mit Symbol laenger als
                          "Schwarz" und "Weiss", und in gleich breiten Dritteln wuerde es

@@ -44,7 +44,7 @@
                 </Grid>
             </DataTemplate>
         </Expander.HeaderTemplate>
-        <StackPanel Spacing="2" Margin="0,8,0,0">
+        <StackPanel Spacing="2" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
             <!-- Der „Auto"-Knopf (Automatische Bildverbesserung) ist in den Anpassen-Bereich
                  umgezogen (EditorView, vor dem Licht-Panel): er ist kein Look, sondern setzt
                  die Grundregler - dort steht er neben den Reglern, die er bewegt. -->

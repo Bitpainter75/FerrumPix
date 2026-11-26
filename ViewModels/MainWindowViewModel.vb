@@ -1459,6 +1459,9 @@ Namespace ViewModels
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AreToolSidebarLabelsVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolSidebarWidth))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsAdjustmentsPanelOnLeft))
+            ' Die Dichtestufe des Panels verschiebt dieselbe Breite: Winzig zieht Punkte ab, Normal
+            ' legt sie wieder drauf. Ohne diese Meldung bliebe die Spalte auf dem alten Mass stehen.
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AdjustmentsPanelWidth))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AdjustmentsVerticalScrollBarVisibility))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AdjustmentsScrollBarAutoHide))
             Editor?.RaiseToolSwitcherChanged()

@@ -38,7 +38,7 @@
                 </Grid>
             </DataTemplate>
         </Expander.HeaderTemplate>
-        <StackPanel Spacing="8" Margin="0,8,0,0">
+        <StackPanel Spacing="8" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
             <!-- Die beiden Ansichten des Farbmischers als Symbolpaar: die acht Baender und die
                  Punktfarbe, die gewaehlte in der Akzentfarbe. Eine eigene Zeile, damit sie auch bei
                  schmalem Panel nicht mit den Kreisen um den Platz streitet. Im Rezept stehen beide

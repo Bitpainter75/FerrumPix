@@ -14,7 +14,7 @@
                 </StackPanel>
             </DataTemplate>
         </Expander.HeaderTemplate>
-        <StackPanel Spacing="10" Margin="0,8,0,0">
+        <StackPanel Spacing="10" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
             <!-- EINFÜGEN OHNE KLICK INS BILD, in die Mitte (EditorViewModel.InsertArmedAnnotationAtCenter).
                  Der Klick ins Bild nimmt zuerst eine getroffene Ebene; liegt eine bildfüllende obenauf,
                  war Text oder QR-Code sonst gar nicht zu setzen. -->

@@ -1452,6 +1452,22 @@
                 <Style Selector="icons|RoundSlider">
                     <Setter Property="CompareOnRightClick" Value="True" />
                 </Style>
+                <!-- DICHTESTUFE des Anpassungspanels.
+                     Beide Regeln stehen HIER und nicht im Theme, weil die Klasse adjustment-group
+                     auch in Dialogen (Export, Grossenanderung) und in den Einstellungsabschnitten
+                     steht: was hier im Panel eng wird, soll keinen Dialog enger machen. Eine Regel
+                     in der Stilmappe des Panels gewinnt gegen die Regel im Theme - sie liegt tiefer
+                     im Baum; gemessen, nicht angenommen.
+                     
+                     Der zweite Grund, hier zu stehen: die Reglerhoehe steht im Theme als fester
+                     Wert. Ohne diese Regel bekamen nur die Abstaende drumherum eine Dichtestufe und
+                     der Regler selbst bliebe in jeder Stufe 36 Punkte hoch. -->
+                <Style Selector="Border.adjustment-group">
+                    <Setter Property="Padding" Value="{DynamicResource FP.Density.Adjust.GroupPadding}" />
+                </Style>
+                <Style Selector="icons|RoundSlider">
+                    <Setter Property="Height" Value="{DynamicResource FP.Density.Adjust.SliderHeight}" />
+                </Style>
             </Border.Styles>
             <Grid RowDefinitions="*,Auto">
                 <Grid Grid.Row="0">
@@ -1481,24 +1497,24 @@
                                  darunter, und wer sie zieht, sieht beim Scrollen nach unten immer
                                  noch den Kopf des Panels. Sichtbar nur bei den Werkzeugen mit
                                  Reglern (IsScopeInAdjustmentPanelsVisible), die Erweiterungen eingeschlossen. -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     IsVisible="{Binding IsScopeInAdjustmentPanelsVisible}">
                                 <panels:ScopePanel />
                             </Border>
 
                             <!-- OHNE aeusseren Rahmen: das Panel bringt mehrere Gruppen mit und
                                  rahmt jede selbst (siehe DetailsPanel). -->
-                            <panels:WarpPanel Margin="0,7,0,0"
+                            <panels:WarpPanel Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                               IsVisible="{Binding ShowWarpAdjustments}" />
 
-                            <panels:LightSourcesPanel Margin="0,7,0,0"
+                            <panels:LightSourcesPanel Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                                       IsVisible="{Binding ShowLightControls}" />
 
                             <!-- Die Erweiterungen: je geladener eine Gruppe, die das Panel selbst
                                  rahmt (EditorViewModelExtensions.vb). Im Kompaktwerkzeug ein Block
                                  wie die uebrigen: sortierbar ueber sein Tag, ausblendbar wie eine
                                  Gruppe, seine Gruppen klappen mit den anderen zu. -->
-                            <panels:ExtensionsPanel Margin="0,7,0,0" Tag="extensions">
+                            <panels:ExtensionsPanel Margin="{DynamicResource FP.Density.Adjust.GroupMargin}" Tag="extensions">
                                 <panels:ExtensionsPanel.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowExtensionAdjustments"/>
@@ -1512,22 +1528,22 @@
                             <panels:DrawPanel IsVisible="{Binding ShowDrawControls}" />
 
                             <!-- Schatten und Glühen auch für den Pinsel (wie beim Text-Objekt). -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     IsVisible="{Binding IsBrushPaintMode}">
                                 <panels:AnnotationShadowPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     IsVisible="{Binding IsBrushPaintMode}">
                                 <panels:AnnotationGlowPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     IsVisible="{Binding ShowLayerToolOptions}">
                                 <panels:InsertPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     IsVisible="{Binding ShowSelectionAdjustments}">
                                 <panels:SelectionPanel />
                             </Border>
@@ -1537,37 +1553,37 @@
                                  an einer sichtbaren Auswahlebene (ShowSelectionLineAndEffects). Alle
                                  vier erst, wenn es eine Auswahl gibt (auch die Maske einer markierten
                                  Auswahlebene): ohne sie wirken sie auf nichts. -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     IsVisible="{Binding ShowSelectionFillGroup}">
                                 <panels:FillPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     IsVisible="{Binding ShowSelectionLineAndEffectsGroups}">
                                 <panels:SelectionStrokePanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     IsVisible="{Binding ShowSelectionLineAndEffectsGroups}">
                                 <panels:AnnotationShadowPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     IsVisible="{Binding ShowSelectionLineAndEffectsGroups}">
                                 <panels:AnnotationGlowPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     IsVisible="{Binding ShowMaskAdjustments}">
                                 <panels:MaskPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     IsVisible="{Binding ShowPathAdjustments}">
                                 <panels:PathPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     IsVisible="{Binding ShowCropAdjustments}">
                                 <panels:CropPanel />
                             </Border>
@@ -1575,7 +1591,7 @@
                             <!-- DREHEN steht seit der Zusammenlegung UNTER dem Zuschnitt im selben
                                  Werkzeug: erst waehlt man den Ausschnitt, dann seine Lage. Eigener
                                  Rahmen im Panel selbst, deshalb hier keiner. -->
-                            <panels:RotatePanel Margin="0,7,0,0"
+                            <panels:RotatePanel Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                                 IsVisible="{Binding ShowRotateAdjustments}" />
 
                             <!-- EIN Anwenden fuer das ganze Werkzeug: Ausschnitt UND Lage. Beide
@@ -1584,7 +1600,7 @@
                                  beim Drehen mit aktiv wurde, sagten dasselbe. Er steht bewusst
                                  AUSSERHALB der beiden Gruppen: so bleibt er erreichbar, auch wenn
                                  eine davon zugeklappt ist. -->
-                            <Button Classes="accent" Margin="0,7,0,0"
+                            <Button Classes="accent" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     HorizontalAlignment="Stretch"
                                     Padding="10,6"
                                     IsVisible="{Binding ShowCropAdjustments}"
@@ -1600,7 +1616,7 @@
                                 </StackPanel>
                             </Button>
 
-                            <panels:ResizePanel Margin="0,7,0,0"
+                            <panels:ResizePanel Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                                 IsVisible="{Binding ShowResizeAdjustments}" />
 
                             <!-- EINE Gruppe für alles, was die Regler in einem Rutsch setzt: die
@@ -1611,7 +1627,7 @@
                                  Die gespeicherten Anpassungen ersetzen das frühere Kopieren und
                                  Einfügen: das hielt genau einen Stand und war beim nächsten
                                  Kopieren weg. -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0">
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}">
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowLightAdjustments"/>
@@ -1650,7 +1666,7 @@
                                             </Grid>
                                         </DataTemplate>
                                     </Expander.HeaderTemplate>
-                                    <StackPanel Spacing="6" Margin="0,8,0,0">
+                                    <StackPanel Spacing="6" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
                                         <Button Classes="ghost"
                                                 HorizontalAlignment="Stretch"
                                                 HorizontalContentAlignment="Center"
@@ -1677,7 +1693,7 @@
                                 </Expander>
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -1694,7 +1710,7 @@
                                  hier, die Einzelwerkzeuge sehen deshalb aus wie vorher. -->
 
                             <!-- TONWERTKURVE (ausklappbar) -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -1711,7 +1727,7 @@
                                  UND GENAU DESHALB nur bei einem entwickelten RAW: alle drei Stufen
                                  sitzen im RAW-Decode, ein JPEG läuft an ihnen vorbei. Vorher stand
                                  die Gruppe bei jeder Datei da und tat nichts. -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -1728,7 +1744,7 @@
                                  Bearbeitung ohne jede Erklaerung. Das Tag bindet ihn im Kompaktmodus
                                  an den Block der Objektivkorrektur (CompactBlockOf), er wandert
                                  beim Sortieren mit. -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0" Padding="10,8" Tag="objektivkorrektur">
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}" Tag="objektivkorrektur">
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowLightAdjustments"/>
@@ -1744,7 +1760,7 @@
 
                             <!-- FILMNEGATIV (ausklappbar) - gehört zu "Anpassen": die Umkehr ist eine
                                  Dichteoperation, auf der Belichtung und Kurve erst aufsetzen. -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -1755,7 +1771,7 @@
                                 <panels:FilmNegativePanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -1767,7 +1783,7 @@
                             </Border>
 
                             <!-- COLOR GRADING (ausklappbar) -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -1778,7 +1794,7 @@
                                 <panels:HslPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -1791,7 +1807,7 @@
 
                             <!-- Die weiteren Farbkorrekturen (EditorViewModelCorrections.vb), in der
                                  Reihenfolge, in der die Punktkette sie rechnet. -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -1802,7 +1818,7 @@
                                 <panels:ChannelMixerPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -1813,7 +1829,7 @@
                                 <panels:GradientMapPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -1825,7 +1841,7 @@
                             </Border>
 
                             <!-- DETAILS + KÖRNUNG (je eigene Karte im Panel, wie ResizePanel) -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -1837,21 +1853,21 @@
                             </Border>
 
                             <!-- RAUSCHEN direkt unter den Details: alles zum Rauschen an einem Ort. -->
-                            <panels:NoisePanel Margin="0,7,0,0"
+                            <panels:NoisePanel Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                                IsVisible="{Binding ShowDetailAdjustments}" />
 
                             <!-- SCHÄRFEN -->
-                            <panels:SharpnessPanel Margin="0,7,0,0"
+                            <panels:SharpnessPanel Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                                    IsVisible="{Binding ShowDetailAdjustments}" />
 
                             <!-- VIGNETTE: eigenes Panel, damit sie im Kompaktwerkzeug ein eigener Block ist -->
-                            <panels:VignettePanel Margin="0,7,0,0"
+                            <panels:VignettePanel Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                                   IsVisible="{Binding ShowDetailAdjustments}" />
 
                             <!-- EFFEKTE: eigenes Werkzeug. Was hier steht, fuegt dem Bild etwas hinzu,
                                  was vorher nicht da war - die Details darueber holen nur heraus, was
                                  in der Aufnahme steckt. -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -1869,7 +1885,7 @@
                                  derselbe Mechanismus wie bei der Auswahl (IsSelectionStyleContext).
                                  Das Tag bindet sie im Kompaktmodus an den Block des Rahmens
                                  (CompactBlockOf), sie wandern beim Sortieren direkt mit ihm. -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0" Tag="frame">
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}" Tag="frame">
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="IsFrameStyleContext"/>
@@ -1879,7 +1895,7 @@
                                 <panels:FillPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0" Tag="frame">
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}" Tag="frame">
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="IsFrameStyleContext"/>
@@ -1889,7 +1905,7 @@
                                 <panels:AnnotationShadowPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0" Tag="frame">
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}" Tag="frame">
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="IsFrameStyleContext"/>
@@ -1900,12 +1916,12 @@
                             </Border>
 
                             <!-- KÖRNUNG (rahmt sich selbst) -->
-                            <panels:EffectsPanel Margin="0,7,0,0"
+                            <panels:EffectsPanel Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                                  IsVisible="{Binding ShowEffectsAdjustments}" />
 
                             <!-- Tontrennung und Schwellenwert: Pixelregler wie die Farbkorrekturen
                                  (EditorViewModelCorrections.vb), gerechnet am Ende der Punktkette. -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -1916,7 +1932,7 @@
                                 <panels:PosterizePanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -1930,15 +1946,15 @@
                             <!-- Die Tiefen-Unschaerfe wird gebacken und rahmt sich selbst; sie steht
                                  nach den Pixelreglern der Effekte, was man wieder loswird, gehoert
                                  vor das, was bleibt. -->
-                            <panels:BokehPanel Margin="0,7,0,0"
+                            <panels:BokehPanel Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                                IsVisible="{Binding ShowEffectsAdjustments}" />
 
                             <!-- Der Nebel nach Tiefe wird gebacken wie die Tiefen-Unschaerfe und rahmt
                                  sich deshalb selbst (BokehPanel.axaml). -->
-                            <panels:FogPanel Margin="0,7,0,0"
+                            <panels:FogPanel Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                              IsVisible="{Binding ShowEffectsAdjustments}" />
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -1953,7 +1969,7 @@
                                  dazu die Ablage ohne Namen (kopieren, einfuegen). Im Filter-Panel,
                                  weil ein gespeicherter Stand wie ein Look angewendet wird. Die
                                  automatische Bildverbesserung bleibt im Anpassen-Panel. -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0">
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}">
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowFilterAdjustments"/>
@@ -1973,7 +1989,7 @@
                                             </StackPanel>
                                         </DataTemplate>
                                     </Expander.HeaderTemplate>
-                                    <StackPanel Spacing="6" Margin="0,8,0,0">
+                                    <StackPanel Spacing="6" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
                                         <!-- Die Auswahlliste, darunter die Knöpfe in EINER Reihe zu
                                              gleichen Teilen. Der Name steht im Dialog hinter
                                              Speichern, zusammen mit der Auswahl dessen, was die
@@ -2148,7 +2164,7 @@
                                  geoeffnet ist (die geoeffnete traegt den Haken), darunter Anlegen,
                                  Umbenennen und Loeschen. Dieselben Ablaeufe wie im Kontextmenue.
                                  Nur im Filter-Panel, wie die gespeicherten Anpassungen. -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0">
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}">
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowFilterAdjustments"/>
@@ -2256,7 +2272,7 @@
                                 </Expander>
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -2268,7 +2284,7 @@
                             </Border>
 
                             <!-- TONWERTKURVE (ausklappbar) -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -2279,7 +2295,7 @@
                                 <panels:XmpPresetPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -2290,7 +2306,7 @@
                                 <panels:LutPresetPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     IsVisible="{Binding ShowAnnotationProperties}">
                                 <panels:AnnotationPropertiesPanel />
                             </Border>
@@ -2298,24 +2314,24 @@
                             <!-- Füllung und Kontur als eigene Gruppen, dieselben wie im Auswahl-Werkzeug.
                                  Nicht beim QR-Code: seine zwei Farben sind Vorder- und Hintergrund und
                                  stehen im Objekt-Panel. Bei Mehrfachauswahl weg wie Schatten und Glühen. -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     IsVisible="{Binding ShowObjectFillGroup}">
                                 <panels:FillPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     IsVisible="{Binding ShowObjectStrokeGroup}">
                                 <panels:ObjectStrokePanel />
                             </Border>
 
                             <!-- Schatten und Glühen sind objekt-eigen: bei einer Mehrfachauswahl
                                  beschrieben sie nur den Anker und bleiben deshalb weg. -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     IsVisible="{Binding ShowSingleAnnotationEffects}">
                                 <panels:AnnotationShadowPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                            <Border Classes="adjustment-group" Margin="{DynamicResource FP.Density.Adjust.GroupMargin}"
                                     IsVisible="{Binding ShowSingleAnnotationEffects}">
                                 <panels:AnnotationGlowPanel />
                             </Border>

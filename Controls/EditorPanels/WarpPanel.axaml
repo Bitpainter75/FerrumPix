@@ -17,7 +17,7 @@
                         </StackPanel>
                     </DataTemplate>
                 </Expander.HeaderTemplate>
-                <StackPanel Spacing="6" Margin="0,8,0,0">
+                <StackPanel Spacing="6" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
                 <!-- Nach dem TEXT bemessen, nicht zu gleichen Teilen: "Perspektive" ist doppelt
                      so lang wie "Gitter", und gleich breite Knoepfe lassen den einen
                      gequetscht und die anderen halb leer aussehen. -->
@@ -150,7 +150,7 @@
                         </Grid>
                     </DataTemplate>
                 </Expander.HeaderTemplate>
-                <StackPanel Spacing="2" Margin="0,8,0,0">
+                <StackPanel Spacing="2" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
                           ToolTip.Tip="Kippt um die waagerechte Achse: richtet stürzende Linien an Gebäuden auf">
                         <TextBlock Text="Senkrecht" Foreground="{DynamicResource FP.Text.Secondary}"
@@ -280,7 +280,7 @@
                         </Grid>
                     </DataTemplate>
                 </Expander.HeaderTemplate>
-                <StackPanel Spacing="2" Margin="0,8,0,0">
+                <StackPanel Spacing="2" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
                           ToolTip.Tip="Wie fein das Stützpunktraster ist. Gröber verzerrt weicher, feiner genauer.">
                         <TextBlock Text="Raster" Foreground="{DynamicResource FP.Text.Secondary}"
@@ -345,7 +345,7 @@
                         </Grid>
                     </DataTemplate>
                 </Expander.HeaderTemplate>
-                <StackPanel Spacing="8" Margin="0,8,0,0">
+                <StackPanel Spacing="8" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
                     <TextBlock Text="Im Bild an den vier Ecken ziehen oder an den kleinen Griffen daneben: die Ecken setzen die Lage, die Griffe biegen den Rand dazwischen. Das Innere folgt den Rändern."
                                TextWrapping="Wrap"
                                Foreground="{DynamicResource FP.Text.Secondary}"
@@ -397,7 +397,7 @@
                         </Grid>
                     </DataTemplate>
                 </Expander.HeaderTemplate>
-                <StackPanel Spacing="8" Margin="0,8,0,0">
+                <StackPanel Spacing="8" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
                     <TextBlock Text="Im Bild eine Linie über eine Kante ziehen. Danach die Linie oder eines ihrer Enden an den neuen Platz ziehen - die Kante geht mit, die Umgebung folgt weich."
                                TextWrapping="Wrap"
                                Foreground="{DynamicResource FP.Text.Secondary}"
@@ -456,7 +456,7 @@
                         </Grid>
                     </DataTemplate>
                 </Expander.HeaderTemplate>
-                <StackPanel Spacing="8" Margin="0,8,0,0">
+                <StackPanel Spacing="8" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
                     <WrapPanel Orientation="Horizontal">
                         <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
                                 Command="{Binding SetLiquifyBrushCommand}" CommandParameter="Push"

@@ -58,7 +58,7 @@
                 </Grid>
             </DataTemplate>
         </Expander.HeaderTemplate>
-        <StackPanel Spacing="2" Margin="0,8,0,0">
+        <StackPanel Spacing="2" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <!-- DAS ZAHLENFELD ZEIGT BLENDENSTUFEN, der Regler bleibt auf seinen Punkten.
                      25 Punkte sind eine Stufe (siehe ExposureStopsConverter), der volle Weg also

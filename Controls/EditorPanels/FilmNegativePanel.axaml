@@ -28,7 +28,7 @@
                 </Grid>
             </DataTemplate>
         </Expander.HeaderTemplate>
-        <StackPanel Spacing="6" Margin="0,8,0,0">
+        <StackPanel Spacing="6" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
             <CheckBox Content="Negativ in Positiv umkehren"
                       IsChecked="{Binding NegativeEnabled}"
                       FontSize="{DynamicResource FP.Font.Small}"

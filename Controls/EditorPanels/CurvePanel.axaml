@@ -38,7 +38,7 @@
                 </Grid>
             </DataTemplate>
         </Expander.HeaderTemplate>
-        <StackPanel Spacing="8" Margin="0,8,0,0">
+        <StackPanel Spacing="8" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
             <StackPanel Orientation="Horizontal" Spacing="14">
                 <Button Classes="info-tab channel-tab" Command="{Binding SetCurveChannelCommand}"
                         CommandParameter="Rgb" Classes.active="{Binding IsCurveChannelRgb}"

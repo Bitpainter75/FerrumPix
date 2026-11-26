@@ -41,7 +41,7 @@
                 </Grid>
             </DataTemplate>
         </Expander.HeaderTemplate>
-        <StackPanel Spacing="2" Margin="0,8,0,0">
+        <StackPanel Spacing="2" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
                 <TextBlock Text="Tiefen" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />

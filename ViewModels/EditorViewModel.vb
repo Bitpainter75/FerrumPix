@@ -69,19 +69,68 @@ Namespace ViewModels
             Return Math.Max(AdjustmentsPanelMinWidth, Math.Min(AdjustmentsPanelMaxWidth, value))
         End Function
 
-        ''' <summary>Die Breite, mit der die Ansicht ihre Spalte setzt.</summary>
-        Public ReadOnly Property AdjustmentsPanelWidth As Double
+        ''' <summary>Was die Stufe Winzig von der Breite abzieht. Die Werkzeugleiste gewinnt ihre
+        ''' schmale Form aus engeren Raendern; hier sind es 100 Punkte Waagerechte.
+        '''
+        ''' Der Abzug passiert beim ANZEIGEN und nicht beim Speichern, und beim Speichern wird er
+        ''' wieder daraufgerechnet. Der Grund: der gespeicherte Wert bleibt unabhaengig von der
+        ''' Dichte. Wer das Panel eng stellt, veraendert damit nicht still seine gezogene Breite, und
+        ''' wer von Winzig zurueck auf Normal geht, findet genau die Breite wieder vor, die er gezogen
+        ''' hat. Die Umrechnung ist deshalb eine Verschiebung und kein Verhaeltnis.
+        '''
+        ''' Die Grenzen (400 und 700) bleiben auf der gespeicherten Seite stehen, weil sie den
+        ''' erlaubten Bereich DIESES Wertes beschreiben; was die Spalte begrenzt, steht an
+        ''' AdjustmentsPanelColumnMinWidth und AdjustmentsPanelColumnMaxWidth - dieselbe Verschiebung.
+        ''' Auf 100 gesetzt: Winzig kommt damit gut ein Viertel unter die Vorgabe von 460.</summary>
+        Public Const AdjustmentsPanelTinyWidthReduction As Double = 100.0
+
+        ''' <summary>Der Abzug, den die eingestellte Dichte des Anpassungspanels mitbringt: bei Winzig
+        ''' die Punkte aus AdjustmentsPanelTinyWidthReduction, bei jeder anderen Stufe nichts.</summary>
+        Private ReadOnly Property DensityWidthReduction As Double
             Get
-                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return AdjustmentsPanelDefaultWidth
-                Return ClampAdjustmentsPanelWidth(_mainVm.Settings.EditorAdjustmentsPanelWidth)
+                Dim modus = _mainVm?.Settings?.EditorAdjustmentsDensity
+                If String.Equals(modus, AppSettingsService.PanelDensityTiny, StringComparison.OrdinalIgnoreCase) Then
+                    Return AdjustmentsPanelTinyWidthReduction
+                End If
+                Return 0.0
             End Get
         End Property
 
-        ''' <summary>Merkt sich eine gezogene Panelbreite. Gerufen von der Ansicht, wenn der
-        ''' Ziehrand losgelassen wird - ohne Fenster (Pruefstand) gibt es nichts zu merken.</summary>
+        ''' <summary>Die Breite, mit der die Ansicht ihre Spalte setzt: die gezogene Breite, vermindert
+        ''' um den Abzug der Dichtestufe.</summary>
+        Public ReadOnly Property AdjustmentsPanelWidth As Double
+            Get
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return AdjustmentsPanelDefaultWidth
+                Return ClampAdjustmentsPanelWidth(_mainVm.Settings.EditorAdjustmentsPanelWidth) - DensityWidthReduction
+            End Get
+        End Property
+
+        ''' <summary>Die Untergrenze der Spalte, in der das Panel steht: dieselbe Verschiebung wie bei
+        ''' der Breite. Ohne das kaeme Winzig nie unter die normale Mindestbreite.</summary>
+        Public ReadOnly Property AdjustmentsPanelColumnMinWidth As Double
+            Get
+                Return AdjustmentsPanelMinWidth - DensityWidthReduction
+            End Get
+        End Property
+
+        ''' <summary>Die Obergrenze der Spalte, ebenfalls verschoben. Ohne das koennte das Panel in
+        ''' Winzig ueber die halbe Buehne wachsen - die Grenze galt ja dem gespeicherten Wert.</summary>
+        Public ReadOnly Property AdjustmentsPanelColumnMaxWidth As Double
+            Get
+                Return AdjustmentsPanelMaxWidth - DensityWidthReduction
+            End Get
+        End Property
+
+        ''' <summary>Merkt sich eine gezogene Panelbreite. Gerufen von der Ansicht, wenn der Ziehrand
+        ''' losgelassen wird - ohne Fenster (Pruefstand) gibt es nichts zu merken.
+        '''
+        ''' Die Ansicht meldet die GESEHENE Breite; gespeichert wird sie mit dem Abzug der
+        ''' Dichtestufe zurueckgerechnet. Sonst verloere Winzig bei jedem Zug noch einmal 100 Punkte
+        ''' in der Einstellung, und der Weg zurueck auf Normal faende ein Panel eine Handbreit
+        ''' schmaler vor.</summary>
         Public Sub StoreAdjustmentsPanelWidth(width As Double)
             If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
-            _mainVm.Settings.EditorAdjustmentsPanelWidth = ClampAdjustmentsPanelWidth(width)
+            _mainVm.Settings.EditorAdjustmentsPanelWidth = ClampAdjustmentsPanelWidth(width + DensityWidthReduction)
             Me.RaisePropertyChanged(NameOf(AdjustmentsPanelWidth))
         End Sub
 

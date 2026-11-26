@@ -60,7 +60,7 @@
                 </Grid>
             </DataTemplate>
         </Expander.HeaderTemplate>
-        <StackPanel Spacing="2" Margin="0,8,0,0">
+        <StackPanel Spacing="2" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
 
             <!-- Vier Räder im 2x2-Raster: nebeneinander wären sie in der schmalen Seitenleiste zu
                  klein, um einen Farbton noch treffen zu können. -->

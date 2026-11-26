@@ -26,7 +26,7 @@
                 </StackPanel>
             </DataTemplate>
         </Expander.HeaderTemplate>
-        <StackPanel Spacing="8" Margin="0,8,0,0">
+        <StackPanel Spacing="8" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
             <StackPanel Spacing="8" IsVisible="{Binding ShowFillGroupContent}">
             <!-- Die Fuellart als Symbolknoepfe: sechs Beschriftungen sprengten jede Spaltenbreite.
                  Der Name steht im Hinweis. WrapPanel, falls das Panel sehr schmal ist; Abstaende

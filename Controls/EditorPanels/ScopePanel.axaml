@@ -47,7 +47,7 @@
                 </Grid>
             </DataTemplate>
         </Expander.HeaderTemplate>
-        <StackPanel Spacing="8" Margin="0,8,0,0">
+        <StackPanel Spacing="8" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
             <!-- Dieselben drei Knoepfe wie in der Leiste, und aus demselben Grund nebeneinander:
                  die drei Darstellungen beantworten verschiedene Fragen. -->
             <Grid ColumnDefinitions="*,*,*" ColumnSpacing="4">

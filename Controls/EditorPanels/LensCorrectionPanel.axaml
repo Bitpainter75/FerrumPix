@@ -26,7 +26,7 @@
                     </Grid>
                 </DataTemplate>
             </Expander.HeaderTemplate>
-            <StackPanel Spacing="8" Margin="0,8,0,0">
+            <StackPanel Spacing="8" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
                 <!-- Dasselbe Muster wie die Stichwoerter im Infopanel, und aus gutem Grund: dort
                      laeuft ein AutoCompleteBox als REINES Textfeld mit Vorschlaegen - ohne Bindung
                      an die Auswahl, ohne SelectionChanged, ohne von Hand aufgeklappte Liste.

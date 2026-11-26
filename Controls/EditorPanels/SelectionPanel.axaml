@@ -13,7 +13,7 @@
                 </StackPanel>
             </DataTemplate>
         </Expander.HeaderTemplate>
-        <StackPanel Spacing="8" Margin="0,8,0,0">
+        <StackPanel Spacing="8" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
 
             <TextBlock Text="Werkzeug" Foreground="{DynamicResource FP.Text.Secondary}"
                        FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />

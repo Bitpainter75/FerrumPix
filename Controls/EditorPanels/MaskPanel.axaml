@@ -13,7 +13,7 @@
                 </StackPanel>
             </DataTemplate>
         </Expander.HeaderTemplate>
-        <StackPanel Spacing="8" Margin="0,8,0,0">
+        <StackPanel Spacing="8" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
 
             <!-- Symbolreihe wie im Auswahlwerkzeug: die drei Arten schliessen einander aus,
                  und die Beschriftung stand nur in die Breite. Was sie tun, sagt der Tooltip. -->

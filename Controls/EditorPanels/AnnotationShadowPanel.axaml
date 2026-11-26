@@ -19,7 +19,7 @@
                 </StackPanel>
             </DataTemplate>
         </Expander.HeaderTemplate>
-        <StackPanel Spacing="2" Margin="0,8,0,0">
+        <StackPanel Spacing="2" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
             <StackPanel Spacing="2" IsVisible="{Binding AnnotationShadowEnabled}">
                 <!-- Lage: aussen unter dem Objekt (wie schon immer), innen auf seiner Flaeche an der
                      dem Licht zugewandten Kante, oder beides mit denselben Werten

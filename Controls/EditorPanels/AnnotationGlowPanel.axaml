@@ -20,7 +20,7 @@
                 </StackPanel>
             </DataTemplate>
         </Expander.HeaderTemplate>
-        <StackPanel Spacing="2" Margin="0,8,0,0">
+        <StackPanel Spacing="2" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
             <StackPanel Spacing="2" IsVisible="{Binding AnnotationGlowEnabled}">
                 <!-- Lage wie beim Schatten: aussen um das Objekt, innen von der Kante in die Flaeche,
                      oder beides (ImageAnnotation.GlowPlacement). -->

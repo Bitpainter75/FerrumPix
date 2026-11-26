@@ -24,7 +24,7 @@
                 </StackPanel>
             </DataTemplate>
         </Expander.HeaderTemplate>
-        <StackPanel Spacing="8" Margin="0,8,0,0">
+        <StackPanel Spacing="8" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
             <StackPanel Spacing="8" IsVisible="{Binding AnnotationStrokeEnabled}">
             <WrapPanel Orientation="Horizontal" IsVisible="{Binding ShowStrokeStyleControls}">
                 <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"

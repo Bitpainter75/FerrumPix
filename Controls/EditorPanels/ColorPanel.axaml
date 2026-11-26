@@ -39,7 +39,7 @@
                 </Grid>
             </DataTemplate>
         </Expander.HeaderTemplate>
-        <StackPanel Spacing="2" Margin="0,8,0,0">
+        <StackPanel Spacing="2" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
             <!-- SPALTENTEILUNG WIE DIE REGLERZEILEN: 92, Rest, 44. Die Pipette steht in der
                  Spalte der Zahlenfelder, damit die rechte Kante der Auswahlliste auf der der
                  Regler darunter liegt. -->

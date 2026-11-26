@@ -32,7 +32,7 @@
                         </StackPanel>
                     </DataTemplate>
                 </Expander.HeaderTemplate>
-                <ItemsRepeater ItemsSource="{Binding FixedShapeItems}" Margin="0,8,0,0">
+                <ItemsRepeater ItemsSource="{Binding FixedShapeItems}" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
                     <ItemsRepeater.Layout>
                         <WrapLayout />
                     </ItemsRepeater.Layout>

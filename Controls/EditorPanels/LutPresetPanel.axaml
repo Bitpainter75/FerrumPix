@@ -38,7 +38,7 @@
                 </Grid>
             </DataTemplate>
         </Expander.HeaderTemplate>
-        <StackPanel Spacing="6" Margin="0,8,0,0">
+        <StackPanel Spacing="6" Margin="{DynamicResource FP.Density.Adjust.ContentMargin}">
             <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="6">
                 <Button Grid.Column="0" Classes="ghost" Padding="8,5"
                         HorizontalAlignment="Stretch"

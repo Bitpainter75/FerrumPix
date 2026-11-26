@@ -4881,11 +4881,6 @@ Namespace Views
             End If
         End Sub
 
-        ' MINDESTbreite des Anpassungspanels. Sie steht im EditorViewModel, weil auch die Schwelle
-        ' fuer die Beschriftungen der Kopfleiste daran haengt - zwei Zahlen an zwei Orten waeren
-        ' genau die Art Paar, das irgendwann auseinanderlaeuft.
-        Private Const AdjustmentsPanelWidth As Double = EditorViewModel.AdjustmentsPanelMinWidth
-
         ''' <summary>Der Ziehrand ist losgelassen: die neue Breite MERKEN.
         '''
         ''' ERST BEIM LOSLASSEN und nicht waehrend des Zugs: die Einstellungen schreiben ihre Datei,
@@ -4920,12 +4915,14 @@ Namespace Views
             Dim panelColumn = If(onLeft, 1, 2)
             Dim stageColumn = If(onLeft, 2, 1)
 
-            ' Die Breite kommt aus den Einstellungen und ist dort geklemmt. Die Grenzen stehen
-            ' zusaetzlich an der SPALTE: der Ziehrand verhandelt zwischen zwei Spalten, und ohne
-            ' sie liesse sich das Panel bis zum Verschwinden zusammenschieben.
-            Dim width = If(vm IsNot Nothing, vm.AdjustmentsPanelWidth, AdjustmentsPanelWidth)
-            root.ColumnDefinitions(panelColumn).MinWidth = AdjustmentsPanelWidth
-            root.ColumnDefinitions(panelColumn).MaxWidth = EditorViewModel.AdjustmentsPanelMaxWidth
+            ' Die Breite kommt aus den Einstellungen und ist dort geklemmt; die Stufe Winzig zieht davon
+            ' ihre Punkte ab. Die Grenzen stehen zusaetzlich an der SPALTE: der Ziehrand verhandelt
+            ' zwischen zwei Spalten, und ohne sie liesse sich das Panel bis zum Verschwinden
+            ' zusammenschieben. Auch sie folgen der Dichtestufe - sonst endete Winzig bei der normalen
+            ' Mindestbreite und kaeme nie unter sie hinunter.
+            Dim width = If(vm IsNot Nothing, vm.AdjustmentsPanelWidth, EditorViewModel.AdjustmentsPanelDefaultWidth)
+            root.ColumnDefinitions(panelColumn).MinWidth = If(vm IsNot Nothing, vm.AdjustmentsPanelColumnMinWidth, EditorViewModel.AdjustmentsPanelMinWidth)
+            root.ColumnDefinitions(panelColumn).MaxWidth = If(vm IsNot Nothing, vm.AdjustmentsPanelColumnMaxWidth, EditorViewModel.AdjustmentsPanelMaxWidth)
             root.ColumnDefinitions(panelColumn).Width = New GridLength(width)
             root.ColumnDefinitions(stageColumn).MinWidth = 0
             root.ColumnDefinitions(stageColumn).MaxWidth = Double.PositiveInfinity
