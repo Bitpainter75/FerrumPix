@@ -1455,10 +1455,26 @@ Namespace ViewModels
             Editor?.RefreshFilmstripItemBadges()
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsInfoSidebarVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsLayersPanelVisible))
+            ' Die Werkzeugleiste: der Modus hat keinen Knopf in der Leiste, sondern steht in den
+            ' Einstellungen, und was an Zeigerzeit noch ausstand, gehoert dem alten Modus nicht mehr.
+            Editor?.CancelToolSelectorHover()
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsToolSidebarCollapsed))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AreToolSidebarLabelsVisible))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolGroupHeadingOpacity))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AreToolGroupSeparatorsVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolSidebarWidth))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsAdjustmentsPanelOnLeft))
+            ' Und auf welcher Seite die Werkzeugleiste jetzt steht. Die Ansicht verankert sie damit
+            ' neu (siehe der Fall in EditorView), und die vier Knopfepaare darunter gelten ebenfalls.
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolSelectorSide))
+            ' Und was auf welcher Seite der Zeile steht: Symbol, Beschriftung, ihre Ausrichtung und
+            ' der Abstand zwischen beiden. Der faengt in der schmalen Leiste weg; bliebe er, schuebe er
+            ' das Symbol dort zehn Punkte nach aussen (siehe ToolRowColumnSpacing).
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolRowColumnSpacing))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolIconColumn))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolLabelColumn))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolSelectorContentAlignment))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolGroupHeadingAlignment))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AdjustmentsVerticalScrollBarVisibility))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AdjustmentsScrollBarAutoHide))
             Editor?.RaiseToolSwitcherChanged()

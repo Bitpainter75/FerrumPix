@@ -796,8 +796,26 @@ Namespace Services
         ''' Datei gelesen, und bei vielen Bildebenen ist der erste Aufbau des Panels spuerbar.</summary>
         Public Property EditorLayerThumbnails As Boolean = True
         ''' Linke Werkzeugleiste des Editors eingeklappt (nur Symbole, keine Beschriftungen) -
-        ''' gemerkter Bedienzustand wie die Info-Leiste, der Umschalter sitzt in der Leiste selbst.
+        ''' gemerkter Bedienzustand wie die Info-Leiste, der Umschalter sitzt in der Fusszeile.
+        ''' Bleibt die Grundlage der Modi "Nur Symbole" und "Mit Text" im Einstellungsdialog.
         Public Property EditorToolSidebarCollapsed As Boolean = False
+        ''' <summary>Die Werkzeugleiste klappt automatisch auf: schmal, bis der Zeiger eine kurze Weile
+        ''' auf ihr steht, dann ueber dem Bild breit. Ab Werk aus, die Leiste verhaelt sich also wie
+        ''' bisher nach dem Klappknopf.
+        '''
+        ''' Ein eigener Wert NEBEN dem Klappzustand und kein dreistufiger Modus an seiner Stelle: der
+        ''' Klappzustand ist gemerkte Bedienung, die ein Update unveraendert ueberleben muss. Der
+        ''' Modus im Dialog ist nur eine Sicht auf beide Werte (SettingsViewModel.EditorToolSelectorMode),
+        ''' und der Klappknopf legt die Leiste fest und schaltet die Automatik damit ab.</summary>
+        Public Property EditorToolSelectorAuto As Boolean = False
+        ''' <summary>Wo die Werkzeugleiste steht: immer links, immer rechts, oder auf der Seite des
+        ''' Anpassungspanels. Ab Werk links, also genau wie bisher: die Leiste stand immer am linken
+        ''' Rand, das Panel wahlweise daneben oder rechts der Buehne.
+        '''
+        ''' Der Grund fuer die eigene Wahl: wer die Regler rechts bedient, faehrt fuer jeden
+        ''' Werkzeugwechsel quer ueber das Bild. Ein Knopf in der Leiste selbst kann das nicht
+        ''' leisten: er hat zwei Stellungen, die Wahl hier hat drei.</summary>
+        Public Property EditorToolSelectorSide As String = AppSettingsService.ToolSelectorSideDefault
         ''' <summary>Breite des Anpassungspanels im Editor, in Punkten. Gemerkter Bedienzustand wie
         ''' die eingeklappte Werkzeugleiste: gezogen wird sie am Rand des Panels, nicht im
         ''' Einstellungsdialog.
@@ -1552,6 +1570,7 @@ Namespace Services
                 settings.RawDemosaicAlgorithm = NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
                 NormalizeMacGraphicsSettings(settings)
                 settings.PickerReadout = NormalizePickerReadout(settings.PickerReadout)
+                settings.EditorToolSelectorSide = NormalizeToolSelectorSide(settings.EditorToolSelectorSide)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.ViewerDoubleClickTarget = NormalizeViewerDoubleClickTarget(settings.ViewerDoubleClickTarget)
                 settings.EditorHomeTarget = NormalizeEditorHomeTarget(settings.EditorHomeTarget)
@@ -1804,6 +1823,7 @@ Namespace Services
                 settings.RawDemosaicAlgorithm = NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
                 NormalizeMacGraphicsSettings(settings)
                 settings.PickerReadout = NormalizePickerReadout(settings.PickerReadout)
+                settings.EditorToolSelectorSide = NormalizeToolSelectorSide(settings.EditorToolSelectorSide)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.ViewerDoubleClickTarget = NormalizeViewerDoubleClickTarget(settings.ViewerDoubleClickTarget)
                 settings.EditorHomeTarget = NormalizeEditorHomeTarget(settings.EditorHomeTarget)
@@ -3076,6 +3096,42 @@ Namespace Services
                 If String.Equals(choice, trimmed, StringComparison.OrdinalIgnoreCase) Then Return choice
             Next
             Return MacRenderingModeDefault
+        End Function
+
+        ''' <summary>Die drei Modi der Werkzeugleiste, wie der Einstellungsdialog sie zeigt. Sie
+        ''' werden NICHT gespeichert: gespeichert sind der Klappzustand (EditorToolSidebarCollapsed)
+        ''' und die Automatik (EditorToolSelectorAuto), der Modus ist eine Sicht auf beide.</summary>
+        Public Const ToolSelectorModeAuto As String = "Auto"
+        Public Const ToolSelectorModeCompact As String = "Compact"
+        Public Const ToolSelectorModeExpanded As String = "Expanded"
+
+        ''' <summary>Der Modus aus den beiden gespeicherten Werten.</summary>
+        Public Shared Function ToolSelectorModeOf(auto As Boolean, collapsed As Boolean) As String
+            If auto Then Return ToolSelectorModeAuto
+            Return If(collapsed, ToolSelectorModeCompact, ToolSelectorModeExpanded)
+        End Function
+
+        ''' <summary>Die Werkzeugleiste steht ab Werk links, wie sie immer stand; mit dem Klappzustand
+        ''' "aus" und abgeschalteter Automatik sieht der Editor nach dem Update aus wie vorher.</summary>
+        Public Const ToolSelectorSideDefault As String = "Left"
+
+        ''' <summary>Die waehlbaren Seiten der Werkzeugleiste, in der Reihenfolge der Auswahlliste. Die
+        ''' Namen liegen in der settings.json und sind keine Anzeigetexte.</summary>
+        Public Shared ReadOnly ToolSelectorSideChoices As String() = {"Left", "WithAdjustments", "Right"}
+
+        Public Const ToolSelectorSideLeft As String = "Left"
+        Public Const ToolSelectorSideWithAdjustments As String = "WithAdjustments"
+        Public Const ToolSelectorSideRight As String = "Right"
+
+        ''' <summary>Macht aus jedem Wert eine der drei Seiten: leer oder unbekannt wird die Vorgabe,
+        ''' damit ein verstuemmelter Bestand die Leiste nicht irgendwohin oder gar nicht stellt.</summary>
+        Public Shared Function NormalizeToolSelectorSide(value As String) As String
+            If String.IsNullOrWhiteSpace(value) Then Return ToolSelectorSideDefault
+            Dim trimmed = value.Trim()
+            For Each choice In ToolSelectorSideChoices
+                If String.Equals(choice, trimmed, StringComparison.OrdinalIgnoreCase) Then Return choice
+            Next
+            Return ToolSelectorSideDefault
         End Function
 
         ''' <summary>Die Anzeige neben der Pipette nennt ab Werk Hex-Wert und R G B.</summary>

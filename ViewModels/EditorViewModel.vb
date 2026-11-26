@@ -5323,22 +5323,218 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Linke Werkzeugleiste eingeklappt: nur Symbole, keine Beschriftungen. Gemerkt in
-        ''' den Einstellungen (EditorToolSidebarCollapsed), umgeschaltet über den Knopf in der Leiste.</summary>
+        ''' <summary>Werkzeugleiste eingeklappt: nur Symbole, keine Beschriftungen. Gemerkt in den
+        ''' Einstellungen (EditorToolSidebarCollapsed), umgeschaltet ueber den Knopf in der Fusszeile
+        ''' oder ueber den Modus im Einstellungsdialog. Im automatischen Modus ist das der Zustand,
+        ''' in den die Leiste zurueckfaellt, wenn die Automatik abgeschaltet wird.</summary>
         Public ReadOnly Property IsToolSidebarCollapsed As Boolean
             Get
                 Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso _mainVm.Settings.EditorToolSidebarCollapsed
             End Get
         End Property
 
-        Public ReadOnly Property AreToolSidebarLabelsVisible As Boolean
+        ''' <summary>Wie die Werkzeugleiste zeigt: automatisch, nur Symbole, oder immer mit Text. Eine
+        ''' Sicht auf den Klappzustand und die Automatik (SettingsViewModel.EditorToolSelectorMode).</summary>
+        Public ReadOnly Property ToolSelectorMode As String
             Get
-                Return Not IsToolSidebarCollapsed
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then
+                    Return AppSettingsService.ToolSelectorModeExpanded
+                End If
+                Return _mainVm.Settings.EditorToolSelectorMode
             End Get
         End Property
 
-        ''' <summary>Steht das Anpassungspanel links neben der Werkzeugleiste statt rechts neben der
-        ''' Bühne? Aus den Einstellungen (EditorAdjustmentsPanelOnLeft), ab Werk aus.
+        ''' <summary>Wo die Werkzeugleiste steht: immer links, immer rechts, oder auf der Seite des
+        ''' Anpassungspanels. Aus den Einstellungen (EditorToolSelectorSide); ein unlesbarer Wert
+        ''' faellt auf die Vorgabe zurueck.</summary>
+        Public ReadOnly Property ToolSelectorSide As String
+            Get
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then
+                    Return AppSettingsService.ToolSelectorSideDefault
+                End If
+                Return AppSettingsService.NormalizeToolSelectorSide(_mainVm.Settings.EditorToolSelectorSide)
+            End Get
+        End Property
+
+        ''' <summary>Steht die Werkzeugleiste links? Entscheidet die Spalten jeder Werkzeugzeile und die
+        ''' Richtung ihrer Ausrichtung (ToolIconColumn, ToolLabelColumn, ToolSelectorContentAlignment).
+        '''
+        ''' Sie fragt die SEITE DER LEISTE ab und nicht die Seite des Anpassungspanels. Beides war
+        ''' bisher dasselbe; seit es eine eigene Wahl ist, gilt die Seite der Leiste - und nur in der
+        ''' Einstellung "Mit Anpassungen" ist das wieder die Seite des Panels.</summary>
+        Public ReadOnly Property IsToolSelectorOnLeft As Boolean
+            Get
+                Select Case ToolSelectorSide
+                    Case AppSettingsService.ToolSelectorSideLeft : Return True
+                    Case AppSettingsService.ToolSelectorSideRight : Return False
+                    Case Else : Return IsAdjustmentsPanelOnLeft
+                End Select
+            End Get
+        End Property
+
+        ''' <summary>Steht der Zeiger ueber der Werkzeugleiste? Nur der automatische Modus macht
+        ''' daraus Beschriftungen. Bewusst der Zeiger und nicht der Fokus: das Abfahren der Leiste
+        ''' darf keinem Werkzeug die Tastatur wegnehmen.</summary>
+        Private _toolSelectorHovered As Boolean = False
+
+        ''' <summary>Zeitnehmer fuer das spaete Auf- und Zuklappen. Ein Zeitnehmer statt eines
+        ''' sofortigen Umschaltens: wer ueber die Leiste faehrt, ohne etwas zu wollen, soll nicht
+        ''' jedes Mal sehen, wie das Bild seitlich springt.</summary>
+        Private _toolSelectorHoverTimer As DispatcherTimer
+
+        ''' <summary>Wartezeit, bis die Leiste unter dem Zeiger aufgeklappt erscheint.</summary>
+        Friend Const ToolSelectorExpandDelayMs As Integer = 200
+        ''' <summary>Wartezeit bis zum Zuklappen, in derselben Groessenordnung: asymmetrisch waere
+        ''' entweder ein nervoeses Zufappen oder ein traeges Aufklappen.</summary>
+        Friend Const ToolSelectorCollapseDelayMs As Integer = 200
+
+        ''' <summary>Der Zeiger steht ueber der Werkzeugleiste: die Wartezeit beginnt von vorn. Steht
+        ''' die Leiste schon offen, tut sie nichts - die Hande wandern ueber die Knopfe, und niemand
+        ''' soll sehen, wie sie vor jedem Knopf von neuem zaehlt.</summary>
+        Public Sub BeginToolSelectorHover()
+            If _toolSelectorHovered Then Return
+            StartToolSelectorTimer(ToolSelectorExpandDelayMs)
+        End Sub
+
+        ''' <summary>Der Zeiger hat die Werkzeugleiste verlassen. War das Aufklappen noch ausstehend,
+        ''' entfaellt es ersatzlos, ohne dass irgendwo etwas geklappt haette.</summary>
+        Public Sub EndToolSelectorHover()
+            If Not _toolSelectorHovered Then
+                If _toolSelectorHoverTimer IsNot Nothing Then _toolSelectorHoverTimer.Stop()
+                Return
+            End If
+            StartToolSelectorTimer(ToolSelectorCollapseDelayMs)
+        End Sub
+
+        Private Sub StartToolSelectorTimer(zeitMs As Integer)
+            If _toolSelectorHoverTimer Is Nothing Then
+                _toolSelectorHoverTimer = New DispatcherTimer()
+                AddHandler _toolSelectorHoverTimer.Tick, AddressOf OnToolSelectorHoverTimer
+            End If
+            _toolSelectorHoverTimer.Interval = TimeSpan.FromMilliseconds(zeitMs)
+            _toolSelectorHoverTimer.Stop()
+            _toolSelectorHoverTimer.Start()
+        End Sub
+
+        Private Sub OnToolSelectorHoverTimer(sender As Object, e As EventArgs)
+            If _toolSelectorHoverTimer IsNot Nothing Then _toolSelectorHoverTimer.Stop()
+            SetToolSelectorHovered(Not _toolSelectorHovered)
+        End Sub
+
+        ''' <summary>Nach einer Umschaltung des Modus gilt der alte Zeigerstand nicht mehr: ein
+        ''' ausstehender Lauf waeme in den neuen Modus hinein. Der Stand geht in die Ruhelage des
+        ''' neuen Modus zurueck.</summary>
+        Public Sub CancelToolSelectorHover()
+            If _toolSelectorHoverTimer IsNot Nothing Then _toolSelectorHoverTimer.Stop()
+            SetToolSelectorHovered(False)
+        End Sub
+
+        Private Sub SetToolSelectorHovered(value As Boolean)
+            If _toolSelectorHovered = value Then Return
+            _toolSelectorHovered = value
+            Me.RaisePropertyChanged(NameOf(AreToolSidebarLabelsVisible))
+            Me.RaisePropertyChanged(NameOf(ToolRowColumnSpacing))
+            Me.RaisePropertyChanged(NameOf(ToolGroupHeadingOpacity))
+            Me.RaisePropertyChanged(NameOf(AreToolGroupSeparatorsVisible))
+            Me.RaisePropertyChanged(NameOf(ToolSidebarWidth))
+        End Sub
+
+        ''' <summary>Zeigt die Werkzeugleiste gerade ihre Beschriftungen?
+        '''
+        ''' Der feste Modus sagt es allein; nur der automatische haengt am Zeiger. Frueher haengte das
+        ''' noch an der Seite des Anpassungspanels: links sollte die Leiste immer breit bleiben. Das war
+        ''' ein Irrtum. Die Symbole springen gerade nicht, wenn die Leiste schmaler wird, weil sie an
+        ''' der Kante sitzen, die sich nie bewegt (siehe ToolIconColumn) - und genau deshalb gilt das
+        ''' Einklappen auf beiden Seiten gleich gut. Der Preis ist dasselbe: die schmale Leiste liegt
+        ''' im automatischen Modus ueber einem Stueck Bild. Dafuer steht das Bild, wenn die Leiste
+        ''' unter dem Zeiger aufklappt.</summary>
+        Public ReadOnly Property AreToolSidebarLabelsVisible As Boolean
+            Get
+                Select Case ToolSelectorMode
+                    Case AppSettingsService.ToolSelectorModeCompact : Return False
+                    Case AppSettingsService.ToolSelectorModeExpanded : Return True
+                    Case Else : Return _toolSelectorHovered
+                End Select
+            End Get
+        End Property
+
+        ''' <summary>Spalte des Zeilenrasters fuer das Symbol: die Kante der Leiste, die sich nie
+        ''' bewegt. Die Leiste haengt aussen an der Buehne; steht sie links, ist das der linke Rand,
+        ''' steht sie rechts, der rechte. An dieser Kante bleibt das Symbol auch dann, wenn sein Text
+        ''' fehlt oder eine Uebersetzung breiter ist.</summary>
+        Public ReadOnly Property ToolIconColumn As Integer
+            Get
+                Return If(IsToolSelectorOnLeft, 0, 1)
+            End Get
+        End Property
+
+        ''' <summary>Spalte des Zeilenrasters fuer die Beschriftung: die Seite gegenueber dem Symbol,
+        ''' also die, die nach aussen zeigt. Siehe ToolIconColumn.</summary>
+        Public ReadOnly Property ToolLabelColumn As Integer
+            Get
+                Return If(IsToolSelectorOnLeft, 1, 0)
+            End Get
+        End Property
+
+        ''' <summary>Ausrichtung des Knopfinhalts an dieselbe Kante wie das Symbol. Ohne sie zentrete
+        ''' der Inhalt in der Zeile, und das Symbol wanderte mit der Breite seiner Beschriftung.</summary>
+        Public ReadOnly Property ToolSelectorContentAlignment As Avalonia.Layout.HorizontalAlignment
+            Get
+                Return If(IsToolSelectorOnLeft, Avalonia.Layout.HorizontalAlignment.Left,
+                                          Avalonia.Layout.HorizontalAlignment.Right)
+            End Get
+        End Property
+
+        ''' <summary>Der Abstand zwischen Symbol und Beschriftung in einer Werkzeugzeile. Er gilt nur,
+        ''' wenn es in der Zeile wirklich beide gibt.
+        '''
+        ''' In der schmalen Leiste ist die Beschriftung ausgeblendet; ihre Spalte bleibt mit der Breite
+        ''' 0 stehen, der Spaltenabstand wird aber trotzdem gerechnet. Er liegt dann zwischen dem
+        ''' Symbol und der Kante, an der es sitzt, und drueckt das Symbol um zehn Punkte weiter nach
+        ''' aussen - hinaus ueber die Innenrandangabe des Knopfes. Nach innen faellt derselbe Abstand
+        ''' nicht auf: dort liegt er hinter dem Symbol und ist bloss toter Raum.
+        '''
+        ''' Das war der Unterschied zwischen den beiden Seiten. Links stand das Symbol ruhig und
+        ''' mittig; rechts klebte es an der Aussenkante und rueckte beim Aufklappen zehn Punkte nach
+        ''' innen. Ohne Abstand in der schmalen Leiste verhalten sich beide Seiten gleich.
+        '''
+        ''' Der Wert haengt am selben Stand wie AreToolSidebarLabelsVisible und wird dort mit
+        ''' geweckt (SetToolSelectorHovered, RefreshLayoutBindings).</summary>
+        Public ReadOnly Property ToolRowColumnSpacing As Double
+            Get
+                Return If(AreToolSidebarLabelsVisible, 10.0, 0.0)
+            End Get
+        End Property
+
+        ''' <summary>Ausrichtung der Gruppenueberschriften: auf die Seite des Textes, also gegenueber
+        ''' der Symbolkante. Unsichtbar statt weggenommen bleibt trotzdem (ToolGroupHeadingOpacity).</summary>
+        Public ReadOnly Property ToolGroupHeadingAlignment As Avalonia.Layout.HorizontalAlignment
+            Get
+                Return If(IsToolSelectorOnLeft, Avalonia.Layout.HorizontalAlignment.Right,
+                                          Avalonia.Layout.HorizontalAlignment.Left)
+            End Get
+        End Property
+
+        ''' <summary>Die Deckkraft der Gruppenueberschriften. Unsichtbar statt weggenommen ist der
+        ''' ganze Trick gegen das Springen: die Zeile behaelt ihren Platz, und kein Symbol unterhalb
+        ''' einer Gruppe macht einen Sprung nach oben. Waere die Zeile weg, wanderten alle Symbole
+        ''' darunter.</summary>
+        Public ReadOnly Property ToolGroupHeadingOpacity As Double
+            Get
+                Return If(AreToolSidebarLabelsVisible, 1.0, 0.0)
+            End Get
+        End Property
+
+        ''' <summary>In der schmalen Leiste stehen die Trennlinien dort, wo sonst die
+        ''' Gruppenueberschriften stehen.</summary>
+        Public ReadOnly Property AreToolGroupSeparatorsVisible As Boolean
+            Get
+                Return Not AreToolSidebarLabelsVisible
+            End Get
+        End Property
+
+        ''' <summary>Steht das Anpassungspanel links von der Bearbeitungsflaeche statt rechts? Aus den
+        ''' Einstellungen (EditorAdjustmentsPanelOnLeft), ab Werk aus.
         '''
         ''' Die Ansicht setzt daraufhin die Spalten des Wurzelrasters um, siehe
         ''' UpdateAdjustmentsPanelSide in EditorView.</summary>
@@ -5375,14 +5571,49 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Breite der linken Werkzeugleiste. Eingeklappt bleibt genau Platz für die Symbole
-        ''' samt Knopf-Innenabstand (Leisten-Padding 8+8, Knopf-Padding 10, Symbol 18). Ausgeklappt
-        ''' waechst sie mit der Schriftgroesse mit: bei fester Breite schnitt der laengste Eintrag
-        ''' ("Drehen und Verzerren") ab einem Schriftversatz von etwa +3 sein letztes Wort ab, und das
-        ''' sah aus wie ein fehlender Text. Zehn Punkt je Schriftpunkt decken den laengsten Eintrag ab.</summary>
+        ''' <summary>Breite der Werkzeugleiste im Zustand, den sie gerade zeigt: ausgeklappt Platz
+        ''' fuer Symbol und Beschriftung, eingeklappt genau Platz fuer das Symbol samt
+        ''' Innenabstaenden (Leisten-Padding 8+8, Knopf-Padding 10+10, Symbol 18).
+        '''
+        ''' Die ausgeklappte Zahl waechst mit der Schriftgroesse mit: bei fester Breite schnitt der
+        ''' laengste Eintrag ("Drehen und Verzerren") ab einem Schriftversatz von etwa +3 sein letztes
+        ''' Wort ab, und das sah aus wie ein fehlender Text. Zehn Punkt je Schriftpunkt decken den
+        ''' laengsten Eintrag ab.</summary>
         Public ReadOnly Property ToolSidebarWidth As Double
             Get
-                If IsToolSidebarCollapsed Then Return 54.0
+                Return If(AreToolSidebarLabelsVisible, ExpandedToolSelectorWidth, CompactToolSelectorWidth)
+            End Get
+        End Property
+
+        ''' <summary>Breite, die die Werkzeugleiste dem Bild dauernd wegnimmt.
+        '''
+        ''' Im festen Modus "nur Symbole" und im festen "mit Text" ist das ihre jeweilige Breite. Nur im
+        ''' automatischen Modus bleibt sie bei der schmalen, und zwar auf beiden Seiten gleich: das
+        ''' Aufklappen unter dem Zeiger liegt UEBER dem Bild und darf ihm nichts wegnehmen, sonst
+        ''' wuerde beim Fahren ueber die Leiste das Bild springen (siehe den Hinweis auf
+        ''' ApplyToolSelectorLayout in EditorView).</summary>
+        Public ReadOnly Property ToolSelectorReservedWidth As Double
+            Get
+                If ToolSelectorMode = AppSettingsService.ToolSelectorModeAuto Then
+                    Return CompactToolSelectorWidth
+                End If
+                Return ToolSidebarWidth
+            End Get
+        End Property
+
+        ''' <summary>Schmaler Zustand der Werkzeugleiste. Bei 54: Leisten-Padding 8+8,
+        ''' Knopf-Padding 10+10, Symbol 18.</summary>
+        Public ReadOnly Property CompactToolSelectorWidth As Double
+            Get
+                Return 54.0
+            End Get
+        End Property
+
+        ''' <summary>Breite der ausgeklappten Leiste. Der Zuschlag je Schriftpunkt steht hier, weil
+        ''' der laengste Eintrag bei fester Breite sein letztes Wort abschnitt; die Begruendung bei
+        ''' <see cref="ToolSidebarWidth"/>.</summary>
+        Public ReadOnly Property ExpandedToolSelectorWidth As Double
+            Get
                 Return 190.0 + Math.Max(0, FontScaleService.CurrentOffset) * 10.0
             End Get
         End Property
@@ -20072,9 +20303,15 @@ Namespace ViewModels
                                                                    _mainVm.Settings.EditorLayersPanelExpanded = Not _mainVm.Settings.EditorLayersPanelExpanded
                                                                    Me.RaisePropertyChanged(NameOf(IsLayersPanelVisible))
                                                                End Sub)
+            ' Der Knopf legt die Leiste FEST: aus dem gerade sichtbaren Zustand in den anderen, und
+            ' die Automatik geht dabei aus. Wer im automatischen Modus klickt, will die Leiste so
+            ' oder so stehen haben und nicht weiter dem Zeiger ueberlassen.
             ToggleToolSidebarCommand = ReactiveCommand.Create(Sub()
                                                                   If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
-                                                                  _mainVm.Settings.EditorToolSidebarCollapsed = Not _mainVm.Settings.EditorToolSidebarCollapsed
+                                                                  Dim zeigtText = AreToolSidebarLabelsVisible
+                                                                  CancelToolSelectorHover()
+                                                                  _mainVm.Settings.EditorToolSelectorAuto = False
+                                                                  _mainVm.Settings.EditorToolSidebarCollapsed = zeigtText
                                                                   Me.RaisePropertyChanged(NameOf(IsToolSidebarCollapsed))
                                                                   Me.RaisePropertyChanged(NameOf(AreToolSidebarLabelsVisible))
                                                                   Me.RaisePropertyChanged(NameOf(ToolSidebarWidth))

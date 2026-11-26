@@ -12473,4 +12473,31 @@
   <data name="Nichts_wurde_umbenannt_91f18288" xml:space="preserve">
     <value>Nada foi renomeado.</value>
   </data>
+  <data name="Legt_fest_in_welcher_Reihenfolge_die_Gruppen_in__efc8d637" xml:space="preserve">
+    <value>Define a ordem dos grupos na barra de ferramentas do editor.</value>
+  </data>
+  <data name="Werkzeugleiste_78b91335" xml:space="preserve">
+    <value>Barra de ferramentas</value>
+  </data>
+  <data name="Nur_Symbole_spart_am_meisten_Platz_f_r_das_Bild__1664a739" xml:space="preserve">
+    <value>Só ícones deixa mais espaço para a imagem; os grupos ficam separados por traços em vez de títulos. Com texto, a barra fica aberta e larga ao lado do painel. Automático mantém a barra estreita e a abre sobre a imagem assim que o ponteiro fica um instante sobre ela. O espaço para a imagem não muda.</value>
+  </data>
+  <data name="Nur_Symbole_c4a487b7" xml:space="preserve">
+    <value>Só ícones</value>
+  </data>
+  <data name="Mit_Text_b34c864f" xml:space="preserve">
+    <value>Com texto</value>
+  </data>
+  <data name="name_fx_erzeugt_etwa_Foto_fx_ist_ein_Z_hler_311d0634" xml:space="preserve">
+    <value>{name}_fx produz por exemplo Foto_fx; ### é um contador.</value>
+  </data>
+  <data name="Seite_der_Werkzeugleiste_70a2e880" xml:space="preserve">
+    <value>Lado da barra de ferramentas</value>
+  </data>
+  <data name="Wo_die_Werkzeugleiste_steht_immer_links_immer_re_f3efb3e4" xml:space="preserve">
+    <value>Onde a barra de ferramentas fica: sempre à esquerda, sempre à direita, ou do lado do painel de ajustes. Do lado do painel ficam juntos a escolha da ferramenta e os controles da ferramenta escolhida. Um lado fixo deixa a barra no lugar mesmo quando o painel muda de lado.</value>
+  </data>
+  <data name="Mit_Anpassungen_541da366" xml:space="preserve">
+    <value>Com ajustes</value>
+  </data>
 </root>
