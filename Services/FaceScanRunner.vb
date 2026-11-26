@@ -298,6 +298,47 @@ Namespace Services
             Next
         End Sub
 
+        ''' <summary>Traegt ein Gesicht ein, das der Benutzer selbst um ein Gesicht gezogen hat.
+        '''
+        ''' DIESELBE BILDQUELLE WIE DIE SUCHE (<see cref="DecodeUprightForFaces"/>), durch dieselbe
+        ''' Decode-Schleuse: der Kasten liegt in ihren Bildpunkten, und nur in genau diesem Bild
+        ''' passen Merkmale, Ausschnitt in der Leiste und Region in der Beistelldatei zusammen.
+        ''' Liest sich die Datei nicht, wird das Gesicht ohne Merkmale eingetragen - der Name
+        ''' traegt dann trotzdem, nur Vorschlaege fuer andere Bilder macht es keine.</summary>
+        ''' <param name="box">Der Kasten in Bildpunkten der Suchquelle (FaceFrameLayout.UnmapBox).</param>
+        ''' <param name="referenceWidth">Breite der Suchquelle, in der <paramref name="box"/> gemessen
+        ''' ist (XmpFaceRegionService.ReadOrientedPixelSize).</param>
+        Public Shared Function AddMarkedFace(filePath As String,
+                                             box As (X As Double, Y As Double, Width As Double, Height As Double),
+                                             referenceWidth As Integer, referenceHeight As Integer,
+                                             name As String) As (Outcome As LibraryService.MarkedFaceOutcome, FaceId As String, HasEmbedding As Boolean)
+            If String.IsNullOrWhiteSpace(filePath) OrElse box.Width < 1 OrElse box.Height < 1 Then
+                Return (LibraryService.MarkedFaceOutcome.Invalid, Nothing, False)
+            End If
+            Dim x = box.X, y = box.Y, w = box.Width, h = box.Height
+            Dim embedding As Single() = Nothing
+            Try
+                Using bitmap = DecodeGate.Run(Function() DecodeUprightForFaces(filePath))
+                    If bitmap IsNot Nothing AndAlso referenceWidth > 0 AndAlso referenceHeight > 0 Then
+                        ' Gleich gross ist der Normalfall; weicht es ab, wird umgerechnet statt an
+                        ' der falschen Stelle gesucht.
+                        Dim sx = bitmap.Width / CDbl(referenceWidth), sy = bitmap.Height / CDbl(referenceHeight)
+                        Dim face = FaceDetectionService.DescribeMarkedFace(bitmap,
+                            New SKRect(CSng(x * sx), CSng(y * sy), CSng((x + w) * sx), CSng((y + h) * sy)))
+                        If face IsNot Nothing Then
+                            x = face.X / sx : y = face.Y / sy
+                            w = face.Width / sx : h = face.Height / sy
+                            embedding = face.Embedding
+                        End If
+                    End If
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gesichter.Markieren", ex)
+            End Try
+            Dim result = LibraryService.Instance.AddMarkedFace(filePath, x, y, w, h, embedding, name)
+            Return (result.Outcome, result.FaceId, embedding IsNot Nothing AndAlso embedding.Length > 0)
+        End Function
+
         ''' <summary>Der Vermerk, unter dem ein Bild als durchsucht gilt. Die Scan-Fassung gehoert
         ''' MIT hinein, sonst gilt ein Bild als erledigt, das eine aeltere Fassung anders gesehen
         ''' hat - siehe <see cref="ScanVersion"/>. Eigene Funktion, damit der Durchlauf und

@@ -58,11 +58,16 @@ Namespace ViewModels
     Public NotInheritable Class FaceFocusRequest
         Inherits EventArgs
 
-        Public Sub New(toLast As Boolean)
+        Public Sub New(toLast As Boolean, Optional faceId As String = Nothing)
             Me.ToLast = toLast
+            Me.FaceId = faceId
         End Sub
 
         Public ReadOnly Property ToLast As Boolean
+
+        ''' <summary>Gesetzt, wenn genau dieses Gesicht gemeint ist (eben von Hand markiert); dann
+        ''' gilt <see cref="ToLast"/> nicht.</summary>
+        Public ReadOnly Property FaceId As String
     End Class
 
 End Namespace

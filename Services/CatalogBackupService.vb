@@ -88,7 +88,7 @@ Namespace Services
     ''' Zugangsdaten, behaelt die zurueckgeholte Einstellungsdatei die jetzigen.
     '''
     ''' DIE GESPEICHERTEN ANPASSUNGEN sind kein einzelnes Stueck, sondern ein Ordnerbaum aus Dateien
-    ''' (AdjustmentPresetStore), womoeglich an einem selbst gewaehlten Ort. Gesichert wird jede
+    ''' (AdjustmentPresetStore) unter "presets" im Datenordner. Gesichert wird jede
     ''' lesbare Vorlage des geltenden Ordners als eigener Eintrag "presets/Ordner/Datei" mit
     ''' Pruefsumme; Fremdes und Kaputtes im Ordner bleibt draussen. Ist der Ordner beim Sichern nicht
     ''' erreichbar, fehlt der Teil, und das Inhaltsverzeichnis nennt den Ordner
@@ -109,6 +109,13 @@ Namespace Services
         Private Const StagedPresetsName As String = "presets"
         Private Const CurrentFormatVersion As Integer = 1
         Private Shared ReadOnly SecretFieldNames As String() = {"ImmichApiKey", "NextcloudAppPassword"}
+        ''' Die Angaben, die dem Rechner gehoeren und nie aus einer Sicherung kommen: wo der
+        ''' Datenordner liegt und welche Aufteilung der Orte erreicht ist. Eine Sicherung von einem
+        ''' anderen Rechner oder von frueher zeigte sonst auf einen Ort, an dem nichts liegt.
+        Private Shared ReadOnly LocalFieldNames As String() = {
+            NameOf(AppSettings.DataFolder), NameOf(AppSettings.DataFolderPending),
+            NameOf(AppSettings.DataFolderPendingAdopt), NameOf(AppSettings.FolderLayoutVersion),
+            NameOf(AppSettings.AdjustmentPresetFolder)}
 
         ''' <summary>Von dem Gewaehlten gibt es nichts: keine der Dateien, keine Anpassung. Eine
         ''' eigene Art, damit das Bereitlegen den leeren Stand vom echten Fehler trennen kann.</summary>
@@ -125,13 +132,7 @@ Namespace Services
 
         Private Shared ReadOnly Property DataDirectory As String
             Get
-                Return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix")
-            End Get
-        End Property
-
-        Private Shared ReadOnly Property ConfigDirectory As String
-            Get
-                Return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FerrumPix")
+                Return AppFolders.DataRoot
             End Get
         End Property
 
@@ -152,12 +153,12 @@ Namespace Services
         ''' <summary>Name in der ZIP, Teil und Ort auf der Platte jeder Datei.</summary>
         Private Shared Function KnownFiles() As List(Of (Name As String, Part As BackupParts, Target As String, IsDatabase As Boolean))
             Return New List(Of (String, BackupParts, String, Boolean)) From {
-                ("library.db", BackupParts.Catalog, Path.Combine(DataDirectory, "library.db"), True),
+                ("library.db", BackupParts.Catalog, AppFolders.CatalogPath, True),
                 ("immich-index.db", BackupParts.ServerIndexes, Path.Combine(DataDirectory, "immich-index.db"), True),
                 ("nextcloud-index.db", BackupParts.ServerIndexes, Path.Combine(DataDirectory, "nextcloud-index.db"), True),
-                ("settings.json", BackupParts.Settings, Path.Combine(ConfigDirectory, "settings.json"), False),
-                ("favorites.json", BackupParts.Favorites, Path.Combine(ConfigDirectory, "favorites.json"), False),
-                ("searchlists.json", BackupParts.Searches, Path.Combine(ConfigDirectory, "searchlists.json"), False)
+                ("settings.json", BackupParts.Settings, AppFolders.SettingsPath, False),
+                ("favorites.json", BackupParts.Favorites, AppFolders.FavoritesPath, False),
+                ("searchlists.json", BackupParts.Searches, AppFolders.SearchListsPath, False)
             }
         End Function
 
@@ -299,7 +300,7 @@ Namespace Services
 
         ''' Derselbe Wortlaut wie im Editor und in der Verwaltung der Anpassungen.
         Private Shared Function UnreachablePresetFolderText(folder As String) As String
-            Return String.Format(LocalizationService.T("Der Ordner für Anpassungen ist nicht erreichbar: {0}. Er wird in den Einstellungen unter Editor festgelegt."), folder)
+            Return String.Format(LocalizationService.T("Der Ordner für Anpassungen ist nicht erreichbar: {0}."), folder)
         End Function
 
         Private Shared Function IsPresetEntry(name As String) As Boolean
@@ -322,21 +323,11 @@ Namespace Services
             Return Path.Combine(directory, index.ToString(CultureInfo.InvariantCulture) & AdjustmentPresetStore.FileExtension)
         End Function
 
-        ''' <summary>Der Ordner der Anpassungen, der NACH dem Einspielen gilt: steht eine
-        ''' Einstellungsdatei bereit, der aus ihr, sonst der jetzige.</summary>
+        ''' <summary>Der Ordner der Anpassungen, der NACH dem Einspielen gilt.</summary>
         Private Shared Function PresetRootAfterRestore(staging As String) As String
-            Dim settingsStaged = Path.Combine(staging, "settings.json")
-            If Not File.Exists(settingsStaged) Then Return AdjustmentPresetStore.ConfiguredRoot
-            Dim custom = ""
-            Try
-                Dim root = TryCast(JsonNode.Parse(File.ReadAllText(settingsStaged)), JsonObject)
-                Dim value = TryCast(root?("AdjustmentPresetFolder"), JsonValue)
-                Dim text As String = Nothing
-                If value IsNot Nothing AndAlso value.TryGetValue(Of String)(text) Then custom = If(text, "").Trim()
-            Catch ex As Exception
-                DiagnosticLogService.LogException("Backup.PresetRoot", ex)
-            End Try
-            Return If(custom.Length > 0, custom, AdjustmentPresetStore.DefaultRoot)
+            ' Die Anpassungen liegen immer im Datenordner; eine Einstellungsdatei aus der Sicherung
+            ' aendert daran nichts.
+            Return AdjustmentPresetStore.DefaultRoot
         End Function
 
         ''' <summary>Liest die bereitgelegten Anpassungen in den geltenden Ordner ein, nach der
@@ -500,6 +491,13 @@ Namespace Services
             If Not RecoverInterruptedRestore() Then Return
             Dim staging = StagingDirectory
             If Not Directory.Exists(staging) Then Return
+            ' Gehoert der Katalog gerade einem anderen Rechner (oder ist der Datenordner nicht
+            ' erreichbar), bleibt das Bereitgelegte liegen, bis dieser Rechner ihn wieder hat:
+            ' sonst ersetzte er die Datei unter einem laufenden FerrumPix.
+            If Not CatalogLock.HasCatalog Then
+                DiagnosticLogService.LogAlways("Backup.ApplyPendingRestore", "catalog not owned by this machine, restore stays staged")
+                Return
+            End If
             Try
                 Dim useBackupSecrets = False
                 Dim info = Path.Combine(staging, "restore.json")
@@ -509,9 +507,11 @@ Namespace Services
                 End If
                 ' Erst alles vorbereiten, was die jetzigen Dateien noch lesen muss.
                 Dim settingsStaged = Path.Combine(staging, "settings.json")
-                If File.Exists(settingsStaged) AndAlso Not useBackupSecrets Then
+                If File.Exists(settingsStaged) Then
                     Dim settingsTarget = KnownFiles().First(Function(k) k.Name = "settings.json").Target
-                    File.WriteAllText(settingsStaged, WithSecretsFrom(File.ReadAllText(settingsStaged), settingsTarget))
+                    Dim keep As IEnumerable(Of String) = LocalFieldNames
+                    If Not useBackupSecrets Then keep = keep.Concat(SecretFieldNames)
+                    File.WriteAllText(settingsStaged, WithFieldsFrom(File.ReadAllText(settingsStaged), settingsTarget, keep))
                 End If
                 ReplaceAllOrNothing(staging)
                 ' Ab hier gelten die zurueckgeholten Einstellungen, auch fuer den Ordner der
@@ -777,8 +777,10 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Die zurueckgeholte Einstellungsdatei mit den Zugangsdaten der jetzigen.</summary>
-        Private Shared Function WithSecretsFrom(json As String, currentFile As String) As String
+        ''' <summary>Die zurueckgeholte Einstellungsdatei mit den genannten Feldern der jetzigen:
+        ''' den Angaben des Rechners (<see cref="LocalFieldNames"/>) und, wenn sie nicht aus der
+        ''' Sicherung kommen sollen, den Zugangsdaten.</summary>
+        Private Shared Function WithFieldsFrom(json As String, currentFile As String, names As IEnumerable(Of String)) As String
             Try
                 Dim root = TryCast(JsonNode.Parse(json), JsonObject)
                 If root Is Nothing Then Return json
@@ -786,7 +788,7 @@ Namespace Services
                 If current Is Nothing Then current = New JsonObject()
                 ' Ganz ersetzen, nicht nur ergaenzen: wer die Zugangsdaten abgewaehlt hat, bekommt
                 ' auch dann keine aus der Sicherung, wenn sie welche enthielt.
-                For Each name In SecretFieldNames
+                For Each name In names
                     root.Remove(name)
                     Dim value As JsonNode = Nothing
                     If current.TryGetPropertyValue(name, value) AndAlso value IsNot Nothing Then root(name) = value.DeepClone()

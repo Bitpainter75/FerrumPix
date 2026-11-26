@@ -78,11 +78,14 @@ Namespace Services
 
         ''' <summary>Wo die Sperrdatei liegt: neben der Bibliothek, damit sie denselben Bestand
         ''' meint. Zwei Anwendungen mit verschiedenen Datenordnern sperren sich damit auch nicht
-        ''' gegenseitig - sie arbeiten ja auf verschiedenen Katalogen.</summary>
+        ''' gegenseitig - sie arbeiten ja auf verschiedenen Katalogen. In einem gewaehlten
+        ''' Datenordner traegt sie den Rechnernamen (AppFolders.BackgroundRunLockPath): eine
+        ''' Dateisperre ueber eine Freigabe im Netz wirkt nicht verlaesslich, und zwei Rechner
+        ''' sollen sich nicht gegenseitig festhalten. Dass nicht zwei Rechner zugleich in den
+        ''' Katalog schreiben, regelt die Katalogsperre (CatalogLock).</summary>
         Private Shared ReadOnly Property LockPath As String
             Get
-                Dim dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix")
-                Return Path.Combine(dir, "background-run.lock")
+                Return AppFolders.BackgroundRunLockPath
             End Get
         End Property
 

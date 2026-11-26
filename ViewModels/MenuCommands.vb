@@ -1,3 +1,5 @@
+Imports System
+Imports System.Collections.Generic
 Imports System.Windows.Input
 
 Namespace ViewModels
@@ -162,6 +164,18 @@ Namespace ViewModels
         ' Wege nach draussen
         Public Property CopyPath As ICommand
         Public Property ShowInFileManager As ICommand
+
+        ''' <summary>Die Dateien auf den Rechner des Browsers holen. Nur gesetzt, wenn die Anwendung im
+        ''' Browser laeuft (<see cref="BrowserDownload"/>); auf dem Desktop gibt es nichts
+        ''' herunterzuladen, und der Eintrag faellt weg.</summary>
+        Public Property Download As ICommand
+
+        ''' <summary>Das Kommando fuer "Herunterladen", oder Nothing ausserhalb des Browsers. Die
+        ''' Pfade werden erst beim Klick gelesen, damit sie die Auswahl dieses Menues meinen.</summary>
+        Public Shared Function BrowserDownload(paths As Func(Of IEnumerable(Of String))) As ICommand
+            If Not Services.BrowserBridge.IsActive OrElse paths Is Nothing Then Return Nothing
+            Return New DelegateCommand(Sub() Services.BrowserBridge.OfferDownload(paths(), startNow:=True))
+        End Function
 
         ''' <summary>"Öffnen mit": das Kommando bekommt die Kennung des Programms als Parameter.
         ''' Die Programme stehen daneben, damit der Bauplan ohne Blick in die Einstellungen

@@ -15,6 +15,10 @@ Namespace Views.Settings
             Owner?.OnAddCatalogWatchFolderClick(sender, e)
         End Sub
 
+        Private Sub OnChooseDataFolderClick(sender As Object, e As RoutedEventArgs)
+            Owner?.OnChooseDataFolderClick(sender, e)
+        End Sub
+
         Private Sub OnBrowseForeignCatalogClick(sender As Object, e As RoutedEventArgs)
             Owner?.OnBrowseForeignCatalogClick(sender, e)
         End Sub

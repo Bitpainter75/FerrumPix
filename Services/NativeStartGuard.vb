@@ -49,8 +49,7 @@ Namespace Services
         Friend Shared ReadOnly Property GuardDirectory As String
             Get
                 If Not String.IsNullOrEmpty(DirectoryOverride) Then Return DirectoryOverride
-                Return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                                    "FerrumPix", "startschutz")
+                Return AppFolders.StartGuardFolder
             End Get
         End Property
 

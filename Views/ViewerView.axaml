@@ -318,6 +318,17 @@
                                  (UpdateImageMarkPositions), sie folgt also Zoom, Drehung und Spiegeln. -->
                             <Canvas Name="ImageMarkCanvas" IsHitTestVisible="False"
                                     IsVisible="{Binding ShowImageMarks}"/>
+                            <!-- Das Rechteck, das beim Markieren eines Gesichts aufgezogen wird. Eigene
+                                 Ebene neben den Markierungen: deren Ebene wird bei jeder Aenderung der
+                                 Rahmen neu aufgebaut, und das Rechteck soll dabei nicht verschwinden. -->
+                            <Canvas Name="FaceMarkCanvas" IsHitTestVisible="False">
+                                <Border Name="FaceMarkRect"
+                                        IsVisible="False"
+                                        IsHitTestVisible="False"
+                                        Background="#22FFFFFF"
+                                        BorderBrush="{DynamicResource FP.Accent}"
+                                        BorderThickness="2"/>
+                            </Canvas>
                             <Canvas Name="CropSelectionCanvas" IsHitTestVisible="False">
                                 <Border Name="CropSelectionRect"
                                         IsVisible="False"
@@ -377,6 +388,20 @@
                         </Button>
 
                     </Grid>
+
+                    <!-- Solange ein Gesicht markiert wird, sagt ein Schild oben ueber dem Bild, was
+                         jetzt gilt: der linke Zug zieht das Rechteck, ESC bricht ab. Ausserhalb des
+                         Rollbereichs, damit es beim Zoomen stehen bleibt. -->
+                    <Border IsVisible="{Binding IsMarkingFace}"
+                            IsHitTestVisible="False"
+                            HorizontalAlignment="Center" VerticalAlignment="Top"
+                            Margin="0,12,0,0" Padding="12,6" CornerRadius="6"
+                            Background="#CC1A1D24"
+                            BorderBrush="{DynamicResource FP.Accent}" BorderThickness="1">
+                        <TextBlock Text="Im Bild ein Rechteck um das Gesicht aufziehen. ESC bricht ab."
+                                   Foreground="White"
+                                   FontSize="{DynamicResource FP.Font.Small}"/>
+                    </Border>
 
                 </Grid>
             </Border>

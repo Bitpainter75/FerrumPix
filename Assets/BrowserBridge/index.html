@@ -8,10 +8,53 @@
   html, body { margin: 0; height: 100%; overflow: hidden; background: #0B0E11; }
   #stage { position: fixed; inset: 0; outline: none; touch-action: none; user-select: none; }
   #stage canvas { position: absolute; display: block; }
+  /* Hochladen und Herunterladen. Farben wie das dunkle Erscheinungsbild der Anwendung. */
+  .fp-layer { position: fixed; z-index: 10000; font: 13px/1.4 system-ui, sans-serif; color: #E7ECF0; }
+  #drop { inset: 0; display: none; align-items: center; justify-content: center; pointer-events: none;
+          background: rgba(11, 14, 17, 0.72); border: 3px dashed #F08A1A; box-sizing: border-box; font-size: 20px; }
+  #drop.on { display: flex; }
+  #uploadButton { right: 0; top: 50%; transform: translateY(-50%); width: 26px; height: 52px; padding: 0;
+                  border: 1px solid #2A333C; border-right: none; border-radius: 8px 0 0 8px; background: #192128;
+                  color: #E7ECF0; opacity: 0.45; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  #uploadButton:hover, #uploadButton:focus-visible { opacity: 1; }
+  #panel { right: 16px; bottom: 16px; width: min(380px, calc(100vw - 32px)); max-height: 60vh; display: none;
+           flex-direction: column; background: #192128; border: 1px solid #2A333C; border-radius: 10px;
+           box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5); overflow: hidden; }
+  #panel.on { display: flex; }
+  #panel header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #2A333C; }
+  #panel header span { flex: 1; }
+  #rows { overflow-y: auto; padding: 4px 0; }
+  .row { padding: 6px 12px; }
+  .row .name { display: flex; gap: 8px; }
+  .row .name span:first-child { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .state { color: #9AA6B2; white-space: nowrap; }
+  .row.failed .state { color: #F0603A; }
+  .row.done .state { color: #6CC28A; }
+  .bar { height: 3px; margin-top: 4px; background: #2A333C; border-radius: 2px; overflow: hidden; }
+  .bar div { height: 100%; width: 0; background: #F08A1A; }
+  #overall { margin: 0 12px 10px; }
+  .fp-button { border: 1px solid #2A333C; border-radius: 6px; background: #0B0E11; color: #E7ECF0;
+               padding: 4px 10px; font: inherit; cursor: pointer; }
+  .fp-button.accent { background: #F08A1A; border-color: #F08A1A; color: #0B0E11; }
+  #offers { right: 16px; top: 16px; display: flex; flex-direction: column; gap: 8px; width: min(380px, calc(100vw - 32px)); }
+  .offer { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #192128;
+           border: 1px solid #2A333C; border-radius: 10px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5); }
+  .offer span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 </head>
 <body>
 <div id="stage" tabindex="0"></div>
+<div id="drop" class="fp-layer"></div>
+<button id="uploadButton" class="fp-layer" type="button">
+  <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M228 152v56a20 20 0 0 1-20 20H48a20 20 0 0 1-20-20v-56a12 12 0 0 1 24 0v52h152v-52a12 12 0 0 1 24 0ZM96.49 88.49 116 69v83a12 12 0 0 0 24 0V69l19.51 19.52a12 12 0 1 0 17-17l-40-40a12 12 0 0 0-17 0l-40 40a12 12 0 1 0 17 17Z"/></svg>
+</button>
+<input id="filePicker" type="file" multiple hidden>
+<div id="panel" class="fp-layer">
+  <header><span id="panelTitle"></span><button id="panelCancel" class="fp-button" type="button"></button><button id="panelClose" class="fp-button" type="button"></button></header>
+  <div id="rows"></div>
+  <div id="overall" class="bar"><div></div></div>
+</div>
+<div id="offers" class="fp-layer"></div>
 <script>
 'use strict';
 // Die Gegenstelle zu Services/BrowserBridge*.vb. Je Fenster der Anwendung ein Canvas; der Server
@@ -47,6 +90,8 @@ function onText(message) {
     chain = chain.then(() => layout(message));
   } else if (message.t === 'cursor') {
     stage.style.cursor = cursors[message.name] || 'default';
+  } else if (message.t === 'offer') {
+    showOffer(message);
   } else if (message.t === 'reload') {
     // Die Kennung gilt nicht mehr, etwa weil die Anwendung neu gestartet wurde. Neu laden holt
     // eine frische; ist eine Anmeldung gesetzt, fragt der Browser dabei von selbst danach.
@@ -206,6 +251,226 @@ addEventListener('resize', () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => send({ t: 'resize', w: innerWidth, h: innerHeight, scale: devicePixelRatio || 1 }), 150);
 });
+
+// DATEIEN HINAUF UND HINUNTER, die Gegenstelle zu Services/BrowserBridgeFiles.vb. Die Texte setzt
+// der Server beim Ausliefern in der Sprache der Anwendung ein.
+const texts = __FERRUMPIX_TEXTS__;
+function text(id, ...values) {
+  let result = texts[id] || id;
+  values.forEach((value, index) => { result = result.split('{' + index + '}').join(String(value)); });
+  return result;
+}
+
+const drop = document.getElementById('drop');
+const uploadButton = document.getElementById('uploadButton');
+const filePicker = document.getElementById('filePicker');
+const panel = document.getElementById('panel');
+const panelTitle = document.getElementById('panelTitle');
+const panelCancel = document.getElementById('panelCancel');
+const panelClose = document.getElementById('panelClose');
+const rows = document.getElementById('rows');
+const overallBar = document.querySelector('#overall div');
+const offers = document.getElementById('offers');
+drop.textContent = text('dropHere');
+uploadButton.title = text('upload');
+uploadButton.setAttribute('aria-label', text('upload'));
+panelCancel.textContent = text('cancel');
+panelClose.textContent = text('close');
+
+// Ablegen auf der Seite. Der Browser oeffnete die Datei sonst selbst und verliesse die Anwendung;
+// deshalb wird auch ein Ablegen von etwas anderem als Dateien abgefangen. Der Zaehler gleicht aus,
+// dass dragleave bei jedem Wechsel zwischen Elementen kommt.
+let dragDepth = 0;
+function carriesFiles(event) {
+  return event.dataTransfer && Array.from(event.dataTransfer.types || []).includes('Files');
+}
+addEventListener('dragenter', event => {
+  event.preventDefault();
+  if (!carriesFiles(event)) return;
+  dragDepth++;
+  drop.classList.add('on');
+});
+addEventListener('dragover', event => {
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = carriesFiles(event) ? 'copy' : 'none';
+});
+addEventListener('dragleave', event => {
+  if (!carriesFiles(event)) return;
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (dragDepth === 0) drop.classList.remove('on');
+});
+addEventListener('drop', event => {
+  event.preventDefault();
+  dragDepth = 0;
+  drop.classList.remove('on');
+  if (!carriesFiles(event) || event.dataTransfer.files.length === 0) return;
+  // Die Stelle zaehlt: auf der Flaeche des Editors wird das Bild eine Ebene an dieser Stelle.
+  enqueue(event.dataTransfer.files, event.clientX, event.clientY);
+});
+
+// Ohne Ziehen (Tablet): der Dateiwaehler des Browsers. Ohne Stelle, das Ziel ist der Ordner.
+uploadButton.addEventListener('click', () => filePicker.click());
+filePicker.addEventListener('change', () => {
+  if (filePicker.files.length > 0) enqueue(filePicker.files, -1, -1);
+  filePicker.value = '';
+  stage.focus();
+});
+
+// Eine Datei nach der anderen, jede als eigene Anfrage. XMLHttpRequest statt fetch, weil nur
+// dort der Fortschritt beim Senden zu sehen ist.
+let queue = [];
+let current = null;
+let finished = 0;
+let total = 0;
+let bytesDone = 0;
+let bytesTotal = 0;
+function isSidecar(name) {
+  return /\.(xmp|fpxmp)$/i.test(name);
+}
+function enqueue(fileList, x, y) {
+  // Beistelldateien zuletzt: bekommt ein Bild einen anderen Namen, weil seiner belegt ist, folgt
+  // seine Beistelldatei ihm nur, wenn das Bild schon angekommen ist.
+  const files = Array.from(fileList).sort((a, b) => Number(isSidecar(a.name)) - Number(isSidecar(b.name)));
+  const batch = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  files.forEach((file, index) => {
+    queue.push({ file, x, y, index, batch, row: addRow(file) });
+    total++;
+    bytesTotal += file.size;
+  });
+  panel.classList.add('on');
+  updatePanel();
+  pump();
+}
+function addRow(file) {
+  const row = document.createElement('div');
+  row.className = 'row';
+  const name = document.createElement('div');
+  name.className = 'name';
+  const label = document.createElement('span');
+  label.textContent = file.name;
+  const state = document.createElement('span');
+  state.className = 'state';
+  name.append(label, state);
+  const bar = document.createElement('div');
+  bar.className = 'bar';
+  bar.appendChild(document.createElement('div'));
+  row.append(name, bar);
+  rows.appendChild(row);
+  return row;
+}
+function setRow(row, kind, state) {
+  row.classList.remove('done', 'failed');
+  if (kind) row.classList.add(kind);
+  row.querySelector('.state').textContent = state;
+}
+function updatePanel() {
+  panelTitle.textContent = text('progress', finished, total);
+  const loaded = current ? current.loaded : 0;
+  overallBar.style.width = bytesTotal > 0 ? Math.min(100, (bytesDone + loaded) / bytesTotal * 100) + '%' : '0';
+  const busy = current !== null || queue.length > 0;
+  panelCancel.style.display = busy ? '' : 'none';
+  panelClose.style.display = busy ? 'none' : '';
+}
+function pump() {
+  if (current || queue.length === 0) {
+    updatePanel();
+    return;
+  }
+  const item = queue.shift();
+  // Zu gross: gar nicht erst senden. Der Server wiese die Datei ab, bevor er sie liest, und
+  // manche Browser meldeten dann nur einen Abbruch statt des Grundes.
+  if (item.file.size > Number(texts.maxBytes || Infinity)) {
+    setRow(item.row, 'failed', text('tooLarge'));
+    finished++;
+    bytesDone += item.file.size;
+    pump();
+    return;
+  }
+  const request = new XMLHttpRequest();
+  current = { item, request, loaded: 0 };
+  const query = 'name=' + encodeURIComponent(item.file.name) + '&x=' + item.x + '&y=' + item.y +
+                '&i=' + item.index + '&batch=' + encodeURIComponent(item.batch);
+  request.open('POST', '/upload?' + query);
+  request.setRequestHeader('X-FerrumPix-Token', token);
+  request.setRequestHeader('Content-Type', 'application/octet-stream');
+  const bar = item.row.querySelector('.bar div');
+  request.upload.onprogress = event => {
+    if (!event.lengthComputable) return;
+    current.loaded = event.loaded;
+    bar.style.width = (event.loaded / event.total * 100) + '%';
+    updatePanel();
+  };
+  const finish = (kind, state) => {
+    setRow(item.row, kind, state);
+    bar.style.width = '100%';
+    finished++;
+    bytesDone += item.file.size;
+    current = null;
+    pump();
+  };
+  request.onload = () => {
+    let answer = {};
+    try { answer = JSON.parse(request.responseText); } catch (error) { }
+    if (request.status === 200 && answer.ok) finish('done', text('done'));
+    else finish('failed', answer.error || text('failed'));
+  };
+  request.onerror = () => finish('failed', text('interrupted'));
+  request.onabort = () => finish('failed', text('cancelled'));
+  request.send(item.file);
+  updatePanel();
+}
+panelCancel.addEventListener('click', () => {
+  // Was noch wartet, faellt weg; die laufende Datei bricht ab, und der Server loescht ihre
+  // Teildatei.
+  for (const item of queue) {
+    setRow(item.row, 'failed', text('cancelled'));
+    finished++;
+    bytesDone += item.file.size;
+  }
+  queue = [];
+  if (current) current.request.abort();
+  updatePanel();
+  stage.focus();
+});
+panelClose.addEventListener('click', () => {
+  panel.classList.remove('on');
+  rows.textContent = '';
+  finished = total = bytesDone = bytesTotal = 0;
+  stage.focus();
+});
+
+// Ein Angebot der Anwendung zum Herunterladen. Die Seite kennt nur seine Kennung, nie einen
+// Pfad. Kommt es aus dem Kontextmenue, beginnt es gleich; der Knopf bleibt fuer ein zweites Mal.
+function startDownload(id, name) {
+  const link = document.createElement('a');
+  link.href = '/download?id=' + encodeURIComponent(id) + '&token=' + encodeURIComponent(token);
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+function showOffer(message) {
+  const offer = document.createElement('div');
+  offer.className = 'offer fp-layer';
+  offer.style.position = 'static';
+  const label = document.createElement('span');
+  label.textContent = message.name;
+  label.title = text('ready');
+  const get = document.createElement('button');
+  get.className = 'fp-button accent';
+  get.type = 'button';
+  get.textContent = text('download');
+  get.addEventListener('click', () => { startDownload(message.id, message.name); stage.focus(); });
+  const close = document.createElement('button');
+  close.className = 'fp-button';
+  close.type = 'button';
+  close.textContent = text('close');
+  close.addEventListener('click', () => { offer.remove(); stage.focus(); });
+  offer.append(label, get, close);
+  offers.appendChild(offer);
+  while (offers.children.length > 4) offers.firstElementChild.remove();
+  if (message.start) startDownload(message.id, message.name);
+}
 
 stage.focus();
 connect();

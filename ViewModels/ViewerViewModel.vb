@@ -502,6 +502,9 @@ Namespace ViewModels
                 ' im selben Lauf, ob es eine entwickelte RAW ist (RunBitmapLoad), und davon haengt
                 ' die Geometrie ab.
                 If Not Object.ReferenceEquals(previous, value) Then
+                    ' Ein angefangenes Rechteck gehoert zum vorigen Bild. Nur bei einem ANDEREN Bild:
+                    ' dasselbe kommt oft zweimal (erst die Vorschau, dann die Entwicklung).
+                    If Not String.Equals(_faceMarkingPath, _currentImagePath, StringComparison.Ordinal) Then CancelFaceMarking()
                     FaceFrames.Clear()
                     FocusFrames.Clear()
                     _announceFocusPointStatus = False
@@ -678,7 +681,7 @@ Namespace ViewModels
         ''' Schalter (Gesichtsrahmen, Fokusfelder) an ist.</summary>
         Public ReadOnly Property ShowImageMarks As Boolean
             Get
-                Return _showFaceFrames OrElse _showFocusPoints
+                Return _showFaceFrames OrElse _showFocusPoints OrElse _isMarkingFace
             End Get
         End Property
 
@@ -759,7 +762,9 @@ Namespace ViewModels
         ''' <summary>Baut die Rahmen aus den Zeilen der Leiste und der gemerkten Geometrie.</summary>
         Private Sub RebuildFaceFrames()
             FaceFrames.Clear()
-            If Not _showFaceFrames OrElse Not _faceFrameReady OrElse _currentImage Is Nothing Then Return
+            ' Beim Markieren auch ohne Schalter: man sieht, welche Gesichter schon dastehen, und
+            ' zieht das fehlende nicht ueber ein vorhandenes.
+            If Not (_showFaceFrames OrElse _isMarkingFace) OrElse Not _faceFrameReady OrElse _currentImage Is Nothing Then Return
             For Each entry In InfoPanel.People
                 Dim box = FaceFrameLayout.MapBox(entry.BoxX, entry.BoxY, entry.BoxWidth, entry.BoxHeight,
                                                  _faceFrameReference.Width, _faceFrameReference.Height,
@@ -769,6 +774,103 @@ Namespace ViewModels
                                              entry.Name, FaceFrameLayout.KindOf(entry.Name, entry.IsManual)))
             Next
         End Sub
+
+        ' ── Gesicht von Hand markieren ────────────────────────────────────────────
+        '
+        ' Der Knopf steht im Personen-Reiter der Leiste (InfoPanel.MarkFaceCommand), aufgezogen
+        ' wird hier im Bild: ein Zug mit der linken Taste, ESC bricht ab. Die Ansicht meldet das
+        ' Rechteck in Anteilen des GEZEIGTEN Bildes, wie die Gesichtsrahmen; zurueck in den Raum
+        ' der Suchquelle rechnet FaceFrameLayout.UnmapBox ueber dieselbe Geometrie, aus der die
+        ' Rahmen entstehen. Damit liegt ein markiertes Gesicht nach Zuschnitt, Drehung und
+        ' Begradigung so wie jedes erkannte.
+
+        Private _isMarkingFace As Boolean
+        Private _isSavingMarkedFace As Boolean
+        Private _faceMarkingPath As String = ""
+
+        ''' <summary>Wird gerade ein Gesicht aufgezogen? Dann gehoert der linke Zug im Bild dem
+        ''' Rechteck, nicht dem Verschieben oder dem Zuschnitt.</summary>
+        Public ReadOnly Property IsMarkingFace As Boolean
+            Get
+                Return _isMarkingFace
+            End Get
+        End Property
+
+        ''' <summary>Startet das Aufziehen. Nicht im Vergleich, nicht bei einem Video und nur, wo die
+        ''' Leiste den Knopf anbietet (eingeschaltete Erkennung, lokales Bild).</summary>
+        Public Sub BeginFaceMarking()
+            If _isMarkingFace OrElse _isSavingMarkedFace OrElse _isCompareMode OrElse _currentImage Is Nothing Then Return
+            If Not InfoPanel.CanMarkFace Then Return
+            _isMarkingFace = True
+            _faceMarkingPath = _currentImagePath
+            Me.RaisePropertyChanged(NameOf(IsMarkingFace))
+            Me.RaisePropertyChanged(NameOf(ShowImageMarks))
+            InfoPanel.FaceMarkStatus = LocalizationService.T("Im Bild ein Rechteck um das Gesicht aufziehen. ESC bricht ab.")
+            ' Bezugsgroesse und Geometrie werden sonst nur bei eingeschalteten Rahmen geholt.
+            RefreshImageMarkGeometry()
+        End Sub
+
+        ''' <summary>Bricht das Aufziehen ab, ohne etwas einzutragen (ESC, Bildwechsel).</summary>
+        Public Sub CancelFaceMarking()
+            If Not _isMarkingFace Then Return
+            EndFaceMarking()
+            InfoPanel.FaceMarkStatus = ""
+        End Sub
+
+        Private Sub EndFaceMarking()
+            _isMarkingFace = False
+            Me.RaisePropertyChanged(NameOf(IsMarkingFace))
+            Me.RaisePropertyChanged(NameOf(ShowImageMarks))
+            RebuildFaceFrames()
+        End Sub
+
+        ''' <summary>Das aufgezogene Rechteck, in Anteilen des gezeigten Bildes (0 bis 1, vor der
+        ''' Drehung und Spiegelung des Betrachters). Traegt das Gesicht ein und gibt das Namensfeld
+        ''' frei. Ein zu kleiner Zug zaehlt nicht und laesst das Aufziehen offen.</summary>
+        Public Async Function CommitFaceMarkingAsync(left As Double, top As Double, right As Double, bottom As Double) As Task
+            If Not _isMarkingFace Then Return
+            Dim path = _currentImagePath
+            If Not _faceFrameReady OrElse String.IsNullOrWhiteSpace(path) Then
+                ' Bezugsgroesse und Geometrie sind noch unterwegs: das Markieren bleibt offen, und
+                ' der Hinweis sagt weiter, was zu tun ist.
+                InfoPanel.FaceMarkStatus = LocalizationService.T("Im Bild ein Rechteck um das Gesicht aufziehen. ESC bricht ab.")
+                Return
+            End If
+            Dim box = FaceFrameLayout.UnmapBox(left, top, right, bottom,
+                                               _faceFrameReference.Width, _faceFrameReference.Height,
+                                               _faceFrameGeometry, _faceFrameQuarterTurn)
+            If Not box.HasValue OrElse box.Value.Width < 8 OrElse box.Value.Height < 8 Then
+                InfoPanel.FaceMarkStatus = LocalizationService.T("Das Rechteck ist zu klein. Bitte größer um das Gesicht aufziehen.")
+                Return
+            End If
+            EndFaceMarking()
+            _isSavingMarkedFace = True
+            InfoPanel.FaceMarkStatus = ""
+            Dim file = VariantKey.FileOf(path)
+            Dim reference = _faceFrameReference
+            Dim result As (Outcome As LibraryService.MarkedFaceOutcome, FaceId As String, HasEmbedding As Boolean) =
+                (LibraryService.MarkedFaceOutcome.Invalid, Nothing, False)
+            Try
+                result = Await Task.Run(Function() FaceScanRunner.AddMarkedFace(file, box.Value, reference.Width, reference.Height, Nothing))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Viewer.MarkFace", ex)
+            Finally
+                _isSavingMarkedFace = False
+            End Try
+            ' Inzwischen ein anderes Bild: dort gilt nichts von hier.
+            If Not String.Equals(_currentImagePath, path, StringComparison.Ordinal) Then Return
+            Select Case result.Outcome
+                Case LibraryService.MarkedFaceOutcome.Added
+                    InfoPanel.ShowMarkedFace(result.FaceId)
+                    InfoPanel.FaceMarkStatus = If(result.HasEmbedding,
+                        LocalizationService.T("Gesicht eingetragen. Der Name kommt in das Feld darüber."),
+                        LocalizationService.T("Gesicht eingetragen. Das Modell konnte es nicht ausrichten; es trägt den Namen, macht aber keine Vorschläge für andere Bilder."))
+                Case LibraryService.MarkedFaceOutcome.Occupied
+                    InfoPanel.FaceMarkStatus = LocalizationService.T("An dieser Stelle steht schon ein Gesicht.")
+                Case Else
+                    InfoPanel.FaceMarkStatus = LocalizationService.T("Das Gesicht ließ sich nicht eintragen.")
+            End Select
+        End Function
 
         ' ── Fokusfelder ───────────────────────────────────────────────────────────
         '
@@ -1737,6 +1839,8 @@ Namespace ViewModels
                                                     .RemoveMetadata = RemoveMetadataCommand,
                                                     .CopyPath = CopyPathCommand,
                                                     .ShowInFileManager = OpenFileManagerCommand,
+                                                    .Download = MenuCommands.BrowserDownload(
+                                                        Function() ContextItems.Where(AddressOf ContextMenuBuilder.IsDownloadable).Select(Function(i) i.FilePath)),
                                                     .OpenWith = OpenWithCommand,
                                                     .OpenWithPrograms = OpenWithService.ConfiguredPrograms(),
                                                     .Delete = DeleteCurrentCommand})
@@ -1965,6 +2069,8 @@ Namespace ViewModels
             InfoPanel.NavigateImage = Sub(delta)
                                           If delta > 0 Then NavigateNext() Else NavigatePrevious()
                                       End Sub
+            ' Gesicht von Hand markieren: aufgezogen wird hier im Bild.
+            InfoPanel.BeginMarkFace = Sub() BeginFaceMarking()
             AddHandler InfoPanel.PropertyChanged,
                 Sub(sender, e)
                     If e.PropertyName = NameOf(InfoPanel.Rating) OrElse

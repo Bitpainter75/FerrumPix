@@ -23,6 +23,32 @@
                                           VerticalAlignment="Center"/>
                         </Grid>
 
+                        <!-- Wo die Vorschaubilder liegen, bestimmt der Datenordner (Seite Katalog);
+                             hier stehen nur die Hoechstgroesse und der belegte Platz. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Höchstgröße der Vorschaubilder" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Wird sie überschritten, entfernt FerrumPix im Hintergrund die am längsten nicht angesehenen Vorschaubilder. Sie entstehen beim nächsten Ansehen neu." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding ThumbnailCacheUsageText}"
+                                           Classes="no-translate"
+                                           IsVisible="{Binding ThumbnailCacheUsageText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Small}"/>
+                            </StackPanel>
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding ThumbnailCacheLimitOptions}"
+                                      SelectedItem="{Binding SelectedThumbnailCacheLimit, Mode=TwoWay}"
+                                      MinWidth="150"
+                                      VerticalAlignment="Center"
+                                      FontSize="{DynamicResource FP.Font.Body}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </Grid>
+
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Vorschaubild-Qualität" FontSize="{DynamicResource FP.Font.Body}"/>

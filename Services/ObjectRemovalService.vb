@@ -725,9 +725,7 @@ Namespace Services
         Private Shared Sub WriteDiagnosticImages(small As SKBitmap, smallMask As SKBitmap, threshold As Byte)
             Try
                 If Not AppSettingsService.Load().EnableDiagnosticLogging Then Return
-                Dim folder = IO.Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "FerrumPix", "logs")
+                Dim folder = AppFolders.LogsFolder
                 IO.Directory.CreateDirectory(folder)
 
                 IO.File.WriteAllBytes(IO.Path.Combine(folder, "entfernen-ausschnitt.png"),

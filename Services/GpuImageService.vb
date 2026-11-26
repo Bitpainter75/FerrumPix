@@ -78,12 +78,14 @@ Namespace Services
             "llvmpipe", "softpipe", "swrast", "lavapipe", "SwiftShader",
             "Microsoft Basic Render", "GDI Generic", "Apple Software Renderer"}
 
-        ''' <summary>Die Marke liegt neben den Einstellungen, solange die Karte arbeitet (Anlegen
-        ''' des Kontexts und jeder Auftrag). Stuerzt der Treiber ab, faengt kein Try das: der Prozess
-        ''' endet, und mit eingeschaltetem Schalter stuerzte er beim naechsten Bild wieder ab. Findet
-        ''' der naechste Start die Marke noch, schaltet er die Karte deshalb ab
-        ''' (<see cref="StartFromSettings"/>). Ein normales Ende raeumt sie weg (ProcessExit).</summary>
-        Private Shared ReadOnly MarkerPath As String = IO.Path.Combine(AppSettingsService.Folder, "gpu-busy.marker")
+        ''' <summary>Die Marke liegt im Datenordner, solange die Karte arbeitet (Anlegen des
+        ''' Kontexts und jeder Auftrag); in einem gewaehlten Datenordner mit dem Rechnernamen, denn
+        ''' sie gilt der Karte dieses Rechners (AppFolders.GpuBusyMarkerPath). Stuerzt der Treiber
+        ''' ab, faengt kein Try das: der Prozess endet, und mit eingeschaltetem Schalter stuerzte
+        ''' er beim naechsten Bild wieder ab. Findet der naechste Start die Marke noch, schaltet er
+        ''' die Karte deshalb ab (<see cref="StartFromSettings"/>). Ein normales Ende raeumt sie weg
+        ''' (ProcessExit).</summary>
+        Private Shared ReadOnly MarkerPath As String = AppFolders.GpuBusyMarkerPath
         Private Shared _shuttingDown As Boolean
         ''' <summary>Gesetzt, wenn die Karte haengt: die Marke bleibt dann auch beim normalen Ende
         ''' liegen, damit der naechste Start den Schalter abschaltet.</summary>
@@ -353,7 +355,7 @@ Namespace Services
                                                                  End Sub
             End If
             Try
-                IO.Directory.CreateDirectory(AppSettingsService.Folder)
+                IO.Directory.CreateDirectory(IO.Path.GetDirectoryName(MarkerPath))
                 IO.File.WriteAllText(MarkerPath, $"{what}; {If(_renderer, "")}; {DateTime.Now:yyyy-MM-dd HH:mm:ss}")
             Catch
                 ' Ohne Marke fehlt nur der Schutz beim naechsten Start; die Arbeit selbst geht.

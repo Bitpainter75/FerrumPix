@@ -12550,4 +12550,304 @@
   <data name="Mehr_Punkte_geben_feinere_berg_nge_und_eine_gr_e_87716011" xml:space="preserve">
     <value>点数越多，过渡越细腻，文件也越大。</value>
   </data>
+  <data name="Speicherort_der_Vorschaubilder_ea4180cd" xml:space="preserve">
+    <value>缩略图位置</value>
+  </data>
+  <data name="Ein_anderer_Ort_etwa_eine_zweite_Platte_nimmt_di_2b098a5f" xml:space="preserve">
+    <value>选择其他位置（例如第二块硬盘）时，现有缩略图会一并迁移。</value>
+  </data>
+  <data name="Standardort_645fbbac" xml:space="preserve">
+    <value>默认位置</value>
+  </data>
+  <data name="Ort_w_hlen_a14d708c" xml:space="preserve">
+    <value>选择位置</value>
+  </data>
+  <data name="H_chstgr_e_der_Vorschaubilder_eef5e17a" xml:space="preserve">
+    <value>缩略图最大占用空间</value>
+  </data>
+  <data name="Wird_sie_berschritten_entfernt_FerrumPix_im_Hint_77e728da" xml:space="preserve">
+    <value>超出时，FerrumPix 会在后台删除最久未查看的缩略图。下次查看时会重新生成。</value>
+  </data>
+  <data name="Unbegrenzt_0d297e61" xml:space="preserve">
+    <value>无限制</value>
+  </data>
+  <data name="Der_gew_hlte_Ort_0_ist_nicht_erreichbar_Bis_er_w_6319e156" xml:space="preserve">
+    <value>无法访问所选位置 {0}。在其恢复之前，新的缩略图会保存在默认位置。</value>
+  </data>
+  <data name="Belegt_0_c4342b36" xml:space="preserve">
+    <value>已占用：{0}</value>
+  </data>
+  <data name="Ort_nicht_verwendbar_6c4c756c" xml:space="preserve">
+    <value>无法使用该位置</value>
+  </data>
+  <data name="Die_vorhandenen_Vorschaubilder_0_werden_nach_1_v_33e1a876" xml:space="preserve">
+    <value>现有缩略图（{0}）将移动到 {1}。若目标在另一块硬盘上，会先复制，之后才从旧位置删除。取消后旧位置保持不变。</value>
+  </data>
+  <data name="Vorschaubilder_verschieben_b91cf923" xml:space="preserve">
+    <value>移动缩略图？</value>
+  </data>
+  <data name="Vorschaubilder_werden_verschoben_f10674ab" xml:space="preserve">
+    <value>正在移动缩略图...</value>
+  </data>
+  <data name="Die_Vorschaubilder_liegen_jetzt_in_0_876dacd2" xml:space="preserve">
+    <value>缩略图现在位于 {0}。</value>
+  </data>
+  <data name="Abgebrochen_Die_Vorschaubilder_liegen_weiter_am__d5ea562d" xml:space="preserve">
+    <value>已取消。缩略图仍在旧位置。</value>
+  </data>
+  <data name="Am_neuen_Ort_ist_nicht_genug_Platz_Die_Vorschaub_5f127c35" xml:space="preserve">
+    <value>新位置空间不足。缩略图仍在旧位置。</value>
+  </data>
+  <data name="Das_Verschieben_ist_fehlgeschlagen_Die_Vorschaub_f5dd8e04" xml:space="preserve">
+    <value>移动失败。缩略图仍在旧位置。</value>
+  </data>
+  <data name="Ort_f_r_die_Vorschaubilder_w_hlen_15f46a6c" xml:space="preserve">
+    <value>选择缩略图的位置</value>
+  </data>
+  <data name="Ort_der_Vorschaubilder_nicht_erreichbar_1854c3fc" xml:space="preserve">
+    <value>无法访问缩略图位置</value>
+  </data>
+  <data name="Es_wurde_kein_Ordner_gew_hlt_3482d327" xml:space="preserve">
+    <value>未选择文件夹。</value>
+  </data>
+  <data name="Dieser_Ordner_l_sst_sich_nicht_verwenden_11f6f21b" xml:space="preserve">
+    <value>无法使用此文件夹。</value>
+  </data>
+  <data name="Die_Wurzel_eines_Laufwerks_l_sst_sich_nicht_verw_84a52fef" xml:space="preserve">
+    <value>不能使用驱动器的根目录。请选择其中的一个文件夹。</value>
+  </data>
+  <data name="Im_Flatpak_lassen_sich_nur_Ordner_verwenden_die__2b6244e0" xml:space="preserve">
+    <value>在 Flatpak 中只能使用 FerrumPix 能直接看到的文件夹，例如主文件夹或已挂载的驱动器中的文件夹。仅通过系统文件选择器共享的文件夹在重启后对 FerrumPix 不再可见。</value>
+  </data>
+  <data name="Das_tempor_re_Verzeichnis_wird_beim_Neustart_gel_042d17a7" xml:space="preserve">
+    <value>临时文件夹会在重启时清空。请选择其他文件夹。</value>
+  </data>
+  <data name="Der_Ordner_ist_nicht_erreichbar_ac533d85" xml:space="preserve">
+    <value>无法访问该文件夹。</value>
+  </data>
+  <data name="In_diesem_Ordner_liegt_schon_ein_Ordner_0_mit_an_6da5df62" xml:space="preserve">
+    <value>此文件夹中已有一个包含其他文件的文件夹 {0}。</value>
+  </data>
+  <data name="Die_Vorschaubilder_liegen_schon_dort_82bebe06" xml:space="preserve">
+    <value>缩略图已经在那里。</value>
+  </data>
+  <data name="Der_neue_Ort_darf_nicht_im_bisherigen_liegen_und_f6cc7817" xml:space="preserve">
+    <value>新位置不能位于当前位置之内，当前位置也不能位于新位置之内。</value>
+  </data>
+  <data name="FerrumPix_darf_in_diesem_Ordner_nicht_schreiben_2337990a" xml:space="preserve">
+    <value>FerrumPix 无权写入此文件夹。</value>
+  </data>
+  <data name="Im_Flatpak_sind_die_Systemordner_des_Rechners_wi_1b629a4b" xml:space="preserve">
+    <value>在 Flatpak 中无法访问计算机的系统文件夹，例如 /usr、/etc 和 /tmp。</value>
+  </data>
+  <data name="Die_Vorschaubilder_liegen_in_0_e64abee7" xml:space="preserve">
+    <value>缩略图位于 {0}。</value>
+  </data>
+  <data name="0_Gruppen_markiert_c8fd0ffe" xml:space="preserve">
+    <value>已标记 {0} 个组</value>
+  </data>
+  <data name="0_Gruppen_mit_zusammen_1_Gesichtern_Jedes_Gesich_25752e68" xml:space="preserve">
+    <value>{0} 个组，共 {1} 张面孔。每张面孔都会进入“未知”收纳组，与“不是此人”相同。在那里可以逐一重新分配，新的搜索也不会再用它们组成组。</value>
+  </data>
+  <data name="0_davon_tragen_einen_Namen_die_Namen_gehen_verlo_636586df" xml:space="preserve">
+    <value>其中 {0} 个有名字；这些名字将会丢失。</value>
+  </data>
+  <data name="Markierte_Gruppen_entfernen_48dc711d" xml:space="preserve">
+    <value>移除已标记的组？</value>
+  </data>
+  <data name="Im_Bild_ein_Rechteck_um_das_Gesicht_aufziehen_ES_fae2b97a" xml:space="preserve">
+    <value>在图像中围绕面孔拖出一个矩形。ESC 取消。</value>
+  </data>
+  <data name="Das_Rechteck_ist_zu_klein_Bitte_gr_er_um_das_Ges_191f0c20" xml:space="preserve">
+    <value>矩形太小。请围绕面孔拖得大一些。</value>
+  </data>
+  <data name="Gesicht_eingetragen_Der_Name_kommt_in_das_Feld_d_612c3ed2" xml:space="preserve">
+    <value>已添加面孔。请在上方的字段中输入名字。</value>
+  </data>
+  <data name="Gesicht_eingetragen_Das_Modell_konnte_es_nicht_a_f777d1cd" xml:space="preserve">
+    <value>已添加面孔。模型无法对齐它；它带有名字，但不会为其他图像提供建议。</value>
+  </data>
+  <data name="An_dieser_Stelle_steht_schon_ein_Gesicht_94ec83ba" xml:space="preserve">
+    <value>此位置已有一张面孔。</value>
+  </data>
+  <data name="Das_Gesicht_lie_sich_nicht_eintragen_8d28725a" xml:space="preserve">
+    <value>无法添加面孔。</value>
+  </data>
+  <data name="0_weitere_benannte_Personen_kommen_in_diesem_Ord_5f17b74e" xml:space="preserve">
+    <value>另有 {0} 位已命名的人物未出现在此文件夹中。</value>
+  </data>
+  <data name="Das_Zeichen_oben_links_auf_einer_Kachel_markiert_dbf9f6a0" xml:space="preserve">
+    <value>缩略图左上角的标记可将其标记。已标记的组可以一起移除，或添加到某个人物。</value>
+  </data>
+  <data name="Alle_auf_dieser_Seite_markieren_b84747ba" xml:space="preserve">
+    <value>标记本页全部</value>
+  </data>
+  <data name="Name_der_Person_13d3aebd" xml:space="preserve">
+    <value>人物名字</value>
+  </data>
+  <data name="Hei_t_schon_jemand_so_werden_die_markierten_Grup_6ddbeaa4" xml:space="preserve">
+    <value>如果已有人使用此名字，已标记的组将与此人合并。否则会新建一个使用此名字的人物。</value>
+  </data>
+  <data name="Zu_Person_hinzuf_gen_368b6a83" xml:space="preserve">
+    <value>添加到人物</value>
+  </data>
+  <data name="Markierung_aufheben_7084b33e" xml:space="preserve">
+    <value>取消标记</value>
+  </data>
+  <data name="Markieren_bc4e896e" xml:space="preserve">
+    <value>标记</value>
+  </data>
+  <data name="Ein_Name_den_es_schon_gibt_f_hrt_diese_Gruppe_mi_10fb8c4f" xml:space="preserve">
+    <value>使用已存在的名字会将此组与该人物合并。</value>
+  </data>
+  <data name="Ein_Gesicht_das_nicht_erkannt_wurde_im_Bild_mit__e47c9990" xml:space="preserve">
+    <value>在图像中用矩形标出未被识别的面孔。ESC 取消。</value>
+  </data>
+  <data name="Gesicht_markieren_bdac8a3d" xml:space="preserve">
+    <value>标记面孔</value>
+  </data>
+  <data name="Alle_Personen_des_Katalogs_zeigen_a096ff69" xml:space="preserve">
+    <value>显示目录中的所有人物</value>
+  </data>
+  <data name="Dateien_zum_Hochladen_hier_ablegen_471f9847" xml:space="preserve">
+    <value>将要上传的文件拖放到此处</value>
+  </data>
+  <data name="Dateien_hochladen_cc58908b" xml:space="preserve">
+    <value>上传文件</value>
+  </data>
+  <data name="0_von_1_Dateien_hochgeladen_18b1984a" xml:space="preserve">
+    <value>已上传 {0}/{1} 个文件</value>
+  </data>
+  <data name="Hochgeladen_a227895e" xml:space="preserve">
+    <value>已上传</value>
+  </data>
+  <data name="Fehlgeschlagen_f7b1b156" xml:space="preserve">
+    <value>失败</value>
+  </data>
+  <data name="Die_bertragung_wurde_unterbrochen_1dc90c16" xml:space="preserve">
+    <value>传输已中断</value>
+  </data>
+  <data name="Bereit_zum_Herunterladen_f8026251" xml:space="preserve">
+    <value>可以下载</value>
+  </data>
+  <data name="Die_Datei_ist_gr_er_als_0_GB_5d04db62" xml:space="preserve">
+    <value>文件大于 {0} GB</value>
+  </data>
+  <data name="Die_Seite_ist_veraltet_Bitte_neu_laden_41bda2b3" xml:space="preserve">
+    <value>页面已过期。请重新加载。</value>
+  </data>
+  <data name="Der_Dateiname_ist_ung_ltig_77f457aa" xml:space="preserve">
+    <value>文件名无效</value>
+  </data>
+  <data name="Die_Datei_ist_leer_db2c5c6e" xml:space="preserve">
+    <value>文件为空</value>
+  </data>
+  <data name="Als_Ebene_l_sst_sich_nur_ein_Bild_einf_gen_3a887426" xml:space="preserve">
+    <value>只能将图像作为图层插入</value>
+  </data>
+  <data name="Diese_Dateiart_nimmt_FerrumPix_nicht_an_299a8ea6" xml:space="preserve">
+    <value>FerrumPix 不接受此类型的文件</value>
+  </data>
+  <data name="Hier_darf_FerrumPix_keine_Dateien_anlegen_92082505" xml:space="preserve">
+    <value>FerrumPix 不能在此处创建文件</value>
+  </data>
+  <data name="Auf_dem_Laufwerk_ist_nicht_genug_Platz_frei_6ba0c24f" xml:space="preserve">
+    <value>驱动器上的可用空间不足</value>
+  </data>
+  <data name="Erst_den_offenen_Dialog_schlie_en_8c1400a7" xml:space="preserve">
+    <value>请先关闭打开的对话框</value>
+  </data>
+  <data name="Kein_Ordner_offen_in_den_die_Dateien_geh_ren_3c539817" xml:space="preserve">
+    <value>没有打开可放入这些文件的文件夹</value>
+  </data>
+  <data name="Die_Bilder_hier_liegen_auf_einem_Server_Hochlade_fa8cc635" xml:space="preserve">
+    <value>这里的图片位于服务器上。只能上传到这台电脑上的文件夹。</value>
+  </data>
+  <data name="Datenordner_1446557a" xml:space="preserve">
+    <value>数据文件夹</value>
+  </data>
+  <data name="Katalog_Vorschaubilder_Modelle_Erweiterungen_ges_d75a6513" xml:space="preserve">
+    <value>目录、缩略图、模型、扩展、已保存的调整、收藏和搜索列表都存放在这里。换到其他位置，例如第二块磁盘或网络共享，会在下次启动时把所有内容一起带过去。</value>
+  </data>
+  <data name="Zur_cknehmen_1651c015" xml:space="preserve">
+    <value>撤销</value>
+  </data>
+  <data name="Ordner_f_r_die_Daten_von_FerrumPix_w_hlen_49493664" xml:space="preserve">
+    <value>选择存放 FerrumPix 数据的文件夹</value>
+  </data>
+  <data name="Die_Daten_liegen_schon_dort_fbeb1a0b" xml:space="preserve">
+    <value>数据已经在那里。</value>
+  </data>
+  <data name="Der_Ordner_der_Einstellungen_l_sst_sich_nicht_al_b1781d9e" xml:space="preserve">
+    <value>设置所在的文件夹不能用作数据文件夹。</value>
+  </data>
+  <data name="Der_Katalog_wird_gerade_von_0_benutzt_Der_Dateno_5ac02e22" xml:space="preserve">
+    <value>目录当前正被 {0} 使用。只有在那里关闭 FerrumPix 后，数据文件夹才能迁移。</value>
+  </data>
+  <data name="Datenordner_verschieben_92acb274" xml:space="preserve">
+    <value>移动数据文件夹？</value>
+  </data>
+  <data name="Die_Daten_von_FerrumPix_0_ziehen_beim_n_chsten_S_9503f5ab" xml:space="preserve">
+    <value>FerrumPix 的数据（{0}）将在下次启动时迁移到 {1}。在同一块磁盘上会立即完成；迁移到其他磁盘则需复制，那次启动会相应变长。只有全部到达后才会清理旧位置。</value>
+  </data>
+  <data name="Vorhandenen_Datenordner_verwenden_23ee4612" xml:space="preserve">
+    <value>使用已有的数据文件夹？</value>
+  </data>
+  <data name="In_0_liegt_schon_ein_Datenordner_von_FerrumPix_A_ee7e4ce9" xml:space="preserve">
+    <value>{0} 中已有一个 FerrumPix 数据文件夹。从下次启动起 FerrumPix 将使用它；现有数据仍留在 {1}。</value>
+  </data>
+  <data name="Verwenden_8590499d" xml:space="preserve">
+    <value>使用</value>
+  </data>
+  <data name="Beim_n_chsten_Start_verwendet_FerrumPix_den_Date_82e8fbec" xml:space="preserve">
+    <value>下次启动时 FerrumPix 将使用 {0} 中的数据文件夹。</value>
+  </data>
+  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_ce1e5936" xml:space="preserve">
+    <value>下次启动时数据文件夹将迁移到 {0}。</value>
+  </data>
+  <data name="Datenordner_nicht_erreichbar_9b1a712e" xml:space="preserve">
+    <value>无法访问数据文件夹</value>
+  </data>
+  <data name="Der_Datenordner_0_ist_nicht_erreichbar_Bis_er_wi_a6ecc803" xml:space="preserve">
+    <value>无法访问数据文件夹 {0}。在它恢复之前，FerrumPix 将在没有目录的情况下工作，模型、扩展和已保存的调整也不可用。</value>
+  </data>
+  <data name="Datenordner_nicht_umgezogen_3673729f" xml:space="preserve">
+    <value>数据文件夹未迁移</value>
+  </data>
+  <data name="Der_Datenordner_konnte_nicht_nach_0_umziehen_wei_59bf6cf5" xml:space="preserve">
+    <value>数据文件夹无法迁移到 {0}，因为空间不足。所有内容仍在原位置。</value>
+  </data>
+  <data name="Der_Datenordner_konnte_nicht_nach_0_umziehen_All_4af32b64" xml:space="preserve">
+    <value>数据文件夹无法迁移到 {0}。所有内容仍在原位置，详情见日志。</value>
+  </data>
+  <data name="Daten_nicht_vollst_ndig_umgezogen_e2dbe176" xml:space="preserve">
+    <value>数据未完全迁移</value>
+  </data>
+  <data name="FerrumPix_legt_seine_Daten_jetzt_gesammelt_in_0__97509d2e" xml:space="preserve">
+    <value>FerrumPix 现在把数据集中存放在 {0}。有一部分无法迁移过去，仍从旧位置使用。下次启动时 FerrumPix 会再试一次；详情见日志。</value>
+  </data>
+  <data name="Katalog_wird_von_0_benutzt_78eb557d" xml:space="preserve">
+    <value>目录正被 {0} 使用</value>
+  </data>
+  <data name="FerrumPix_l_uft_auf_0_mit_demselben_Katalog_seit_97dbe250" xml:space="preserve">
+    <value>FerrumPix 正在 {0} 上使用同一个目录，开始于 {1}。两台电脑不能同时打开它。在 {0} 释放之前，FerrumPix 在这里不使用目录工作，本次会话中本应写入目录的内容不会保存。如果 {0} 上的 FerrumPix 已不再运行，例如崩溃之后，可以接管锁定。</value>
+  </data>
+  <data name="Sperre_bernehmen_14672502" xml:space="preserve">
+    <value>接管锁定</value>
+  </data>
+  <data name="Ohne_Katalog_weiter_ba43ea48" xml:space="preserve">
+    <value>不使用目录继续</value>
+  </data>
+  <data name="Sperre_bernommen_7d2f823d" xml:space="preserve">
+    <value>已接管锁定</value>
+  </data>
+  <data name="Der_Katalog_geh_rt_jetzt_diesem_Rechner_Bitte_Fe_f21858c6" xml:space="preserve">
+    <value>目录现在属于这台电脑。请重新启动 FerrumPix 以打开它。</value>
+  </data>
+  <data name="Der_Ordner_f_r_Anpassungen_ist_nicht_erreichbar__f22a0510" xml:space="preserve">
+    <value>无法访问调整所在的文件夹：{0}。</value>
+  </data>
+  <data name="Hier_liegen_die_im_Editor_gespeicherten_Anpassun_d58c017e" xml:space="preserve">
+    <value>这里存放在编辑器中保存的调整，每个是一个单独的文件，每个文件夹都是真实的文件夹。该文件夹属于数据文件夹，并随它一起迁移。</value>
+  </data>
 </root>

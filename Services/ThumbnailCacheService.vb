@@ -58,7 +58,9 @@ Namespace Services
         End Function
     End Class
 
-    Public NotInheritable Class ThumbnailCacheService
+    ''' <summary>Der Kachelspeicher der Galerie. Ort, Umzug und Hoechstgroesse stehen in
+    ''' ThumbnailCacheStorage.vb.</summary>
+    Partial Public NotInheritable Class ThumbnailCacheService
         Private Sub New()
         End Sub
 
@@ -98,10 +100,7 @@ Namespace Services
         ' 4 seit dem halbaufgeloesten LibRaw-Weg fuer entwickelte RAW-Kacheln.
         Private Const CacheFormatVersion As Integer = 4
 
-        Private Shared ReadOnly CacheRoot As String =
-            IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix", "ThumbnailCache")
-
-        Private Shared ReadOnly RootIndexPath As String = IO.Path.Combine(CacheRoot, IndexFileName)
+        ' Der Ort (CacheRoot, RootIndexPath) steht in ThumbnailCacheStorage.vb: er ist einstellbar.
         Private Shared ReadOnly JsonOptions As New JsonSerializerOptions With {.WriteIndented = True}
 
         ' Zwischenspeicher der Einstellungen: erspart es, fuer JEDE Kachel die
@@ -235,6 +234,7 @@ Namespace Services
                 _cachedQuality = AppSettingsService.NormalizeThumbnailQuality(s.ThumbnailQuality)
                 _cachedDevelopRawThumbnails = s.DevelopRawThumbnails
                 _cachedHighResolution = s.ThumbnailHighResolution
+                Volatile.Write(_cachedLimitBytes, LimitBytesFromGigabytes(s.ThumbnailCacheLimitGigabytes))
                 Volatile.Write(_settingsCacheExpiry, Environment.TickCount64 + 10_000L)
             End If
             enabled = _cachedEnabled
@@ -403,9 +403,7 @@ Namespace Services
                     Using image = SKImage.FromBitmap(managed)
                         Using data = image.Encode(SKEncodedImageFormat.Jpeg, quality)
                             If data Is Nothing Then Return False
-                            Using output = File.Open(cachePath, FileMode.Create, FileAccess.Write, FileShare.None)
-                                data.SaveTo(output)
-                            End Using
+                            WriteTileAtomic(data, cachePath)
                         End Using
                     End Using
                 Finally
@@ -595,15 +593,22 @@ Namespace Services
                 If File.Exists(cachePath) Then Return ThumbnailCacheOutcome.AlreadyThere
                 If Not File.Exists(filePath) Then Return ThumbnailCacheOutcome.Skipped
 
-                Directory.CreateDirectory(folderCachePath)
-                EnsureFolderRegistered(folderId, folderDisplayPath)
-                DeleteStaleCacheFiles(folderId, folderCachePath, imageHash, cacheFileName)
-                cancellationToken.ThrowIfCancellationRequested()
+                If Not TryBeginTileWrite(cachePath) Then Return ThumbnailCacheOutcome.Skipped
+                Dim written = False
+                Try
+                    Directory.CreateDirectory(folderCachePath)
+                    EnsureFolderRegistered(folderId, folderDisplayPath)
+                    DeleteStaleCacheFiles(folderId, folderCachePath, imageHash, cacheFileName)
+                    cancellationToken.ThrowIfCancellationRequested()
 
-                If DecodeGate.Run(Function() TryWriteCacheFile(filePath, cachePath, quality, width)) AndAlso File.Exists(cachePath) Then
-                    GetFolderFileIndex(folderId).Add(folderCachePath, imageHash, cacheFileName)
-                    Return ThumbnailCacheOutcome.Written
-                End If
+                    If DecodeGate.Run(Function() TryWriteCacheFile(filePath, cachePath, quality, width)) AndAlso File.Exists(cachePath) Then
+                        GetFolderFileIndex(folderId).Add(folderCachePath, imageHash, cacheFileName)
+                        written = True
+                        Return ThumbnailCacheOutcome.Written
+                    End If
+                Finally
+                    EndTileWrite(cachePath, written)
+                End Try
             Catch ex As OperationCanceledException
                 Throw
             Catch
@@ -664,6 +669,7 @@ Namespace Services
                 If File.Exists(cachePath) Then
                     cancellationToken.ThrowIfCancellationRequested()
                     isExact = True
+                    TouchForEviction(cachePath)
                     Return OpenTileBitmap(cachePath, width)
                 End If
 
@@ -781,12 +787,19 @@ Namespace Services
                 Dim cachePath = IO.Path.Combine(folderCachePath, cacheFileName)
 
                 If Not IsDevelopedRawTile(cachePath, width) Then
-                    Directory.CreateDirectory(folderCachePath)
-                    EnsureFolderRegistered(folderId, ResolveCacheDisplayPath(filePath, Nothing, Nothing))
-                    DeleteStaleCacheFiles(folderId, folderCachePath, imageHash, cacheFileName)
-                    If Not DecodeGate.Run(Function() TryWriteCacheFile(filePath, cachePath, quality, width)) Then Return Nothing
-                    If Not File.Exists(cachePath) Then Return Nothing
-                    GetFolderFileIndex(folderId).Add(folderCachePath, imageHash, cacheFileName)
+                    If Not TryBeginTileWrite(cachePath) Then Return Nothing
+                    Dim written = False
+                    Try
+                        Directory.CreateDirectory(folderCachePath)
+                        EnsureFolderRegistered(folderId, ResolveCacheDisplayPath(filePath, Nothing, Nothing))
+                        DeleteStaleCacheFiles(folderId, folderCachePath, imageHash, cacheFileName)
+                        If Not DecodeGate.Run(Function() TryWriteCacheFile(filePath, cachePath, quality, width)) Then Return Nothing
+                        If Not File.Exists(cachePath) Then Return Nothing
+                        GetFolderFileIndex(folderId).Add(folderCachePath, imageHash, cacheFileName)
+                        written = True
+                    Finally
+                        EndTileWrite(cachePath, written)
+                    End Try
                 Else
                     NoteRawSource(RawSourceDevelopedTile)
                 End If
@@ -835,16 +848,28 @@ Namespace Services
             Dim cachePath = IO.Path.Combine(folderCachePath, cacheFileName)
 
             Try
-                Directory.CreateDirectory(folderCachePath)
-                ' Den Ordner einmal je Sitzung im Wurzelverzeichnis eintragen, nicht je Kachel.
-                EnsureFolderRegistered(folderId, folderDisplayPath)
-                DeleteStaleCacheFiles(folderId, folderCachePath, imageHash, cacheFileName)
-                cancellationToken.ThrowIfCancellationRequested()
+                ' Eine Kachel ausserhalb des Kachelspeichers wird nur angezeigt, nicht abgelegt
+                ' (DecodeDirect unten).
+                If TryBeginTileWrite(cachePath) Then
+                    Dim written = False
+                    Try
+                        Directory.CreateDirectory(folderCachePath)
+                        ' Den Ordner einmal je Sitzung im Wurzelverzeichnis eintragen, nicht je Kachel.
+                        EnsureFolderRegistered(folderId, folderDisplayPath)
+                        DeleteStaleCacheFiles(folderId, folderCachePath, imageHash, cacheFileName)
+                        cancellationToken.ThrowIfCancellationRequested()
 
-                If TryWriteCacheFile(filePath, cachePath, quality, width, isStillWanted) AndAlso File.Exists(cachePath) Then
-                    GetFolderFileIndex(folderId).Add(folderCachePath, imageHash, cacheFileName)
-                    cancellationToken.ThrowIfCancellationRequested()
-                    Return OpenTileBitmap(cachePath, width)
+                        If TryWriteCacheFile(filePath, cachePath, quality, width, isStillWanted) AndAlso File.Exists(cachePath) Then
+                            GetFolderFileIndex(folderId).Add(folderCachePath, imageHash, cacheFileName)
+                            written = True
+                        End If
+                    Finally
+                        EndTileWrite(cachePath, written)
+                    End Try
+                    If written Then
+                        cancellationToken.ThrowIfCancellationRequested()
+                        Return OpenTileBitmap(cachePath, width)
+                    End If
                 End If
             Catch ex As OperationCanceledException
                 Throw
@@ -859,10 +884,11 @@ Namespace Services
             _registeredFolderIds.Clear()
             _folderFileIndexes.Clear()
             InvalidateSettingsCache()
-            If Not Directory.Exists(CacheRoot) Then Return 0
+            Dim root = CacheRoot
+            If Not Directory.Exists(root) Then Return 0
             Try
-                Dim count = Directory.GetFiles(CacheRoot, "*.jpg", SearchOption.AllDirectories).Length
-                Directory.Delete(CacheRoot, True)
+                Dim count = Directory.GetFiles(root, "*.jpg", SearchOption.AllDirectories).Length
+                Directory.Delete(root, True)
                 Return count
             Catch
                 Return 0
@@ -1116,9 +1142,7 @@ Namespace Services
                                     Using image = SKImage.FromBitmap(managed)
                                         Using data = image.Encode(SKEncodedImageFormat.Jpeg, quality)
                                             If data Is Nothing Then Return False
-                                            Using output = File.Open(cachePath, FileMode.Create, FileAccess.Write, FileShare.None)
-                                                data.SaveTo(output)
-                                            End Using
+                                            WriteTileAtomic(data, cachePath)
                                         End Using
                                     End Using
                                 Finally

@@ -39,8 +39,7 @@ Namespace Services
         Private Shared _loaded As Boolean
 
         ''' <summary>Ablage der Messwerte; im Pruefstand auf einen eigenen Ort umgelenkt.</summary>
-        Friend Shared Property CacheFilePath As String =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix", "sharpness.tsv")
+        Friend Shared Property CacheFilePath As String = AppFolders.InData("sharpness.tsv")
 
         Private Sub New()
         End Sub

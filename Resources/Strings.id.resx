@@ -12596,4 +12596,304 @@
   <data name="Mehr_Punkte_geben_feinere_berg_nge_und_eine_gr_e_87716011" xml:space="preserve">
     <value>Lebih banyak titik memberi transisi lebih halus dan berkas lebih besar.</value>
   </data>
+  <data name="Speicherort_der_Vorschaubilder_ea4180cd" xml:space="preserve">
+    <value>Lokasi gambar mini</value>
+  </data>
+  <data name="Ein_anderer_Ort_etwa_eine_zweite_Platte_nimmt_di_2b098a5f" xml:space="preserve">
+    <value>Lokasi lain, misalnya disk kedua, ikut membawa gambar mini yang sudah ada.</value>
+  </data>
+  <data name="Standardort_645fbbac" xml:space="preserve">
+    <value>Lokasi bawaan</value>
+  </data>
+  <data name="Ort_w_hlen_a14d708c" xml:space="preserve">
+    <value>Pilih lokasi</value>
+  </data>
+  <data name="H_chstgr_e_der_Vorschaubilder_eef5e17a" xml:space="preserve">
+    <value>Ukuran maksimum gambar mini</value>
+  </data>
+  <data name="Wird_sie_berschritten_entfernt_FerrumPix_im_Hint_77e728da" xml:space="preserve">
+    <value>Jika terlampaui, FerrumPix menghapus di latar belakang gambar mini yang paling lama tidak dilihat. Gambar mini dibuat lagi saat dilihat berikutnya.</value>
+  </data>
+  <data name="Unbegrenzt_0d297e61" xml:space="preserve">
+    <value>Tanpa batas</value>
+  </data>
+  <data name="Der_gew_hlte_Ort_0_ist_nicht_erreichbar_Bis_er_w_6319e156" xml:space="preserve">
+    <value>Lokasi yang dipilih {0} tidak dapat dijangkau. Sampai lokasi itu kembali, gambar mini baru disimpan di lokasi bawaan.</value>
+  </data>
+  <data name="Belegt_0_c4342b36" xml:space="preserve">
+    <value>Terpakai: {0}</value>
+  </data>
+  <data name="Ort_nicht_verwendbar_6c4c756c" xml:space="preserve">
+    <value>Lokasi tidak dapat digunakan</value>
+  </data>
+  <data name="Die_vorhandenen_Vorschaubilder_0_werden_nach_1_v_33e1a876" xml:space="preserve">
+    <value>Gambar mini yang ada ({0}) akan dipindahkan ke {1}. Ke disk lain gambar mini disalin dahulu dan baru setelah itu dihapus dari lokasi lama. Membatalkan membiarkan lokasi lama tidak berubah.</value>
+  </data>
+  <data name="Vorschaubilder_verschieben_b91cf923" xml:space="preserve">
+    <value>Pindahkan gambar mini?</value>
+  </data>
+  <data name="Vorschaubilder_werden_verschoben_f10674ab" xml:space="preserve">
+    <value>Memindahkan gambar mini...</value>
+  </data>
+  <data name="Die_Vorschaubilder_liegen_jetzt_in_0_876dacd2" xml:space="preserve">
+    <value>Gambar mini sekarang berada di {0}.</value>
+  </data>
+  <data name="Abgebrochen_Die_Vorschaubilder_liegen_weiter_am__d5ea562d" xml:space="preserve">
+    <value>Dibatalkan. Gambar mini tetap di lokasi lama.</value>
+  </data>
+  <data name="Am_neuen_Ort_ist_nicht_genug_Platz_Die_Vorschaub_5f127c35" xml:space="preserve">
+    <value>Ruang di lokasi baru tidak cukup. Gambar mini tetap di lokasi lama.</value>
+  </data>
+  <data name="Das_Verschieben_ist_fehlgeschlagen_Die_Vorschaub_f5dd8e04" xml:space="preserve">
+    <value>Gagal memindahkan. Gambar mini tetap di lokasi lama.</value>
+  </data>
+  <data name="Ort_f_r_die_Vorschaubilder_w_hlen_15f46a6c" xml:space="preserve">
+    <value>Pilih lokasi untuk gambar mini</value>
+  </data>
+  <data name="Ort_der_Vorschaubilder_nicht_erreichbar_1854c3fc" xml:space="preserve">
+    <value>Lokasi gambar mini tidak dapat dijangkau</value>
+  </data>
+  <data name="Es_wurde_kein_Ordner_gew_hlt_3482d327" xml:space="preserve">
+    <value>Tidak ada folder yang dipilih.</value>
+  </data>
+  <data name="Dieser_Ordner_l_sst_sich_nicht_verwenden_11f6f21b" xml:space="preserve">
+    <value>Folder ini tidak dapat digunakan.</value>
+  </data>
+  <data name="Die_Wurzel_eines_Laufwerks_l_sst_sich_nicht_verw_84a52fef" xml:space="preserve">
+    <value>Akar drive tidak dapat digunakan. Pilih folder di dalamnya.</value>
+  </data>
+  <data name="Im_Flatpak_lassen_sich_nur_Ordner_verwenden_die__2b6244e0" xml:space="preserve">
+    <value>Di Flatpak hanya folder yang dilihat langsung oleh FerrumPix yang dapat digunakan, misalnya di folder pribadi atau di drive yang dipasang. Folder yang hanya dibagikan melalui pemilih berkas sistem hilang bagi FerrumPix setelah dimulai ulang.</value>
+  </data>
+  <data name="Das_tempor_re_Verzeichnis_wird_beim_Neustart_gel_042d17a7" xml:space="preserve">
+    <value>Folder sementara dikosongkan saat dimulai ulang. Pilih folder lain.</value>
+  </data>
+  <data name="Der_Ordner_ist_nicht_erreichbar_ac533d85" xml:space="preserve">
+    <value>Folder tidak dapat dijangkau.</value>
+  </data>
+  <data name="In_diesem_Ordner_liegt_schon_ein_Ordner_0_mit_an_6da5df62" xml:space="preserve">
+    <value>Folder ini sudah berisi folder {0} dengan berkas lain.</value>
+  </data>
+  <data name="Die_Vorschaubilder_liegen_schon_dort_82bebe06" xml:space="preserve">
+    <value>Gambar mini sudah ada di sana.</value>
+  </data>
+  <data name="Der_neue_Ort_darf_nicht_im_bisherigen_liegen_und_f6cc7817" xml:space="preserve">
+    <value>Lokasi baru tidak boleh berada di dalam lokasi saat ini, dan lokasi saat ini tidak boleh berada di dalam lokasi baru.</value>
+  </data>
+  <data name="FerrumPix_darf_in_diesem_Ordner_nicht_schreiben_2337990a" xml:space="preserve">
+    <value>FerrumPix tidak diizinkan menulis ke folder ini.</value>
+  </data>
+  <data name="Im_Flatpak_sind_die_Systemordner_des_Rechners_wi_1b629a4b" xml:space="preserve">
+    <value>Di Flatpak folder sistem komputer seperti /usr, /etc, dan /tmp tidak dapat dijangkau.</value>
+  </data>
+  <data name="Die_Vorschaubilder_liegen_in_0_e64abee7" xml:space="preserve">
+    <value>Gambar mini berada di {0}.</value>
+  </data>
+  <data name="0_Gruppen_markiert_c8fd0ffe" xml:space="preserve">
+    <value>{0} grup ditandai</value>
+  </data>
+  <data name="0_Gruppen_mit_zusammen_1_Gesichtern_Jedes_Gesich_25752e68" xml:space="preserve">
+    <value>{0} grup dengan total {1} wajah. Setiap wajah masuk ke wadah 'Tidak diketahui', seperti dengan 'Bukan orang ini'. Di sana wajah dapat ditetapkan lagi satu per satu, dan pencarian baru tidak lagi membentuk grup darinya.</value>
+  </data>
+  <data name="0_davon_tragen_einen_Namen_die_Namen_gehen_verlo_636586df" xml:space="preserve">
+    <value>{0} di antaranya bernama; nama-nama itu akan hilang.</value>
+  </data>
+  <data name="Markierte_Gruppen_entfernen_48dc711d" xml:space="preserve">
+    <value>Hapus grup yang ditandai?</value>
+  </data>
+  <data name="Im_Bild_ein_Rechteck_um_das_Gesicht_aufziehen_ES_fae2b97a" xml:space="preserve">
+    <value>Tarik persegi panjang di sekitar wajah pada gambar. ESC membatalkan.</value>
+  </data>
+  <data name="Das_Rechteck_ist_zu_klein_Bitte_gr_er_um_das_Ges_191f0c20" xml:space="preserve">
+    <value>Persegi panjang terlalu kecil. Tarik lebih besar di sekitar wajah.</value>
+  </data>
+  <data name="Gesicht_eingetragen_Der_Name_kommt_in_das_Feld_d_612c3ed2" xml:space="preserve">
+    <value>Wajah ditambahkan. Ketik nama di kolom di atasnya.</value>
+  </data>
+  <data name="Gesicht_eingetragen_Das_Modell_konnte_es_nicht_a_f777d1cd" xml:space="preserve">
+    <value>Wajah ditambahkan. Model tidak dapat menyelaraskannya; wajah ini membawa nama, tetapi tidak memberi saran untuk gambar lain.</value>
+  </data>
+  <data name="An_dieser_Stelle_steht_schon_ein_Gesicht_94ec83ba" xml:space="preserve">
+    <value>Sudah ada wajah di tempat ini.</value>
+  </data>
+  <data name="Das_Gesicht_lie_sich_nicht_eintragen_8d28725a" xml:space="preserve">
+    <value>Wajah tidak dapat ditambahkan.</value>
+  </data>
+  <data name="0_weitere_benannte_Personen_kommen_in_diesem_Ord_5f17b74e" xml:space="preserve">
+    <value>{0} orang bernama lainnya tidak ada di folder ini.</value>
+  </data>
+  <data name="Das_Zeichen_oben_links_auf_einer_Kachel_markiert_dbf9f6a0" xml:space="preserve">
+    <value>Tanda di kiri atas ubin menandainya. Grup yang ditandai dapat dihapus bersama atau ditambahkan ke seseorang.</value>
+  </data>
+  <data name="Alle_auf_dieser_Seite_markieren_b84747ba" xml:space="preserve">
+    <value>Tandai semua di halaman ini</value>
+  </data>
+  <data name="Name_der_Person_13d3aebd" xml:space="preserve">
+    <value>Nama orang</value>
+  </data>
+  <data name="Hei_t_schon_jemand_so_werden_die_markierten_Grup_6ddbeaa4" xml:space="preserve">
+    <value>Jika sudah ada orang dengan nama ini, grup yang ditandai digabungkan dengan orang itu. Jika belum, dibuat orang baru dengan nama ini.</value>
+  </data>
+  <data name="Zu_Person_hinzuf_gen_368b6a83" xml:space="preserve">
+    <value>Tambahkan ke orang</value>
+  </data>
+  <data name="Markierung_aufheben_7084b33e" xml:space="preserve">
+    <value>Hapus tanda</value>
+  </data>
+  <data name="Markieren_bc4e896e" xml:space="preserve">
+    <value>Tandai</value>
+  </data>
+  <data name="Ein_Name_den_es_schon_gibt_f_hrt_diese_Gruppe_mi_10fb8c4f" xml:space="preserve">
+    <value>Nama yang sudah ada menggabungkan grup ini dengan orang tersebut.</value>
+  </data>
+  <data name="Ein_Gesicht_das_nicht_erkannt_wurde_im_Bild_mit__e47c9990" xml:space="preserve">
+    <value>Tandai wajah yang tidak dikenali dengan persegi panjang pada gambar. ESC membatalkan.</value>
+  </data>
+  <data name="Gesicht_markieren_bdac8a3d" xml:space="preserve">
+    <value>Tandai wajah</value>
+  </data>
+  <data name="Alle_Personen_des_Katalogs_zeigen_a096ff69" xml:space="preserve">
+    <value>Tampilkan semua orang di katalog</value>
+  </data>
+  <data name="Dateien_zum_Hochladen_hier_ablegen_471f9847" xml:space="preserve">
+    <value>Letakkan file di sini untuk mengunggahnya</value>
+  </data>
+  <data name="Dateien_hochladen_cc58908b" xml:space="preserve">
+    <value>Unggah file</value>
+  </data>
+  <data name="0_von_1_Dateien_hochgeladen_18b1984a" xml:space="preserve">
+    <value>{0} dari {1} file diunggah</value>
+  </data>
+  <data name="Hochgeladen_a227895e" xml:space="preserve">
+    <value>Diunggah</value>
+  </data>
+  <data name="Fehlgeschlagen_f7b1b156" xml:space="preserve">
+    <value>Gagal</value>
+  </data>
+  <data name="Die_bertragung_wurde_unterbrochen_1dc90c16" xml:space="preserve">
+    <value>Transfer terputus</value>
+  </data>
+  <data name="Bereit_zum_Herunterladen_f8026251" xml:space="preserve">
+    <value>Siap diunduh</value>
+  </data>
+  <data name="Die_Datei_ist_gr_er_als_0_GB_5d04db62" xml:space="preserve">
+    <value>File lebih besar dari {0} GB</value>
+  </data>
+  <data name="Die_Seite_ist_veraltet_Bitte_neu_laden_41bda2b3" xml:space="preserve">
+    <value>Halaman sudah usang. Muat ulang halaman.</value>
+  </data>
+  <data name="Der_Dateiname_ist_ung_ltig_77f457aa" xml:space="preserve">
+    <value>Nama file tidak valid</value>
+  </data>
+  <data name="Die_Datei_ist_leer_db2c5c6e" xml:space="preserve">
+    <value>File kosong</value>
+  </data>
+  <data name="Als_Ebene_l_sst_sich_nur_ein_Bild_einf_gen_3a887426" xml:space="preserve">
+    <value>Hanya gambar yang dapat disisipkan sebagai lapisan</value>
+  </data>
+  <data name="Diese_Dateiart_nimmt_FerrumPix_nicht_an_299a8ea6" xml:space="preserve">
+    <value>FerrumPix tidak menerima jenis file ini</value>
+  </data>
+  <data name="Hier_darf_FerrumPix_keine_Dateien_anlegen_92082505" xml:space="preserve">
+    <value>FerrumPix tidak boleh membuat file di sini</value>
+  </data>
+  <data name="Auf_dem_Laufwerk_ist_nicht_genug_Platz_frei_6ba0c24f" xml:space="preserve">
+    <value>Ruang kosong pada drive tidak cukup</value>
+  </data>
+  <data name="Erst_den_offenen_Dialog_schlie_en_8c1400a7" xml:space="preserve">
+    <value>Tutup dulu dialog yang terbuka</value>
+  </data>
+  <data name="Kein_Ordner_offen_in_den_die_Dateien_geh_ren_3c539817" xml:space="preserve">
+    <value>Tidak ada folder terbuka untuk menampung file</value>
+  </data>
+  <data name="Die_Bilder_hier_liegen_auf_einem_Server_Hochlade_fa8cc635" xml:space="preserve">
+    <value>Gambar di sini ada di server. Unggahan hanya bisa ke folder di komputer ini.</value>
+  </data>
+  <data name="Datenordner_1446557a" xml:space="preserve">
+    <value>Folder data</value>
+  </data>
+  <data name="Katalog_Vorschaubilder_Modelle_Erweiterungen_ges_d75a6513" xml:space="preserve">
+    <value>Katalog, gambar mini, model, ekstensi, penyesuaian tersimpan, favorit, dan daftar pencarian ada di sini. Lokasi lain, misalnya disk kedua atau berbagi jaringan, membawa semuanya pada awal berikutnya.</value>
+  </data>
+  <data name="Zur_cknehmen_1651c015" xml:space="preserve">
+    <value>Urungkan</value>
+  </data>
+  <data name="Ordner_f_r_die_Daten_von_FerrumPix_w_hlen_49493664" xml:space="preserve">
+    <value>Pilih folder untuk data FerrumPix</value>
+  </data>
+  <data name="Die_Daten_liegen_schon_dort_fbeb1a0b" xml:space="preserve">
+    <value>Data sudah ada di sana.</value>
+  </data>
+  <data name="Der_Ordner_der_Einstellungen_l_sst_sich_nicht_al_b1781d9e" xml:space="preserve">
+    <value>Folder pengaturan tidak dapat dipakai sebagai folder data.</value>
+  </data>
+  <data name="Der_Katalog_wird_gerade_von_0_benutzt_Der_Dateno_5ac02e22" xml:space="preserve">
+    <value>Katalog sedang dipakai oleh {0}. Folder data baru dapat pindah setelah FerrumPix ditutup di sana.</value>
+  </data>
+  <data name="Datenordner_verschieben_92acb274" xml:space="preserve">
+    <value>Pindahkan folder data?</value>
+  </data>
+  <data name="Die_Daten_von_FerrumPix_0_ziehen_beim_n_chsten_S_9503f5ab" xml:space="preserve">
+    <value>Data FerrumPix ({0}) pindah ke {1} pada awal berikutnya. Pada disk yang sama langsung selesai; ke disk lain akan disalin, dan awal itu berlangsung lebih lama. Lokasi lama baru dikosongkan setelah semuanya tiba.</value>
+  </data>
+  <data name="Vorhandenen_Datenordner_verwenden_23ee4612" xml:space="preserve">
+    <value>Pakai folder data yang ada?</value>
+  </data>
+  <data name="In_0_liegt_schon_ein_Datenordner_von_FerrumPix_A_ee7e4ce9" xml:space="preserve">
+    <value>Di {0} sudah ada folder data FerrumPix. Mulai awal berikutnya FerrumPix bekerja dengannya; data saat ini tetap di {1}.</value>
+  </data>
+  <data name="Verwenden_8590499d" xml:space="preserve">
+    <value>Pakai</value>
+  </data>
+  <data name="Beim_n_chsten_Start_verwendet_FerrumPix_den_Date_82e8fbec" xml:space="preserve">
+    <value>Pada awal berikutnya FerrumPix memakai folder data di {0}.</value>
+  </data>
+  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_ce1e5936" xml:space="preserve">
+    <value>Pada awal berikutnya folder data pindah ke {0}.</value>
+  </data>
+  <data name="Datenordner_nicht_erreichbar_9b1a712e" xml:space="preserve">
+    <value>Folder data tidak dapat dijangkau</value>
+  </data>
+  <data name="Der_Datenordner_0_ist_nicht_erreichbar_Bis_er_wi_a6ecc803" xml:space="preserve">
+    <value>Folder data {0} tidak dapat dijangkau. Sampai tersedia lagi, FerrumPix bekerja tanpa katalog, dan model, ekstensi, serta penyesuaian tersimpan tidak ada.</value>
+  </data>
+  <data name="Datenordner_nicht_umgezogen_3673729f" xml:space="preserve">
+    <value>Folder data tidak dipindahkan</value>
+  </data>
+  <data name="Der_Datenordner_konnte_nicht_nach_0_umziehen_wei_59bf6cf5" xml:space="preserve">
+    <value>Folder data tidak dapat pindah ke {0} karena ruang tidak cukup. Semuanya tetap di lokasi sebelumnya.</value>
+  </data>
+  <data name="Der_Datenordner_konnte_nicht_nach_0_umziehen_All_4af32b64" xml:space="preserve">
+    <value>Folder data tidak dapat pindah ke {0}. Semuanya tetap di lokasi sebelumnya; rinciannya ada di log.</value>
+  </data>
+  <data name="Daten_nicht_vollst_ndig_umgezogen_e2dbe176" xml:space="preserve">
+    <value>Data belum pindah sepenuhnya</value>
+  </data>
+  <data name="FerrumPix_legt_seine_Daten_jetzt_gesammelt_in_0__97509d2e" xml:space="preserve">
+    <value>FerrumPix kini menyimpan datanya bersama di {0}. Sebagian tidak dapat dipindahkan ke sana dan masih dipakai dari lokasi lama. Pada awal berikutnya FerrumPix mencoba lagi; rinciannya ada di log.</value>
+  </data>
+  <data name="Katalog_wird_von_0_benutzt_78eb557d" xml:space="preserve">
+    <value>Katalog dipakai oleh {0}</value>
+  </data>
+  <data name="FerrumPix_l_uft_auf_0_mit_demselben_Katalog_seit_97dbe250" xml:space="preserve">
+    <value>FerrumPix berjalan di {0} dengan katalog yang sama, sejak {1}. Dua komputer tidak boleh membukanya bersamaan. Sampai {0} melepaskannya, FerrumPix bekerja di sini tanpa katalog, dan apa yang seharusnya masuk ke katalog pada sesi ini tidak disimpan. Jika FerrumPix tidak lagi berjalan di {0}, misalnya setelah crash, kunci dapat diambil alih.</value>
+  </data>
+  <data name="Sperre_bernehmen_14672502" xml:space="preserve">
+    <value>Ambil alih kunci</value>
+  </data>
+  <data name="Ohne_Katalog_weiter_ba43ea48" xml:space="preserve">
+    <value>Lanjut tanpa katalog</value>
+  </data>
+  <data name="Sperre_bernommen_7d2f823d" xml:space="preserve">
+    <value>Kunci diambil alih</value>
+  </data>
+  <data name="Der_Katalog_geh_rt_jetzt_diesem_Rechner_Bitte_Fe_f21858c6" xml:space="preserve">
+    <value>Katalog kini milik komputer ini. Mulai ulang FerrumPix agar katalog dibuka.</value>
+  </data>
+  <data name="Der_Ordner_f_r_Anpassungen_ist_nicht_erreichbar__f22a0510" xml:space="preserve">
+    <value>Folder penyesuaian tidak dapat dijangkau: {0}.</value>
+  </data>
+  <data name="Hier_liegen_die_im_Editor_gespeicherten_Anpassun_d58c017e" xml:space="preserve">
+    <value>Di sini ada penyesuaian yang disimpan di editor, masing-masing sebagai berkas sendiri, setiap folder sebagai folder sungguhan. Folder ini bagian dari folder data dan ikut pindah bersamanya.</value>
+  </data>
 </root>

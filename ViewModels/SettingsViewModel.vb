@@ -5636,6 +5636,7 @@ Namespace ViewModels
             _faceRecognitionEnabled = _appSettings.FaceRecognitionEnabled
             _photoMapEnabled = _appSettings.PhotoMapEnabled
             LoadMapSettings(_appSettings)
+            LoadThumbnailCacheStorageSettings(_appSettings)
             _faceMinimumSizePercent = _appSettings.FaceMinimumSizePercent
             _transparencyBackgroundMode = AppSettingsService.NormalizeTransparencyBackgroundMode(_appSettings.TransparencyBackgroundMode)
             _transparencyBackgroundColor = AppSettingsService.NormalizeHexColor(_appSettings.TransparencyBackgroundColor, "#FFFFFFFF")
@@ -5955,6 +5956,7 @@ Namespace ViewModels
             _savedFaceMinimumSizePercent = _faceMinimumSizePercent
             _savedPhotoMapEnabled = _photoMapEnabled
             SnapshotMapSettings()
+            SnapshotThumbnailCacheStorageSettings()
             _savedThemeMode = _themeMode
             _savedWindowButtonsSide = _windowButtonsSide
             _savedAccentColor = _accentColor
@@ -6186,6 +6188,7 @@ Namespace ViewModels
             FaceMinimumSizePercent = _savedFaceMinimumSizePercent
             PhotoMapEnabled = _savedPhotoMapEnabled
             RestoreMapSettings()
+            RestoreThumbnailCacheStorageSettings()
             ThemeMode = _savedThemeMode
             ' Die Seite der Fensterknoepfe wirkt sofort beim Antippen, genau wie das Thema - ein
             ' Abbrechen muss sie deshalb ebenso zuruecknehmen.
@@ -6498,6 +6501,7 @@ Namespace ViewModels
             FaceMinimumSizePercent = 3
             PhotoMapEnabled = False
             ResetMapSettings()
+            ResetThumbnailCacheStorageSettings()
             TransparencyBackgroundMode = "Checkerboard"
             TransparencyBackgroundColor = "#FFFFFFFF"
             FontSizeOffset = 0
@@ -6971,6 +6975,9 @@ Namespace ViewModels
 
             _isThumbnailCacheRefreshing = True
             RaiseFolderListChanged()
+            ' Den belegten Platz der Vorschaubilder und den Datenordner gleich mit nachsehen.
+            RefreshThumbnailCacheStorage()
+            RaiseDataFolderChanged()
             Try
                 Do
                     _isThumbnailCacheRefreshQueued = False

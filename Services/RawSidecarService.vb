@@ -180,8 +180,13 @@ Namespace Services
         '''
         ''' GrainModel: aus demselben Grund. Ohne Schwelle verloere eine aeltere Fassung das Feld,
         ''' und neues Korn kaeme danach in der alten Rechnung, mit anderer Bedeutung von Groesse und
-        ''' Rauheit.</summary>
-        Friend Shared ReadOnly RecipeFieldsSinceFloor As String() = {"HazeModel", "GrainModel"}
+        ''' Rauheit.
+        '''
+        ''' ToneRuleVersion: ebenso. Eine aeltere Fassung verloere das Feld beim naechsten Stern, und
+        ''' abgesenkte Lichter nach positiver Belichtung rechneten danach wieder mit dem ganzen Wert
+        ''' in der Kette. Gespeichert wird es nur, wo es wirkt (Belichtung ueber 0, Lichter unter 0);
+        ''' jede andere Bearbeitung bleibt fuer aeltere Fassungen lesbar.</summary>
+        Friend Shared ReadOnly RecipeFieldsSinceFloor As String() = {"HazeModel", "GrainModel", "ToneRuleVersion"}
         Private Shared ReadOnly Ns As XNamespace = "https://github.com/Bitpainter75/FerrumPix/ns/recipe/1.0"
         Private Shared ReadOnly _writeLock As New Object()
 

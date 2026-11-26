@@ -96,4 +96,31 @@
     <EmbeddedResource Include="Resources\PentaxLensIds.tsv" />
     <EmbeddedResource Include="Resources\CanonLensTypes.tsv" />
   </ItemGroup>
+
+  <!-- Nur fuer Windows: das Paket Microsoft.ML.OnnxRuntime legt seine Windows-Bibliotheken
+       (onnxruntime.dll, onnxruntime_providers_shared.dll) ueber die eigene .props als None-Eintrag
+       an, unabhaengig vom Zielsystem. Unter Linux und macOS laedt die Anwendung die .so bzw.
+       .dylib aus runtimes/; die DLLs waren dort rund 17 MB ohne jeden Zugriff (gefunden im
+       AppImage 0.9.91-3). Gebaut fuer ein anderes System als Windows fallen sie weg. Ohne
+       Zielsystem (Entwicklungsbau) entscheidet das System, auf dem gebaut wird. -->
+  <PropertyGroup>
+    <TargetsWindowsRuntime Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier.StartsWith('win'))</TargetsWindowsRuntime>
+    <TargetsWindowsRuntime Condition="'$(RuntimeIdentifier)' == ''">$([MSBuild]::IsOSPlatform('Windows'))</TargetsWindowsRuntime>
+  </PropertyGroup>
+  <Target Name="DropWindowsOnnxRuntimeElsewhere" BeforeTargets="AssignTargetPaths" Condition="'$(TargetsWindowsRuntime)' != 'true'">
+    <ItemGroup>
+      <None Remove="@(None)" Condition="'%(None.Link)' == 'onnxruntime.dll' OR '%(None.Link)' == 'onnxruntime_providers_shared.dll'" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Bibliotheken, die nur beim Binden gebraucht werden und zur Laufzeit von niemandem gelesen:
+       die statische libe_sqlite3.a aus SQLitePCLRaw.lib.e_sqlite3 (runtimes/linux-*/native,
+       1,8 MB im AppImage 0.9.91-3) und die Importbibliotheken onnxruntime.lib und
+       onnxruntime_providers_shared.lib aus Microsoft.ML.OnnxRuntime (runtimes/win-*/native). -->
+  <Target Name="DropLinkOnlyLibraries" AfterTargets="ResolvePackageAssets">
+    <ItemGroup>
+      <NativeCopyLocalItems Remove="@(NativeCopyLocalItems)" Condition="'%(Extension)' == '.a' OR '%(Extension)' == '.lib'" />
+      <RuntimeTargetsCopyLocalItems Remove="@(RuntimeTargetsCopyLocalItems)" Condition="'%(Extension)' == '.a' OR '%(Extension)' == '.lib'" />
+    </ItemGroup>
+  </Target>
 </Project>

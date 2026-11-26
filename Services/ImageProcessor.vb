@@ -5782,7 +5782,8 @@ Namespace Services
             state.LightSources = New List(Of LightSource)() : state.LightAmbient = neutral.LightAmbient
             state.Exposure = neutral.Exposure : state.Brightness = neutral.Brightness : state.Contrast = neutral.Contrast
             state.Saturation = neutral.Saturation : state.Vibrance = neutral.Vibrance
-            state.Highlights = neutral.Highlights : state.ShadowsLevel = neutral.ShadowsLevel
+            state.Highlights = neutral.Highlights : state.ToneRuleVersion = neutral.ToneRuleVersion
+            state.ShadowsLevel = neutral.ShadowsLevel
             state.Whites = neutral.Whites : state.Blacks = neutral.Blacks
             state.Temperature = neutral.Temperature : state.Tint = neutral.Tint
             state.WhiteBalanceModel = neutral.WhiteBalanceModel
@@ -5924,7 +5925,7 @@ Namespace Services
             ' komponierten auf veralteter Basis. Das gilt auch fuer APP-WEITE Render-Schalter,
             ' nicht nur adj-Felder - wer einen einfuehrt, muss ihn hier eintragen.
             Return String.Join("|", New Object() {
-                adj.Exposure, adj.ExposureInSource, adj.ChainExposureInRawStage(), adj.KneeInSource, adj.SourceFromRawStage, adj.RampBlackShareInSource, If(adj.ShadowSaturationInSource IsNot Nothing, 1, 0), adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
+                adj.Exposure, adj.ExposureInSource, adj.ChainExposureInRawStage(), adj.KneeInSource, adj.SourceFromRawStage, adj.RampBlackShareInSource, If(adj.ShadowSaturationInSource IsNot Nothing, 1, 0), adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ToneRuleVersion, adj.ShadowsLevel,
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.SharpenRadius, adj.SharpenDetail,
                 adj.SharpnessAtOutputScale,
                 adj.WhiteBalanceModel, adj.WhiteBalanceAnchorX, adj.WhiteBalanceAnchorY, adj.WhiteBalanceCamera,

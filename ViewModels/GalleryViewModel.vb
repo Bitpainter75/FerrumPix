@@ -6599,6 +6599,7 @@ Namespace ViewModels
         ''' Bild im Infopanel, wo der Ausschnitt danebensteht.</summary>
         Public Sub RefreshPersonFilterOptions()
             PersonFilterOptions.Clear()
+            Dim outsideFolder = 0
             Try
                 Dim search = If(_personFilterSearch, "").Trim()
                 ' Im Umfang "Ordner" zaehlen nur die Fotos des Ordners; wer dort nicht vorkommt,
@@ -6610,6 +6611,10 @@ Namespace ViewModels
                     If scopedCounts IsNot Nothing Then
                         Dim inFolder = 0
                         scopedCounts.TryGetValue(entry.Id, inFolder)
+                        ' Benannt, im Katalog zu sehen, nur nicht in diesem Ordner: mitzaehlen, damit
+                        ' die Liste sagt, dass es sie gibt (PersonsOutsideFolderText).
+                        If inFolder <= 0 AndAlso entry.ImageCount > 0 AndAlso entry.IsNamed AndAlso
+                           Not entry.IsUnknownBin AndAlso Not IsPersonFilterSelected(entry.Id) Then outsideFolder += 1
                         entry.ImageCount = inFolder
                     End If
                     ' Eine gewaehlte Person bleibt stehen, auch mit null im Ordner - sonst liesse sie
@@ -6655,8 +6660,59 @@ Namespace ViewModels
                 DiagnosticLogService.LogException("Gallery.RefreshPersonFilterOptions", ex)
             End Try
             KeepOnlyActiveSource(PersonFilterOptions, Function(o) o.ServerSource)
+            _personsOutsideFolder = outsideFolder
+            Me.RaisePropertyChanged(NameOf(PersonsOutsideFolderCount))
+            Me.RaisePropertyChanged(NameOf(PersonsOutsideFolderText))
+            Me.RaisePropertyChanged(NameOf(HasPersonsOutsideFolder))
+            Me.RaisePropertyChanged(NameOf(ShowNoNamedPersonsHint))
             RefreshPersonFilterState()
             Me.RaisePropertyChanged(NameOf(HasPersonFeature))
+        End Sub
+
+        ' DIE LISTE SAGT, WER FEHLT. Im Umfang "Ordner" (ab Werk) stehen nur Personen, die im
+        ' offenen Ordner vorkommen. Wer jemanden in einem anderen Ordner benannt hat, suchte ihn
+        ' hier vergeblich und hielt den Namen fuer verloren (Nutzerbefund: eine benannte Person
+        ' fehlte im Personen-Menue, andere standen da - die standen eben auch in diesem Ordner).
+        ' Der Umschalter des Umfangs ist nur ein Symbol neben dem Suchfeld; deshalb nennt die
+        ' Liste die Zahl und fuehrt mit einem Knopf auf denselben Schalter.
+
+        Private _personsOutsideFolder As Integer
+
+        ''' <summary>Wie viele benannte Personen im Umfang "Ordner" aus der Liste fallen, weil sie in
+        ''' diesem Ordner nicht vorkommen. Null im Umfang "Katalog".</summary>
+        Public ReadOnly Property PersonsOutsideFolderCount As Integer
+            Get
+                Return _personsOutsideFolder
+            End Get
+        End Property
+
+        Public ReadOnly Property HasPersonsOutsideFolder As Boolean
+            Get
+                Return _personsOutsideFolder > 0
+            End Get
+        End Property
+
+        ''' <summary>"Noch keine Personen benannt" stimmt nur, wenn die Liste leer ist UND auch
+        ''' ausserhalb des Ordners niemand benannt ist.</summary>
+        Public ReadOnly Property ShowNoNamedPersonsHint As Boolean
+            Get
+                Return PersonFilterOptions.Count = 0 AndAlso _personsOutsideFolder = 0
+            End Get
+        End Property
+
+        Public ReadOnly Property PersonsOutsideFolderText As String
+            Get
+                If _personsOutsideFolder <= 0 Then Return ""
+                Return String.Format(LocalizationService.T("{0} weitere benannte Personen kommen in diesem Ordner nicht vor."), _personsOutsideFolder)
+            End Get
+        End Property
+
+        ''' <summary>Schaltet den Umfang auf den ganzen Katalog, wie der Schalter neben dem
+        ''' Suchfeld, und baut die Liste neu.</summary>
+        Public Sub ShowPersonsOfWholeCatalog()
+            If Not CanToggleFilterScope Then Return
+            IsCatalogFilterScope = True
+            RefreshPersonFilterOptions()
         End Sub
 
         Public Function IsPersonFilterSelected(personId As String) As Boolean
@@ -17606,14 +17662,30 @@ Namespace ViewModels
                     Return
                 End If
 
-                exportedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems, targetFolder, writer,
+                ' Im Browser sollen die fertigen Dateien auf den Rechner des Browsers kommen: der
+                ' Schreiber merkt sich jedes gelungene Ziel, danach geht EIN Angebot an die Seite.
+                Dim writtenTargets As New List(Of String)()
+                Dim recordingWriter = writer
+                If BrowserBridge.IsActive Then
+                    recordingWriter = Function(source As String, target As String)
+                                          Dim saved = writer(source, target)
+                                          If saved Then
+                                              SyncLock writtenTargets
+                                                  writtenTargets.Add(target)
+                                              End SyncLock
+                                          End If
+                                          Return saved
+                                      End Function
+                End If
+                exportedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems, targetFolder, recordingWriter,
                                                                           Function(source) result.Extension,
                                                                           "", skipSameExtension:=False,
                                                                           metaCopy:=result.MetaCopy,
                                                                           nameBuilder:=nameBuilder).ConfigureAwait(True)
-                uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems, targetFolder, writer,
+                uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems, targetFolder, recordingWriter,
                                                                            Function(source) result.Extension,
                                                                            "", nameBuilder).ConfigureAwait(True)
+                If writtenTargets.Count > 0 Then BrowserBridge.OfferDownload(writtenTargets)
             End If
 
             If saveToImmich AndAlso uploadedAssetIds.Count > 0 Then Await RefreshImmichViewAsync()

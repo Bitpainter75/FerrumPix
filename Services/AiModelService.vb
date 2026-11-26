@@ -56,12 +56,11 @@ Namespace Services
 
         ''' <summary>Der Ordner des NUTZERS. Was hier liegt, gewinnt: wer ein Modell selbst
         ''' exportiert oder gegen ein neueres tauscht, soll das ohne Schreibrechte im System
-        ''' koennen.</summary>
+        ''' koennen. "Models" im Datenordner (AppFolders.ModelsFolder); bis 0.9.91 hiess er
+        ''' "Modelle" und lag bei den Einstellungen.</summary>
         Public Shared ReadOnly Property ModelFolder As String
             Get
-                Return Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "FerrumPix", "Modelle")
+                Return AppFolders.ModelsFolder
             End Get
         End Property
 
@@ -76,6 +75,10 @@ Namespace Services
         Public Shared ReadOnly Iterator Property SearchPaths As IEnumerable(Of String)
             Get
                 Yield ModelFolder
+                ' Der Ordner bis 0.9.91: was ein abgebrochener Umzug dort gelassen hat, bleibt
+                ' benutzbar, bis der naechste Start es nachholt (FolderLayoutMigration).
+                Dim legacy = AppFolders.LegacyModelsFolder
+                If Not PathIdentity.AreSame(legacy, ModelFolder) AndAlso Directory.Exists(legacy) Then Yield legacy
                 ' Neben der Anwendung - so liefert ein Paket sie aus.
                 Dim neben = AppContext.BaseDirectory
                 If Not String.IsNullOrEmpty(neben) Then Yield Path.Combine(neben, "Modelle")

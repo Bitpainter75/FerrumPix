@@ -92,11 +92,11 @@ Namespace Services
     ''' sichere Fassung (<see cref="SafeFileName"/>). Gefunden wird eine Anpassung ueber ihre
     ''' KENNUNG; sie uebersteht Umbenennen und Verschieben, auch im Dateimanager.
     '''
-    ''' WO: Vorgabe ist "presets" im Datenordner (<see cref="DefaultRoot"/>); die Einstellung
-    ''' AppSettings.AdjustmentPresetFolder legt einen anderen Ordner fest, etwa in einer
-    ''' Cloud-Ablage. Ist der nicht erreichbar, ist der Stand leer und Reachable False. Es wird
-    ''' NICHT auf die Vorgabe ausgewichen: sonst entstuenden zwei Bestaende, und der zweite
-    ''' tauchte auf, sobald die Ablage wieder da ist.
+    ''' WO: immer "presets" im Datenordner (<see cref="DefaultRoot"/>). Einen eigenen Ort gibt es
+    ''' nicht mehr; wer mit dem Datenordner umzieht, nimmt die Anpassungen mit (AppFolders). Ein
+    ''' bis 0.9.91 gewaehlter Ordner wird beim Start einmal hierher kopiert
+    ''' (FolderLayoutMigration). Ist der Ordner nicht erreichbar, ist der Stand leer und Reachable
+    ''' False.
     '''
     ''' FREMDES STOERT NICHT UND WIRD NICHT ANGEFASST: Dateien mit anderer Endung zaehlen nicht,
     ''' eine Datei mit der Endung, die sich nicht lesen laesst, wird uebergangen. Loeschen eines
@@ -138,33 +138,30 @@ Namespace Services
 
         ' ── Wo ──────────────────────────────────────────────────────────────────────────────
 
-        ''' <summary>Die Vorgabe: "presets" im Datenordner der Anwendung.</summary>
+        ''' <summary>"presets" im Datenordner der Anwendung (AppFolders.PresetsFolder).</summary>
         Public Shared ReadOnly Property DefaultRoot As String
             Get
-                Return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix", "presets")
+                If Not String.IsNullOrEmpty(RootOverride) Then Return RootOverride
+                Return AppFolders.PresetsFolder
             End Get
         End Property
 
-        ''' <summary>Der geltende Ordner: der aus der Einstellung, sonst die Vorgabe.</summary>
-        Public Shared ReadOnly Property ConfiguredRoot As String
-            Get
-                Dim custom = If(AppSettingsService.Load().AdjustmentPresetFolder, "").Trim()
-                Return If(custom.Length > 0, custom, DefaultRoot)
-            End Get
-        End Property
+        ''' <summary>Fuer den Pruefstand: ein eigener Ordner statt des Datenordners. Anders als der im
+        ''' Datenordner wird er nicht angelegt, wenn er fehlt; so laesst sich ein nicht erreichbarer
+        ''' Ordner nachstellen.</summary>
+        Friend Shared RootOverride As String = Nothing
 
         Public Shared Function Current() As AdjustmentPresetStore
-            Return New AdjustmentPresetStore(ConfiguredRoot)
+            Return New AdjustmentPresetStore(DefaultRoot)
         End Function
 
         ''' <summary>Ist der Ordner da? Die Vorgabe im Datenordner wird angelegt, wenn sie fehlt;
-        ''' ein eigener Ordner nicht: fehlt er, ist die Ablage gerade nicht eingehaengt, und ein
-        ''' hier angelegter Ordner laege dann an ihrer Stelle auf der lokalen Platte.</summary>
+        ''' ein anderer Ordner (ein Ziel beim Einlesen) nicht.</summary>
         Public Function IsReachable() As Boolean
             If _root.Length = 0 Then Return False
             Try
                 If Directory.Exists(_root) Then Return True
-                If Not SamePath(_root, DefaultRoot) Then Return False
+                If Not SamePath(_root, AppFolders.PresetsFolder) Then Return False
                 Directory.CreateDirectory(_root)
                 Return Directory.Exists(_root)
             Catch
@@ -874,9 +871,10 @@ Namespace Services
             Return PathIdentity.IsAncestorOrSelf(realA, realB) OrElse PathIdentity.IsAncestorOrSelf(realB, realA)
         End Function
 
-        ''' <summary>Zieht alle Anpassungen samt Ordnern in einen anderen Bestand um, beim Wechsel
-        ''' des Ordners in den Einstellungen. Eine Datei verlaesst den alten Ordner erst, wenn sie
-        ''' im neuen belegt geschrieben ist.
+        ''' <summary>Zieht alle Anpassungen samt Ordnern in einen anderen Bestand um. Eine Datei
+        ''' verlaesst den alten Ordner erst, wenn sie im neuen belegt geschrieben ist. Die
+        ''' Anwendung selbst ruft das nicht mehr, seit es keinen eigenen Ort der Anpassungen gibt;
+        ''' der Pruefstand haelt die Regel fest.
         '''
         ''' VERSCHACHTELTE ORDNER WERDEN ABGELEHNT, in beide Richtungen (Refused): liegt der neue
         ''' im alten oder der alte im neuen, sieht der eine Bestand die Dateien des anderen mit

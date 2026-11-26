@@ -672,6 +672,17 @@ Namespace Services
             ' Feldnamen. Er gilt zuletzt und damit vor jeder Folgeregel oben (Fassung des Dunstes und
             ' des Korns, Ueberblendung ohne Angabe). In einer fremden Datei steht er nicht.
             ApplyPresetNamespace(xmpText, adj)
+            ' Die Tonfassung (ImageAdjustments.ToneRuleVersion) NACH dem eigenen Namensraum: ein
+            ' Preset oder eine Beistelldatei ist eine neue Einstellung und rechnet in der aktuellen,
+            ' gespeichert nur, wo sie wirkt. Ein mitgeschriebenes fpx:ToneRuleVersion zaehlt nicht;
+            ' es steht dort meist als 0, weil die Fassung im Quellrezept nicht wirkte, und machte
+            ' sonst auf einem Bild mit Belichtung aus einem neuen Preset die alte Rechnung. Beruehrt
+            ' das Preset weder Belichtung noch Lichter, bleibt die Fassung des Ausgangslooks.
+            Dim toneValue As Double
+            If TryGetXmpDouble(values, "Exposure2012", toneValue) OrElse TryGetXmpDouble(values, "Exposure", toneValue) OrElse
+               TryGetXmpDouble(values, "Highlights2012", toneValue) OrElse Not adj.ToneRuleMatters() Then
+                adj.ToneRuleVersion = If(adj.ToneRuleMatters(), ImageAdjustments.CurrentToneRuleVersion, 0)
+            End If
 
             Return adj
         End Function

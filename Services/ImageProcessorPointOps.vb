@@ -1430,9 +1430,14 @@ Namespace Services
             ' auf null aus. Lichter und Tiefen nehmen ihre Kurve nach dem ganzen Histogramm des Bildes
             ' (ToneReference.PrepareShapeCurves), ohne diese Regel Lichter nach dem Median, Tiefen
             ' nach dem Anteil heller Bildpunkte; Weiss nach der Spitze.
+            ' Die Lichter mit dem Wert der Kette: in Tonfassung 1 nach positiver Belichtung in der
+            ' RAW-Stufe zurueckgenommen (ImageAdjustments.ChainHighlights), sonst der Regler selbst.
+            ' Das Strukturglied (BuildLocalDetailTable) behaelt den ganzen Wert, sein Verstaerker
+            ' faellt schon selbst mit der Belichtung.
+            Dim highlights = adj.ChainHighlights()
             Dim highlightLift = If(reference.HighlightCurves IsNot Nothing,
-                                   ToneSliderCurves.LiftFromCurves(reference.HighlightCurves, adj.Highlights, d0),
-                                   ToneSliderCurves.LiftByMedian("Highlights", adj.Highlights, d0, reference.MedianL))
+                                   ToneSliderCurves.LiftFromCurves(reference.HighlightCurves, highlights, d0),
+                                   ToneSliderCurves.LiftByMedian("Highlights", highlights, d0, reference.MedianL))
             Dim shadowLift = If(reference.ShadowCurves IsNot Nothing,
                                 ToneSliderCurves.LiftFromCurves(reference.ShadowCurves, adj.ShadowsLevel, d0),
                                 ToneSliderCurves.LiftByBrightShare("Shadows", adj.ShadowsLevel, d0, reference.BrightShare,
@@ -1441,11 +1446,11 @@ Namespace Services
             If ShadowsRaiseDeepScale <> 1.0 AndAlso adj.ShadowsLevel > 0.0F Then shadowLift *= ShadowsRaiseDeepFactor(d0)
             ' Zusammen gesetzt daempfen sich beide gegensinnig und verstaerken sich gleichsinnig
             ' (ToneZoneInterplay).
-            If adj.Highlights <> 0 AndAlso adj.ShadowsLevel <> 0 Then
+            If highlights <> 0 AndAlso adj.ShadowsLevel <> 0 Then
                 highlightLift *= ToneZoneInterplay(HighlightsDampingPerRatio, HighlightsBoostRaise, HighlightsBoostLower,
-                                                   adj.Highlights, adj.ShadowsLevel)
+                                                   highlights, adj.ShadowsLevel)
                 shadowLift *= ToneZoneInterplay(ShadowsDampingPerRatio, ShadowsBoostRaise, ShadowsBoostLower,
-                                                adj.ShadowsLevel, adj.Highlights)
+                                                adj.ShadowsLevel, highlights)
             End If
             If part = ToneZonePart.ShadowsLocal Then Return shadowLift
             If part = ToneZonePart.HighlightsLocal Then Return highlightLift

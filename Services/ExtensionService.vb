@@ -296,13 +296,13 @@ Namespace Services
         Private Sub New()
         End Sub
 
-        ''' <summary>Der Ordner des Nutzers.</summary>
+        ''' <summary>Der Ordner des Nutzers: "Extensions" im Datenordner (AppFolders), sofern
+        ''' FERRUMPIX_EXTENSIONS keinen anderen nennt.</summary>
         Public Shared ReadOnly Property UserFolder As String
             Get
                 Dim override = Environment.GetEnvironmentVariable("FERRUMPIX_EXTENSIONS")
                 If Not String.IsNullOrWhiteSpace(override) Then Return override
-                Return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                                    "FerrumPix", "Extensions")
+                Return AppFolders.ExtensionsFolder
             End Get
         End Property
 

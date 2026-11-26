@@ -282,6 +282,11 @@ Namespace ViewModels
             Return Build("Im Dateimanager zeigen", "folder-open", c)
         End Function
 
+        ''' <summary>Nur im Browser: die Dateien auf den Rechner des Browsers.</summary>
+        Public Shared Function Download(c As ICommand) As AppAction
+            Return Build("Herunterladen", "download-simple", c)
+        End Function
+
         ''' <summary>Das Untermenue "Öffnen mit", je eingetragenem Programm ein Eintrag.</summary>
         Public Shared Function OpenWith(children As IReadOnlyList(Of Object)) As AppAction
             Return New AppAction(LocalizationService.T("Öffnen mit"), "arrow-square-out", Nothing, Nothing, children)

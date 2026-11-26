@@ -43,7 +43,7 @@ Namespace Services
         End Property
 
         Private Sub New()
-            Dim dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix")
+            Dim dir = AppFolders.DataRoot
             Directory.CreateDirectory(dir)
             _dbPath = Path.Combine(dir, "nextcloud-index.db")
             _connectionString = $"Data Source={_dbPath}"

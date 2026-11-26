@@ -686,6 +686,8 @@ Namespace Services
             look.HazeModel = HazeModelAfter(0, 0, look.Haze)
             ' Ebenso das Korn: ein Look mit Koernung bekommt die aktuelle Fassung (oder die verlangte 0).
             look.GrainModel = If(grainModel >= 1, GrainModelAfter(0, 0, look.Grain), 0)
+            ' Ein Look ist eine neue Einstellung: die aktuelle Tonfassung, gespeichert nur, wo sie wirkt.
+            look.ToneRuleVersion = If(look.ToneRuleMatters(), CurrentToneRuleVersion, 0)
             look.FilterPreset = name.Trim()
             look.FilterStrength = CSng(Math.Max(0, Math.Min(100, strengthPercent)))
             Return look
@@ -780,6 +782,105 @@ Namespace Services
             Dim lowered = Math.Min(1.0, Math.Max(0.0, -Highlights / 100.0))
             Return RawDecodeService.HighlightRecoveryKnee +
                    (RawDecodeService.HighlightKneeAtFullLowering - RawDecodeService.HighlightRecoveryKnee) * lowered
+        End Function
+
+        ''' <summary>Fassung der Tonrechnung. 0 ist der Weg von 0.9.78 und gilt fuer jedes Rezept ohne
+        ''' das Feld. 1 (<see cref="CurrentToneRuleVersion"/>): abgesenkte Lichter wirken in der Kette
+        ''' mit positiver Belichtung in der RAW-Stufe schwaecher (<see cref="ChainHighlights"/>,
+        ''' Faktor nach <see cref="HighlightsExposureScale"/>). Die Belichtung schiebt die Lichter in
+        ''' die Schulter der RAW-Stufe, und der volle Lichter-Regler danach machte aus der
+        ''' ausgefressenen Flaeche ein flaches Grau statt Weiss. Das Knie der Schulter
+        ''' (<see cref="RawHighlightKnee"/>) folgt weiter dem ganzen Regler; ohne Belichtung, mit
+        ''' angehobenen Lichtern und ohne RAW-Stufe rechnen beide Fassungen gleich.
+        '''
+        ''' WANN EIN REZEPT DIE NEUE FASSUNG BEKOMMT: die Fassung wirkt nur, wenn Belichtung ueber 0
+        ''' UND Lichter unter 0 stehen (<see cref="ToneRuleMatters"/>), und nur dann wird sie
+        ''' gespeichert; sonst steht sie als 0 im Rezept. Ein Rezept, in dem sie nichts bewirkt,
+        ''' bekommt beim Oeffnen im Editor die aktuelle (<see cref="ToneRuleVersionOnOpen"/>), ein
+        ''' XMP-Preset oder eine Beistelldatei beim Einlesen und ein eingebauter Look ebenso. Eine
+        ''' geladene Bearbeitung, in der sie wirkt, behaelt ihre fuer die ganze Sitzung, auch wenn
+        ''' Belichtung oder Lichter weiter verstellt werden. So wechselt die Fassung nur dort, wo
+        ''' sie nichts aendert, und gespeicherte Bearbeitungen sehen bitgleich aus wie zuvor.
+        '''
+        ''' EIN PIXELREGLER, wandert also mit den Lichtern (Eintrag Lichter, AdjustmentEntries):
+        ''' Kopieren und Einfuegen, Vorlagen, Stapel. Allein zaehlt das Feld nie als Bearbeitung
+        ''' (HasPixelAdjustments, IsEditedComparedTo, AdjustmentEntries.NonNeutralEntries).</summary>
+        Public Property ToneRuleVersion As Integer = 0
+        ''' <summary>Die Fassung, die neue Bearbeitungen bekommen (siehe <see cref="ToneRuleVersion"/>).</summary>
+        Public Const CurrentToneRuleVersion As Integer = 1
+
+        ''' <summary>Wirkt die Fassung der Tonrechnung in diesem Rezept? Nur mit Belichtung ueber 0
+        ''' und abgesenkten Lichtern; sonst rechnen alle Fassungen gleich.</summary>
+        Public Function ToneRuleMatters() As Boolean
+            Return Exposure > 0.0F AndAlso Highlights < 0.0F
+        End Function
+
+        ''' <summary>Die Fassung fuer ein Rezept, das der Editor oeffnet: wirkt sie darin, seine;
+        ''' sonst die aktuelle. Die eine Regel fuer Editor, XMP-Leser und eingebaute Looks (dort mit
+        ''' einem neuen Rezept, also immer die aktuelle).</summary>
+        Public Shared Function ToneRuleVersionOnOpen(loaded As ImageAdjustments) As Integer
+            If loaded IsNot Nothing AndAlso loaded.ToneRuleMatters() Then Return loaded.ToneRuleVersion
+            Return CurrentToneRuleVersion
+        End Function
+
+        ''' <summary>MESSSCHALTER der Reglereichung: setzt den Faktor von
+        ''' <see cref="HighlightsExposureScale"/> fuer jede positive Belichtung fest und gilt dann in
+        ''' jeder Fassung. NaN (ab Werk) laesst die Kennlinie gelten. Gesetzt per Reflexion
+        ''' (REGLER_LICHTER_BELICHTUNG). Gemessen ist die Kennlinie mit dem Faktor auf jede Stellung
+        ''' der Lichter; seit sie gebaut ist, gilt er wie die Kennlinie bei Lichter -100.</summary>
+        Friend Shared HighlightsExposureScaleOverride As Double = Double.NaN
+
+        ''' <summary>Stuetzstellen der Kennlinie von <see cref="HighlightsExposureScale"/>: Belichtung
+        ''' in der RAW-Stufe in Blendenstufen und der Faktor auf Lichter -100 in der Kette.
+        '''
+        ''' <para>GEMESSEN (Reglereichung, Messschalter REGLER_LICHTER_BELICHTUNG mit 1, 0,5 und 0,25,
+        ''' Wirkung gegen das eigene Nullbild in L 70 bis 85 und 85 bis 95 an die Referenz gelegt): an
+        ''' 29 Bildern mit ausgefressenen Lichtern und 57 Eichbildern traf Lichter -100 bei +0,5 mit
+        ''' 0,91, bei +1 mit 0,85 bis 0,90, bei +2 mit 0,41 bis 0,55; Lichter -50 traf bei +1 mit 0,93
+        ''' und bei +2 mit 0,56 bis 0,94, also etwa mit dem halben Abstand von 1 (deshalb die
+        ''' Mischung nach dem Regler in <see cref="ChainHighlights"/>). Ab +3 aendert der Faktor kaum
+        ''' noch etwas (unter 1 L, das Bild ist dort weitgehend ausgefressen); die Kennlinie bleibt
+        ''' deshalb beim Wert von +2 stehen, statt wieder zu steigen.</para>
+        '''
+        ''' <para>BIS +1 BLEIBT ES BEI 1: an 25 Bildern aus dem Bestand (Gegenprobe) lag Lichter -100
+        ''' bei +1 schon ohne Ruecknahme ueber der Referenz, mit 0,87 noch weiter (L 70 bis 95 um 0,9
+        ''' und 0,7 L heller), und ueber alle drei Saetze traf 1 dort besser. Bei +2 trifft 0,48 an
+        ''' allen dreien besser als 1 (Gegenprobe L 70 bis 85: 15,0 auf 16,9, Referenz 17,3).</para></summary>
+        Private Shared ReadOnly HighlightsExposureScaleEv As Double() = {0.0, 1.0, 2.0}
+        Private Shared ReadOnly HighlightsExposureScaleFactor As Double() = {1.0, 1.0, 0.48}
+
+        ''' <summary>Der Faktor auf Lichter -100 in der Kette bei <paramref name="ev"/> Blendenstufen
+        ''' Belichtung in der RAW-Stufe (Fassung 1): 1 bei 0 und darunter, dazwischen linear zwischen
+        ''' den Stuetzstellen, ueber der letzten deren Wert.</summary>
+        Public Shared Function HighlightsExposureScale(ev As Double) As Double
+            If ev <= 0.0 Then Return 1.0
+            If Not Double.IsNaN(HighlightsExposureScaleOverride) Then Return HighlightsExposureScaleOverride
+            Dim last = HighlightsExposureScaleEv.Length - 1
+            If ev >= HighlightsExposureScaleEv(last) Then Return HighlightsExposureScaleFactor(last)
+            For i = 1 To last
+                If ev <= HighlightsExposureScaleEv(i) Then
+                    Dim t = (ev - HighlightsExposureScaleEv(i - 1)) / (HighlightsExposureScaleEv(i) - HighlightsExposureScaleEv(i - 1))
+                    Return HighlightsExposureScaleFactor(i - 1) + (HighlightsExposureScaleFactor(i) - HighlightsExposureScaleFactor(i - 1)) * t
+                End If
+            Next
+            Return HighlightsExposureScaleFactor(last)
+        End Function
+
+        ''' <summary>Der Lichter-Wert, mit dem die Kette rechnet (Kennlinien, Struktur, Buntheit der
+        ''' Lichter). In Fassung 0, mit angehobenen Lichtern und ohne Belichtung in der RAW-Stufe
+        ''' genau <see cref="Highlights"/>; sonst abgesenkte Lichter mal einem Faktor, der von 1 bei
+        ''' Lichter 0 linear bis <see cref="HighlightsExposureScale"/> bei Lichter -100 laeuft, nach der
+        ''' Belichtung, die das Quellbild in der RAW-Stufe traegt oder die die Kette ihr vorgreift.
+        ''' Eine Maskenebene hat keine Belichtung in der RAW-Stufe und rechnet immer mit dem ganzen
+        ''' Wert.</summary>
+        Public Function ChainHighlights() As Single
+            If Highlights >= 0.0F OrElse Not SourceFromRawStage OrElse Not ExposureBelongsToRawStage() Then Return Highlights
+            If ToneRuleVersion < 1 AndAlso Double.IsNaN(HighlightsExposureScaleOverride) Then Return Highlights
+            Dim inRawStage = If(ChainExposureInRawStage(), Exposure, ExposureInSource)
+            If inRawStage <= 0.0F Then Return Highlights
+            Dim lowered = Math.Min(1.0, -Highlights / 100.0)
+            Dim scale = 1.0 - (1.0 - HighlightsExposureScale(inRawStage / ExposurePointsPerStop)) * lowered
+            Return CSng(Highlights * scale)
         End Function
 
         ''' <summary>Gehoert die Belichtung bei einer RAW-Datei in die RAW-Stufe, unabhaengig davon,
@@ -1922,10 +2023,17 @@ Namespace Services
                 ' Die Fassung des Dunstes geht mit dem Dunst, nicht allein (siehe unten).
                 If p.Name = NameOf(HazeModel) Then Continue For
                 If p.Name = NameOf(GrainModel) Then Continue For
+                If p.Name = NameOf(ToneRuleVersion) Then Continue For
                 Dim value = p.GetValue(look)
                 Dim standard = p.GetValue(neutral)
                 If Not Equals(value, standard) Then p.SetValue(Me, value)
             Next
+            ' Setzt der Look Belichtung oder Lichter, bringt er seine Tonfassung mit (wirkt sie in ihm
+            ' nicht, die aktuelle).
+            If look.Exposure <> neutral.Exposure OrElse look.Highlights <> neutral.Highlights Then
+                ToneRuleVersion = ToneRuleVersionOnOpen(look)
+            End If
+            If Not ToneRuleMatters() Then ToneRuleVersion = 0
             ' Setzt der Look den Dunst, bringt er seine Fassung mit; eine Fassung 0 des Looks waere
             ' sonst als Neutralwert uebergangen und der Dunst rechnete in der Fassung des Ziels.
             If look.Haze <> neutral.Haze Then HazeModel = If(look.Haze > 0, look.HazeModel, 0)
@@ -2150,8 +2258,9 @@ Namespace Services
             For Each p In PixelAdjustmentProperties()
                 ' Die Fassung des Dunstes allein ist keine Anpassung; mit Dunst zaehlt der Dunst.
                 If p.Name = NameOf(HazeModel) Then Continue For
-                ' Ebenso die Fassung der Koernung.
+                ' Ebenso die Fassung der Koernung und die Tonfassung.
                 If p.Name = NameOf(GrainModel) Then Continue For
+                If p.Name = NameOf(ToneRuleVersion) Then Continue For
                 If Not Object.Equals(p.GetValue(Me), p.GetValue(neutral)) Then Return True
             Next
             Return False
@@ -2214,6 +2323,9 @@ Namespace Services
             ' Ohne Korn ebenso dessen Fassung (GrainModel).
             If own.Grain <= 0 Then own.GrainModel = 0
             If reference.Grain <= 0 Then reference.GrainModel = 0
+            ' Die Tonfassung wirkt nur mit Belichtung ueber 0 und abgesenkten Lichtern.
+            If Not own.ToneRuleMatters() Then own.ToneRuleVersion = 0
+            If Not reference.ToneRuleMatters() Then reference.ToneRuleVersion = 0
             ' Ohne Korn wirken auch Groesse, Rauheit und Farbe des Korns nicht. Neues Korn setzt Groesse
             ' und Rauheit auf seine Startwerte (EditorViewModel.Grain); zurueck auf null bleiben sie
             ' stehen und sollen das Bild nicht zur Bearbeitung machen.
@@ -2319,6 +2431,7 @@ Namespace Services
                 .DustScratches = DustScratches,
                 .Haze = Haze,
                 .HazeModel = HazeModel,
+                .ToneRuleVersion = ToneRuleVersion,
                 .AddNoise = AddNoise,
                 .Structure = [Structure],
                 .Glow = Glow,

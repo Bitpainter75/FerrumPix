@@ -515,8 +515,7 @@ Namespace Services
         ''' neben dem Foto.</summary>
         Friend Shared ReadOnly Property ClipCacheFolder As String
             Get
-                Return IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                                       "FerrumPix", "MotionClipCache")
+                Return AppFolders.InData("MotionClipCache")
             End Get
         End Property
 

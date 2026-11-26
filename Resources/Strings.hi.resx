@@ -12596,4 +12596,304 @@
   <data name="Mehr_Punkte_geben_feinere_berg_nge_und_eine_gr_e_87716011" xml:space="preserve">
     <value>अधिक बिंदु बारीक बदलाव और बड़ी फ़ाइल देते हैं।</value>
   </data>
+  <data name="Speicherort_der_Vorschaubilder_ea4180cd" xml:space="preserve">
+    <value>थंबनेल का स्थान</value>
+  </data>
+  <data name="Ein_anderer_Ort_etwa_eine_zweite_Platte_nimmt_di_2b098a5f" xml:space="preserve">
+    <value>दूसरा स्थान, जैसे दूसरी ड्राइव, चुनने पर मौजूदा थंबनेल साथ ले जाए जाते हैं।</value>
+  </data>
+  <data name="Standardort_645fbbac" xml:space="preserve">
+    <value>डिफ़ॉल्ट स्थान</value>
+  </data>
+  <data name="Ort_w_hlen_a14d708c" xml:space="preserve">
+    <value>स्थान चुनें</value>
+  </data>
+  <data name="H_chstgr_e_der_Vorschaubilder_eef5e17a" xml:space="preserve">
+    <value>थंबनेल का अधिकतम आकार</value>
+  </data>
+  <data name="Wird_sie_berschritten_entfernt_FerrumPix_im_Hint_77e728da" xml:space="preserve">
+    <value>सीमा पार होने पर FerrumPix पृष्ठभूमि में सबसे लंबे समय से न देखे गए थंबनेल हटा देता है। अगली बार देखने पर वे फिर से बन जाते हैं।</value>
+  </data>
+  <data name="Unbegrenzt_0d297e61" xml:space="preserve">
+    <value>असीमित</value>
+  </data>
+  <data name="Der_gew_hlte_Ort_0_ist_nicht_erreichbar_Bis_er_w_6319e156" xml:space="preserve">
+    <value>चुना गया स्थान {0} उपलब्ध नहीं है। उसके वापस आने तक नए थंबनेल डिफ़ॉल्ट स्थान पर रखे जाते हैं।</value>
+  </data>
+  <data name="Belegt_0_c4342b36" xml:space="preserve">
+    <value>उपयोग में: {0}</value>
+  </data>
+  <data name="Ort_nicht_verwendbar_6c4c756c" xml:space="preserve">
+    <value>यह स्थान उपयोग नहीं किया जा सकता</value>
+  </data>
+  <data name="Die_vorhandenen_Vorschaubilder_0_werden_nach_1_v_33e1a876" xml:space="preserve">
+    <value>मौजूदा थंबनेल ({0}) {1} में ले जाए जाएंगे। दूसरी ड्राइव पर पहले कॉपी किया जाता है और उसके बाद ही पुराने स्थान से हटाया जाता है। रद्द करने पर पुराना स्थान वैसा ही रहता है।</value>
+  </data>
+  <data name="Vorschaubilder_verschieben_b91cf923" xml:space="preserve">
+    <value>थंबनेल ले जाएं?</value>
+  </data>
+  <data name="Vorschaubilder_werden_verschoben_f10674ab" xml:space="preserve">
+    <value>थंबनेल ले जाए जा रहे हैं...</value>
+  </data>
+  <data name="Die_Vorschaubilder_liegen_jetzt_in_0_876dacd2" xml:space="preserve">
+    <value>थंबनेल अब {0} में हैं।</value>
+  </data>
+  <data name="Abgebrochen_Die_Vorschaubilder_liegen_weiter_am__d5ea562d" xml:space="preserve">
+    <value>रद्द किया गया। थंबनेल पुराने स्थान पर ही हैं।</value>
+  </data>
+  <data name="Am_neuen_Ort_ist_nicht_genug_Platz_Die_Vorschaub_5f127c35" xml:space="preserve">
+    <value>नए स्थान पर पर्याप्त जगह नहीं है। थंबनेल पुराने स्थान पर ही हैं।</value>
+  </data>
+  <data name="Das_Verschieben_ist_fehlgeschlagen_Die_Vorschaub_f5dd8e04" xml:space="preserve">
+    <value>ले जाना विफल रहा। थंबनेल पुराने स्थान पर ही हैं।</value>
+  </data>
+  <data name="Ort_f_r_die_Vorschaubilder_w_hlen_15f46a6c" xml:space="preserve">
+    <value>थंबनेल के लिए स्थान चुनें</value>
+  </data>
+  <data name="Ort_der_Vorschaubilder_nicht_erreichbar_1854c3fc" xml:space="preserve">
+    <value>थंबनेल का स्थान उपलब्ध नहीं</value>
+  </data>
+  <data name="Es_wurde_kein_Ordner_gew_hlt_3482d327" xml:space="preserve">
+    <value>कोई फ़ोल्डर नहीं चुना गया।</value>
+  </data>
+  <data name="Dieser_Ordner_l_sst_sich_nicht_verwenden_11f6f21b" xml:space="preserve">
+    <value>यह फ़ोल्डर उपयोग नहीं किया जा सकता।</value>
+  </data>
+  <data name="Die_Wurzel_eines_Laufwerks_l_sst_sich_nicht_verw_84a52fef" xml:space="preserve">
+    <value>ड्राइव का रूट उपयोग नहीं किया जा सकता। कृपया उस पर कोई फ़ोल्डर चुनें।</value>
+  </data>
+  <data name="Im_Flatpak_lassen_sich_nur_Ordner_verwenden_die__2b6244e0" xml:space="preserve">
+    <value>Flatpak में केवल वे फ़ोल्डर उपयोग किए जा सकते हैं जिन्हें FerrumPix सीधे देखता है, जैसे होम फ़ोल्डर या माउंट की गई ड्राइव में। केवल सिस्टम के फ़ाइल चयनकर्ता से साझा किए गए फ़ोल्डर पुनः आरंभ के बाद FerrumPix के लिए गायब हो जाते हैं।</value>
+  </data>
+  <data name="Das_tempor_re_Verzeichnis_wird_beim_Neustart_gel_042d17a7" xml:space="preserve">
+    <value>अस्थायी फ़ोल्डर पुनः आरंभ पर खाली हो जाता है। कृपया कोई दूसरा फ़ोल्डर चुनें।</value>
+  </data>
+  <data name="Der_Ordner_ist_nicht_erreichbar_ac533d85" xml:space="preserve">
+    <value>फ़ोल्डर उपलब्ध नहीं है।</value>
+  </data>
+  <data name="In_diesem_Ordner_liegt_schon_ein_Ordner_0_mit_an_6da5df62" xml:space="preserve">
+    <value>इस फ़ोल्डर में पहले से अन्य फ़ाइलों वाला {0} फ़ोल्डर है।</value>
+  </data>
+  <data name="Die_Vorschaubilder_liegen_schon_dort_82bebe06" xml:space="preserve">
+    <value>थंबनेल पहले से वहीं हैं।</value>
+  </data>
+  <data name="Der_neue_Ort_darf_nicht_im_bisherigen_liegen_und_f6cc7817" xml:space="preserve">
+    <value>नया स्थान मौजूदा स्थान के अंदर नहीं हो सकता, और मौजूदा स्थान नए के अंदर नहीं।</value>
+  </data>
+  <data name="FerrumPix_darf_in_diesem_Ordner_nicht_schreiben_2337990a" xml:space="preserve">
+    <value>FerrumPix को इस फ़ोल्डर में लिखने की अनुमति नहीं है।</value>
+  </data>
+  <data name="Im_Flatpak_sind_die_Systemordner_des_Rechners_wi_1b629a4b" xml:space="preserve">
+    <value>Flatpak में कंप्यूटर के सिस्टम फ़ोल्डर जैसे /usr, /etc और /tmp उपलब्ध नहीं हैं।</value>
+  </data>
+  <data name="Die_Vorschaubilder_liegen_in_0_e64abee7" xml:space="preserve">
+    <value>थंबनेल {0} में हैं।</value>
+  </data>
+  <data name="0_Gruppen_markiert_c8fd0ffe" xml:space="preserve">
+    <value>{0} समूह चिह्नित</value>
+  </data>
+  <data name="0_Gruppen_mit_zusammen_1_Gesichtern_Jedes_Gesich_25752e68" xml:space="preserve">
+    <value>{0} समूह, कुल {1} चेहरे। हर चेहरा 'यह व्यक्ति नहीं' की तरह 'अज्ञात' ट्रे में जाएगा। वहाँ उसे एक-एक करके फिर से सौंपा जा सकता है, और नई खोज उनसे अब समूह नहीं बनाएगी।</value>
+  </data>
+  <data name="0_davon_tragen_einen_Namen_die_Namen_gehen_verlo_636586df" xml:space="preserve">
+    <value>इनमें से {0} के नाम हैं; ये नाम खो जाएँगे।</value>
+  </data>
+  <data name="Markierte_Gruppen_entfernen_48dc711d" xml:space="preserve">
+    <value>चिह्नित समूह हटाएँ?</value>
+  </data>
+  <data name="Im_Bild_ein_Rechteck_um_das_Gesicht_aufziehen_ES_fae2b97a" xml:space="preserve">
+    <value>चित्र में चेहरे के चारों ओर एक आयत खींचें। ESC रद्द करता है।</value>
+  </data>
+  <data name="Das_Rechteck_ist_zu_klein_Bitte_gr_er_um_das_Ges_191f0c20" xml:space="preserve">
+    <value>आयत बहुत छोटा है। कृपया चेहरे के चारों ओर बड़ा खींचें।</value>
+  </data>
+  <data name="Gesicht_eingetragen_Der_Name_kommt_in_das_Feld_d_612c3ed2" xml:space="preserve">
+    <value>चेहरा जोड़ा गया। नाम ऊपर वाले फ़ील्ड में लिखें।</value>
+  </data>
+  <data name="Gesicht_eingetragen_Das_Modell_konnte_es_nicht_a_f777d1cd" xml:space="preserve">
+    <value>चेहरा जोड़ा गया। मॉडल इसे संरेखित नहीं कर सका; इस पर नाम रहता है, पर यह दूसरे चित्रों के लिए सुझाव नहीं देता।</value>
+  </data>
+  <data name="An_dieser_Stelle_steht_schon_ein_Gesicht_94ec83ba" xml:space="preserve">
+    <value>इस जगह पहले से एक चेहरा है।</value>
+  </data>
+  <data name="Das_Gesicht_lie_sich_nicht_eintragen_8d28725a" xml:space="preserve">
+    <value>चेहरा जोड़ा नहीं जा सका।</value>
+  </data>
+  <data name="0_weitere_benannte_Personen_kommen_in_diesem_Ord_5f17b74e" xml:space="preserve">
+    <value>नाम वाले {0} और लोग इस फ़ोल्डर में नहीं हैं।</value>
+  </data>
+  <data name="Das_Zeichen_oben_links_auf_einer_Kachel_markiert_dbf9f6a0" xml:space="preserve">
+    <value>टाइल के ऊपर बाईं ओर का निशान उसे चिह्नित करता है। चिह्नित समूह एक साथ हटाए जा सकते हैं या किसी व्यक्ति में जोड़े जा सकते हैं।</value>
+  </data>
+  <data name="Alle_auf_dieser_Seite_markieren_b84747ba" xml:space="preserve">
+    <value>इस पृष्ठ पर सब चिह्नित करें</value>
+  </data>
+  <data name="Name_der_Person_13d3aebd" xml:space="preserve">
+    <value>व्यक्ति का नाम</value>
+  </data>
+  <data name="Hei_t_schon_jemand_so_werden_die_markierten_Grup_6ddbeaa4" xml:space="preserve">
+    <value>अगर किसी का यह नाम पहले से है, तो चिह्नित समूह उस व्यक्ति के साथ मिला दिए जाते हैं। नहीं तो इस नाम का एक व्यक्ति बनाया जाता है।</value>
+  </data>
+  <data name="Zu_Person_hinzuf_gen_368b6a83" xml:space="preserve">
+    <value>व्यक्ति में जोड़ें</value>
+  </data>
+  <data name="Markierung_aufheben_7084b33e" xml:space="preserve">
+    <value>चिह्न हटाएँ</value>
+  </data>
+  <data name="Markieren_bc4e896e" xml:space="preserve">
+    <value>चिह्नित करें</value>
+  </data>
+  <data name="Ein_Name_den_es_schon_gibt_f_hrt_diese_Gruppe_mi_10fb8c4f" xml:space="preserve">
+    <value>पहले से मौजूद नाम इस समूह को उस व्यक्ति के साथ मिला देता है।</value>
+  </data>
+  <data name="Ein_Gesicht_das_nicht_erkannt_wurde_im_Bild_mit__e47c9990" xml:space="preserve">
+    <value>जो चेहरा पहचाना नहीं गया, उसे चित्र में आयत से चिह्नित करें। ESC रद्द करता है।</value>
+  </data>
+  <data name="Gesicht_markieren_bdac8a3d" xml:space="preserve">
+    <value>चेहरा चिह्नित करें</value>
+  </data>
+  <data name="Alle_Personen_des_Katalogs_zeigen_a096ff69" xml:space="preserve">
+    <value>कैटलॉग के सभी लोग दिखाएँ</value>
+  </data>
+  <data name="Dateien_zum_Hochladen_hier_ablegen_471f9847" xml:space="preserve">
+    <value>अपलोड करने के लिए फ़ाइलें यहाँ छोड़ें</value>
+  </data>
+  <data name="Dateien_hochladen_cc58908b" xml:space="preserve">
+    <value>फ़ाइलें अपलोड करें</value>
+  </data>
+  <data name="0_von_1_Dateien_hochgeladen_18b1984a" xml:space="preserve">
+    <value>{1} में से {0} फ़ाइलें अपलोड हुईं</value>
+  </data>
+  <data name="Hochgeladen_a227895e" xml:space="preserve">
+    <value>अपलोड हो गया</value>
+  </data>
+  <data name="Fehlgeschlagen_f7b1b156" xml:space="preserve">
+    <value>विफल</value>
+  </data>
+  <data name="Die_bertragung_wurde_unterbrochen_1dc90c16" xml:space="preserve">
+    <value>स्थानांतरण बाधित हो गया</value>
+  </data>
+  <data name="Bereit_zum_Herunterladen_f8026251" xml:space="preserve">
+    <value>डाउनलोड के लिए तैयार</value>
+  </data>
+  <data name="Die_Datei_ist_gr_er_als_0_GB_5d04db62" xml:space="preserve">
+    <value>फ़ाइल {0} GB से बड़ी है</value>
+  </data>
+  <data name="Die_Seite_ist_veraltet_Bitte_neu_laden_41bda2b3" xml:space="preserve">
+    <value>पेज पुराना हो गया है। कृपया इसे फिर से लोड करें।</value>
+  </data>
+  <data name="Der_Dateiname_ist_ung_ltig_77f457aa" xml:space="preserve">
+    <value>फ़ाइल का नाम मान्य नहीं है</value>
+  </data>
+  <data name="Die_Datei_ist_leer_db2c5c6e" xml:space="preserve">
+    <value>फ़ाइल खाली है</value>
+  </data>
+  <data name="Als_Ebene_l_sst_sich_nur_ein_Bild_einf_gen_3a887426" xml:space="preserve">
+    <value>परत के रूप में केवल चित्र डाला जा सकता है</value>
+  </data>
+  <data name="Diese_Dateiart_nimmt_FerrumPix_nicht_an_299a8ea6" xml:space="preserve">
+    <value>FerrumPix इस प्रकार की फ़ाइल स्वीकार नहीं करता</value>
+  </data>
+  <data name="Hier_darf_FerrumPix_keine_Dateien_anlegen_92082505" xml:space="preserve">
+    <value>FerrumPix यहाँ फ़ाइलें नहीं बना सकता</value>
+  </data>
+  <data name="Auf_dem_Laufwerk_ist_nicht_genug_Platz_frei_6ba0c24f" xml:space="preserve">
+    <value>ड्राइव पर पर्याप्त खाली जगह नहीं है</value>
+  </data>
+  <data name="Erst_den_offenen_Dialog_schlie_en_8c1400a7" xml:space="preserve">
+    <value>पहले खुला संवाद बंद करें</value>
+  </data>
+  <data name="Kein_Ordner_offen_in_den_die_Dateien_geh_ren_3c539817" xml:space="preserve">
+    <value>फ़ाइलें रखने के लिए कोई फ़ोल्डर खुला नहीं है</value>
+  </data>
+  <data name="Die_Bilder_hier_liegen_auf_einem_Server_Hochlade_fa8cc635" xml:space="preserve">
+    <value>ये चित्र एक सर्वर पर हैं। अपलोड केवल इस कंप्यूटर के फ़ोल्डर में हो सकता है।</value>
+  </data>
+  <data name="Datenordner_1446557a" xml:space="preserve">
+    <value>डेटा फ़ोल्डर</value>
+  </data>
+  <data name="Katalog_Vorschaubilder_Modelle_Erweiterungen_ges_d75a6513" xml:space="preserve">
+    <value>कैटलॉग, थंबनेल, मॉडल, एक्सटेंशन, सहेजे गए समायोजन, पसंदीदा और खोज सूचियाँ यहाँ रहती हैं। कोई दूसरा स्थान, जैसे दूसरी डिस्क या नेटवर्क शेयर, अगली शुरुआत पर सब कुछ साथ ले जाता है।</value>
+  </data>
+  <data name="Zur_cknehmen_1651c015" xml:space="preserve">
+    <value>वापस लें</value>
+  </data>
+  <data name="Ordner_f_r_die_Daten_von_FerrumPix_w_hlen_49493664" xml:space="preserve">
+    <value>FerrumPix के डेटा के लिए फ़ोल्डर चुनें</value>
+  </data>
+  <data name="Die_Daten_liegen_schon_dort_fbeb1a0b" xml:space="preserve">
+    <value>डेटा पहले से वहाँ है।</value>
+  </data>
+  <data name="Der_Ordner_der_Einstellungen_l_sst_sich_nicht_al_b1781d9e" xml:space="preserve">
+    <value>सेटिंग्स वाले फ़ोल्डर को डेटा फ़ोल्डर के रूप में इस्तेमाल नहीं किया जा सकता।</value>
+  </data>
+  <data name="Der_Katalog_wird_gerade_von_0_benutzt_Der_Dateno_5ac02e22" xml:space="preserve">
+    <value>कैटलॉग अभी {0} पर इस्तेमाल हो रहा है। वहाँ FerrumPix बंद होने के बाद ही डेटा फ़ोल्डर स्थानांतरित हो सकता है।</value>
+  </data>
+  <data name="Datenordner_verschieben_92acb274" xml:space="preserve">
+    <value>डेटा फ़ोल्डर स्थानांतरित करें?</value>
+  </data>
+  <data name="Die_Daten_von_FerrumPix_0_ziehen_beim_n_chsten_S_9503f5ab" xml:space="preserve">
+    <value>FerrumPix का डेटा ({0}) अगली शुरुआत पर {1} में चला जाएगा। उसी डिस्क पर यह तुरंत होता है; दूसरी डिस्क पर कॉपी किया जाता है, और वह शुरुआत उतनी ही लंबी चलती है। पुराने स्थान को तभी खाली किया जाता है जब सब कुछ पहुँच जाए।</value>
+  </data>
+  <data name="Vorhandenen_Datenordner_verwenden_23ee4612" xml:space="preserve">
+    <value>मौजूदा डेटा फ़ोल्डर इस्तेमाल करें?</value>
+  </data>
+  <data name="In_0_liegt_schon_ein_Datenordner_von_FerrumPix_A_ee7e4ce9" xml:space="preserve">
+    <value>{0} में पहले से FerrumPix का एक डेटा फ़ोल्डर है। अगली शुरुआत से FerrumPix उसी के साथ काम करेगा; मौजूदा डेटा {1} में रहेगा।</value>
+  </data>
+  <data name="Verwenden_8590499d" xml:space="preserve">
+    <value>इस्तेमाल करें</value>
+  </data>
+  <data name="Beim_n_chsten_Start_verwendet_FerrumPix_den_Date_82e8fbec" xml:space="preserve">
+    <value>अगली शुरुआत पर FerrumPix {0} में मौजूद डेटा फ़ोल्डर इस्तेमाल करेगा।</value>
+  </data>
+  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_ce1e5936" xml:space="preserve">
+    <value>अगली शुरुआत पर डेटा फ़ोल्डर {0} में चला जाएगा।</value>
+  </data>
+  <data name="Datenordner_nicht_erreichbar_9b1a712e" xml:space="preserve">
+    <value>डेटा फ़ोल्डर उपलब्ध नहीं</value>
+  </data>
+  <data name="Der_Datenordner_0_ist_nicht_erreichbar_Bis_er_wi_a6ecc803" xml:space="preserve">
+    <value>डेटा फ़ोल्डर {0} उपलब्ध नहीं है। उसके वापस आने तक FerrumPix बिना कैटलॉग के काम करता है, और मॉडल, एक्सटेंशन और सहेजे गए समायोजन उपलब्ध नहीं हैं।</value>
+  </data>
+  <data name="Datenordner_nicht_umgezogen_3673729f" xml:space="preserve">
+    <value>डेटा फ़ोल्डर स्थानांतरित नहीं हुआ</value>
+  </data>
+  <data name="Der_Datenordner_konnte_nicht_nach_0_umziehen_wei_59bf6cf5" xml:space="preserve">
+    <value>पर्याप्त जगह न होने के कारण डेटा फ़ोल्डर {0} में नहीं जा सका। सब कुछ पिछले स्थान पर ही है।</value>
+  </data>
+  <data name="Der_Datenordner_konnte_nicht_nach_0_umziehen_All_4af32b64" xml:space="preserve">
+    <value>डेटा फ़ोल्डर {0} में नहीं जा सका। सब कुछ पिछले स्थान पर ही है; विवरण लॉग में है।</value>
+  </data>
+  <data name="Daten_nicht_vollst_ndig_umgezogen_e2dbe176" xml:space="preserve">
+    <value>डेटा पूरी तरह स्थानांतरित नहीं हुआ</value>
+  </data>
+  <data name="FerrumPix_legt_seine_Daten_jetzt_gesammelt_in_0__97509d2e" xml:space="preserve">
+    <value>FerrumPix अब अपना डेटा एक साथ {0} में रखता है। एक हिस्सा वहाँ नहीं ले जाया जा सका और अब भी पुराने स्थान से इस्तेमाल होता है। अगली शुरुआत पर FerrumPix फिर कोशिश करेगा; विवरण लॉग में है।</value>
+  </data>
+  <data name="Katalog_wird_von_0_benutzt_78eb557d" xml:space="preserve">
+    <value>कैटलॉग {0} पर इस्तेमाल हो रहा है</value>
+  </data>
+  <data name="FerrumPix_l_uft_auf_0_mit_demselben_Katalog_seit_97dbe250" xml:space="preserve">
+    <value>FerrumPix {1} से {0} पर उसी कैटलॉग के साथ चल रहा है। दो कंप्यूटर इसे एक साथ नहीं खोल सकते। जब तक {0} इसे छोड़ता नहीं, FerrumPix यहाँ बिना कैटलॉग के काम करता है, और इस सत्र में जो कैटलॉग में जाता, वह सहेजा नहीं जाता। अगर {0} पर FerrumPix अब नहीं चल रहा, जैसे क्रैश के बाद, तो लॉक अपने हाथ में लिया जा सकता है।</value>
+  </data>
+  <data name="Sperre_bernehmen_14672502" xml:space="preserve">
+    <value>लॉक अपने हाथ में लें</value>
+  </data>
+  <data name="Ohne_Katalog_weiter_ba43ea48" xml:space="preserve">
+    <value>बिना कैटलॉग के जारी रखें</value>
+  </data>
+  <data name="Sperre_bernommen_7d2f823d" xml:space="preserve">
+    <value>लॉक अपने हाथ में लिया गया</value>
+  </data>
+  <data name="Der_Katalog_geh_rt_jetzt_diesem_Rechner_Bitte_Fe_f21858c6" xml:space="preserve">
+    <value>कैटलॉग अब इस कंप्यूटर का है। इसे खोलने के लिए कृपया FerrumPix को फिर से शुरू करें।</value>
+  </data>
+  <data name="Der_Ordner_f_r_Anpassungen_ist_nicht_erreichbar__f22a0510" xml:space="preserve">
+    <value>समायोजनों का फ़ोल्डर उपलब्ध नहीं है: {0}।</value>
+  </data>
+  <data name="Hier_liegen_die_im_Editor_gespeicherten_Anpassun_d58c017e" xml:space="preserve">
+    <value>संपादक में सहेजे गए समायोजन यहाँ रहते हैं, हर एक अलग फ़ाइल के रूप में, हर फ़ोल्डर असली फ़ोल्डर के रूप में। यह फ़ोल्डर डेटा फ़ोल्डर का हिस्सा है और उसके साथ स्थानांतरित होता है।</value>
+  </data>
 </root>

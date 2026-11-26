@@ -137,9 +137,11 @@ Namespace Services
         End Property
 
         Private Sub New()
-            Dim dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix")
-            Directory.CreateDirectory(dir)
-            Dim dbPath = Path.Combine(dir, "library.db")
+            ' Der Katalog im Datenordner, wenn dieser Rechner ihn hat; sonst ein leerer fuer diese
+            ' Sitzung (CatalogLock: ein anderer Rechner benutzt ihn, oder der Datenordner ist nicht
+            ' erreichbar).
+            Dim dbPath = CatalogLock.DatabasePath
+            Directory.CreateDirectory(Path.GetDirectoryName(dbPath))
             _connectionString = $"Data Source={dbPath}"
             InitDb()
             ' Nur unter Windows: dort kann dieselbe Datei in zwei Schreibweisen im Katalog stehen
@@ -565,9 +567,15 @@ Namespace Services
 
         ''' <summary>Spalten, die spaeter zur Gesichtstabelle dazugekommen sind. Bestehende
         ''' Bibliotheken tragen sie nicht - ohne dieses Nachziehen faende jede Abfrage darauf
-        ''' nichts.</summary>
+        ''' nichts.
+        '''
+        ''' IsDrawn heisst: den KASTEN hat der Benutzer selbst aufgezogen, die Erkennung hatte das
+        ''' Gesicht nicht gefunden. Getrennt von IsManual, weil beides Verschiedenes meint: ein
+        ''' gezeichnetes Gesicht kann einer Gruppe als Vorschlag zugeordnet sein (IsManual=0) und
+        ''' muss trotzdem jeden Neulauf ueberleben - die Erkennung fande es ja nicht wieder.</summary>
         Private Shared ReadOnly FaceColumns As (Name As String, Sql As String)() = {
-            ("IsManual", "INTEGER NOT NULL DEFAULT 0")
+            ("IsManual", "INTEGER NOT NULL DEFAULT 0"),
+            ("IsDrawn", "INTEGER NOT NULL DEFAULT 0")
         }
 
         ''' <summary>Dasselbe fuer die Personentabelle. IsUnknownBin kennzeichnet die EINE Gruppe,

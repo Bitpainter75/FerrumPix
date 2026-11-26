@@ -903,6 +903,27 @@ Namespace Views
             End Try
         End Sub
 
+        ''' <summary>Fuer das Ablegen im Browser: liegt die Stelle (im Raum von
+        ''' <paramref name="relativeTo"/>) auf der Leinwand mit einem offenen Bild, und wo im Bild in
+        ''' Prozent? Dieselbe Rechnung wie <see cref="OnPreviewCanvasDrop"/>: irgendwo auf der
+        ''' Leinwand zaehlt, die Stelle wird auf das Bild geklemmt.</summary>
+        Public Function TryGetLayerDropPercent(relativeTo As Visual, point As Avalonia.Point,
+                                               ByRef xPercent As Double, ByRef yPercent As Double) As Boolean
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+            If vm Is Nothing OrElse canvas Is Nothing OrElse relativeTo Is Nothing OrElse Not canvas.IsEffectivelyVisible Then Return False
+            Dim local = relativeTo.TranslatePoint(point, canvas)
+            If Not local.HasValue Then Return False
+            If local.Value.X < 0 OrElse local.Value.Y < 0 OrElse
+               local.Value.X > canvas.Bounds.Width OrElse local.Value.Y > canvas.Bounds.Height Then Return False
+            Dim imageRect = GetDisplayedImageRect(canvas, vm)
+            If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return False
+            Dim pos = ClampPointToRect(local.Value, imageRect)
+            xPercent = (pos.X - imageRect.Left) / imageRect.Width * 100.0
+            yPercent = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
+            Return True
+        End Function
+
         Public Async Sub OnWatermarkChooseImageClick(sender As Object, e As RoutedEventArgs)
             Try
                 Dim vm = TryCast(DataContext, EditorViewModel)

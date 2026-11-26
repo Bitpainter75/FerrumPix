@@ -11,6 +11,43 @@
                             <TextBlock Text="Welche Ordner FerrumPix kennt und was es über sie gespeichert hat." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         </StackPanel>
 
+                        <!-- Der Datenordner (AppFolders). Ein Wechsel wird vorgemerkt und beim
+                             naechsten Start ausgefuehrt, bevor irgendetwas darin geoeffnet ist;
+                             Pfade und Saetze kommen fertig aus dem ViewModel, deshalb no-translate. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Datenordner" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Katalog, Vorschaubilder, Modelle, Erweiterungen, gespeicherte Anpassungen, Favoriten und Suchlisten liegen hier. Ein anderer Ort, etwa eine zweite Platte oder eine Freigabe im Netz, nimmt beim nächsten Start alles mit." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding DataFolderText}"
+                                           Classes="no-translate"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Small}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding DataFolderPendingText}"
+                                           Classes="no-translate"
+                                           IsVisible="{Binding HasPendingDataFolder}"
+                                           Foreground="{DynamicResource FP.Text.Accent}"
+                                           FontSize="{DynamicResource FP.Font.Small}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding DataFolderFallbackText}"
+                                           Classes="no-translate"
+                                           IsVisible="{Binding DataFolderFallbackText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                           Foreground="{DynamicResource FP.Text.Accent}"
+                                           FontSize="{DynamicResource FP.Font.Small}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <Button Classes="ghost" Padding="12,7"
+                                        IsVisible="{Binding HasPendingDataFolder}"
+                                        Command="{Binding CancelDataFolderChangeCommand}">Zurücknehmen</Button>
+                                <Button Classes="ghost" Padding="12,7"
+                                        IsVisible="{Binding HasCustomDataFolder}"
+                                        Command="{Binding ResetDataFolderCommand}">Standardort</Button>
+                                <Button Classes="ghost" Padding="12,7"
+                                        Click="OnChooseDataFolderClick">Ort wählen</Button>
+                            </StackPanel>
+                        </Grid>
+
                         <!-- Katalogindex. Bisher entstanden Katalogeintrag und Vorschaubild erst
                              beim Ansehen eines Ordners; wer seinen Fotobestand hier einträgt, hat
                              Suche und Filter darauf, ohne jeden Ordner einmal besucht zu haben. -->
@@ -153,6 +190,12 @@
                                        Classes="no-translate"
                                        Foreground="{DynamicResource FP.Text.Secondary}"
                                        FontSize="{DynamicResource FP.Font.Body}"
+                                       TextWrapping="Wrap"/>
+                            <!-- Wo die Vorschaubilder liegen; sie folgen dem Datenordner oben. -->
+                            <TextBlock Text="{Binding ThumbnailCacheLocationSummary}"
+                                       Classes="no-translate"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Small}"
                                        TextWrapping="Wrap"/>
 
                             <!-- EIGENE HÖHE UND EIGENER SCROLL, und darin eine ListBox statt einer

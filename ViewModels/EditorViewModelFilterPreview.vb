@@ -399,7 +399,7 @@ Namespace ViewModels
 
         Private Shared Function BuildFilterResetPropertyNames() As String()
             Dim names As New List(Of String) From {
-                "Brightness", "Contrast", "Highlights", "ShadowsLevel", "Whites", "Blacks", "Exposure",
+                "Brightness", "Contrast", "Highlights", "ToneRuleVersion", "ShadowsLevel", "Whites", "Blacks", "Exposure",
                 "WhiteBalanceMode", "Temperature", "Tint", "WhiteBalanceKelvin", "WhiteBalanceKelvinTint",
                 "Vibrance", "Saturation",
                 "Clarity", "Sharpness", "SharpenRadius", "SharpenDetail", "SharpenMasking", "SharpenMethod",
@@ -420,7 +420,7 @@ Namespace ViewModels
 
         Private Shared Function BuildLookPropertyNames() As String()
             Dim names As New List(Of String) From {
-                "Exposure", "Brightness", "Contrast", "Highlights", "ShadowsLevel", "Whites", "Blacks",
+                "Exposure", "Brightness", "Contrast", "Highlights", "ToneRuleVersion", "ShadowsLevel", "Whites", "Blacks",
                 "Clarity", "Structure", "Haze", "HazeModel", "Vibrance", "Saturation",
                 "Sharpness", "SharpenRadius", "SharpenDetail", "SharpenMasking",
                 "NoiseReduction", "NoiseReductionDetail", "Blur", "ColorNoiseReduction", "ColorNoiseAdd",

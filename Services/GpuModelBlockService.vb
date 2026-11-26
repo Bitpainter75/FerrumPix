@@ -24,8 +24,9 @@ Namespace Services
     ''' genau dort gestorben. Wie beim Startschutz hat jeder Prozess seine eigenen Marken; laufen in
     ''' einem Prozess zwei Laeufe desselben Paares gleichzeitig, steht die Marke bis zum letzten.
     '''
-    ''' DIE SPERRDATEI <c>karte-gesperrt.json</c> liegt neben den Einstellungen (wie die Marke der
-    ''' Bildkette, <c>gpu-busy.marker</c>). Beim ersten Blick in die Sperren eines Programmlaufs
+    ''' DIE SPERRDATEI <c>karte-gesperrt.json</c> liegt im Datenordner, in einem gewaehlten mit dem
+    ''' Rechnernamen (AppFolders.GpuBlockPath; wie die Marke der Bildkette,
+    ''' <c>gpu-busy.marker</c>). Beim ersten Blick in die Sperren eines Programmlaufs
     ''' werden liegengebliebene Laufmarken dorthin uebernommen (Grund "crash"), und auch ein
     ''' gefangener Fehler im Aufbau landet dort (Grund "error", ueber
     ''' <see cref="AiModelService.NoteGpuFailedModel"/>). Ein gesperrtes Paar rechnet auf dem
@@ -116,7 +117,7 @@ Namespace Services
         Private Shared ReadOnly Property BlockFilePath As String
             Get
                 If Not String.IsNullOrEmpty(FileOverride) Then Return FileOverride
-                Return Path.Combine(AppSettingsService.Folder, BlockFileName)
+                Return AppFolders.GpuBlockPath
             End Get
         End Property
 

@@ -198,6 +198,11 @@ Namespace Services
             Dim roots = If(folders Is Nothing, ConfiguredFolders(),
                            folders.Where(Function(f) Not String.IsNullOrWhiteSpace(f) AndAlso Directory.Exists(f)).ToList())
             If roots.Count = 0 Then Return result
+            ' Ohne den Katalog (ein anderer Rechner hat ihn, CatalogLock) bliebe vom Lauf nichts.
+            If Not CatalogLock.HasCatalog Then
+                result.NotStarted = True
+                Return result
+            End If
 
             ' HOECHSTENS EIN DURCHLAUF. Wer abgewiesen wird, bekommt das GEMELDET und nicht nur ein
             ' leeres Ergebnis - sonst haelt er seinen Anzeigezustand fuer beendet und setzt ihn

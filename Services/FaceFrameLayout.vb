@@ -112,6 +112,68 @@ Namespace Services
             Return (minX, minY, maxX, maxY)
         End Function
 
+        ''' <summary>Der Rueckweg von <see cref="MapBox"/>: ein Rechteck in Anteilen des GEZEIGTEN
+        ''' Bildes wird zum Kasten in den Bildpunkten der Suchquelle. Gebraucht, wenn der Benutzer
+        ''' ein Gesicht selbst aufzieht - gespeichert wird es im selben Raum wie jedes gefundene,
+        ''' sonst stuende es nach einem Zuschnitt oder einer Drehung woanders.
+        '''
+        ''' Mit Geometrie ueber dieselbe Rueckabbildung wie Pinsel und Masken
+        ''' (<see cref="ImageProcessor.TryGeometryOutputToSourcePoint"/>), abgetastet als Raster
+        ''' wie auf dem Hinweg. Nothing, wenn die Bezugsgroesse fehlt oder kein Punkt des Rechtecks
+        ''' auf dem Bild liegt.</summary>
+        Public Shared Function UnmapBox(left As Double, top As Double, right As Double, bottom As Double,
+                                        referenceWidth As Integer, referenceHeight As Integer,
+                                        geometry As ImageAdjustments, quarterTurn As Integer) As (X As Double, Y As Double, Width As Double, Height As Double)?
+            If referenceWidth <= 0 OrElse referenceHeight <= 0 Then Return Nothing
+            Dim x1 = Math.Min(left, right), x2 = Math.Max(left, right)
+            Dim y1 = Math.Min(top, bottom), y2 = Math.Max(top, bottom)
+            If x2 - x1 <= 0 OrElse y2 - y1 <= 0 Then Return Nothing
+            Const Samples As Integer = 4
+            Dim minX = Double.MaxValue, minY = Double.MaxValue, maxX = Double.MinValue, maxY = Double.MinValue
+            Dim mappedCount = 0
+
+            If geometry IsNot Nothing Then
+                Dim outSize = ImageProcessor.ComputeGeometryOutputSize(referenceWidth, referenceHeight, geometry)
+                If outSize.Width <= 0 OrElse outSize.Height <= 0 Then Return Nothing
+                For iy = 0 To Samples
+                    For ix = 0 To Samples
+                        Dim fx = x1 + (x2 - x1) * ix / Samples
+                        Dim fy = y1 + (y2 - y1) * iy / Samples
+                        Dim p As SKPoint
+                        If Not ImageProcessor.TryGeometryOutputToSourcePoint(fx * outSize.Width, fy * outSize.Height,
+                                                                            referenceWidth, referenceHeight, geometry, p) Then Continue For
+                        minX = Math.Min(minX, p.X) : maxX = Math.Max(maxX, p.X)
+                        minY = Math.Min(minY, p.Y) : maxY = Math.Max(maxY, p.Y)
+                        mappedCount += 1
+                    Next
+                Next
+            Else
+                ' Die Umkehrung der Vierteldrehung aus MapBox.
+                Dim turn = ImageOrientationService.NormalizeQuarterTurn(quarterTurn)
+                For Each c In {(x1, y1), (x2, y1), (x1, y2), (x2, y2)}
+                    Dim tx = c.Item1, ty = c.Item2
+                    Dim rx = tx, ry = ty
+                    Select Case turn
+                        Case 90
+                            rx = ty : ry = 1.0 - tx
+                        Case 180
+                            rx = 1.0 - tx : ry = 1.0 - ty
+                        Case 270
+                            rx = 1.0 - ty : ry = tx
+                    End Select
+                    minX = Math.Min(minX, rx * referenceWidth) : maxX = Math.Max(maxX, rx * referenceWidth)
+                    minY = Math.Min(minY, ry * referenceHeight) : maxY = Math.Max(maxY, ry * referenceHeight)
+                    mappedCount += 1
+                Next
+            End If
+
+            If mappedCount < 2 Then Return Nothing
+            minX = Math.Max(0.0, minX) : minY = Math.Max(0.0, minY)
+            maxX = Math.Min(CDbl(referenceWidth), maxX) : maxY = Math.Min(CDbl(referenceHeight), maxY)
+            If maxX - minX <= 0.0 OrElse maxY - minY <= 0.0 Then Return Nothing
+            Return (minX, minY, maxX - minX, maxY - minY)
+        End Function
+
         ''' <summary>Welche Darstellung ein Gesicht bekommt: dieselbe Unterscheidung wie in der
         ''' Leiste (Vorschlag gegen Handarbeit).</summary>
         Public Shared Function KindOf(name As String, isManual As Boolean) As FaceFrameKind

@@ -19,10 +19,6 @@ Namespace Views.Settings
         Private Sub OnBrowseSaveAsFolderClick(sender As Object, e As Avalonia.Interactivity.RoutedEventArgs)
             Owner?.OnBrowseImportTargetClick(sender, e)
         End Sub
-
-        Private Sub OnBrowseAdjustmentPresetFolderClick(sender As Object, e As Avalonia.Interactivity.RoutedEventArgs)
-            Owner?.OnBrowseAdjustmentPresetFolderClick(sender, e)
-        End Sub
     End Class
 
 End Namespace

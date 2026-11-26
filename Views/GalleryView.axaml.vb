@@ -229,6 +229,13 @@ Namespace Views
             GetVm()?.RefreshPersonFilterOptions()
         End Sub
 
+        ''' <summary>Im Personen-Menue: auf den ganzen Katalog schalten, weil gesuchte Personen
+        ''' in diesem Ordner nicht vorkommen. Derselbe Schalter wie neben dem Suchfeld.</summary>
+        Private Sub OnShowPersonsOfWholeCatalogClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.ShowPersonsOfWholeCatalog()
+            e.Handled = True
+        End Sub
+
         ''' <summary>Eine Person dazunehmen oder abwaehlen. Ueber den Datenkontext der Schaltflaeche,
         ''' nicht ueber eine Bindung: der Inhalt eines Aufklappfensters haengt nicht im Baum der
         ''' Ansicht (gleicher Grund wie bei den Stichwoertern).</summary>
@@ -3069,6 +3076,7 @@ Namespace Views
                 .CompareMetadata = vm.CompareMetadataCommand,
                 .CopyPath = New DelegateCommand(Sub() OnContextCopyPath(Nothing, Nothing)),
                 .ShowInFileManager = vm.OpenFileManagerCommand,
+                .Download = MenuCommands.BrowserDownload(Function() vm.GetPathsForTransfer(vm.ContextItems)),
                 .OpenWith = vm.OpenWithCommand,
                 .OpenWithPrograms = Services.OpenWithService.ConfiguredPrograms(),
                 .Delete = vm.DeleteSelectedCommand,

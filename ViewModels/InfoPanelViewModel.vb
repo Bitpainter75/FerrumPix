@@ -88,6 +88,10 @@ Namespace ViewModels
                 Sub(tag) OpenTagSearch?.Invoke(If(tag?.Canonical, "")))
             AnalyzeAiTagsCommand = ReactiveCommand.CreateFromTask(AddressOf AnalyzeAiTagsAsync)
             ScanFacesCommand = ReactiveCommand.CreateFromTask(AddressOf ScanFacesForImageAsync)
+            MarkFaceCommand = ReactiveCommand.Create(
+                Sub()
+                    If CanMarkFace Then BeginMarkFace?.Invoke()
+                End Sub)
             NavigatorPanCommand = ReactiveCommand.Create(Of Object)(
                 Sub(p)
                     If TypeOf p Is Avalonia.Point Then RaiseEvent NavigatorPanRequested(Me, CType(p, Avalonia.Point))
@@ -572,7 +576,58 @@ Namespace ViewModels
             RaiseFaceScanState()
         End Function
 
+        ' ── Gesicht von Hand markieren ───────────────────────────────────────────
+        '
+        ' Findet die Erkennung ein Gesicht nicht (Halbprofil, halb verdeckt, zu klein fuer den
+        ' Werkswert der Mindestgroesse), zieht der Benutzer selbst ein Rechteck darum. Aufgezogen
+        ' wird im BILD, nicht in der Leiste: deshalb startet die Leiste nur, und der Besitzer
+        ' (Betrachter) uebernimmt Zeichnen, Abbruch und Eintragen. Galerie und Editor setzen
+        ' BeginMarkFace nicht; dort steht der Knopf nicht.
+
+        ''' <summary>Vom Besitzer gesetzt: startet das Aufziehen im Bild.</summary>
+        Public Property BeginMarkFace As Action
+
+        ''' <summary>Steht der Knopf "Gesicht markieren"? Bei eingeschalteter Erkennung, einem
+        ''' lokalen, erreichbaren Bild und einem Besitzer, der aufziehen laesst. Fehlt das Modell,
+        ''' ist die Erkennung aus und mit ihr der ganze Reiter, also auch dieser Knopf.</summary>
+        Public ReadOnly Property CanMarkFace As Boolean
+            Get
+                If BeginMarkFace Is Nothing OrElse Not HasPeopleTab OrElse IsReadOnly Then Return False
+                Dim path = _items(0)?.FilePath
+                Return Not String.IsNullOrWhiteSpace(path) AndAlso Not LibraryService.IsServerPseudoPath(path)
+            End Get
+        End Property
+
+        Private _faceMarkStatus As String = ""
+
+        ''' <summary>Was beim Markieren zu sagen ist: wie es geht, warum nichts eingetragen wurde.
+        ''' Leer bei jedem Bildwechsel.</summary>
+        Public Property FaceMarkStatus As String
+            Get
+                Return _faceMarkStatus
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_faceMarkStatus, If(value, ""))
+                Me.RaisePropertyChanged(NameOf(HasFaceMarkStatus))
+            End Set
+        End Property
+
+        Public ReadOnly Property HasFaceMarkStatus As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(_faceMarkStatus)
+            End Get
+        End Property
+
+        ''' <summary>Das eben markierte Gesicht steht in der Bibliothek: die Zeilen neu holen und
+        ''' sein Namensfeld fokussieren, damit es sofort benannt werden kann.</summary>
+        Public Sub ShowMarkedFace(faceId As String)
+            LoadPeople()
+            If String.IsNullOrWhiteSpace(faceId) Then Return
+            RaiseEvent FocusFaceRequested(Me, New FaceFocusRequest(False, faceId))
+        End Sub
+
         Private Sub RaiseFaceScanState()
+            Me.RaisePropertyChanged(NameOf(CanMarkFace))
             Me.RaisePropertyChanged(NameOf(ShowFaceScanOffer))
             Me.RaisePropertyChanged(NameOf(IsFaceScanning))
             Me.RaisePropertyChanged(NameOf(ShowNobodyFound))
@@ -597,6 +652,7 @@ Namespace ViewModels
             _needsFaceScan = False
             _faceScanUnreadable = False
             _faceScanStatus = ""
+            FaceMarkStatus = ""
             If _items.Count <> 1 Then
                 RaisePeopleTabState()
                 Return
@@ -2034,6 +2090,10 @@ Namespace ViewModels
         Public ReadOnly Property OpenAiTagSearchCommand As ICommand
         Public ReadOnly Property AnalyzeAiTagsCommand As ICommand
         Public ReadOnly Property ScanFacesCommand As ICommand
+
+        ''' <summary>"Gesicht markieren": der Besitzer laesst ein Rechteck aufziehen. Nur, wo er
+        ''' <see cref="BeginMarkFace"/> gesetzt hat.</summary>
+        Public ReadOnly Property MarkFaceCommand As ICommand
 
         ' ---------------------------------------------------------------- Navigator
 

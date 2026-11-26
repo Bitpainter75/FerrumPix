@@ -36,8 +36,14 @@ Module Program
         ' Genau daran ist eine Fehlersuche unter Windows 10 schon einmal haengengeblieben.
         Dim debugRequested = args IsNot Nothing AndAlso
                              args.Any(Function(a) String.Equals(a, DebugSwitch, StringComparison.OrdinalIgnoreCase))
+        If debugRequested Then DiagnosticLogService.ForceEnable()
+
+        ' DIE ORTE VOR ALLEM, WAS EINEN BENUTZT: der einmalige Umzug von 0.9.92, ein vorgemerkter
+        ' Wechsel des Datenordners und die Sperre des Katalogs. Danach steht fest, wo Katalog,
+        ' Modelle und Protokolle dieses Laufs liegen. Siehe AppFolders.
+        AppFolders.PrepareAtStartup()
+
         If debugRequested Then
-            DiagnosticLogService.ForceEnable()
             AttachDebugConsole()
             EchoStartupBanner()
         End If

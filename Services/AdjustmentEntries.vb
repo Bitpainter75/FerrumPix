@@ -67,7 +67,7 @@ Namespace Services
             list.Add(E("exposure", "light", "Belichtung (EV)", "Exposure"))
             list.Add(E("brightness", "light", "Helligkeit", "Brightness"))
             list.Add(E("contrast", "light", "Kontrast", "Contrast"))
-            list.Add(E("highlights", "light", "Lichter", "Highlights"))
+            list.Add(E("highlights", "light", "Lichter", "Highlights", "ToneRuleVersion"))
             list.Add(E("shadows", "light", "Tiefen", "ShadowsLevel"))
             list.Add(E("whites", "light", "Weiß", "Whites"))
             list.Add(E("blacks", "light", "Schwarz", "Blacks"))
@@ -293,6 +293,9 @@ Namespace Services
         Public Shared Sub Apply(target As ImageAdjustments, source As ImageAdjustments, entries As IEnumerable(Of AdjustmentEntry))
             If target Is Nothing OrElse source Is Nothing Then Return
             Dim chosen = ToSet(entries)
+            Dim matteredBefore = target.ToneRuleMatters()
+            Dim versionBefore = target.ToneRuleVersion
+            Dim highlightsChosen = False
             For Each entry In _all
                 If Not chosen.Contains(entry.Key) Then Continue For
                 If entry.IsFrame Then
@@ -302,8 +305,21 @@ Namespace Services
                 For Each field In entry.Fields
                     Dim p = PropertyOf(field)
                     If p IsNot Nothing Then p.SetValue(target, p.GetValue(source))
+                    If field = NameOf(ImageAdjustments.Highlights) Then highlightsChosen = True
                 Next
             Next
+            ' Die Tonfassung (ImageAdjustments.ToneRuleVersion) steht nur dort, wo sie wirkt. Wirkt sie
+            ' in der Quelle und kommen deren Lichter mit, gilt ihre; wirkt sie im Ziel erst jetzt, ist
+            ' das eine neue Einstellung und bekommt die aktuelle; sonst bleibt die des Ziels.
+            If Not target.ToneRuleMatters() Then
+                target.ToneRuleVersion = 0
+            ElseIf highlightsChosen AndAlso source.ToneRuleMatters() Then
+                target.ToneRuleVersion = source.ToneRuleVersion
+            ElseIf Not matteredBefore Then
+                target.ToneRuleVersion = ImageAdjustments.CurrentToneRuleVersion
+            Else
+                target.ToneRuleVersion = versionBefore
+            End If
         End Sub
 
         ''' <summary>Welche Eintraege in <paramref name="recipe"/> vom Neutralwert abweichen: die
@@ -325,6 +341,8 @@ Namespace Services
                     If field = NameOf(ImageAdjustments.HazeModel) Then Continue For
                     ' Ebenso die Fassung der Koernung.
                     If field = NameOf(ImageAdjustments.GrainModel) Then Continue For
+                    ' Und die Tonfassung beim Eintrag Lichter.
+                    If field = NameOf(ImageAdjustments.ToneRuleVersion) Then Continue For
                     If Not Object.Equals(p.GetValue(recipe), p.GetValue(neutral)) Then
                         result.Add(entry)
                         Exit For

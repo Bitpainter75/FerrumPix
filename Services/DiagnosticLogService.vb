@@ -4,7 +4,8 @@ Imports System.IO
 Namespace Services
 
     ''' <summary>
-    ''' Fehler- und Diagnoseprotokoll unter ~/.local/share/FerrumPix/logs.
+    ''' Fehler- und Diagnoseprotokoll unter logs im Datenordner (AppFolders.LogsFolder; in einem
+    ''' gewaehlten Datenordner je Rechner ein Unterordner).
     '''
     ''' ZWEI Stufen mit unterschiedlicher Regel:
     ''' - <see cref="LogAlways"/> (Ablaufspuren, HTTP-Antworten, Renderzeiten) schreibt NUR bei
@@ -19,14 +20,28 @@ Namespace Services
         Private Sub New()
         End Sub
 
-        Private Shared ReadOnly LogDirectory As String =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix", "logs")
+        ''' <summary>Bei jedem Zugriff neu gebildet und nicht beim Laden der Klasse gemerkt: ein
+        ''' Fehler, der beim Start VOR dem Umzug des Datenordners protokolliert wird, legte den Ort
+        ''' sonst auf den alten fest (AppFolders.PrepareAtStartup).</summary>
+        Private Shared ReadOnly Property LogDirectory As String
+            Get
+                Return AppFolders.LogsFolder
+            End Get
+        End Property
 
-        Private Shared ReadOnly LogPath As String = Path.Combine(LogDirectory, "diagnostics.log")
+        Private Shared ReadOnly Property LogPath As String
+            Get
+                Return Path.Combine(LogDirectory, "diagnostics.log")
+            End Get
+        End Property
 
         ''' <summary>Fehlerdatei für den Normalbetrieb (getrennt von der ausführlichen
         ''' diagnostics.log, damit ein eingeschaltetes Diagnose-Log sie nicht überschwemmt).</summary>
-        Private Shared ReadOnly ErrorLogPath As String = Path.Combine(LogDirectory, "errors.log")
+        Private Shared ReadOnly Property ErrorLogPath As String
+            Get
+                Return Path.Combine(LogDirectory, "errors.log")
+            End Get
+        End Property
 
         Private Const MaxErrorLogBytes As Long = 1024L * 1024L
 

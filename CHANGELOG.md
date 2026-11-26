@@ -1,4 +1,4 @@
-## Unreleased
+## 0.9.92
 
 ### Changes
 
@@ -11,6 +11,11 @@
   show the same grain. This applies to new edits; pictures you edited before look exactly as they
   did.
 
+- Lowering highlights on a raw picture you have brightened with exposure no longer turns blown
+  out skies into a flat grey: the highlights slider holds back a little more the further the
+  exposure goes up, so bright areas stay bright. This applies to new edits;
+  pictures you edited before look exactly as they did.
+
 - The editor's tool bar can now stand on the left, on the right, or on the side of the adjustments
   panel (Settings, Editor). A new automatic mode keeps it narrow and opens it over the picture when
   the pointer rests on it, without taking room from the picture. The collapse button stays where it
@@ -20,7 +25,7 @@
 - The buttons at the bottom of the adjustments panel that step to the previous and next tool now
   show the icon of that tool next to its name, the same one as in the tool bar.
 
-- **Save adjustment as XMP preset or LUT.** The Save adjustment dialog can now also write your
+- Save adjustment as XMP preset or LUT. The Save adjustment dialog can now also write your
   look as an XMP preset that other raw developers read, and that FerrumPix reads back completely,
   or as a .cube LUT for video editors and other programs, with 17, 33 or 65 grid points. Sliders a
   target can't carry are grayed out, and the dialog says why.
@@ -30,7 +35,38 @@
   are filled by FerrumPix's own repair. Red eye corrections are not taken over yet. Presets never
   bring spots with them, since a dust spot belongs to one picture only.
 
+- All of FerrumPix's data now lives in one data folder that you can move, for example to a second
+  drive or a network share (Settings, Catalog): the catalogue, thumbnails, models, extensions,
+  saved adjustments, favourites and search lists all move along at the next start. If a second
+  computer opens the same catalogue, it says which computer is using it and carries on without it.
+  A new size limit for thumbnails, unlimited out of the box, removes the ones you have not looked
+  at for the longest time once it is reached (Settings, Performance).
+
+- On the first start of this version, models, extensions, favourites and search lists move once
+  from the settings folder into the data folder. Older versions will not find the models there
+  and download them again if needed.
+
+- Manage people can now act on several groups at once: select them with the mark on their tiles
+  and either add them to a person or remove them. Removing puts every face into the Unknown bin,
+  just like "Not this person", after a question that says how many groups and faces are affected.
+
+- A face that was not recognized can now be marked by hand: in the viewer, choose Mark face in the
+  People tab of the info sidebar and drag a rectangle around it. The face can be named right away,
+  makes suggestions like any recognized face, and stays when the pictures are scanned again.
+
+- In the browser, pictures now travel both ways: drop files onto the page to put them into the
+  folder you are looking at, or onto the picture in the editor to add them as a layer, and choose
+  Download in the context menu to bring pictures to your device, several at once as a ZIP with
+  their sidecar files. After Export to and Save as, the page offers the finished files for download.
+
+- FerrumPix in the browser is now also available as a container image for Docker and Podman, for
+  amd64 and arm64, so it can run on a home server without a screen.
+
 ### Fixes
+
+- The People menu in the gallery now says when named people are missing because they don't appear
+  in the open folder, and offers to show all people of the catalog. Before, someone named in
+  another folder simply wasn't there, which looked as if the name had been lost.
 
 - Olympus, OM System and Panasonic pictures taken with the camera's own shading compensation
   switched on no longer get their corners brightened a second time by the lens profile. Distortion

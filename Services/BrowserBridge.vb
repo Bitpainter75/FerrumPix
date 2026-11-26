@@ -41,8 +41,9 @@ Namespace Services
     ''' koennte jede fremde Webseite im selben Browser die Anwendung fernbedienen.</para>
     '''
     ''' <para>WARUM DER DIALOG DES BROWSERS und kein eigenes Formular: er ist in jeder Sprache schon
-    ''' da, der Browser merkt sich die Angaben fuer die Sitzung, und die Seite selbst braucht
-    ''' keinen einzigen Text.</para>
+    ''' da, der Browser merkt sich die Angaben fuer die Sitzung, und die Anmeldung braucht keinen
+    ''' eigenen Text. Die wenigen Texte der Seite (Hochladen, Herunterladen) setzt der Server beim
+    ''' Ausliefern in der Sprache der Anwendung ein.</para>
     ''' </summary>
     Partial Public NotInheritable Class BrowserBridge
 
@@ -91,6 +92,13 @@ Namespace Services
         Public Const ProxyAddressVariable As String = "FERRUMPIX_BROWSER_PROXY_ADDRESS"
 
         Private Const DefaultBind As String = "127.0.0.1:14500"
+
+        ''' <summary>Der Pfad fuer die Gesundheitspruefung des Behaelters. Er antwortet immer nur
+        ''' mit "ok", ohne Anmeldung und auf jedem Weg, auch am Proxy vorbei: die Pruefung laeuft im
+        ''' Behaelter selbst gegen 127.0.0.1 und schickt keinen Kopf des Proxys mit. Er gibt nichts
+        ''' preis, was nicht schon die offene Verbindung verraet, und alle anderen Pfade bleiben
+        ''' hinter Weg und Anmeldung.</summary>
+        Friend Const HealthRoute As String = "/health"
 
         Private Const PageAsset As String = "avares://FerrumPix/Assets/BrowserBridge/index.html"
 
@@ -331,7 +339,12 @@ Namespace Services
             ' Kennwort sonst genau ueber den Weg, der sie nicht sehen soll.
             listener.AuthenticationSchemeSelectorDelegate =
                 Function(request)
+                    ' Das Hochladen prueft die Anmeldung selbst (BrowserBridgeFiles.vb): die
+                    ' Ablehnung des Listeners liesse den Inhalt der Anfrage ungelesen auf der
+                    ' Verbindung liegen, und die naechste Anfrage darauf hinge.
                     If _password.Length > 0 AndAlso request.Url.AbsolutePath <> "/ws" AndAlso
+                       request.Url.AbsolutePath <> HealthRoute AndAlso
+                       request.Url.AbsolutePath <> UploadRoute AndAlso
                        IsAcceptedRoute(request) Then Return AuthenticationSchemes.Basic
                     Return AuthenticationSchemes.Anonymous
                 End Function
@@ -357,6 +370,7 @@ Namespace Services
             SyncLock Tokens
                 Tokens.Clear()
             End SyncLock
+            ResetFileTransfers()
             WindowSource = AddressOf ApplicationWindows
         End Sub
 
@@ -389,6 +403,16 @@ Namespace Services
         Private Shared Async Function HandleContextAsync(context As HttpListenerContext) As Task
             Try
                 Dim path = context.Request.Url.AbsolutePath
+                If path = HealthRoute Then
+                    Dim healthy = Encoding.ASCII.GetBytes("ok")
+                    context.Response.StatusCode = 200
+                    context.Response.ContentType = "text/plain; charset=utf-8"
+                    context.Response.Headers("Cache-Control") = "no-store"
+                    context.Response.ContentLength64 = healthy.Length
+                    Await context.Response.OutputStream.WriteAsync(healthy)
+                    context.Response.Close()
+                    Return
+                End If
                 If Not IsAcceptedRoute(context.Request) Then
                     Dim hint = Encoding.UTF8.GetBytes(
                         If(_tlsProxy, "FerrumPix is only available through its encrypted address.",
@@ -410,6 +434,16 @@ Namespace Services
                     Await RunClientAsync(socketContext.WebSocket)
                     Return
                 End If
+                ' Dateien hinauf und hinunter, siehe BrowserBridgeFiles.vb. Beide pruefen die
+                ' Anmeldung selbst, dazu die Kennung der Seite.
+                If path = UploadRoute Then
+                    Await HandleUploadAsync(context)
+                    Return
+                End If
+                If path = DownloadRoute Then
+                    Await HandleDownloadAsync(context)
+                    Return
+                End If
 
                 If path <> "/" AndAlso path <> "/index.html" Then
                     context.Response.StatusCode = 404
@@ -427,7 +461,11 @@ Namespace Services
                     Return
                 End If
 
-                Dim page = Encoding.UTF8.GetBytes(_pageText.Replace(TokenPlaceholder, IssueToken(), StringComparison.Ordinal))
+                ' Die Texte der Seite entstehen beim Ausliefern, in der Sprache, die die Anwendung
+                ' gerade spricht.
+                Dim texts = Await Dispatcher.UIThread.InvokeAsync(Function() PageTextsJson())
+                Dim page = Encoding.UTF8.GetBytes(_pageText.Replace(TokenPlaceholder, IssueToken(), StringComparison.Ordinal).
+                                                            Replace(TextsPlaceholder, texts, StringComparison.Ordinal))
                 context.Response.ContentType = "text/html; charset=utf-8"
                 context.Response.Headers("Cache-Control") = "no-store"
                 context.Response.ContentLength64 = page.Length
@@ -435,6 +473,12 @@ Namespace Services
                 context.Response.Close()
             Catch ex As Exception
                 DiagnosticLogService.LogException("BrowserBridge.Request", ex)
+                ' Ohne Antwort hielte der Browser die Anfrage offen, bis seine eigene Frist
+                ' ablaeuft; abgebrochen erfaehrt er sofort, dass sie gescheitert ist.
+                Try
+                    context.Response.Abort()
+                Catch
+                End Try
             End Try
         End Function
 

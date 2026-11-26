@@ -83,6 +83,22 @@ Namespace Models
             End Get
         End Property
 
+        Private _isSelected As Boolean
+
+        ''' <summary>In der Wand fuer eine Sammelaktion markiert (Entfernen, Zu Person
+        ''' hinzufuegen). Nie am Ablagekorb: er ist keine Gruppe, die man entfernen oder einer Person
+        ''' zuschlagen koennte.</summary>
+        Public Property IsSelected As Boolean
+            Get
+                Return _isSelected
+            End Get
+            Set(value As Boolean)
+                If _isSelected = value Then Return
+                _isSelected = value
+                Notify()
+            End Set
+        End Property
+
         ''' <summary>Wo das Aushaengeschild herkommt: Datei und Lage des groessten Gesichts.</summary>
         Public Property CoverPath As String = ""
         Public Property BoxX As Double

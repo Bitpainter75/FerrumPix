@@ -253,11 +253,22 @@ flatpak run --env=FERRUMPIX_BROWSER_USER=anna --env=FERRUMPIX_BROWSER_PASSWORD=s
 | `--browser-tls-proxy` | `FERRUMPIX_BROWSER_TLS_PROXY=1` | a reverse proxy with HTTPS stands in front |
 | `--browser-proxy-address=192.168.1.2` | `FERRUMPIX_BROWSER_PROXY_ADDRESS` | where that proxy is, if it runs on a different computer |
 
-This is a first version, and a few things are still missing. Copy and paste stay inside FerrumPix and do not reach the clipboard of the device you sit at. Videos play without sound. Pictures cannot yet be uploaded from or downloaded to that device. And because the computer draws everything without the help of its graphics card in this mode, it feels a little less quick than the window does, mostly with very large browser windows.
+For a home server there is also a container image for Docker and Podman, for both amd64 and arm64 machines. Your photo folders go in under `/photos`, and everything FerrumPix keeps for itself goes into one volume:
+
+```
+docker run -d -p 127.0.0.1:14501:14500 -e FERRUMPIX_BROWSER_LOCAL_FORWARD=1 \
+  -v ferrumpix-data:/data -v ~/Pictures:/photos/Pictures ghcr.io/bitpainter75/ferrumpix
+```
+
+That keeps it on the server itself, at `http://127.0.0.1:14501`. For other devices the same rule as above applies: put a reverse proxy with HTTPS in front, tell FerrumPix where it is, and give it a password.
+
+Pictures travel both ways: drop files onto the page to put them into the folder you are looking at, or onto the picture in the editor to add them as a layer, and Download in the right-click menu brings pictures, and your exports, to the device you sit at.
+
+This is a first version, and a few things are still missing. Copy and paste stay inside FerrumPix and do not reach the clipboard of the device you sit at. Videos play without sound. And because the computer draws everything without the help of its graphics card in this mode, it feels a little less quick than the window does, mostly with very large browser windows.
 
 ## Settings
 
-Theme, accent colour, which side the window buttons sit on, language, date format, interface and font scale (on Linux per display), thumbnail and export quality, metadata handling, video support, the map view, cache cleanup and the connection to an Immich or Nextcloud server. A search field finds any setting by a word of its name or description.
+Theme, accent colour, which side the window buttons sit on, language, date format, interface and font scale (on Linux per display), thumbnail and export quality, how much space thumbnails may take, one data folder for the catalogue, thumbnails, models and everything else that can move to another drive or a network share, metadata handling, video support, the map view, cache cleanup and the connection to an Immich or Nextcloud server. A search field finds any setting by a word of its name or description.
 
 The interface speaks German, English, Dutch, Swedish, Danish, Norwegian, Finnish, Spanish, French, Italian, Portuguese, Polish, Czech, Russian, Turkish, Hindi, Thai, Indonesian, Chinese, Japanese and Korean. By default it follows your system; anything else it does not know falls back to English.
 

@@ -347,6 +347,14 @@ Namespace Views
             If PlatformShortcutService.IsInputFieldSource(e.Source) Then Return
             Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
 
+            ' ESC beendet zuerst das Markieren eines Gesichts, eine Ebene und nicht mehr.
+            If e.Key = Key.Escape AndAlso vm.IsMarkingFace Then
+                EndFaceMarkDrag()
+                vm.CancelFaceMarking()
+                e.Handled = True
+                Return
+            End If
+
             If mainVm IsNot Nothing AndAlso mainVm.IsFullscreen AndAlso (e.Key = Key.Escape OrElse e.Key = Key.Back) Then
                 mainVm.ExitFullscreen()
                 e.Handled = True
@@ -776,6 +784,56 @@ Namespace Views
             Return False
         End Function
 
+        ' ── Gesicht markieren: das Rechteck im Bild ───────────────────────────────
+        '
+        ' Gemessen wird ueber e.GetPosition(MainImage), also im Raum des gezeigten Bildes VOR der
+        ' Drehung und Spiegelung des Betrachters - derselbe Raum, in dem die Gesichtsrahmen liegen.
+        ' Gezeichnet wird das Rechteck neben der Huelle wie die Rahmen, ueber alle vier Ecken.
+
+        Private _isFaceMarkDragging As Boolean
+        Private _faceMarkStartNorm As Point
+        Private _faceMarkCurrentNorm As Point
+
+        Private Sub UpdateFaceMarkVisual()
+            Dim image = Me.FindControl(Of Image)("MainImage")
+            Dim canvas = Me.FindControl(Of Canvas)("FaceMarkCanvas")
+            Dim rect = Me.FindControl(Of Border)("FaceMarkRect")
+            If image Is Nothing OrElse canvas Is Nothing OrElse rect Is Nothing Then Return
+            Dim size = image.Bounds.Size
+            If size.Width <= 0 OrElse size.Height <= 0 Then Return
+            Dim left = Math.Min(_faceMarkStartNorm.X, _faceMarkCurrentNorm.X), right = Math.Max(_faceMarkStartNorm.X, _faceMarkCurrentNorm.X)
+            Dim top = Math.Min(_faceMarkStartNorm.Y, _faceMarkCurrentNorm.Y), bottom = Math.Max(_faceMarkStartNorm.Y, _faceMarkCurrentNorm.Y)
+            Dim x1 = Double.MaxValue, y1 = Double.MaxValue, x2 = Double.MinValue, y2 = Double.MinValue
+            For Each corner In {New Point(left, top), New Point(right, top), New Point(left, bottom), New Point(right, bottom)}
+                Dim mapped = image.TranslatePoint(New Point(corner.X * size.Width, corner.Y * size.Height), canvas)
+                If Not mapped.HasValue Then Return
+                x1 = Math.Min(x1, mapped.Value.X) : x2 = Math.Max(x2, mapped.Value.X)
+                y1 = Math.Min(y1, mapped.Value.Y) : y2 = Math.Max(y2, mapped.Value.Y)
+            Next
+            Canvas.SetLeft(rect, x1)
+            Canvas.SetTop(rect, y1)
+            rect.Width = Math.Max(0, x2 - x1)
+            rect.Height = Math.Max(0, y2 - y1)
+            rect.IsVisible = True
+        End Sub
+
+        Private Sub EndFaceMarkDrag()
+            _isFaceMarkDragging = False
+            Dim rect = Me.FindControl(Of Border)("FaceMarkRect")
+            If rect IsNot Nothing Then rect.IsVisible = False
+        End Sub
+
+        ''' <summary>Gibt das Rechteck an das ViewModel. Async Sub mit eigenem Fang: eine Ausnahme
+        ''' landete sonst beim Dispatcher und beendete den Prozess.</summary>
+        Private Async Sub CommitFaceMark(vm As ViewerViewModel, startNorm As Point, endNorm As Point)
+            Try
+                Await vm.CommitFaceMarkingAsync(Math.Min(startNorm.X, endNorm.X), Math.Min(startNorm.Y, endNorm.Y),
+                                                Math.Max(startNorm.X, endNorm.X), Math.Max(startNorm.Y, endNorm.Y))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ViewerView.CommitFaceMark", ex)
+            End Try
+        End Sub
+
         Private Sub OnImagePointerPressed(sender As Object, e As PointerPressedEventArgs)
             Dim properties = e.GetCurrentPoint(Nothing).Properties
             Dim isLeftButton = properties.IsLeftButtonPressed
@@ -784,6 +842,23 @@ Namespace Views
             Dim vm = GetVm()
             Dim scrollViewer = Me.FindControl(Of ScrollViewer)("ImageScrollViewer")
             If vm Is Nothing OrElse scrollViewer Is Nothing Then Return
+
+            ' Beim Markieren eines Gesichts gehoert der linke Zug dem Rechteck. Verschieben geht
+            ' weiter mit der rechten Taste.
+            If vm.IsMarkingFace AndAlso isLeftButton Then
+                Dim markImage = Me.FindControl(Of Image)("MainImage")
+                If markImage Is Nothing OrElse markImage.Bounds.Width <= 0 OrElse markImage.Bounds.Height <= 0 Then Return
+                _faceMarkStartNorm = NormalizeImagePoint(e.GetPosition(markImage), markImage.Bounds.Size)
+                _faceMarkCurrentNorm = _faceMarkStartNorm
+                _isFaceMarkDragging = True
+                If TypeOf sender Is Control Then
+                    e.Pointer.Capture(DirectCast(sender, Control))
+                Else
+                    e.Pointer.Capture(Me)
+                End If
+                e.Handled = True
+                Return
+            End If
 
             ' Ab Werk verschiebt ein Zug mit jeder der beiden Tasten ein Bild, das groesser ist als die
             ' Ansicht, wie man es von einem Bildbetrachter erwartet. Den Zuschnittrahmen gibt es nur,
@@ -853,6 +928,20 @@ Namespace Views
         Private Sub OnImagePointerMoved(sender As Object, e As PointerEventArgs)
             UpdateMousePositionText(e)
 
+            If _isFaceMarkDragging Then
+                ' Wie beim Zuschnitt: ohne gedrueckte Taste ist der Zug vorbei, und verworfen.
+                If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then
+                    EndFaceMarkDrag()
+                    Return
+                End If
+                Dim markImage = Me.FindControl(Of Image)("MainImage")
+                If markImage Is Nothing Then Return
+                _faceMarkCurrentNorm = NormalizeImagePoint(e.GetPosition(markImage), markImage.Bounds.Size)
+                UpdateFaceMarkVisual()
+                e.Handled = True
+                Return
+            End If
+
             ' Beim Zeichenstift bleibt das Loslassen aus, wenn der Stift das Tablett verlaesst; der
             ' Fang bleibt dabei bestehen, der Weg ueber den Fangverlust greift also nicht. Ohne
             ' gedrueckte Taste ist der Zug vorbei: das Bild soll dem Zeiger nicht weiter folgen, und
@@ -903,6 +992,19 @@ Namespace Views
         End Sub
 
         Private Sub OnImagePointerReleased(sender As Object, e As PointerReleasedEventArgs)
+            If _isFaceMarkDragging Then
+                Dim startNorm = _faceMarkStartNorm
+                Dim endNorm = _faceMarkCurrentNorm
+                EndFaceMarkDrag()
+                e.Pointer.Capture(Nothing)
+                e.Handled = True
+                Dim markVm = GetVm()
+                ' Ein blosser Klick ist kein Rechteck: das Markieren bleibt offen. Was zu klein
+                ' ausfaellt, meldet das ViewModel.
+                If markVm Is Nothing OrElse (Math.Abs(endNorm.X - startNorm.X) < 0.002 AndAlso Math.Abs(endNorm.Y - startNorm.Y) < 0.002) Then Return
+                CommitFaceMark(markVm, startNorm, endNorm)
+                Return
+            End If
             If _isCropDragging Then
                 Dim wasMoved = _cropDragMoved
                 Dim startNorm = _cropDragStartNorm
@@ -931,6 +1033,7 @@ Namespace Views
 
         Private Sub OnImagePointerCaptureLost(sender As Object, e As PointerCaptureLostEventArgs)
             EndPanning()
+            If _isFaceMarkDragging Then EndFaceMarkDrag()
             If _isCropDragging Then
                 _isCropDragging = False
                 _cropDragMoved = False

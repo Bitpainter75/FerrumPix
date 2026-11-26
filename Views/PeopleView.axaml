@@ -41,6 +41,31 @@
         <Style Selector="Panel.face-tile Button.tile-badge:pointerover icons|SvgIcon">
             <Setter Property="IconBrush" Value="{DynamicResource FP.OnAccent}"/>
         </Style>
+        <!-- Das Markierzeichen der Gruppenkacheln: wie die Zeichen der Gesichtskacheln erst beim
+             Zeigen, aber an einer markierten Kachel IMMER und in der Akzentfarbe. Sonst saehe man
+             nach dem Wegzeigen nicht mehr, was markiert ist. -->
+        <Style Selector="Panel.group-tile Button.tile-badge">
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="Background" Value="#D9151B21"/>
+            <Setter Property="BorderBrush" Value="#80FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="14"/>
+        </Style>
+        <Style Selector="Panel.group-tile:pointerover Button.tile-badge">
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <Style Selector="Panel.group-tile Button.tile-badge.selected">
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        </Style>
+        <Style Selector="Panel.group-tile Button.tile-badge.selected icons|SvgIcon">
+            <Setter Property="IconBrush" Value="{DynamicResource FP.OnAccent}"/>
+        </Style>
+        <Style Selector="Panel.group-tile Button.group-card.selected">
+            <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+            <Setter Property="BorderThickness" Value="2"/>
+        </Style>
     </UserControl.Styles>
 
     <!-- EIGENER BEREICH und kein Abschnitt der Einstellungen mehr: hier arbeitet man am Bestand,
@@ -103,6 +128,53 @@
                         <TextBlock Text="Ein Klick öffnet eine Gruppe. Dort steht jedes Gesicht einzeln, und was nicht dazugehört, lässt sich herauslösen, ohne die anderen Bilder anzufassen."
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        <!-- MEHRERE AUF EINMAL: das Zeichen oben links markiert eine Kachel. Beide
+                             Aktionen sind die der geoeffneten Gruppe, nur fuer viele zugleich
+                             (PeopleViewModel, Abschnitt "Mehrere Gruppen auf einmal"). -->
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <TextBlock Text="Das Zeichen oben links auf einer Kachel markiert sie. Markierte Gruppen lassen sich zusammen entfernen oder einer Person hinzufügen."
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center"
+                                    IsVisible="{Binding !!People.Count}"
+                                    Click="OnSelectPageGroupsClick">Alle auf dieser Seite markieren</Button>
+                        </Grid>
+
+                        <!-- Die Leiste der Sammelaktionen, nur mit Markierung. Das Namensfeld schlaegt
+                             vor wie jedes andere: ein vorhandener Name aus der Liste trifft die
+                             Person zeichengenau, und genau daran haengt das Zusammenfuehren. -->
+                        <Border IsVisible="{Binding HasGroupSelection}"
+                                Background="{DynamicResource FP.Bg.Elevated}"
+                                BorderBrush="{DynamicResource FP.Accent}" BorderThickness="1"
+                                CornerRadius="8" Padding="12,8">
+                            <WrapPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding GroupSelectionText}" Classes="no-translate"
+                                           VerticalAlignment="Center" Margin="0,0,16,0"
+                                           FontWeight="SemiBold"/>
+                                <AutoCompleteBox Name="GroupTargetNameBox" Width="220"
+                                                 VerticalAlignment="Center" Margin="0,4,8,4"
+                                                 ItemsSource="{Binding PersonNameSuggestions}"
+                                                 FilterMode="Contains"
+                                                 MinimumPrefixLength="0"
+                                                 PlaceholderText="Name der Person"
+                                                 Classes="no-translate"
+                                                 KeyDown="OnGroupTargetNameKeyDown"/>
+                                <Button Classes="accent" Padding="12,7" Margin="0,4,16,4" VerticalAlignment="Center"
+                                        Click="OnAddSelectedGroupsClick"
+                                        ToolTip.Tip="Heißt schon jemand so, werden die markierten Gruppen mit dieser Person zusammengeführt. Sonst entsteht eine Person mit diesem Namen.">Zu Person hinzufügen</Button>
+                                <Button Classes="ghost" Padding="12,7" Margin="0,4,8,4" VerticalAlignment="Center"
+                                        Click="OnRemoveSelectedGroupsClick">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
+                                                       Width="16" Height="16" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Entfernen" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Classes="ghost" Padding="12,7" Margin="0,4,0,4" VerticalAlignment="Center"
+                                        Click="OnClearGroupSelectionClick">Markierung aufheben</Button>
+                            </WrapPanel>
+                        </Border>
 
                         <ItemsControl ItemsSource="{Binding People}">
                             <ItemsControl.ItemsPanel>
@@ -112,7 +184,10 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type models:PersonListEntry}">
-                                    <Button Classes="ghost" Padding="8" Margin="0,0,10,10"
+                                    <Panel Classes="group-tile" Margin="0,0,10,10"
+                                           AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
+                                    <Button Classes="ghost group-card" Padding="8"
+                                            Classes.selected="{Binding IsSelected}"
                                             Click="OnPersonCardClick">
                                         <StackPanel Width="104" Spacing="6">
                                             <!-- Rund, weil es ein Gesicht ist. Der Rahmen bleibt
@@ -134,6 +209,20 @@
                                                        FontSize="{DynamicResource FP.Font.Small}"/>
                                         </StackPanel>
                                     </Button>
+                                    <!-- Nicht am Ablagekorb: er ist keine Gruppe, die man entfernen
+                                         oder einer Person hinzufuegen koennte. -->
+                                    <Button Classes="ghost tile-badge" Width="28" Height="28" Padding="0"
+                                            Classes.selected="{Binding IsSelected}"
+                                            IsVisible="{Binding !IsUnknownBin}"
+                                            HorizontalAlignment="Left" VerticalAlignment="Top"
+                                            Margin="4,4,0,0"
+                                            Click="OnToggleGroupSelectionClick"
+                                            ToolTip.Tip="Markieren">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/check.svg"
+                                                       Width="16" Height="16"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Button>
+                                    </Panel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -214,6 +303,12 @@
                         </Grid>
 
                         <TextBlock Text="Gehört jemand nicht dazu, löst der Knopf an der Kachel genau dieses Gesicht heraus. Andere Bilder bleiben unberührt."
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        <!-- Der Weg zu einer vorhandenen Person stand nirgends: ein Name, den es schon
+                             gibt, fuehrt die Gruppe mit ihr zusammen (LibraryService.NamePerson). -->
+                        <TextBlock Text="Ein Name, den es schon gibt, führt diese Gruppe mit der Person zusammen."
+                                   IsVisible="{Binding !SelectedPerson.IsUnknownBin}"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
 

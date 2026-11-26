@@ -27,8 +27,7 @@ Namespace Services
         Private Const ModelEdge As Integer = 384
         ''' <summary>Kurzlebige Originalkopien für Server-Analysen und -XMP-Synchronisation.
         ''' Sie liegen bewusst nicht im deterministischen Viewer-Cache der Serverquellen.</summary>
-        Public Shared ReadOnly WorkFolder As String = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix", "ai-work")
+        Public Shared ReadOnly WorkFolder As String = AppFolders.InData("ai-work")
 
         Private Shared ReadOnly _catalogLock As New Object()
         Private Shared _tags As String()

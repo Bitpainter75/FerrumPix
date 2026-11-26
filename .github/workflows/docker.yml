@@ -1,0 +1,136 @@
+# Vorlage. Gehoert ins OEFFENTLICHE Repo nach .github/workflows/docker.yml (Vorlage im Build-Repo
+# unter ci/docker.yml).
+#
+# DAS ABBILD FUER DEN BROWSER, fuer linux/amd64 und linux/arm64, aus
+# packaging/browser-avalonia/Dockerfile. Ziel ist allein die Paketablage von GitHub:
+#   ghcr.io/bitpainter75/ferrumpix  mit den Tags latest, <VERSION> (etwa 0.9.92-1) und dem Kern
+#                                   davor (0.9.92)
+#
+# NUR VON HAND, und ab Werk wird NICHTS hochgeladen: ohne die Eingabe "veroeffentlichen" baut der
+# Lauf beide Architekturen und macht den Probelauf, mehr nicht. Mit ihr laedt er hoch, aber nur,
+# wenn der Probelauf gruen war.
+#
+# DER PROBELAUF (packaging/browser-avalonia/probe.sh) startet das amd64-Abbild ohne eingehaengte
+# Daten: ohne Zusage muss es den Start verweigern, mit der Zusage "nur am eigenen Rechner" und
+# einem zufaelligen Kennwort muessen /health "ok", die Seite mit Kennwort 200 und ohne 401 liefern.
+#
+# SICHERHEIT: kein pull_request_target, kein Ausloeser von aussen (siehe release.yml). Der Token
+# zum Hochladen ist der eingebaute GITHUB_TOKEN mit "packages: write"; ein weiteres Secret braucht
+# es dafuer nicht. PACKAGING_DEPLOY_KEY wie in release.yml, fuer die mitgelieferten Bibliotheken
+# aus dem Build-Repo.
+#
+# Die Fassungen der Actions gehoeren aktuell gehalten, wie in release.yml.
+
+name: Docker
+
+on:
+  workflow_dispatch:
+    inputs:
+      veroeffentlichen:
+        description: "Nach gruenem Probelauf nach ghcr.io hochladen. Aus: nur bauen und pruefen"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/bitpainter75/ferrumpix
+
+jobs:
+
+  abbild:
+    name: Abbild
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/checkout@v7
+        with:
+          repository: Bitpainter75/FerrumPix-Build
+          path: packaging
+          ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
+
+      - name: Version
+        id: version
+        run: |
+          version="$(tr -d '[:space:]' < VERSION)"
+          core="${version%%-*}"
+          case "$version" in
+            ""|*[!0-9A-Za-z._-]*) echo "VERSION ist kein gueltiger Tag: '$version'"; exit 1 ;;
+          esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "core=$core" >> "$GITHUB_OUTPUT"
+          echo "created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          echo "Abbild $IMAGE, Tags latest, $version, $core"
+
+      # Die Bibliotheken je Architektur muessen im Build-Repo liegen; fehlt eine, bricht der Bau
+      # spaeter mitten im Dockerfile ab, hier sagt es die Zeile gleich.
+      - name: Mitgelieferte Bibliotheken
+        run: |
+          for rid in linux-x64 linux-arm64; do
+            for lib in libraw libheif libjxl openjpeg openexr; do
+              ls packaging/$lib/$rid/*.so* > /dev/null 2>&1 || { echo "packaging/$lib/$rid fehlt"; exit 1; }
+            done
+          done
+
+      - uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm64
+
+      - uses: docker/setup-buildx-action@v4
+
+      # Erst amd64 allein, in den lokalen Docker geladen, fuer den Probelauf. Der Bau beider
+      # Architekturen danach nimmt diese Stufen aus dem Zwischenspeicher desselben Builders.
+      - name: Bau amd64 fuer den Probelauf
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: packaging/browser-avalonia/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: ferrumpix-probe:latest
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            REVISION=${{ github.sha }}
+            CREATED=${{ steps.version.outputs.created }}
+
+      - name: Probelauf
+        run: packaging/browser-avalonia/probe.sh ferrumpix-probe:latest
+
+      - name: Anmelden bei ghcr.io
+        if: ${{ inputs.veroeffentlichen }}
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bau beider Architekturen
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: packaging/browser-avalonia/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ inputs.veroeffentlichen }}
+          provenance: false
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ steps.version.outputs.version }}
+            ${{ env.IMAGE }}:${{ steps.version.outputs.core }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            REVISION=${{ github.sha }}
+            CREATED=${{ steps.version.outputs.created }}
+
+      - name: Ergebnis
+        run: |
+          if [ "${{ inputs.veroeffentlichen }}" = "true" ]; then
+            echo "Hochgeladen: $IMAGE:latest, :${{ steps.version.outputs.version }}, :${{ steps.version.outputs.core }}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Nur gebaut und geprueft, nichts hochgeladen (Eingabe veroeffentlichen war aus)." >> "$GITHUB_STEP_SUMMARY"
+          fi

@@ -12571,4 +12571,304 @@
   <data name="Mehr_Punkte_geben_feinere_berg_nge_und_eine_gr_e_87716011" xml:space="preserve">
     <value>More points give finer transitions and a larger file.</value>
   </data>
+  <data name="Speicherort_der_Vorschaubilder_ea4180cd" xml:space="preserve">
+    <value>Thumbnail location</value>
+  </data>
+  <data name="Ein_anderer_Ort_etwa_eine_zweite_Platte_nimmt_di_2b098a5f" xml:space="preserve">
+    <value>Choosing another location, such as a second drive, takes the existing thumbnails along.</value>
+  </data>
+  <data name="Standardort_645fbbac" xml:space="preserve">
+    <value>Default location</value>
+  </data>
+  <data name="Ort_w_hlen_a14d708c" xml:space="preserve">
+    <value>Choose location</value>
+  </data>
+  <data name="H_chstgr_e_der_Vorschaubilder_eef5e17a" xml:space="preserve">
+    <value>Maximum thumbnail storage</value>
+  </data>
+  <data name="Wird_sie_berschritten_entfernt_FerrumPix_im_Hint_77e728da" xml:space="preserve">
+    <value>When it is exceeded, FerrumPix removes the thumbnails that have not been viewed for the longest time in the background. They are created again the next time they are viewed.</value>
+  </data>
+  <data name="Unbegrenzt_0d297e61" xml:space="preserve">
+    <value>Unlimited</value>
+  </data>
+  <data name="Der_gew_hlte_Ort_0_ist_nicht_erreichbar_Bis_er_w_6319e156" xml:space="preserve">
+    <value>The chosen location {0} cannot be reached. Until it is back, new thumbnails are stored in the default location.</value>
+  </data>
+  <data name="Belegt_0_c4342b36" xml:space="preserve">
+    <value>In use: {0}</value>
+  </data>
+  <data name="Ort_nicht_verwendbar_6c4c756c" xml:space="preserve">
+    <value>Location cannot be used</value>
+  </data>
+  <data name="Die_vorhandenen_Vorschaubilder_0_werden_nach_1_v_33e1a876" xml:space="preserve">
+    <value>The existing thumbnails ({0}) will be moved to {1}. To another drive they are copied first and only then deleted at the old location. Cancelling leaves the old location unchanged.</value>
+  </data>
+  <data name="Vorschaubilder_verschieben_b91cf923" xml:space="preserve">
+    <value>Move thumbnails?</value>
+  </data>
+  <data name="Vorschaubilder_werden_verschoben_f10674ab" xml:space="preserve">
+    <value>Moving thumbnails...</value>
+  </data>
+  <data name="Die_Vorschaubilder_liegen_jetzt_in_0_876dacd2" xml:space="preserve">
+    <value>The thumbnails are now stored in {0}.</value>
+  </data>
+  <data name="Abgebrochen_Die_Vorschaubilder_liegen_weiter_am__d5ea562d" xml:space="preserve">
+    <value>Cancelled. The thumbnails remain in the old location.</value>
+  </data>
+  <data name="Am_neuen_Ort_ist_nicht_genug_Platz_Die_Vorschaub_5f127c35" xml:space="preserve">
+    <value>There is not enough space at the new location. The thumbnails remain in the old location.</value>
+  </data>
+  <data name="Das_Verschieben_ist_fehlgeschlagen_Die_Vorschaub_f5dd8e04" xml:space="preserve">
+    <value>Moving failed. The thumbnails remain in the old location.</value>
+  </data>
+  <data name="Ort_f_r_die_Vorschaubilder_w_hlen_15f46a6c" xml:space="preserve">
+    <value>Choose a location for the thumbnails</value>
+  </data>
+  <data name="Ort_der_Vorschaubilder_nicht_erreichbar_1854c3fc" xml:space="preserve">
+    <value>Thumbnail location not reachable</value>
+  </data>
+  <data name="Es_wurde_kein_Ordner_gew_hlt_3482d327" xml:space="preserve">
+    <value>No folder was chosen.</value>
+  </data>
+  <data name="Dieser_Ordner_l_sst_sich_nicht_verwenden_11f6f21b" xml:space="preserve">
+    <value>This folder cannot be used.</value>
+  </data>
+  <data name="Die_Wurzel_eines_Laufwerks_l_sst_sich_nicht_verw_84a52fef" xml:space="preserve">
+    <value>The root of a drive cannot be used. Please choose a folder on it.</value>
+  </data>
+  <data name="Im_Flatpak_lassen_sich_nur_Ordner_verwenden_die__2b6244e0" xml:space="preserve">
+    <value>In the Flatpak only folders that FerrumPix sees directly can be used, for example in the home folder or on a mounted drive. Folders shared only through the system file dialog disappear for FerrumPix after a restart.</value>
+  </data>
+  <data name="Das_tempor_re_Verzeichnis_wird_beim_Neustart_gel_042d17a7" xml:space="preserve">
+    <value>The temporary folder is emptied on restart. Please choose another folder.</value>
+  </data>
+  <data name="Der_Ordner_ist_nicht_erreichbar_ac533d85" xml:space="preserve">
+    <value>The folder cannot be reached.</value>
+  </data>
+  <data name="In_diesem_Ordner_liegt_schon_ein_Ordner_0_mit_an_6da5df62" xml:space="preserve">
+    <value>This folder already contains a folder {0} with other files.</value>
+  </data>
+  <data name="Die_Vorschaubilder_liegen_schon_dort_82bebe06" xml:space="preserve">
+    <value>The thumbnails are already stored there.</value>
+  </data>
+  <data name="Der_neue_Ort_darf_nicht_im_bisherigen_liegen_und_f6cc7817" xml:space="preserve">
+    <value>The new location must not be inside the current one, and the current one must not be inside the new one.</value>
+  </data>
+  <data name="FerrumPix_darf_in_diesem_Ordner_nicht_schreiben_2337990a" xml:space="preserve">
+    <value>FerrumPix is not allowed to write to this folder.</value>
+  </data>
+  <data name="Im_Flatpak_sind_die_Systemordner_des_Rechners_wi_1b629a4b" xml:space="preserve">
+    <value>In the Flatpak the computer's system folders such as /usr, /etc and /tmp cannot be reached.</value>
+  </data>
+  <data name="Die_Vorschaubilder_liegen_in_0_e64abee7" xml:space="preserve">
+    <value>The thumbnails are stored in {0}.</value>
+  </data>
+  <data name="0_Gruppen_markiert_c8fd0ffe" xml:space="preserve">
+    <value>{0} groups selected</value>
+  </data>
+  <data name="0_Gruppen_mit_zusammen_1_Gesichtern_Jedes_Gesich_25752e68" xml:space="preserve">
+    <value>{0} groups with {1} faces in total. Each face goes into the 'Unknown' bin, as with 'Not this person'. There it can be assigned again one by one, and a new scan no longer builds a group from it.</value>
+  </data>
+  <data name="0_davon_tragen_einen_Namen_die_Namen_gehen_verlo_636586df" xml:space="preserve">
+    <value>{0} of them have a name; the names will be lost.</value>
+  </data>
+  <data name="Markierte_Gruppen_entfernen_48dc711d" xml:space="preserve">
+    <value>Remove the selected groups?</value>
+  </data>
+  <data name="Im_Bild_ein_Rechteck_um_das_Gesicht_aufziehen_ES_fae2b97a" xml:space="preserve">
+    <value>Drag a rectangle around the face in the picture. ESC cancels.</value>
+  </data>
+  <data name="Das_Rechteck_ist_zu_klein_Bitte_gr_er_um_das_Ges_191f0c20" xml:space="preserve">
+    <value>The rectangle is too small. Please drag it larger around the face.</value>
+  </data>
+  <data name="Gesicht_eingetragen_Der_Name_kommt_in_das_Feld_d_612c3ed2" xml:space="preserve">
+    <value>Face added. Type the name into the field above.</value>
+  </data>
+  <data name="Gesicht_eingetragen_Das_Modell_konnte_es_nicht_a_f777d1cd" xml:space="preserve">
+    <value>Face added. The model could not align it; it carries the name but makes no suggestions for other pictures.</value>
+  </data>
+  <data name="An_dieser_Stelle_steht_schon_ein_Gesicht_94ec83ba" xml:space="preserve">
+    <value>There is already a face at this spot.</value>
+  </data>
+  <data name="Das_Gesicht_lie_sich_nicht_eintragen_8d28725a" xml:space="preserve">
+    <value>The face could not be added.</value>
+  </data>
+  <data name="0_weitere_benannte_Personen_kommen_in_diesem_Ord_5f17b74e" xml:space="preserve">
+    <value>{0} more named people do not appear in this folder.</value>
+  </data>
+  <data name="Das_Zeichen_oben_links_auf_einer_Kachel_markiert_dbf9f6a0" xml:space="preserve">
+    <value>The mark at the top left of a tile selects it. Selected groups can be removed together or added to a person.</value>
+  </data>
+  <data name="Alle_auf_dieser_Seite_markieren_b84747ba" xml:space="preserve">
+    <value>Select all on this page</value>
+  </data>
+  <data name="Name_der_Person_13d3aebd" xml:space="preserve">
+    <value>Name of the person</value>
+  </data>
+  <data name="Hei_t_schon_jemand_so_werden_die_markierten_Grup_6ddbeaa4" xml:space="preserve">
+    <value>If someone already has this name, the selected groups are merged with that person. Otherwise a person with this name is created.</value>
+  </data>
+  <data name="Zu_Person_hinzuf_gen_368b6a83" xml:space="preserve">
+    <value>Add to person</value>
+  </data>
+  <data name="Markierung_aufheben_7084b33e" xml:space="preserve">
+    <value>Clear selection</value>
+  </data>
+  <data name="Markieren_bc4e896e" xml:space="preserve">
+    <value>Select</value>
+  </data>
+  <data name="Ein_Name_den_es_schon_gibt_f_hrt_diese_Gruppe_mi_10fb8c4f" xml:space="preserve">
+    <value>A name that already exists merges this group with that person.</value>
+  </data>
+  <data name="Ein_Gesicht_das_nicht_erkannt_wurde_im_Bild_mit__e47c9990" xml:space="preserve">
+    <value>Mark a face that was not recognized with a rectangle in the picture. ESC cancels.</value>
+  </data>
+  <data name="Gesicht_markieren_bdac8a3d" xml:space="preserve">
+    <value>Mark face</value>
+  </data>
+  <data name="Alle_Personen_des_Katalogs_zeigen_a096ff69" xml:space="preserve">
+    <value>Show all people of the catalog</value>
+  </data>
+  <data name="Dateien_zum_Hochladen_hier_ablegen_471f9847" xml:space="preserve">
+    <value>Drop files here to upload</value>
+  </data>
+  <data name="Dateien_hochladen_cc58908b" xml:space="preserve">
+    <value>Upload files</value>
+  </data>
+  <data name="0_von_1_Dateien_hochgeladen_18b1984a" xml:space="preserve">
+    <value>{0} of {1} files uploaded</value>
+  </data>
+  <data name="Hochgeladen_a227895e" xml:space="preserve">
+    <value>Uploaded</value>
+  </data>
+  <data name="Fehlgeschlagen_f7b1b156" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="Die_bertragung_wurde_unterbrochen_1dc90c16" xml:space="preserve">
+    <value>The transfer was interrupted</value>
+  </data>
+  <data name="Bereit_zum_Herunterladen_f8026251" xml:space="preserve">
+    <value>Ready to download</value>
+  </data>
+  <data name="Die_Datei_ist_gr_er_als_0_GB_5d04db62" xml:space="preserve">
+    <value>The file is larger than {0} GB</value>
+  </data>
+  <data name="Die_Seite_ist_veraltet_Bitte_neu_laden_41bda2b3" xml:space="preserve">
+    <value>The page is out of date. Please reload it.</value>
+  </data>
+  <data name="Der_Dateiname_ist_ung_ltig_77f457aa" xml:space="preserve">
+    <value>The file name is not valid</value>
+  </data>
+  <data name="Die_Datei_ist_leer_db2c5c6e" xml:space="preserve">
+    <value>The file is empty</value>
+  </data>
+  <data name="Als_Ebene_l_sst_sich_nur_ein_Bild_einf_gen_3a887426" xml:space="preserve">
+    <value>Only an image can be inserted as a layer</value>
+  </data>
+  <data name="Diese_Dateiart_nimmt_FerrumPix_nicht_an_299a8ea6" xml:space="preserve">
+    <value>FerrumPix does not accept this type of file</value>
+  </data>
+  <data name="Hier_darf_FerrumPix_keine_Dateien_anlegen_92082505" xml:space="preserve">
+    <value>FerrumPix may not create files here</value>
+  </data>
+  <data name="Auf_dem_Laufwerk_ist_nicht_genug_Platz_frei_6ba0c24f" xml:space="preserve">
+    <value>There is not enough free space on the drive</value>
+  </data>
+  <data name="Erst_den_offenen_Dialog_schlie_en_8c1400a7" xml:space="preserve">
+    <value>Close the open dialog first</value>
+  </data>
+  <data name="Kein_Ordner_offen_in_den_die_Dateien_geh_ren_3c539817" xml:space="preserve">
+    <value>No folder is open for the files to go into</value>
+  </data>
+  <data name="Die_Bilder_hier_liegen_auf_einem_Server_Hochlade_fa8cc635" xml:space="preserve">
+    <value>The pictures here are on a server. Uploading only works into a folder on this computer.</value>
+  </data>
+  <data name="Datenordner_1446557a" xml:space="preserve">
+    <value>Data folder</value>
+  </data>
+  <data name="Katalog_Vorschaubilder_Modelle_Erweiterungen_ges_d75a6513" xml:space="preserve">
+    <value>The catalogue, thumbnails, models, extensions, saved adjustments, favourites and search lists live here. Another location, such as a second disk or a network share, takes everything along at the next start.</value>
+  </data>
+  <data name="Zur_cknehmen_1651c015" xml:space="preserve">
+    <value>Undo</value>
+  </data>
+  <data name="Ordner_f_r_die_Daten_von_FerrumPix_w_hlen_49493664" xml:space="preserve">
+    <value>Choose a folder for the FerrumPix data</value>
+  </data>
+  <data name="Die_Daten_liegen_schon_dort_fbeb1a0b" xml:space="preserve">
+    <value>The data is already there.</value>
+  </data>
+  <data name="Der_Ordner_der_Einstellungen_l_sst_sich_nicht_al_b1781d9e" xml:space="preserve">
+    <value>The settings folder cannot be used as the data folder.</value>
+  </data>
+  <data name="Der_Katalog_wird_gerade_von_0_benutzt_Der_Dateno_5ac02e22" xml:space="preserve">
+    <value>The catalogue is currently in use by {0}. The data folder can only move once FerrumPix has been closed there.</value>
+  </data>
+  <data name="Datenordner_verschieben_92acb274" xml:space="preserve">
+    <value>Move data folder?</value>
+  </data>
+  <data name="Die_Daten_von_FerrumPix_0_ziehen_beim_n_chsten_S_9503f5ab" xml:space="preserve">
+    <value>The FerrumPix data ({0}) moves to {1} at the next start. On the same disk this is instant; to another disk it is copied, and that start takes correspondingly longer. The old location is only cleared once everything has arrived.</value>
+  </data>
+  <data name="Vorhandenen_Datenordner_verwenden_23ee4612" xml:space="preserve">
+    <value>Use existing data folder?</value>
+  </data>
+  <data name="In_0_liegt_schon_ein_Datenordner_von_FerrumPix_A_ee7e4ce9" xml:space="preserve">
+    <value>{0} already contains a FerrumPix data folder. From the next start FerrumPix works with it; the current data stays in {1}.</value>
+  </data>
+  <data name="Verwenden_8590499d" xml:space="preserve">
+    <value>Use</value>
+  </data>
+  <data name="Beim_n_chsten_Start_verwendet_FerrumPix_den_Date_82e8fbec" xml:space="preserve">
+    <value>At the next start FerrumPix uses the data folder in {0}.</value>
+  </data>
+  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_ce1e5936" xml:space="preserve">
+    <value>At the next start the data folder moves to {0}.</value>
+  </data>
+  <data name="Datenordner_nicht_erreichbar_9b1a712e" xml:space="preserve">
+    <value>Data folder not reachable</value>
+  </data>
+  <data name="Der_Datenordner_0_ist_nicht_erreichbar_Bis_er_wi_a6ecc803" xml:space="preserve">
+    <value>The data folder {0} is not reachable. Until it is back, FerrumPix works without a catalogue, and models, extensions and saved adjustments are missing.</value>
+  </data>
+  <data name="Datenordner_nicht_umgezogen_3673729f" xml:space="preserve">
+    <value>Data folder not moved</value>
+  </data>
+  <data name="Der_Datenordner_konnte_nicht_nach_0_umziehen_wei_59bf6cf5" xml:space="preserve">
+    <value>The data folder could not move to {0} because there is not enough space. Everything stays at the previous location.</value>
+  </data>
+  <data name="Der_Datenordner_konnte_nicht_nach_0_umziehen_All_4af32b64" xml:space="preserve">
+    <value>The data folder could not move to {0}. Everything stays at the previous location; details are in the log.</value>
+  </data>
+  <data name="Daten_nicht_vollst_ndig_umgezogen_e2dbe176" xml:space="preserve">
+    <value>Data not completely moved</value>
+  </data>
+  <data name="FerrumPix_legt_seine_Daten_jetzt_gesammelt_in_0__97509d2e" xml:space="preserve">
+    <value>FerrumPix now keeps its data together in {0}. Part of it could not be moved there and is still used from its old location. FerrumPix tries again at the next start; details are in the log.</value>
+  </data>
+  <data name="Katalog_wird_von_0_benutzt_78eb557d" xml:space="preserve">
+    <value>Catalogue in use by {0}</value>
+  </data>
+  <data name="FerrumPix_l_uft_auf_0_mit_demselben_Katalog_seit_97dbe250" xml:space="preserve">
+    <value>FerrumPix is running on {0} with the same catalogue, since {1}. Two computers must not open it at the same time. Until {0} releases it, FerrumPix works here without a catalogue, and anything that would go into the catalogue in this session is not saved. If FerrumPix is no longer running on {0}, for example after a crash, the lock can be taken over.</value>
+  </data>
+  <data name="Sperre_bernehmen_14672502" xml:space="preserve">
+    <value>Take over lock</value>
+  </data>
+  <data name="Ohne_Katalog_weiter_ba43ea48" xml:space="preserve">
+    <value>Continue without catalogue</value>
+  </data>
+  <data name="Sperre_bernommen_7d2f823d" xml:space="preserve">
+    <value>Lock taken over</value>
+  </data>
+  <data name="Der_Katalog_geh_rt_jetzt_diesem_Rechner_Bitte_Fe_f21858c6" xml:space="preserve">
+    <value>The catalogue now belongs to this computer. Please restart FerrumPix so that it is opened.</value>
+  </data>
+  <data name="Der_Ordner_f_r_Anpassungen_ist_nicht_erreichbar__f22a0510" xml:space="preserve">
+    <value>The folder for adjustments is not reachable: {0}.</value>
+  </data>
+  <data name="Hier_liegen_die_im_Editor_gespeicherten_Anpassun_d58c017e" xml:space="preserve">
+    <value>The adjustments saved in the editor live here, each as its own file, each folder as a real folder. The folder belongs to the data folder and moves with it.</value>
+  </data>
 </root>

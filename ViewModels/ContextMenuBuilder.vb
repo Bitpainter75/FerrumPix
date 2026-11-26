@@ -184,6 +184,12 @@ Namespace ViewModels
             If Not isVirtual AndAlso Not isParentEntry AndAlso first IsNot Nothing AndAlso first.CanFileOperationCopy Then
                 AddIfOffered(list, commands.Duplicate, FooterMenuCatalog.Duplicate(commands.Duplicate))
             End If
+            ' Herunterladen gibt es nur im Browser (sonst ist das Kommando nicht gesetzt), und nur
+            ' fuer lokale Dateien, die sich kopieren liessen: es ist eine Kopie auf den Rechner des
+            ' Browsers. Ein Serverbild hat hier keine Datei, ein Ordner ist keine.
+            If Not isParentEntry AndAlso entries.Any(AddressOf IsDownloadable) Then
+                AddIfOffered(list, commands.Download, FooterMenuCatalog.Download(commands.Download))
+            End If
             Divider(list)
 
             ' --- Stapelarbeit am Bild ----------------------------------------------------------
@@ -493,6 +499,14 @@ Namespace ViewModels
             TidySeparators(children)
             list.Add(FooterMenuCatalog.Variants(children))
         End Sub
+
+        ''' <summary>Laesst sich das Element herunterladen? Eine lokale Datei, kein Ordner, kein
+        ''' Serverelement, nicht im Papierkorb, und kopieren duerfte man sie auch.</summary>
+        Friend Shared Function IsDownloadable(item As ImageItem) As Boolean
+            Return item IsNot Nothing AndAlso Not item.IsFolder AndAlso Not item.IsParentFolderEntry AndAlso
+                   Not item.IsRemoteAsset AndAlso Not item.IsTrashed AndAlso item.CanFileOperationCopy AndAlso
+                   Not String.IsNullOrEmpty(item.FilePath)
+        End Function
 
         ''' Nimmt den Eintrag nur auf, wenn der Bereich das Kommando ueberhaupt anbietet.
         Private Shared Sub AddIfOffered(list As List(Of Object), command As Object, entry As AppAction)

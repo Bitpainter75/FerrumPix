@@ -114,9 +114,11 @@ Namespace Views
                 e.Handled = True
                 Return
             End If
-            ' Dann eine geoeffnete Gruppe, erst danach der Bereich selbst.
+            ' Dann eine geoeffnete Gruppe, in der Wand eine Markierung, erst danach der Bereich selbst.
             Dim vm = TryCast(DataContext, PeopleViewModel)
-            If vm IsNot Nothing AndAlso vm.IsPersonOpen Then
+            If vm IsNot Nothing AndAlso vm.IsPeopleOverview AndAlso vm.HasGroupSelection Then
+                vm.ClearGroupSelection()
+            ElseIf vm IsNot Nothing AndAlso vm.IsPersonOpen Then
                 vm.ClosePerson()
                 ScrollToTop()
             Else
@@ -130,9 +132,77 @@ Namespace Views
         Private Sub OnPersonCardClick(sender As Object, e As RoutedEventArgs)
             Dim entry = TryCast(TryCast(sender, Button)?.DataContext, PersonListEntry)
             If entry Is Nothing Then Return
-            TryCast(Me.DataContext, PeopleViewModel)?.OpenPerson(entry)
+            Dim vm = TryCast(Me.DataContext, PeopleViewModel)
+            If vm Is Nothing Then Return
+            ' Steht eine Markierung, markiert auch der Klick auf die Kachel: wer zwanzig Gruppen
+            ' zusammenstellt, soll nicht zwanzigmal das kleine Zeichen treffen muessen. Der
+            ' Ablagekorb oeffnet sich weiter, er laesst sich nicht markieren.
+            If vm.HasGroupSelection AndAlso Not entry.IsUnknownBin Then
+                vm.ToggleGroupSelection(entry)
+                e.Handled = True
+                Return
+            End If
+            vm.OpenPerson(entry)
             ScrollToTop()
             e.Handled = True
+        End Sub
+
+        ''' <summary>Das Zeichen oben links auf einer Gruppenkachel: markieren oder die Markierung
+        ''' wegnehmen, ohne die Gruppe zu oeffnen.</summary>
+        Private Sub OnToggleGroupSelectionClick(sender As Object, e As RoutedEventArgs)
+            Dim entry = TryCast(TryCast(sender, Button)?.DataContext, PersonListEntry)
+            If entry Is Nothing Then Return
+            TryCast(Me.DataContext, PeopleViewModel)?.ToggleGroupSelection(entry)
+            e.Handled = True
+        End Sub
+
+        Private Sub OnSelectPageGroupsClick(sender As Object, e As RoutedEventArgs)
+            TryCast(Me.DataContext, PeopleViewModel)?.SelectAllGroupsOnPage()
+            e.Handled = True
+        End Sub
+
+        Private Sub OnClearGroupSelectionClick(sender As Object, e As RoutedEventArgs)
+            TryCast(Me.DataContext, PeopleViewModel)?.ClearGroupSelection()
+            e.Handled = True
+        End Sub
+
+        ''' <summary>Entfernt die markierten Gruppen nach Rueckfrage; die Frage nennt Gruppen und
+        ''' Gesichter.</summary>
+        Private Async Sub OnRemoveSelectedGroupsClick(sender As Object, e As RoutedEventArgs)
+            e.Handled = True
+            Dim vm = TryCast(Me.DataContext, PeopleViewModel)
+            If vm Is Nothing Then Return
+            Try
+                Await vm.ConfirmAndRemoveSelectedGroupsAsync()
+                ScrollToTop()
+            Catch ex As Exception
+                ' Eine Ausnahme in einem Async Sub landete sonst beim Dispatcher und beendete den
+                ' Prozess.
+                FerrumPix.Services.DiagnosticLogService.LogException("PeopleView.RemoveSelectedGroups", ex)
+            End Try
+        End Sub
+
+        Private Sub OnAddSelectedGroupsClick(sender As Object, e As RoutedEventArgs)
+            AddSelectedGroupsToPerson()
+            e.Handled = True
+        End Sub
+
+        ''' <summary>Die Eingabetaste fuehrt zusammen wie der Knopf. Steht die Vorschlagsliste offen,
+        ''' hat der Rahmen den ersten Druck fuer die Auswahl verbraucht, wie an jedem Namensfeld.</summary>
+        Private Sub OnGroupTargetNameKeyDown(sender As Object, e As KeyEventArgs)
+            If e.Key <> Key.Enter Then Return
+            AddSelectedGroupsToPerson()
+            e.Handled = True
+        End Sub
+
+        Private Sub AddSelectedGroupsToPerson()
+            Dim box = Me.FindControl(Of AutoCompleteBox)("GroupTargetNameBox")
+            Dim vm = TryCast(Me.DataContext, PeopleViewModel)
+            If box Is Nothing OrElse vm Is Nothing Then Return
+            If vm.AddSelectedGroupsToPerson(If(box.Text, "")) Then
+                box.Text = ""
+                ScrollToTop()
+            End If
         End Sub
 
         Private Sub OnClosePersonClick(sender As Object, e As RoutedEventArgs)

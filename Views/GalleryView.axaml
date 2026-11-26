@@ -433,16 +433,30 @@
                                          nach einer frischen Erkennung noch leer. Der zweite Satz sagt,
                                          wo es weitergeht. -->
                                     <TextBlock Text="Noch keine Personen benannt"
-                                               IsVisible="{Binding !PersonFilterOptions.Count}"
+                                               IsVisible="{Binding ShowNoNamedPersonsHint}"
                                                Foreground="{DynamicResource FP.Text.Muted}"
                                                FontSize="{DynamicResource FP.Font.Small}"
                                                Margin="10,8,10,2"/>
                                     <TextBlock Text="Namen werden in der Info-Leiste am Bild vergeben"
-                                               IsVisible="{Binding !PersonFilterOptions.Count}"
+                                               IsVisible="{Binding ShowNoNamedPersonsHint}"
                                                Foreground="{DynamicResource FP.Text.Muted}"
                                                FontSize="{DynamicResource FP.Font.Small}"
                                                TextWrapping="Wrap"
                                                Margin="10,0,10,8"/>
+
+                                    <!-- Im Umfang "Ordner" stehen nur Personen dieses Ordners. Wer
+                                         jemanden anderswo benannt hat, sucht ihn hier sonst vergeblich
+                                         (GalleryViewModel.PersonsOutsideFolderText). -->
+                                    <StackPanel IsVisible="{Binding HasPersonsOutsideFolder}" Spacing="4" Margin="10,4,10,8">
+                                        <TextBlock Text="{Binding PersonsOutsideFolderText}" Classes="no-translate"
+                                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                                   FontSize="{DynamicResource FP.Font.Small}"
+                                                   TextWrapping="Wrap" MaxWidth="260" HorizontalAlignment="Left"/>
+                                        <Button Classes="ghost" Padding="8,4" HorizontalAlignment="Left"
+                                                Click="OnShowPersonsOfWholeCatalogClick">
+                                            <TextBlock Text="Alle Personen des Katalogs zeigen" FontSize="{DynamicResource FP.Font.Small}"/>
+                                        </Button>
+                                    </StackPanel>
 
                                 </StackPanel>
                             </Flyout>

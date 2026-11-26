@@ -424,6 +424,8 @@ Namespace ViewModels
             RefreshNameSuggestions()
             Me.RaisePropertyChanged(NameOf(PeopleSummaryText))
             Me.RaisePropertyChanged(NameOf(HasPeopleFeature))
+            ' Die Eintraege sind neu, eine Markierung von vorhin haengt an keinem mehr.
+            RaiseGroupSelection()
             ShowPeoplePage(0)
         End Sub
 
@@ -647,6 +649,141 @@ Namespace ViewModels
             End Try
             RefreshPeople()
         End Sub
+
+        ' ── Mehrere Gruppen auf einmal ───────────────────────────────────────────
+        '
+        ' WOZU: nach einem Durchlauf stehen dutzende namenlose Gruppen in der Wand, viele davon
+        ' Fremde im Hintergrund oder Gesichter auf Plakaten. Jede einzeln zu oeffnen und Kopf fuer
+        ' Kopf herauszuloesen ist Arbeit fuer nichts. Markiert wird ueber das Zeichen auf der
+        ' Kachel; steht eine Markierung, markiert auch der Klick auf eine Kachel, statt sie zu
+        ' oeffnen.
+        '
+        ' BEIDE AKTIONEN SIND DIE DER GEOEFFNETEN GRUPPE, nur fuer viele zugleich: Entfernen legt
+        ' jedes Gesicht in den Ablagekorb wie "Nicht diese Person" (die leere Gruppe verschwindet
+        ' danach wie nach dem letzten Herausloesen), Hinzufuegen traegt den Namen ein wie das Feld
+        ' ueber der Gruppe (ein vorhandener Name fuehrt zusammen). Kein zweiter Weg mit anderer
+        ' Bedeutung.
+
+        ''' <summary>Die markierten Gruppen, ueber alle Seiten.</summary>
+        Public ReadOnly Property SelectedGroups As List(Of PersonListEntry)
+            Get
+                Return _allPeople.Where(Function(p) p.IsSelected).ToList()
+            End Get
+        End Property
+
+        Public ReadOnly Property HasGroupSelection As Boolean
+            Get
+                Return _allPeople.Any(Function(p) p.IsSelected)
+            End Get
+        End Property
+
+        ''' <summary>"3 Gruppen markiert", ueber eine Schablone, damit die Zahl in jeder Sprache an
+        ''' ihrer Stelle steht.</summary>
+        Public ReadOnly Property GroupSelectionText As String
+            Get
+                Dim count = _allPeople.Where(Function(p) p.IsSelected).Count()
+                If count = 0 Then Return ""
+                Return String.Format(LocalizationService.T("{0} Gruppen markiert"), count)
+            End Get
+        End Property
+
+        Private Sub RaiseGroupSelection()
+            Me.RaisePropertyChanged(NameOf(HasGroupSelection))
+            Me.RaisePropertyChanged(NameOf(GroupSelectionText))
+        End Sub
+
+        ''' <summary>Markiert eine Gruppe oder nimmt die Markierung weg. Der Ablagekorb bleibt
+        ''' unmarkierbar: er ist keine Gruppe, die man entfernen oder einer Person zuschlagen
+        ''' koennte.</summary>
+        Public Sub ToggleGroupSelection(entry As PersonListEntry)
+            If entry Is Nothing OrElse entry.IsUnknownBin Then Return
+            entry.IsSelected = Not entry.IsSelected
+            RaiseGroupSelection()
+        End Sub
+
+        ''' <summary>Markiert alle Gruppen der gezeigten Seite ausser dem Ablagekorb.</summary>
+        Public Sub SelectAllGroupsOnPage()
+            For Each entry In People
+                If Not entry.IsUnknownBin Then entry.IsSelected = True
+            Next
+            RaiseGroupSelection()
+        End Sub
+
+        Public Sub ClearGroupSelection()
+            For Each entry In _allPeople
+                entry.IsSelected = False
+            Next
+            RaiseGroupSelection()
+        End Sub
+
+        ''' <summary>Was ein Entfernen der Markierung beträfe: Gruppen, Gesichter darin und wie viele
+        ''' davon einen Namen tragen. Fuer die Rueckfrage.</summary>
+        Public Function DescribeGroupRemoval() As (Groups As Integer, Faces As Integer, Named As Integer)
+            Dim chosen = SelectedGroups
+            If chosen.Count = 0 Then Return (0, 0, 0)
+            Dim faces = 0
+            Try
+                faces = LibraryService.Instance.CountFacesOfPeople(chosen.Select(Function(p) p.Id))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("People.DescribeGroupRemoval", ex)
+            End Try
+            Return (chosen.Count, faces, chosen.Where(Function(p) p.IsNamed).Count())
+        End Function
+
+        ''' <summary>Entfernt die markierten Gruppen OHNE Rueckfrage: jedes Gesicht in den
+        ''' Ablagekorb, die Gruppe weg (<see cref="LibraryService.MovePeopleToUnknownBin"/>). Die
+        ''' Rueckfrage stellt <see cref="ConfirmAndRemoveSelectedGroupsAsync"/>.</summary>
+        ''' <returns>Wie viele Gesichter in den Korb gegangen sind.</returns>
+        Public Function RemoveSelectedGroups() As Integer
+            Dim chosen = SelectedGroups
+            If chosen.Count = 0 Then Return 0
+            Dim moved = 0
+            Try
+                moved = LibraryService.Instance.MovePeopleToUnknownBin(chosen.Select(Function(p) p.Id))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("People.RemoveSelectedGroups", ex)
+            End Try
+            RefreshPeople()
+            Return moved
+        End Function
+
+        ''' <summary>Fragt nach und entfernt dann. Die Frage nennt, wie viele Gruppen und Gesichter
+        ''' betroffen sind und ob Namen verloren gehen: ein Name ist Handarbeit, und hier gehen
+        ''' womoeglich viele auf einmal.</summary>
+        Public Async Function ConfirmAndRemoveSelectedGroupsAsync() As Task
+            Dim info = DescribeGroupRemoval()
+            If info.Groups = 0 Then Return
+            If _mainVm IsNot Nothing Then
+                Dim message = String.Format(LocalizationService.T("{0} Gruppen mit zusammen {1} Gesichtern. Jedes Gesicht kommt in den Ablagekorb 'Unbekannt', wie mit 'Nicht diese Person'. Dort lässt es sich einzeln wieder zuordnen, und ein neuer Suchlauf bildet daraus keine Gruppe mehr."),
+                                            info.Groups, info.Faces)
+                If info.Named > 0 Then
+                    message &= " " & String.Format(LocalizationService.T("{0} davon tragen einen Namen; die Namen gehen verloren."), info.Named)
+                End If
+                Dim ok = Await _mainVm.ShowConfirmAsync(LocalizationService.T("Markierte Gruppen entfernen?"), message, "Entfernen")
+                If Not ok Then Return
+            End If
+            RemoveSelectedGroups()
+        End Function
+
+        ''' <summary>Fuehrt die markierten Gruppen unter einem Namen zusammen. Je Gruppe derselbe
+        ''' Weg wie das Namensfeld ueber einer geoeffneten Gruppe (<see cref="RenameSelectedPerson"/>):
+        ''' heisst schon jemand so, verschmilzt die Gruppe mit ihm, sonst traegt die erste den neuen
+        ''' Namen und die uebrigen verschmelzen mit ihr.</summary>
+        ''' <returns>False ohne Markierung oder ohne Namen.</returns>
+        Public Function AddSelectedGroupsToPerson(name As String) As Boolean
+            Dim clean = If(name, "").Trim()
+            Dim chosen = SelectedGroups.Where(Function(p) Not p.IsUnknownBin).ToList()
+            If chosen.Count = 0 OrElse clean.Length = 0 Then Return False
+            Try
+                For Each entry In chosen
+                    LibraryService.Instance.ApplyPersonName(entry.Id, clean, Nothing)
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("People.AddSelectedGroupsToPerson", ex)
+            End Try
+            RefreshPeople()
+            Return True
+        End Function
 
     End Class
 

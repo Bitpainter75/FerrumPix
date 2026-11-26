@@ -106,10 +106,13 @@ Namespace Services
                     ' Fehlzuordnung geloest hat, hat damit entschieden - ein erneuter Durchlauf
                     ' darf das nicht ueberschreiben. Diese Gesichter werden weder geloescht noch
                     ' neu angelegt; ein neuer Fund, der auf demselben Fleck liegt, faellt weg.
+                    ' Dasselbe gilt fuer ein von Hand AUFGEZOGENES Gesicht (IsDrawn), auch wenn
+                    ' seine Zuordnung nur ein Vorschlag ist: die Erkennung hat es nicht gefunden
+                    ' und faende es beim Neulauf auch nicht wieder.
                     Dim manual As New List(Of (X As Double, Y As Double, W As Double, H As Double))()
                     Using cmd = conn.CreateCommand()
                         cmd.Transaction = tx
-                        cmd.CommandText = "SELECT X, Y, Width, Height FROM Face WHERE FilePath=$p AND IsManual=1"
+                        cmd.CommandText = "SELECT X, Y, Width, Height FROM Face WHERE FilePath=$p AND (IsManual=1 OR IsDrawn=1)"
                         cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                         Using reader = cmd.ExecuteReader()
                             While reader.Read()
@@ -127,7 +130,7 @@ Namespace Services
                         cmd.Transaction = tx
                         cmd.CommandText = "SELECT f.PersonId, f.Embedding FROM Face f " &
                                           "JOIN Person p ON p.Id = f.PersonId " &
-                                          "WHERE f.FilePath=$p AND f.IsManual=0 " &
+                                          "WHERE f.FilePath=$p AND f.IsManual=0 AND f.IsDrawn=0 " &
                                           "AND f.Embedding IS NOT NULL AND p.IsUnknownBin=0"
                         cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                         Using reader = cmd.ExecuteReader()
@@ -140,7 +143,7 @@ Namespace Services
 
                     Using cmd = conn.CreateCommand()
                         cmd.Transaction = tx
-                        cmd.CommandText = "DELETE FROM Face WHERE FilePath=$p AND IsManual=0"
+                        cmd.CommandText = "DELETE FROM Face WHERE FilePath=$p AND IsManual=0 AND IsDrawn=0"
                         cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                         cmd.ExecuteNonQuery()
                     End Using
@@ -169,7 +172,7 @@ Namespace Services
                         ' Gesichter liegen, und sie alle gehoeren in denselben Ablagekorb.
                         cmd.CommandText = "SELECT f.PersonId FROM Face f " &
                                           "JOIN Person p ON p.Id = f.PersonId " &
-                                          "WHERE f.FilePath=$p AND f.IsManual=1 AND p.IsUnknownBin=0"
+                                          "WHERE f.FilePath=$p AND (f.IsManual=1 OR f.IsDrawn=1) AND p.IsUnknownBin=0"
                         cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                         Using reader = cmd.ExecuteReader()
                             While reader.Read()
@@ -719,6 +722,14 @@ Namespace Services
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Using tx = conn.BeginTransaction()
+                    ' Ein von Hand aufgezogenes Gesicht geht ganz: ohne Gruppe waere es unsichtbar,
+                    ' und weil ein Neulauf es stehen laesst, blockierte es die Stelle fuer immer.
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "DELETE FROM Face WHERE PersonId=$p AND IsDrawn=1"
+                        cmd.Parameters.AddWithValue("$p", personId)
+                        cmd.ExecuteNonQuery()
+                    End Using
                     Using cmd = conn.CreateCommand()
                         cmd.Transaction = tx
                         cmd.CommandText = "UPDATE Face SET PersonId=NULL, IsManual=0 WHERE PersonId=$p"
@@ -968,6 +979,74 @@ Namespace Services
                     Return newId
                 End Using
             End Using
+        End Function
+
+        ''' <summary>Wie viele Gesichter in diesen Gruppen liegen. Fuer die Rueckfrage vor dem
+        ''' Entfernen mehrerer Gruppen: sie nennt, was davon betroffen ist.</summary>
+        Public Function CountFacesOfPeople(personIds As IEnumerable(Of String)) As Integer
+            Dim ids = If(personIds, Enumerable.Empty(Of String)()).
+                      Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
+                      Distinct(StringComparer.Ordinal).ToList()
+            If ids.Count = 0 Then Return 0
+            Dim total = 0
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                For Each id In ids
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT COUNT(*) FROM Face WHERE PersonId=$p"
+                        cmd.Parameters.AddWithValue("$p", id)
+                        total += Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture)
+                    End Using
+                Next
+            End Using
+            Return total
+        End Function
+
+        ''' <summary>Entfernt ganze Gruppen auf einmal: JEDES ihrer Gesichter geht in den
+        ''' Ablagekorb, danach verschwindet die Gruppe selbst, auch eine benannte.
+        '''
+        ''' DAS IST DERSELBE HANDGRIFF WIE IN DER GEOEFFNETEN GRUPPE, nur fuer viele zugleich. Dort
+        ''' loest "Nicht diese Person" ein Gesicht nach dem anderen heraus (<see cref="DetachFace"/>:
+        ''' in den Korb, als Handarbeit), und mit dem letzten Gesicht verschwindet die Gruppe
+        ''' (PeopleViewModel.DeleteSelectedPerson). Einen zweiten Weg mit anderer Bedeutung gibt es
+        ''' damit nicht: weder werden Gesichter geloescht, noch fallen sie ohne Gruppe in die
+        ''' Erkennung zurueck. Als Handarbeit bleiben sie bei jedem Neulauf im Korb, statt wieder
+        ''' eine Gruppe zu bilden, und aus dem Korb laesst sich jeder Kopf einzeln wieder zuordnen.
+        '''
+        ''' Der Ablagekorb selbst ist kein Ziel: er wuerde in sich selbst verschoben.</summary>
+        ''' <returns>Wie viele Gesichter in den Korb gegangen sind.</returns>
+        Public Function MovePeopleToUnknownBin(personIds As IEnumerable(Of String)) As Integer
+            Dim ids = If(personIds, Enumerable.Empty(Of String)()).
+                      Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
+                      Distinct(StringComparer.Ordinal).ToList()
+            If ids.Count = 0 Then Return 0
+            Dim moved = 0
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using tx = conn.BeginTransaction()
+                    Dim binId = GetOrCreateUnknownBinLocked(conn, tx)
+                    For Each id In ids
+                        If String.Equals(id, binId, StringComparison.Ordinal) Then Continue For
+                        Using cmd = conn.CreateCommand()
+                            cmd.Transaction = tx
+                            cmd.CommandText = "UPDATE Face SET PersonId=$bin, IsManual=1 WHERE PersonId=$p"
+                            cmd.Parameters.AddWithValue("$bin", binId)
+                            cmd.Parameters.AddWithValue("$p", id)
+                            moved += cmd.ExecuteNonQuery()
+                        End Using
+                        Using cmd = conn.CreateCommand()
+                            cmd.Transaction = tx
+                            cmd.CommandText = "DELETE FROM Person WHERE Id=$p AND IsUnknownBin=0"
+                            cmd.Parameters.AddWithValue("$p", id)
+                            cmd.ExecuteNonQuery()
+                        End Using
+                    Next
+                    tx.Commit()
+                    ' Gesichter haben die Gruppe gewechselt: die gemerkten Mitten stimmen nicht mehr.
+                    InvalidateCentroids()
+                End Using
+            End Using
+            Return moved
         End Function
 
         ''' <summary>Zu jedem Bildpfad die Namen der Personen darauf, in EINER Abfrage.
@@ -1458,6 +1537,147 @@ Namespace Services
                               End Function
             XmpFaceRegionService.WriteRegions(sidecarPath, size.Width, size.Height, regions, keepForeign)
         End Sub
+
+        ''' <summary>Was aus einem von Hand aufgezogenen Gesicht geworden ist.</summary>
+        Public Enum MarkedFaceOutcome
+            ''' <summary>Eingetragen.</summary>
+            Added
+            ''' <summary>An dieser Stelle steht schon ein Gesicht mit Gruppe; nichts eingetragen.</summary>
+            Occupied
+            ''' <summary>Kein Bild oder kein brauchbarer Kasten; nichts eingetragen.</summary>
+            Invalid
+        End Enum
+
+        ''' <summary>Traegt ein Gesicht ein, das der Benutzer selbst aufgezogen hat, weil die
+        ''' Erkennung es nicht gefunden hat.
+        '''
+        ''' ES WIRD WIE EIN ERKANNTES GESPEICHERT, mit einem Unterschied: IsDrawn=1, damit jeder
+        ''' Neulauf es stehen laesst (<see cref="SaveFaces"/>). Die Zuordnung folgt denselben
+        ''' Regeln wie beim Durchlauf:
+        ''' - mit Namen gehoert es dieser Person (heisst noch niemand so, entsteht sie) und gilt als
+        '''   Handarbeit, wie jeder bewusst vergebene Name;
+        ''' - ohne Namen, aber mit Merkmalen, wird es gegen die Gruppenmitten verglichen wie jedes
+        '''   gefundene Gesicht (dieselbe Schwelle, eine Person einmal je Bild) und steht dann als
+        '''   VORSCHLAG da, der sich bestaetigen oder berichtigen laesst;
+        ''' - ohne beides bekommt es eine eigene namenlose Gruppe, damit es in der Leiste steht und
+        '''   sich benennen laesst.
+        '''
+        ''' EINE STELLE, EIN GESICHT: liegt dort schon ein Gesicht mit Gruppe, wird nichts
+        ''' eingetragen. Ein Fund OHNE Gruppe an derselben Stelle (zu klein fuer Merkmale, deshalb
+        ''' unsichtbar) wird dagegen ersetzt - genau das ist oft das Gesicht, das "nicht erkannt"
+        ''' wurde.</summary>
+        ''' <param name="x">Kasten in den Bildpunkten der Suchquelle (siehe
+        ''' FaceScanRunner.DecodeUprightForFaces), wie bei jedem gefundenen Gesicht.</param>
+        ''' <param name="embedding">Die Merkmalsreihe zu diesem Ausschnitt, oder Nothing, wenn das
+        ''' Modell dort kein Gesicht ausrichten konnte.</param>
+        Public Function AddMarkedFace(filePath As String, x As Double, y As Double, width As Double, height As Double,
+                                      embedding As Single(), name As String) As (Outcome As MarkedFaceOutcome, FaceId As String)
+            If String.IsNullOrWhiteSpace(filePath) OrElse width < 1 OrElse height < 1 Then Return (MarkedFaceOutcome.Invalid, Nothing)
+            Dim clean = If(name, "").Trim()
+            Dim stamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
+            Dim newFaceId = Guid.NewGuid().ToString("N")
+            Dim committed = False
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using tx = conn.BeginTransaction()
+                        Dim stale As New List(Of String)()
+                        Dim onImage As New HashSet(Of String)(StringComparer.Ordinal)
+                        Using cmd = conn.CreateCommand()
+                            cmd.Transaction = tx
+                            cmd.CommandText = "SELECT f.Id, f.PersonId, f.X, f.Y, f.Width, f.Height, COALESCE(p.IsUnknownBin,0) " &
+                                              "FROM Face f LEFT JOIN Person p ON p.Id = f.PersonId WHERE f.FilePath=$p"
+                            cmd.Parameters.AddWithValue("$p", PathKey(filePath))
+                            Using reader = cmd.ExecuteReader()
+                                While reader.Read()
+                                    Dim fx = reader.GetDouble(2), fy = reader.GetDouble(3)
+                                    Dim fw = reader.GetDouble(4), fh = reader.GetDouble(5)
+                                    Dim same = RectsMeanSameFace(fx, fy, fw, fh, x, y, width, height) OrElse
+                                               RectsMeanSameFace(x, y, width, height, fx, fy, fw, fh)
+                                    If reader.IsDBNull(1) Then
+                                        If same Then stale.Add(reader.GetString(0))
+                                        Continue While
+                                    End If
+                                    If same Then Return (MarkedFaceOutcome.Occupied, Nothing)
+                                    If reader.GetInt64(6) = 0 Then onImage.Add(reader.GetString(1))
+                                End While
+                            End Using
+                        End Using
+
+                        For Each staleId In stale
+                            Using cmd = conn.CreateCommand()
+                                cmd.Transaction = tx
+                                cmd.CommandText = "DELETE FROM Face WHERE Id=$id"
+                                cmd.Parameters.AddWithValue("$id", staleId)
+                                cmd.ExecuteNonQuery()
+                            End Using
+                        Next
+
+                        Dim hasEmbedding = embedding IsNot Nothing AndAlso embedding.Length > 0
+                        Dim personId As String = Nothing
+                        Dim isManual = False
+                        If clean.Length > 0 Then
+                            Using cmd = conn.CreateCommand()
+                                cmd.Transaction = tx
+                                cmd.CommandText = "SELECT Id FROM Person WHERE Name=$n COLLATE NOCASE AND IsUnknownBin=0 LIMIT 1"
+                                cmd.Parameters.AddWithValue("$n", clean)
+                                Dim r = cmd.ExecuteScalar()
+                                If r IsNot Nothing AndAlso Not TypeOf r Is DBNull Then personId = CStr(r)
+                            End Using
+                            isManual = True
+                        ElseIf hasEmbedding Then
+                            personId = MatchOrCreatePersonLocked(conn, tx, embedding, stamp, onImage)
+                        End If
+                        If personId Is Nothing Then
+                            personId = Guid.NewGuid().ToString("N")
+                            Using cmd = conn.CreateCommand()
+                                cmd.Transaction = tx
+                                cmd.CommandText = "INSERT INTO Person(Id,Name,CreatedAt) VALUES($id,$n,$t)"
+                                cmd.Parameters.AddWithValue("$id", personId)
+                                cmd.Parameters.AddWithValue("$n", clean)
+                                cmd.Parameters.AddWithValue("$t", stamp)
+                                cmd.ExecuteNonQuery()
+                            End Using
+                        End If
+
+                        Using cmd = conn.CreateCommand()
+                            cmd.Transaction = tx
+                            cmd.CommandText =
+                                "INSERT INTO Face(Id,FilePath,PersonId,X,Y,Width,Height,Score,Embedding,ScannedAt,IsManual,IsDrawn) " &
+                                "VALUES($id,$p,$person,$x,$y,$w,$h,1.0,$e,$t,$m,1)"
+                            cmd.Parameters.AddWithValue("$id", newFaceId)
+                            cmd.Parameters.AddWithValue("$p", PathKey(filePath))
+                            cmd.Parameters.AddWithValue("$person", personId)
+                            cmd.Parameters.AddWithValue("$x", x)
+                            cmd.Parameters.AddWithValue("$y", y)
+                            cmd.Parameters.AddWithValue("$w", width)
+                            cmd.Parameters.AddWithValue("$h", height)
+                            cmd.Parameters.AddWithValue("$e", If(hasEmbedding, CObj(ToBlob(embedding)), CObj(DBNull.Value)))
+                            cmd.Parameters.AddWithValue("$t", stamp)
+                            cmd.Parameters.AddWithValue("$m", If(isManual, 1, 0))
+                            cmd.ExecuteNonQuery()
+                        End Using
+                        ' Die Zahl im Scan-Vermerk zieht mit, sofern das Bild schon durchsucht war.
+                        Using cmd = conn.CreateCommand()
+                            cmd.Transaction = tx
+                            cmd.CommandText = "UPDATE ScannedImage SET FaceCount=FaceCount+$d WHERE FilePath=$p"
+                            cmd.Parameters.AddWithValue("$d", 1 - stale.Count)
+                            cmd.Parameters.AddWithValue("$p", PathKey(filePath))
+                            cmd.ExecuteNonQuery()
+                        End Using
+                        tx.Commit()
+                        committed = True
+                    End Using
+                End Using
+            Finally
+                ' Auch nach einem Abbruch: MatchOrCreatePersonLocked kann die Mitten schon gelesen
+                ' haben, und die Gruppen haben sich geaendert.
+                InvalidateCentroids()
+            End Try
+            ' Ein Name ist eine bewusste Benennung und geht wie jede andere in die Beistelldatei.
+            If committed AndAlso clean.Length > 0 Then SyncFaceRegionsToXmp({filePath})
+            Return (MarkedFaceOutcome.Added, newFaceId)
+        End Function
 
         ''' <summary>Legt eine Person mit diesem Namen an. Fuer ein Gesicht, das aus dem Ablagekorb
         ''' zu jemandem geht, den es noch nicht gibt.</summary>

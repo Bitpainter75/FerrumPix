@@ -518,10 +518,10 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Der Hinweis, wenn der Ordner der Anpassungen fehlt, mit dem Weg zur
-        ''' Einstellung. Derselbe Wortlaut im Editor und in der Verwaltung.</summary>
+        ''' <summary>Der Hinweis, wenn der Ordner der Anpassungen fehlt (er liegt im Datenordner,
+        ''' und der ist gerade nicht erreichbar). Derselbe Wortlaut im Editor und in der Verwaltung.</summary>
         Public Shared Function UnreachableMessage(root As String) As String
-            Return String.Format(LocalizationService.T("Der Ordner für Anpassungen ist nicht erreichbar: {0}. Er wird in den Einstellungen unter Editor festgelegt."), If(root, ""))
+            Return String.Format(LocalizationService.T("Der Ordner für Anpassungen ist nicht erreichbar: {0}."), If(root, ""))
         End Function
 
         ''' Was Verschieben getan hat; eine Zeile unter den Listen.

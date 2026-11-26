@@ -279,7 +279,13 @@ Namespace Views
             Avalonia.Threading.Dispatcher.UIThread.Post(
                 Sub()
                     Dim boxes = NameBoxes()
-                    If boxes.Count > 0 Then
+                    ' Ein bestimmtes Gesicht (eben von Hand markiert): sein Feld, damit der Name
+                    ' gleich hineingeht.
+                    Dim wanted = If(String.IsNullOrEmpty(e.FaceId), Nothing,
+                                    boxes.FirstOrDefault(Function(b) String.Equals(TryCast(b.DataContext, PersonFaceEntry)?.FaceId, e.FaceId, StringComparison.Ordinal)))
+                    If wanted IsNot Nothing Then
+                        FocusTagInput(wanted)
+                    ElseIf boxes.Count > 0 Then
                         boxes(If(e.ToLast, boxes.Count - 1, 0)).Focus(NavigationMethod.Tab)
                     Else
                         Me.FindControl(Of Border)("NoPeopleHint")?.Focus(NavigationMethod.Tab)

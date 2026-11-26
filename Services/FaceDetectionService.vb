@@ -180,6 +180,80 @@ Namespace Services
             Return Similarity(a, b) >= SamePersonThreshold
         End Function
 
+        ''' <summary>Wie nachsichtig die Suche im Ausschnitt eines VON HAND aufgezogenen Kastens
+        ''' ist. Dort steht fest, dass ein Gesicht ist; gesucht werden nur noch seine fuenf Punkte,
+        ''' und ein Gesicht, das im Vollbild unter 0,6 blieb (Halbprofil, Gegenlicht, halb
+        ''' verdeckt), soll sie trotzdem bekommen.</summary>
+        Private Const MarkedFaceScoreThreshold As Single = 0.3F
+
+        ''' <summary>Macht aus einem Kasten, den der Benutzer um ein Gesicht gezogen hat, ein
+        ''' Gesicht wie aus der Erkennung: Lage und, wenn moeglich, Merkmale.
+        '''
+        ''' OHNE AUSRICHTUNG KEINE MERKMALE. Das Vergleichsmodell braucht die fuenf Punkte
+        ''' (Augen, Nase, Mundwinkel), und die kommen nur aus dem Suchmodell. Es sucht deshalb in
+        ''' einem Ausschnitt von vier Kastenbreiten, nachsichtiger als im Vollbild, und nimmt den
+        ''' Fund, der sich mit dem Kasten deckt - dieselbe Regel wie in RefineLandmarks. Deckt sich
+        ''' nichts, bleibt das Gesicht ohne Merkmale: aus dem Kasten geratene Punkte ergaeben eine
+        ''' Reihe, die im Zweifel den Falschen trifft, und dann zoege sie eine benannte Gruppe
+        ''' schief. Dasselbe unter <see cref="MinimumFaceSize"/>: dort sind Merkmale Rauschen.
+        '''
+        ''' Der Kasten des Ergebnisses ist der des Funds, wenn es einen gab (er sitzt wie bei
+        ''' jedem erkannten Gesicht, und Ausschnitt und Region passen dazu), sonst der gezogene.</summary>
+        ''' <param name="source">Das Bild der Suche, aufgerichtet (FaceScanRunner.DecodeUprightForFaces).</param>
+        ''' <param name="box">Der gezogene Kasten in Bildpunkten von <paramref name="source"/>.</param>
+        Public Shared Function DescribeMarkedFace(source As SKBitmap, box As SKRect) As DetectedFace
+            Dim drawn As New DetectedFace With {.X = box.Left, .Y = box.Top, .Width = box.Width, .Height = box.Height, .Score = 1.0F}
+            If source Is Nothing OrElse box.Width < 1 OrElse box.Height < 1 Then Return drawn
+            If Not Available Then Return drawn
+            Dim detector = AiModelService.SessionFor(DetectorKey)
+            Dim recognizer = AiModelService.SessionFor(RecognizerKey)
+            If detector Is Nothing OrElse recognizer Is Nothing Then Return drawn
+
+            Try
+                Dim faceSize = Math.Max(box.Width, box.Height)
+                Dim windowSize = CInt(Math.Round(faceSize * 4.0F))
+                windowSize = Math.Max(64, Math.Min(windowSize, Math.Min(source.Width, source.Height)))
+                Dim left = CInt(Math.Round(box.MidX - windowSize / 2.0F))
+                Dim top = CInt(Math.Round(box.MidY - windowSize / 2.0F))
+                left = Math.Max(0, Math.Min(left, source.Width - windowSize))
+                top = Math.Max(0, Math.Min(top, source.Height - windowSize))
+
+                Dim found As DetectedFace = Nothing
+                Using window = New SKBitmap(windowSize, windowSize, SKColorType.Bgra8888, SKAlphaType.Premul)
+                    Using canvas = New SKCanvas(window)
+                        canvas.Clear(SKColors.Black)
+                        ImageProcessor.DrawBitmapSampled(canvas, source,
+                                                         New SKRect(left, top, left + windowSize, top + windowSize),
+                                                         New SKRect(0, 0, windowSize, windowSize),
+                                                         ImageProcessor.SamplingHigh, Nothing)
+                    End Using
+                    Dim expected As New DetectedFace With {
+                        .X = box.Left - left, .Y = box.Top - top, .Width = box.Width, .Height = box.Height}
+                    Dim candidates = RunDetector(detector, window, MarkedFaceScoreThreshold)
+                    If candidates.Count > 0 Then
+                        Dim best = candidates.OrderByDescending(Function(f) Overlap(expected, f)).First()
+                        If Overlap(expected, best) >= 0.3F Then
+                            found = New DetectedFace With {
+                                .X = best.X + left, .Y = best.Y + top,
+                                .Width = best.Width, .Height = best.Height, .Score = best.Score}
+                            For p = 0 To 4
+                                found.Landmarks(p * 2) = best.Landmarks(p * 2) + left
+                                found.Landmarks(p * 2 + 1) = best.Landmarks(p * 2 + 1) + top
+                            Next
+                        End If
+                    End If
+                End Using
+                If found Is Nothing Then Return drawn
+                If Math.Max(found.Width, found.Height) >= MinimumFaceSize Then
+                    found.Embedding = RunRecognizer(recognizer, source, found)
+                End If
+                Return found
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gesichter.Markieren", ex)
+                Return drawn
+            End Try
+        End Function
+
         ' ── Suchmodell ───────────────────────────────────────────────────────────
 
         ''' <summary>Das Suchmodell ist ANKERFREI und liefert seine Funde auf drei Rastern

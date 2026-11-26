@@ -112,6 +112,34 @@
 
   <releases>
 
+    <release version="0.9.92-1" date="2026-11-26">
+      <description>
+        <p>This update brings film-like grain, more room in the highlights when you brighten a raw photo, saved adjustments as XMP presets and LUTs, and a tool bar you can place where you like:</p>
+        <p xml:lang="de">Dieses Update bringt filmähnliches Korn, mehr Spielraum in den Lichtern beim Aufhellen einer RAW, gespeicherte Anpassungen als XMP-Preset und LUT sowie eine Werkzeugleiste, die du platzieren kannst, wo du willst:</p>
+        <ul>
+          <li>Grain added in the editor is now soft and film-like: it is strongest in the midtones, fades towards black and white, and its size follows the photo, so the preview and exports in every size show the same grain. Photos you edited before look exactly as they did.</li>
+          <li xml:lang="de">Korn, das du im Editor hinzufügst, ist jetzt weich und filmähnlich: Es ist in den Mitteltönen am stärksten, läuft zu Schwarz und Weiß hin aus, und seine Größe richtet sich nach dem Foto, sodass Vorschau und Export in jeder Größe dasselbe Korn zeigen. Bereits bearbeitete Fotos sehen genau so aus wie vorher.</li>
+
+          <li>When you brighten a raw photo with exposure and lower the highlights, blown out skies no longer turn into a flat grey; bright areas stay bright. Added haze now takes on the colour of the light in the photo, so a sunset gets a warm haze. Both apply to new edits only.</li>
+          <li xml:lang="de">Wenn du eine RAW mit der Belichtung aufhellst und die Lichter absenkst, wird ein ausgefressener Himmel nicht mehr zu einem flachen Grau; helle Bereiche bleiben hell. Hinzugefügter Dunst nimmt jetzt die Farbe des Lichts im Foto an, sodass ein Sonnenuntergang einen warmen Dunst bekommt. Beides gilt nur für neue Bearbeitungen.</li>
+
+          <li>The Save adjustment dialog can also write your look as an XMP preset, which other raw developers read and FerrumPix reads back completely, or as a .cube LUT for video editors and other programs. Sliders that a format cannot carry are greyed out, and the dialog tells you why.</li>
+          <li xml:lang="de">Der Dialog „Anpassung speichern“ kann deinen Look jetzt auch als XMP-Preset schreiben, das andere RAW-Entwickler lesen und FerrumPix vollständig wieder einliest, oder als .cube-LUT für Videoschnitt und andere Programme. Regler, die ein Format nicht tragen kann, sind ausgegraut, und der Dialog sagt dir, warum.</li>
+
+          <li>The editor's tool bar can stand on the left, on the right or next to the adjustments panel, and a new automatic mode keeps it narrow and opens it over the photo when you rest the pointer on it. The buttons that step to the previous and next tool show that tool's icon.</li>
+          <li xml:lang="de">Die Werkzeugleiste des Editors kann links, rechts oder neben dem Anpassungspanel stehen, und ein neuer automatischer Modus hält sie schmal und klappt sie über dem Foto auf, wenn der Zeiger auf ihr ruht. Die Knöpfe zum vorigen und nächsten Werkzeug zeigen dessen Symbol.</li>
+
+          <li>Spot removal now comes along when you take over Lightroom settings from a sidecar file or a Lightroom catalog. Presets and sidecar files from Lightroom 3 and older come in with the right exposure, contrast, highlights, shadows, clarity and tone curve.</li>
+          <li xml:lang="de">Beim Übernehmen von Lightroom-Einstellungen aus einer Beistelldatei oder einem Lightroom-Katalog kommen jetzt auch die Ausbesserungsstellen mit. Presets und Beistelldateien aus Lightroom 3 und älter kommen mit der richtigen Belichtung, dem richtigen Kontrast, den richtigen Lichtern, Tiefen, der Klarheit und der Gradationskurve an.</li>
+
+          <li>All data now lives in one data folder that you can move, for example to a second drive or a network share; the catalog, thumbnails, models, extensions, saved adjustments, favourites and search lists move along. On the first start, models and extensions move there from the settings folder once; older versions download the models again if needed.</li>
+          <li xml:lang="de">Alle Daten liegen jetzt in einem Datenordner, den du verschieben kannst, etwa auf eine zweite Platte oder eine Freigabe im Netz; Katalog, Vorschaubilder, Modelle, Erweiterungen, gespeicherte Anpassungen, Favoriten und Suchlisten ziehen mit. Beim ersten Start ziehen Modelle und Erweiterungen einmal aus dem Ordner der Einstellungen dorthin; ältere Fassungen laden die Modelle bei Bedarf neu.</li>
+
+          <li>Fixed: Olympus, OM System and Panasonic photos taken with the camera's shading compensation no longer get their corners brightened twice; an older FerrumPix no longer throws away what a newer one saved with an edit; damaged JPEG files and LUTs referred to by an edit can no longer make the app reserve huge amounts of memory or hang; videos that start black get a real picture as their tile; on Windows, the AI model runtime no longer registers its telemetry with the system; and EXR files are read with an updated library that closes a security issue.</li>
+          <li xml:lang="de">Behoben: Fotos von Olympus, OM System und Panasonic mit kamerainterner Randabschattungskorrektur bekommen ihre Ecken nicht mehr doppelt aufgehellt; ein älteres FerrumPix wirft nicht mehr weg, was ein neueres mit einer Bearbeitung gespeichert hat; beschädigte JPEG-Dateien und LUTs, auf die eine Bearbeitung verweist, können die Anwendung nicht mehr riesige Mengen Speicher belegen lassen oder aufhängen; Videos, die schwarz beginnen, bekommen ein echtes Bild als Kachel; unter Windows meldet die Laufzeit der KI-Modelle ihre Telemetrie nicht mehr beim System an; und EXR-Dateien werden mit einer aktualisierten Bibliothek gelesen, die eine Sicherheitslücke schließt.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.91-1" date="2026-11-25">
       <description>
         <p>This update introduces side-by-side comparison of up to four photos, more flexible adjustment presets with selective application, support for Live Photos and Motion Photos, and a significantly more accurate depth model:</p>

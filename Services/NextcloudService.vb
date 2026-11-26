@@ -2141,8 +2141,7 @@ Namespace Services
 
         ' ── Plattenzwischenspeicher der Vorschaubilder ──────────────────────────
 
-        Private Shared ReadOnly CacheRoot As String =
-            IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix", "NextcloudCache")
+        Private Shared ReadOnly CacheRoot As String = AppFolders.InData("NextcloudCache")
 
         ''' <summary>Kennung des Servers samt Benutzer. Getrennt abgelegt, damit ein Server- oder
         ''' Kontowechsel keine fremden Kacheln zeigt.</summary>

@@ -632,6 +632,27 @@ Namespace Services
         ''' groessten Kacheln nicht hochgerechnet werden. AB WERK AUS: kostet Platz auf der Platte
         ''' und bis zu viermal so viel Arbeitsspeicher je gehaltenem Vorschaubild.
         Public Property ThumbnailHighResolution As Boolean = False
+        ''' <summary>Der gewaehlte Datenordner (AppFolders); leer heisst der ab Werk. Gesetzt wird
+        ''' er nur beim Start, nachdem die Daten dort angekommen sind (AppFolders.PrepareAtStartup),
+        ''' nie allein: sonst stuende die Einstellung auf einem Ort, an dem nichts liegt. Diese und
+        ''' die drei folgenden Angaben gehoeren dem Rechner und bleiben beim Zurueckholen einer
+        ''' Sicherung, wie sie sind.</summary>
+        Public Property DataFolder As String = ""
+        ''' <summary>Der Datenordner, der beim naechsten Start gelten soll; leer, wenn keiner
+        ''' vorgemerkt ist. Bleibt stehen, bis der Umzug durch ist: ein abgebrochener setzt beim
+        ''' naechsten Start fort.</summary>
+        Public Property DataFolderPending As String = ""
+        ''' <summary>True: am vorgemerkten Ort liegt schon ein Datenordner, FerrumPix arbeitet mit
+        ''' ihm, statt die eigenen Daten hinueberzuziehen.</summary>
+        Public Property DataFolderPendingAdopt As Boolean = False
+        ''' <summary>Welche Aufteilung der Orte erreicht ist: 0 die bis 0.9.91 (Modelle,
+        ''' Erweiterungen, Favoriten und Suchlisten bei den Einstellungen), 1 die ab 0.9.92 (alles
+        ''' im Datenordner). Siehe FolderLayoutMigration.</summary>
+        Public Property FolderLayoutVersion As Integer = 0
+        ''' <summary>Hoechstgroesse des Kachelspeichers in Gigabyte, 0 = unbegrenzt. AB WERK
+        ''' UNBEGRENZT: ein dauerhafter Vorschauspeicher ist fuer eine Bildverwaltung ein Vorteil,
+        ''' und wer nichts einstellt, verliert keine Kachel.</summary>
+        Public Property ThumbnailCacheLimitGigabytes As Integer = 0
         ''' Das Ergebnis des Entrauschens mit Modell als .fpdnz neben der RAW ablegen
         ''' (ModelDenoiseFileService), beim Speichern im Editor, bei Export und Stapel. AB WERK AUS:
         ''' die Datei ist gross, gemessen rund 2,6 Byte je Bildpunkt (24 MP: 63 MB).
@@ -1213,10 +1234,10 @@ Namespace Services
         ''' (AdjustmentPresetStore), duerfen zwei in verschiedenen Ordnern gleich heissen; der Name
         ''' darueber bleibt als Rueckfall fuer Einstellungen von frueher.
         Public Property LastAdjustmentPresetId As String = ""
-        ''' Der Ordner, in dem die Anpassungen als Dateien liegen. Leer heisst die Vorgabe
-        ''' (AdjustmentPresetStore.DefaultRoot, "presets" im Datenordner). Ist ein eigener Ordner
-        ''' gesetzt und nicht erreichbar, bleibt die Liste leer; es wird NICHT auf die Vorgabe
-        ''' ausgewichen, sonst entstuenden zwei Bestaende.
+        ''' Der eigene Ordner der Anpassungen bis 0.9.91. Die Anwendung liest ihn nicht mehr: die
+        ''' Anpassungen liegen immer unter "presets" im Datenordner. Steht hier noch einer, kopiert
+        ''' der Umzug beim Start seine Anpassungen dorthin und leert danach die Angabe
+        ''' (FolderLayoutMigration); der Ordner selbst bleibt unberuehrt, er gehoert dem Nutzer.
         Public Property AdjustmentPresetFolder As String = ""
         ''' Der Ordner, in den zuletzt eine Anpassung als XMP-Preset oder LUT geschrieben wurde;
         ''' dort schlaegt der Dialog "Anpassung speichern" die naechste Datei vor. Leer heisst der
@@ -1399,19 +1420,11 @@ Namespace Services
         Private Sub New()
         End Sub
 
-        Private Shared ReadOnly SettingsDirectory As String =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FerrumPix")
+        ''' <summary>Der Ordner der Einstellungen (AppFolders.ConfigRoot). Ausser settings.json
+        ''' liegt dort nichts; alles andere gehoert in den Datenordner.</summary>
+        Private Shared ReadOnly SettingsDirectory As String = AppFolders.ConfigRoot
 
-        Private Shared ReadOnly SettingsPath As String =
-            Path.Combine(SettingsDirectory, "settings.json")
-
-        ''' <summary>Der Ordner der Einstellungen, fuer Merkdateien, die neben ihnen liegen
-        ''' (etwa die Marke des GPU-Wegs, <see cref="GpuImageService"/>).</summary>
-        Friend Shared ReadOnly Property Folder As String
-            Get
-                Return SettingsDirectory
-            End Get
-        End Property
+        Private Shared ReadOnly SettingsPath As String = AppFolders.SettingsPath
 
         ''' Der zuletzt bekannte, bereits normalisierte Stand als JSON. Load liest daraus statt von der
         ''' Platte: die Einstellungen werden an 148 Stellen abgefragt, unter anderem aus Vorschaubild-Threads.
@@ -1981,6 +1994,16 @@ Namespace Services
 
         Public Shared Function NormalizeThumbnailQuality(value As Integer) As Integer
             Return Math.Max(45, Math.Min(95, value))
+        End Function
+
+        ''' <summary>Die Stufen der Hoechstgroesse des Kachelspeichers in Gigabyte; 0 ist
+        ''' unbegrenzt.</summary>
+        Public Shared ReadOnly ThumbnailCacheLimitChoices As Integer() = {0, 1, 2, 5, 10, 20, 50, 100, 200, 500}
+
+        ''' <summary>0 oder weniger heisst unbegrenzt; sonst hoechstens 100000 GB.</summary>
+        Public Shared Function NormalizeThumbnailCacheLimitGigabytes(value As Integer) As Integer
+            If value <= 0 Then Return 0
+            Return Math.Min(100000, value)
         End Function
 
         ''' <summary>Obergrenze 10.000 statt frueher 5.000: ein Ordner mit 7.500
@@ -2867,11 +2890,6 @@ Namespace Services
                        s.LastAdjustmentPresetId = cleanId
                        s.LastAdjustmentPresetName = cleanName
                    End Sub)
-        End Sub
-
-        ''' <summary>Legt den Ordner der Anpassungen fest; leer heisst die Vorgabe im Datenordner.</summary>
-        Public Shared Sub SaveAdjustmentPresetFolder(value As String)
-            Update(Sub(s) s.AdjustmentPresetFolder = NormalizeFolderPath(value))
         End Sub
 
         ''' <summary>Nimmt die Vorlagen mit diesen Kennungen aus den Einstellungen: sie liegen

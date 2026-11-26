@@ -73,6 +73,7 @@ Namespace Views
             AddHandler Loaded, Sub(s, e) Services.PerformanceTraceService.StartUiThreadWatchdog()
             AddHandler Opened, Sub(s, e) RestoreWindowPlacement()
             AddHandler Opened, Sub(s, e) ShowSetupAssistantOnFirstStart()
+            AddHandler Opened, Sub(s, e) ReportFolderStartupNotices()
             ' Erst wenn das Fenster offen ist, gibt es eine Zeichenflaeche, an der ein Farbraum
             ' haengen koennte. Der Aufruf prueft die Einstellung selbst und tut ausserhalb von
             ' macOS nichts.
@@ -301,6 +302,47 @@ Namespace Views
                                      DispatcherPriority.Background)
         End Sub
 
+        ''' <summary>Was beim Start mit den Orten schiefging (AppFolders.PrepareAtStartup), einmal
+        ''' nach dem Oeffnen des Fensters. Der Umzug selbst laeuft still; sichtbar wird nur ein
+        ''' Fehler. Danach die Frage zum Katalog, wenn ein anderer Rechner ihn hat (CatalogLock).</summary>
+        Private Async Sub ReportFolderStartupNotices()
+            Try
+                Dim vm = TryCast(DataContext, MainWindowViewModel)
+                If vm Is Nothing Then Return
+                For Each notice In Services.AppFolders.TakeStartupNotices()
+                    Select Case notice.Kind
+                        Case Services.FolderStartupNoticeKind.DataFolderUnreachable
+                            Await vm.ShowMessageAsync(Services.LocalizationService.T("Datenordner nicht erreichbar"),
+                                String.Format(Services.LocalizationService.T("Der Datenordner {0} ist nicht erreichbar. Bis er wieder da ist, arbeitet FerrumPix ohne Katalog, und Modelle, Erweiterungen und gespeicherte Anpassungen fehlen."), notice.Folder))
+                        Case Services.FolderStartupNoticeKind.MoveTargetFull
+                            Await vm.ShowMessageAsync(Services.LocalizationService.T("Datenordner nicht umgezogen"),
+                                String.Format(Services.LocalizationService.T("Der Datenordner konnte nicht nach {0} umziehen, weil dort nicht genug Platz ist. Alles liegt weiter am bisherigen Ort."), notice.Folder))
+                        Case Services.FolderStartupNoticeKind.MoveFailed
+                            Await vm.ShowMessageAsync(Services.LocalizationService.T("Datenordner nicht umgezogen"),
+                                String.Format(Services.LocalizationService.T("Der Datenordner konnte nicht nach {0} umziehen. Alles liegt weiter am bisherigen Ort, Einzelheiten stehen im Protokoll."), notice.Folder))
+                        Case Services.FolderStartupNoticeKind.LayoutIncomplete
+                            Await vm.ShowMessageAsync(Services.LocalizationService.T("Daten nicht vollständig umgezogen"),
+                                String.Format(Services.LocalizationService.T("FerrumPix legt seine Daten jetzt gesammelt in {0} ab. Ein Teil ließ sich nicht dorthin bringen und wird am alten Ort weiter benutzt. Beim nächsten Start versucht FerrumPix es erneut; Einzelheiten stehen im Protokoll."), notice.Folder))
+                    End Select
+                Next
+                If Services.CatalogLock.State <> Services.CatalogLockState.HeldElsewhere Then Return
+                Dim holder = Services.CatalogLock.Holder
+                Dim machine = If(holder?.Machine, "")
+                Dim since = If(holder Is Nothing, "", holder.StartedUtc.ToLocalTime().ToString("g", Globalization.CultureInfo.CurrentCulture))
+                Dim takeOver = Await vm.ShowConfirmAsync(
+                    String.Format(Services.LocalizationService.T("Katalog wird von {0} benutzt"), machine),
+                    String.Format(Services.LocalizationService.T("FerrumPix läuft auf {0} mit demselben Katalog, seit {1}. Zwei Rechner dürfen ihn nicht gleichzeitig öffnen. Bis {0} ihn freigibt, arbeitet FerrumPix hier ohne Katalog, und was in dieser Sitzung in den Katalog käme, wird nicht gespeichert. Läuft FerrumPix auf {0} nicht mehr, etwa nach einem Absturz, lässt sich die Sperre übernehmen."), machine, since),
+                    Services.LocalizationService.T("Sperre übernehmen"),
+                    Services.LocalizationService.T("Ohne Katalog weiter"))
+                If takeOver AndAlso Services.CatalogLock.TakeOver() Then
+                    Await vm.ShowMessageAsync(Services.LocalizationService.T("Sperre übernommen"),
+                                              Services.LocalizationService.T("Der Katalog gehört jetzt diesem Rechner. Bitte FerrumPix neu starten, damit er geöffnet wird."))
+                End If
+            Catch ex As Exception
+                Services.DiagnosticLogService.LogException("MainWindow.FolderStartupNotices", ex)
+            End Try
+        End Sub
+
         Private Sub HandleDataContextChanged(sender As Object, e As EventArgs)
             Dim vm = TryCast(DataContext, MainWindowViewModel)
             If vm IsNot Nothing Then
@@ -308,6 +350,8 @@ Namespace Views
                 AddHandler vm.EditorViewWanted, AddressOf PrepareEditorView
                 AddHandler vm.EditorViewNotNeeded, AddressOf ReleasePreparedEditorView
                 EnsureDialogOverlays(vm)
+                ' Im Browser: wohin abgelegte Dateien gehen (MainWindowBrowserFiles.vb).
+                InstallBrowserFileHooks()
                 ShowCurrentContent()
                 ApplyFullscreenState()
                 ' Der erste SizeChanged kann vor dem DataContext liegen - dann bliebe die Breite

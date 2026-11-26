@@ -80,11 +80,13 @@ Namespace Services
         Private Sub New()
         End Sub
 
-        Private Shared ReadOnly FavoritesDirectory As String =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FerrumPix")
-
-        Private Shared ReadOnly FavoritesPath As String =
-            Path.Combine(FavoritesDirectory, "favorites.json")
+        ''' <summary>Im Datenordner (AppFolders.FavoritesPath); bis zum Umzug beim Start von 0.9.92
+        ''' lag die Datei bei den Einstellungen.</summary>
+        Private Shared ReadOnly Property FavoritesPath As String
+            Get
+                Return AppFolders.FavoritesPath
+            End Get
+        End Property
 
         Private Shared ReadOnly JsonOptions As New JsonSerializerOptions With {.WriteIndented = True}
 

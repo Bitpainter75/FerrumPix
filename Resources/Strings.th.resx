@@ -12596,4 +12596,304 @@
   <data name="Mehr_Punkte_geben_feinere_berg_nge_und_eine_gr_e_87716011" xml:space="preserve">
     <value>จุดมากขึ้นให้การไล่ระดับละเอียดขึ้นและไฟล์ใหญ่ขึ้น</value>
   </data>
+  <data name="Speicherort_der_Vorschaubilder_ea4180cd" xml:space="preserve">
+    <value>ตำแหน่งภาพย่อ</value>
+  </data>
+  <data name="Ein_anderer_Ort_etwa_eine_zweite_Platte_nimmt_di_2b098a5f" xml:space="preserve">
+    <value>เมื่อเลือกตำแหน่งอื่น เช่น ไดรฟ์ที่สอง ภาพย่อที่มีอยู่จะถูกย้ายไปด้วย</value>
+  </data>
+  <data name="Standardort_645fbbac" xml:space="preserve">
+    <value>ตำแหน่งเริ่มต้น</value>
+  </data>
+  <data name="Ort_w_hlen_a14d708c" xml:space="preserve">
+    <value>เลือกตำแหน่ง</value>
+  </data>
+  <data name="H_chstgr_e_der_Vorschaubilder_eef5e17a" xml:space="preserve">
+    <value>ขนาดสูงสุดของภาพย่อ</value>
+  </data>
+  <data name="Wird_sie_berschritten_entfernt_FerrumPix_im_Hint_77e728da" xml:space="preserve">
+    <value>เมื่อเกินขนาดนี้ FerrumPix จะลบภาพย่อที่ไม่ได้ดูนานที่สุดในเบื้องหลัง และจะสร้างใหม่เมื่อเปิดดูครั้งถัดไป</value>
+  </data>
+  <data name="Unbegrenzt_0d297e61" xml:space="preserve">
+    <value>ไม่จำกัด</value>
+  </data>
+  <data name="Der_gew_hlte_Ort_0_ist_nicht_erreichbar_Bis_er_w_6319e156" xml:space="preserve">
+    <value>ไม่สามารถเข้าถึงตำแหน่งที่เลือก {0} ได้ ระหว่างนี้ภาพย่อใหม่จะถูกเก็บไว้ที่ตำแหน่งเริ่มต้น</value>
+  </data>
+  <data name="Belegt_0_c4342b36" xml:space="preserve">
+    <value>ใช้ไป: {0}</value>
+  </data>
+  <data name="Ort_nicht_verwendbar_6c4c756c" xml:space="preserve">
+    <value>ใช้ตำแหน่งนี้ไม่ได้</value>
+  </data>
+  <data name="Die_vorhandenen_Vorschaubilder_0_werden_nach_1_v_33e1a876" xml:space="preserve">
+    <value>ภาพย่อที่มีอยู่ ({0}) จะถูกย้ายไปที่ {1} หากเป็นไดรฟ์อื่น จะคัดลอกก่อนแล้วจึงลบออกจากตำแหน่งเดิม การยกเลิกจะไม่เปลี่ยนแปลงตำแหน่งเดิม</value>
+  </data>
+  <data name="Vorschaubilder_verschieben_b91cf923" xml:space="preserve">
+    <value>ย้ายภาพย่อหรือไม่</value>
+  </data>
+  <data name="Vorschaubilder_werden_verschoben_f10674ab" xml:space="preserve">
+    <value>กำลังย้ายภาพย่อ...</value>
+  </data>
+  <data name="Die_Vorschaubilder_liegen_jetzt_in_0_876dacd2" xml:space="preserve">
+    <value>ตอนนี้ภาพย่ออยู่ที่ {0}</value>
+  </data>
+  <data name="Abgebrochen_Die_Vorschaubilder_liegen_weiter_am__d5ea562d" xml:space="preserve">
+    <value>ยกเลิกแล้ว ภาพย่อยังอยู่ที่ตำแหน่งเดิม</value>
+  </data>
+  <data name="Am_neuen_Ort_ist_nicht_genug_Platz_Die_Vorschaub_5f127c35" xml:space="preserve">
+    <value>พื้นที่ที่ตำแหน่งใหม่ไม่พอ ภาพย่อยังอยู่ที่ตำแหน่งเดิม</value>
+  </data>
+  <data name="Das_Verschieben_ist_fehlgeschlagen_Die_Vorschaub_f5dd8e04" xml:space="preserve">
+    <value>ย้ายไม่สำเร็จ ภาพย่อยังอยู่ที่ตำแหน่งเดิม</value>
+  </data>
+  <data name="Ort_f_r_die_Vorschaubilder_w_hlen_15f46a6c" xml:space="preserve">
+    <value>เลือกตำแหน่งสำหรับภาพย่อ</value>
+  </data>
+  <data name="Ort_der_Vorschaubilder_nicht_erreichbar_1854c3fc" xml:space="preserve">
+    <value>เข้าถึงตำแหน่งภาพย่อไม่ได้</value>
+  </data>
+  <data name="Es_wurde_kein_Ordner_gew_hlt_3482d327" xml:space="preserve">
+    <value>ยังไม่ได้เลือกโฟลเดอร์</value>
+  </data>
+  <data name="Dieser_Ordner_l_sst_sich_nicht_verwenden_11f6f21b" xml:space="preserve">
+    <value>ใช้โฟลเดอร์นี้ไม่ได้</value>
+  </data>
+  <data name="Die_Wurzel_eines_Laufwerks_l_sst_sich_nicht_verw_84a52fef" xml:space="preserve">
+    <value>ใช้รากของไดรฟ์ไม่ได้ โปรดเลือกโฟลเดอร์ภายในไดรฟ์นั้น</value>
+  </data>
+  <data name="Im_Flatpak_lassen_sich_nur_Ordner_verwenden_die__2b6244e0" xml:space="preserve">
+    <value>ใน Flatpak ใช้ได้เฉพาะโฟลเดอร์ที่ FerrumPix มองเห็นโดยตรง เช่น ในโฟลเดอร์ส่วนตัวหรือบนไดรฟ์ที่เมานต์ไว้ โฟลเดอร์ที่แชร์ผ่านตัวเลือกไฟล์ของระบบเท่านั้นจะหายไปจาก FerrumPix หลังเริ่มใหม่</value>
+  </data>
+  <data name="Das_tempor_re_Verzeichnis_wird_beim_Neustart_gel_042d17a7" xml:space="preserve">
+    <value>โฟลเดอร์ชั่วคราวจะถูกล้างเมื่อเริ่มใหม่ โปรดเลือกโฟลเดอร์อื่น</value>
+  </data>
+  <data name="Der_Ordner_ist_nicht_erreichbar_ac533d85" xml:space="preserve">
+    <value>เข้าถึงโฟลเดอร์ไม่ได้</value>
+  </data>
+  <data name="In_diesem_Ordner_liegt_schon_ein_Ordner_0_mit_an_6da5df62" xml:space="preserve">
+    <value>โฟลเดอร์นี้มีโฟลเดอร์ {0} ที่มีไฟล์อื่นอยู่แล้ว</value>
+  </data>
+  <data name="Die_Vorschaubilder_liegen_schon_dort_82bebe06" xml:space="preserve">
+    <value>ภาพย่ออยู่ที่นั่นแล้ว</value>
+  </data>
+  <data name="Der_neue_Ort_darf_nicht_im_bisherigen_liegen_und_f6cc7817" xml:space="preserve">
+    <value>ตำแหน่งใหม่ต้องไม่อยู่ภายในตำแหน่งปัจจุบัน และตำแหน่งปัจจุบันต้องไม่อยู่ภายในตำแหน่งใหม่</value>
+  </data>
+  <data name="FerrumPix_darf_in_diesem_Ordner_nicht_schreiben_2337990a" xml:space="preserve">
+    <value>FerrumPix ไม่มีสิทธิ์เขียนลงในโฟลเดอร์นี้</value>
+  </data>
+  <data name="Im_Flatpak_sind_die_Systemordner_des_Rechners_wi_1b629a4b" xml:space="preserve">
+    <value>ใน Flatpak ไม่สามารถเข้าถึงโฟลเดอร์ระบบของเครื่อง เช่น /usr, /etc และ /tmp</value>
+  </data>
+  <data name="Die_Vorschaubilder_liegen_in_0_e64abee7" xml:space="preserve">
+    <value>ภาพย่ออยู่ที่ {0}</value>
+  </data>
+  <data name="0_Gruppen_markiert_c8fd0ffe" xml:space="preserve">
+    <value>ทำเครื่องหมายแล้ว {0} กลุ่ม</value>
+  </data>
+  <data name="0_Gruppen_mit_zusammen_1_Gesichtern_Jedes_Gesich_25752e68" xml:space="preserve">
+    <value>{0} กลุ่ม รวม {1} ใบหน้า ทุกใบหน้าจะเข้าไปในถาด 'ไม่ทราบ' เหมือนกับ 'ไม่ใช่คนนี้' ที่นั่นสามารถกำหนดใหม่ทีละใบหน้า และการค้นหาครั้งใหม่จะไม่รวมเป็นกลุ่มอีก</value>
+  </data>
+  <data name="0_davon_tragen_einen_Namen_die_Namen_gehen_verlo_636586df" xml:space="preserve">
+    <value>ในจำนวนนี้มีชื่อ {0} กลุ่ม ชื่อเหล่านี้จะหายไป</value>
+  </data>
+  <data name="Markierte_Gruppen_entfernen_48dc711d" xml:space="preserve">
+    <value>นำกลุ่มที่ทำเครื่องหมายออกหรือไม่</value>
+  </data>
+  <data name="Im_Bild_ein_Rechteck_um_das_Gesicht_aufziehen_ES_fae2b97a" xml:space="preserve">
+    <value>ลากสี่เหลี่ยมรอบใบหน้าในภาพ ESC เพื่อยกเลิก</value>
+  </data>
+  <data name="Das_Rechteck_ist_zu_klein_Bitte_gr_er_um_das_Ges_191f0c20" xml:space="preserve">
+    <value>สี่เหลี่ยมเล็กเกินไป โปรดลากให้ใหญ่ขึ้นรอบใบหน้า</value>
+  </data>
+  <data name="Gesicht_eingetragen_Der_Name_kommt_in_das_Feld_d_612c3ed2" xml:space="preserve">
+    <value>เพิ่มใบหน้าแล้ว พิมพ์ชื่อในช่องด้านบน</value>
+  </data>
+  <data name="Gesicht_eingetragen_Das_Modell_konnte_es_nicht_a_f777d1cd" xml:space="preserve">
+    <value>เพิ่มใบหน้าแล้ว โมเดลจัดแนวไม่ได้ ใบหน้านี้มีชื่อ แต่จะไม่ให้คำแนะนำสำหรับภาพอื่น</value>
+  </data>
+  <data name="An_dieser_Stelle_steht_schon_ein_Gesicht_94ec83ba" xml:space="preserve">
+    <value>ตำแหน่งนี้มีใบหน้าอยู่แล้ว</value>
+  </data>
+  <data name="Das_Gesicht_lie_sich_nicht_eintragen_8d28725a" xml:space="preserve">
+    <value>ไม่สามารถเพิ่มใบหน้าได้</value>
+  </data>
+  <data name="0_weitere_benannte_Personen_kommen_in_diesem_Ord_5f17b74e" xml:space="preserve">
+    <value>บุคคลที่มีชื่ออีก {0} คนไม่ปรากฏในโฟลเดอร์นี้</value>
+  </data>
+  <data name="Das_Zeichen_oben_links_auf_einer_Kachel_markiert_dbf9f6a0" xml:space="preserve">
+    <value>เครื่องหมายมุมซ้ายบนของไทล์ใช้ทำเครื่องหมาย กลุ่มที่ทำเครื่องหมายสามารถนำออกพร้อมกันหรือเพิ่มให้บุคคลได้</value>
+  </data>
+  <data name="Alle_auf_dieser_Seite_markieren_b84747ba" xml:space="preserve">
+    <value>ทำเครื่องหมายทั้งหมดในหน้านี้</value>
+  </data>
+  <data name="Name_der_Person_13d3aebd" xml:space="preserve">
+    <value>ชื่อบุคคล</value>
+  </data>
+  <data name="Hei_t_schon_jemand_so_werden_die_markierten_Grup_6ddbeaa4" xml:space="preserve">
+    <value>หากมีคนใช้ชื่อนี้อยู่แล้ว กลุ่มที่ทำเครื่องหมายจะรวมเข้ากับบุคคลนั้น มิฉะนั้นจะสร้างบุคคลใหม่ด้วยชื่อนี้</value>
+  </data>
+  <data name="Zu_Person_hinzuf_gen_368b6a83" xml:space="preserve">
+    <value>เพิ่มให้บุคคล</value>
+  </data>
+  <data name="Markierung_aufheben_7084b33e" xml:space="preserve">
+    <value>ยกเลิกเครื่องหมาย</value>
+  </data>
+  <data name="Markieren_bc4e896e" xml:space="preserve">
+    <value>ทำเครื่องหมาย</value>
+  </data>
+  <data name="Ein_Name_den_es_schon_gibt_f_hrt_diese_Gruppe_mi_10fb8c4f" xml:space="preserve">
+    <value>ชื่อที่มีอยู่แล้วจะรวมกลุ่มนี้เข้ากับบุคคลนั้น</value>
+  </data>
+  <data name="Ein_Gesicht_das_nicht_erkannt_wurde_im_Bild_mit__e47c9990" xml:space="preserve">
+    <value>ทำเครื่องหมายใบหน้าที่ไม่ถูกจดจำด้วยสี่เหลี่ยมในภาพ ESC เพื่อยกเลิก</value>
+  </data>
+  <data name="Gesicht_markieren_bdac8a3d" xml:space="preserve">
+    <value>ทำเครื่องหมายใบหน้า</value>
+  </data>
+  <data name="Alle_Personen_des_Katalogs_zeigen_a096ff69" xml:space="preserve">
+    <value>แสดงบุคคลทั้งหมดในแคตตาล็อก</value>
+  </data>
+  <data name="Dateien_zum_Hochladen_hier_ablegen_471f9847" xml:space="preserve">
+    <value>วางไฟล์ที่นี่เพื่ออัปโหลด</value>
+  </data>
+  <data name="Dateien_hochladen_cc58908b" xml:space="preserve">
+    <value>อัปโหลดไฟล์</value>
+  </data>
+  <data name="0_von_1_Dateien_hochgeladen_18b1984a" xml:space="preserve">
+    <value>อัปโหลดแล้ว {0} จาก {1} ไฟล์</value>
+  </data>
+  <data name="Hochgeladen_a227895e" xml:space="preserve">
+    <value>อัปโหลดแล้ว</value>
+  </data>
+  <data name="Fehlgeschlagen_f7b1b156" xml:space="preserve">
+    <value>ล้มเหลว</value>
+  </data>
+  <data name="Die_bertragung_wurde_unterbrochen_1dc90c16" xml:space="preserve">
+    <value>การถ่ายโอนถูกขัดจังหวะ</value>
+  </data>
+  <data name="Bereit_zum_Herunterladen_f8026251" xml:space="preserve">
+    <value>พร้อมดาวน์โหลด</value>
+  </data>
+  <data name="Die_Datei_ist_gr_er_als_0_GB_5d04db62" xml:space="preserve">
+    <value>ไฟล์มีขนาดใหญ่กว่า {0} GB</value>
+  </data>
+  <data name="Die_Seite_ist_veraltet_Bitte_neu_laden_41bda2b3" xml:space="preserve">
+    <value>หน้านี้ล้าสมัยแล้ว โปรดโหลดใหม่</value>
+  </data>
+  <data name="Der_Dateiname_ist_ung_ltig_77f457aa" xml:space="preserve">
+    <value>ชื่อไฟล์ไม่ถูกต้อง</value>
+  </data>
+  <data name="Die_Datei_ist_leer_db2c5c6e" xml:space="preserve">
+    <value>ไฟล์ว่างเปล่า</value>
+  </data>
+  <data name="Als_Ebene_l_sst_sich_nur_ein_Bild_einf_gen_3a887426" xml:space="preserve">
+    <value>แทรกเป็นเลเยอร์ได้เฉพาะรูปภาพ</value>
+  </data>
+  <data name="Diese_Dateiart_nimmt_FerrumPix_nicht_an_299a8ea6" xml:space="preserve">
+    <value>FerrumPix ไม่รับไฟล์ประเภทนี้</value>
+  </data>
+  <data name="Hier_darf_FerrumPix_keine_Dateien_anlegen_92082505" xml:space="preserve">
+    <value>FerrumPix ไม่สามารถสร้างไฟล์ที่นี่</value>
+  </data>
+  <data name="Auf_dem_Laufwerk_ist_nicht_genug_Platz_frei_6ba0c24f" xml:space="preserve">
+    <value>พื้นที่ว่างในไดรฟ์ไม่เพียงพอ</value>
+  </data>
+  <data name="Erst_den_offenen_Dialog_schlie_en_8c1400a7" xml:space="preserve">
+    <value>ปิดกล่องโต้ตอบที่เปิดอยู่ก่อน</value>
+  </data>
+  <data name="Kein_Ordner_offen_in_den_die_Dateien_geh_ren_3c539817" xml:space="preserve">
+    <value>ไม่มีโฟลเดอร์ที่เปิดอยู่สำหรับวางไฟล์</value>
+  </data>
+  <data name="Die_Bilder_hier_liegen_auf_einem_Server_Hochlade_fa8cc635" xml:space="preserve">
+    <value>รูปภาพที่นี่อยู่บนเซิร์ฟเวอร์ อัปโหลดได้เฉพาะไปยังโฟลเดอร์ในคอมพิวเตอร์เครื่องนี้</value>
+  </data>
+  <data name="Datenordner_1446557a" xml:space="preserve">
+    <value>โฟลเดอร์ข้อมูล</value>
+  </data>
+  <data name="Katalog_Vorschaubilder_Modelle_Erweiterungen_ges_d75a6513" xml:space="preserve">
+    <value>แค็ตตาล็อก ภาพตัวอย่าง โมเดล ส่วนขยาย การปรับที่บันทึกไว้ รายการโปรด และรายการค้นหาอยู่ที่นี่ ตำแหน่งอื่น เช่น ดิสก์ลูกที่สองหรือโฟลเดอร์แชร์บนเครือข่าย จะพาทุกอย่างไปด้วยเมื่อเริ่มครั้งถัดไป</value>
+  </data>
+  <data name="Zur_cknehmen_1651c015" xml:space="preserve">
+    <value>ยกเลิกการเปลี่ยน</value>
+  </data>
+  <data name="Ordner_f_r_die_Daten_von_FerrumPix_w_hlen_49493664" xml:space="preserve">
+    <value>เลือกโฟลเดอร์สำหรับข้อมูลของ FerrumPix</value>
+  </data>
+  <data name="Die_Daten_liegen_schon_dort_fbeb1a0b" xml:space="preserve">
+    <value>ข้อมูลอยู่ที่นั่นแล้ว</value>
+  </data>
+  <data name="Der_Ordner_der_Einstellungen_l_sst_sich_nicht_al_b1781d9e" xml:space="preserve">
+    <value>ไม่สามารถใช้โฟลเดอร์การตั้งค่าเป็นโฟลเดอร์ข้อมูลได้</value>
+  </data>
+  <data name="Der_Katalog_wird_gerade_von_0_benutzt_Der_Dateno_5ac02e22" xml:space="preserve">
+    <value>ขณะนี้ {0} กำลังใช้แค็ตตาล็อก โฟลเดอร์ข้อมูลจะย้ายได้ก็ต่อเมื่อปิด FerrumPix ที่นั่นแล้ว</value>
+  </data>
+  <data name="Datenordner_verschieben_92acb274" xml:space="preserve">
+    <value>ย้ายโฟลเดอร์ข้อมูลหรือไม่</value>
+  </data>
+  <data name="Die_Daten_von_FerrumPix_0_ziehen_beim_n_chsten_S_9503f5ab" xml:space="preserve">
+    <value>ข้อมูลของ FerrumPix ({0}) จะย้ายไปที่ {1} เมื่อเริ่มครั้งถัดไป บนดิสก์เดียวกันจะเสร็จทันที ไปยังดิสก์อื่นจะต้องคัดลอก และการเริ่มครั้งนั้นจะใช้เวลานานขึ้นตามไปด้วย ตำแหน่งเดิมจะถูกล้างหลังจากทุกอย่างไปถึงแล้วเท่านั้น</value>
+  </data>
+  <data name="Vorhandenen_Datenordner_verwenden_23ee4612" xml:space="preserve">
+    <value>ใช้โฟลเดอร์ข้อมูลที่มีอยู่หรือไม่</value>
+  </data>
+  <data name="In_0_liegt_schon_ein_Datenordner_von_FerrumPix_A_ee7e4ce9" xml:space="preserve">
+    <value>ใน {0} มีโฟลเดอร์ข้อมูลของ FerrumPix อยู่แล้ว ตั้งแต่การเริ่มครั้งถัดไป FerrumPix จะทำงานกับโฟลเดอร์นี้ ข้อมูลปัจจุบันยังคงอยู่ใน {1}</value>
+  </data>
+  <data name="Verwenden_8590499d" xml:space="preserve">
+    <value>ใช้</value>
+  </data>
+  <data name="Beim_n_chsten_Start_verwendet_FerrumPix_den_Date_82e8fbec" xml:space="preserve">
+    <value>เมื่อเริ่มครั้งถัดไป FerrumPix จะใช้โฟลเดอร์ข้อมูลใน {0}</value>
+  </data>
+  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_ce1e5936" xml:space="preserve">
+    <value>เมื่อเริ่มครั้งถัดไป โฟลเดอร์ข้อมูลจะย้ายไปที่ {0}</value>
+  </data>
+  <data name="Datenordner_nicht_erreichbar_9b1a712e" xml:space="preserve">
+    <value>เข้าถึงโฟลเดอร์ข้อมูลไม่ได้</value>
+  </data>
+  <data name="Der_Datenordner_0_ist_nicht_erreichbar_Bis_er_wi_a6ecc803" xml:space="preserve">
+    <value>เข้าถึงโฟลเดอร์ข้อมูล {0} ไม่ได้ จนกว่าจะกลับมา FerrumPix จะทำงานโดยไม่มีแค็ตตาล็อก และจะไม่มีโมเดล ส่วนขยาย และการปรับที่บันทึกไว้</value>
+  </data>
+  <data name="Datenordner_nicht_umgezogen_3673729f" xml:space="preserve">
+    <value>ไม่ได้ย้ายโฟลเดอร์ข้อมูล</value>
+  </data>
+  <data name="Der_Datenordner_konnte_nicht_nach_0_umziehen_wei_59bf6cf5" xml:space="preserve">
+    <value>ย้ายโฟลเดอร์ข้อมูลไปที่ {0} ไม่ได้เพราะพื้นที่ไม่พอ ทุกอย่างยังอยู่ที่ตำแหน่งเดิม</value>
+  </data>
+  <data name="Der_Datenordner_konnte_nicht_nach_0_umziehen_All_4af32b64" xml:space="preserve">
+    <value>ย้ายโฟลเดอร์ข้อมูลไปที่ {0} ไม่ได้ ทุกอย่างยังอยู่ที่ตำแหน่งเดิม ดูรายละเอียดได้ในบันทึก</value>
+  </data>
+  <data name="Daten_nicht_vollst_ndig_umgezogen_e2dbe176" xml:space="preserve">
+    <value>ย้ายข้อมูลไม่ครบ</value>
+  </data>
+  <data name="FerrumPix_legt_seine_Daten_jetzt_gesammelt_in_0__97509d2e" xml:space="preserve">
+    <value>ตอนนี้ FerrumPix เก็บข้อมูลไว้รวมกันที่ {0} บางส่วนย้ายไปที่นั่นไม่ได้และยังใช้จากตำแหน่งเดิม เมื่อเริ่มครั้งถัดไป FerrumPix จะลองอีกครั้ง ดูรายละเอียดได้ในบันทึก</value>
+  </data>
+  <data name="Katalog_wird_von_0_benutzt_78eb557d" xml:space="preserve">
+    <value>{0} กำลังใช้แค็ตตาล็อก</value>
+  </data>
+  <data name="FerrumPix_l_uft_auf_0_mit_demselben_Katalog_seit_97dbe250" xml:space="preserve">
+    <value>FerrumPix กำลังทำงานบน {0} ด้วยแค็ตตาล็อกเดียวกันตั้งแต่ {1} คอมพิวเตอร์สองเครื่องต้องไม่เปิดพร้อมกัน จนกว่า {0} จะปล่อย FerrumPix จะทำงานที่นี่โดยไม่มีแค็ตตาล็อก และสิ่งที่จะเข้าแค็ตตาล็อกในเซสชันนี้จะไม่ถูกบันทึก หาก FerrumPix ไม่ได้ทำงานบน {0} แล้ว เช่น หลังจากแครช สามารถรับช่วงการล็อกได้</value>
+  </data>
+  <data name="Sperre_bernehmen_14672502" xml:space="preserve">
+    <value>รับช่วงการล็อก</value>
+  </data>
+  <data name="Ohne_Katalog_weiter_ba43ea48" xml:space="preserve">
+    <value>ทำต่อโดยไม่มีแค็ตตาล็อก</value>
+  </data>
+  <data name="Sperre_bernommen_7d2f823d" xml:space="preserve">
+    <value>รับช่วงการล็อกแล้ว</value>
+  </data>
+  <data name="Der_Katalog_geh_rt_jetzt_diesem_Rechner_Bitte_Fe_f21858c6" xml:space="preserve">
+    <value>ตอนนี้แค็ตตาล็อกเป็นของคอมพิวเตอร์เครื่องนี้ โปรดเริ่ม FerrumPix ใหม่เพื่อเปิดแค็ตตาล็อก</value>
+  </data>
+  <data name="Der_Ordner_f_r_Anpassungen_ist_nicht_erreichbar__f22a0510" xml:space="preserve">
+    <value>เข้าถึงโฟลเดอร์ของการปรับไม่ได้: {0}</value>
+  </data>
+  <data name="Hier_liegen_die_im_Editor_gespeicherten_Anpassun_d58c017e" xml:space="preserve">
+    <value>การปรับที่บันทึกในตัวแก้ไขอยู่ที่นี่ แต่ละรายการเป็นไฟล์ของตัวเอง แต่ละโฟลเดอร์เป็นโฟลเดอร์จริง โฟลเดอร์นี้เป็นส่วนหนึ่งของโฟลเดอร์ข้อมูลและย้ายไปพร้อมกัน</value>
+  </data>
 </root>

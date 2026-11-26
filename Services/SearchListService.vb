@@ -140,11 +140,13 @@ Namespace Services
             Return "Local"
         End Function
 
-        Private Shared ReadOnly SearchListsDirectory As String =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FerrumPix")
-
-        Private Shared ReadOnly SearchListsPath As String =
-            Path.Combine(SearchListsDirectory, "searchlists.json")
+        ''' <summary>Im Datenordner (AppFolders.SearchListsPath); bis zum Umzug beim Start von
+        ''' 0.9.92 lag die Datei bei den Einstellungen.</summary>
+        Private Shared ReadOnly Property SearchListsPath As String
+            Get
+                Return AppFolders.SearchListsPath
+            End Get
+        End Property
 
         Private Shared ReadOnly JsonOptions As New JsonSerializerOptions With {.WriteIndented = True}
 

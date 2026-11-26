@@ -12592,4 +12592,304 @@
   <data name="Mehr_Punkte_geben_feinere_berg_nge_und_eine_gr_e_87716011" xml:space="preserve">
     <value>Więcej punktów daje płynniejsze przejścia i większy plik.</value>
   </data>
+  <data name="Speicherort_der_Vorschaubilder_ea4180cd" xml:space="preserve">
+    <value>Lokalizacja miniatur</value>
+  </data>
+  <data name="Ein_anderer_Ort_etwa_eine_zweite_Platte_nimmt_di_2b098a5f" xml:space="preserve">
+    <value>Inna lokalizacja, na przykład drugi dysk, zabiera ze sobą istniejące miniatury.</value>
+  </data>
+  <data name="Standardort_645fbbac" xml:space="preserve">
+    <value>Domyślna lokalizacja</value>
+  </data>
+  <data name="Ort_w_hlen_a14d708c" xml:space="preserve">
+    <value>Wybierz lokalizację</value>
+  </data>
+  <data name="H_chstgr_e_der_Vorschaubilder_eef5e17a" xml:space="preserve">
+    <value>Maksymalny rozmiar miniatur</value>
+  </data>
+  <data name="Wird_sie_berschritten_entfernt_FerrumPix_im_Hint_77e728da" xml:space="preserve">
+    <value>Po jej przekroczeniu FerrumPix usuwa w tle miniatury, które najdłużej nie były oglądane. Zostaną utworzone ponownie przy następnym wyświetleniu.</value>
+  </data>
+  <data name="Unbegrenzt_0d297e61" xml:space="preserve">
+    <value>Bez limitu</value>
+  </data>
+  <data name="Der_gew_hlte_Ort_0_ist_nicht_erreichbar_Bis_er_w_6319e156" xml:space="preserve">
+    <value>Wybrana lokalizacja {0} jest niedostępna. Dopóki nie wróci, nowe miniatury trafiają do lokalizacji domyślnej.</value>
+  </data>
+  <data name="Belegt_0_c4342b36" xml:space="preserve">
+    <value>Zajęte: {0}</value>
+  </data>
+  <data name="Ort_nicht_verwendbar_6c4c756c" xml:space="preserve">
+    <value>Nie można użyć lokalizacji</value>
+  </data>
+  <data name="Die_vorhandenen_Vorschaubilder_0_werden_nach_1_v_33e1a876" xml:space="preserve">
+    <value>Istniejące miniatury ({0}) zostaną przeniesione do {1}. Na inny dysk są najpierw kopiowane, a dopiero potem usuwane ze starej lokalizacji. Anulowanie pozostawia starą lokalizację bez zmian.</value>
+  </data>
+  <data name="Vorschaubilder_verschieben_b91cf923" xml:space="preserve">
+    <value>Przenieść miniatury?</value>
+  </data>
+  <data name="Vorschaubilder_werden_verschoben_f10674ab" xml:space="preserve">
+    <value>Przenoszenie miniatur...</value>
+  </data>
+  <data name="Die_Vorschaubilder_liegen_jetzt_in_0_876dacd2" xml:space="preserve">
+    <value>Miniatury znajdują się teraz w {0}.</value>
+  </data>
+  <data name="Abgebrochen_Die_Vorschaubilder_liegen_weiter_am__d5ea562d" xml:space="preserve">
+    <value>Anulowano. Miniatury pozostają w starej lokalizacji.</value>
+  </data>
+  <data name="Am_neuen_Ort_ist_nicht_genug_Platz_Die_Vorschaub_5f127c35" xml:space="preserve">
+    <value>W nowej lokalizacji brakuje miejsca. Miniatury pozostają w starej lokalizacji.</value>
+  </data>
+  <data name="Das_Verschieben_ist_fehlgeschlagen_Die_Vorschaub_f5dd8e04" xml:space="preserve">
+    <value>Przenoszenie nie powiodło się. Miniatury pozostają w starej lokalizacji.</value>
+  </data>
+  <data name="Ort_f_r_die_Vorschaubilder_w_hlen_15f46a6c" xml:space="preserve">
+    <value>Wybierz lokalizację miniatur</value>
+  </data>
+  <data name="Ort_der_Vorschaubilder_nicht_erreichbar_1854c3fc" xml:space="preserve">
+    <value>Lokalizacja miniatur jest niedostępna</value>
+  </data>
+  <data name="Es_wurde_kein_Ordner_gew_hlt_3482d327" xml:space="preserve">
+    <value>Nie wybrano folderu.</value>
+  </data>
+  <data name="Dieser_Ordner_l_sst_sich_nicht_verwenden_11f6f21b" xml:space="preserve">
+    <value>Tego folderu nie można użyć.</value>
+  </data>
+  <data name="Die_Wurzel_eines_Laufwerks_l_sst_sich_nicht_verw_84a52fef" xml:space="preserve">
+    <value>Nie można użyć katalogu głównego dysku. Wybierz folder na nim.</value>
+  </data>
+  <data name="Im_Flatpak_lassen_sich_nur_Ordner_verwenden_die__2b6244e0" xml:space="preserve">
+    <value>W Flatpaku można używać tylko folderów, które FerrumPix widzi bezpośrednio, na przykład w folderze domowym lub na zamontowanym dysku. Foldery udostępnione tylko przez systemowe okno wyboru plików znikają dla FerrumPix po ponownym uruchomieniu.</value>
+  </data>
+  <data name="Das_tempor_re_Verzeichnis_wird_beim_Neustart_gel_042d17a7" xml:space="preserve">
+    <value>Folder tymczasowy jest czyszczony przy ponownym uruchomieniu. Wybierz inny folder.</value>
+  </data>
+  <data name="Der_Ordner_ist_nicht_erreichbar_ac533d85" xml:space="preserve">
+    <value>Folder jest niedostępny.</value>
+  </data>
+  <data name="In_diesem_Ordner_liegt_schon_ein_Ordner_0_mit_an_6da5df62" xml:space="preserve">
+    <value>W tym folderze jest już folder {0} z innymi plikami.</value>
+  </data>
+  <data name="Die_Vorschaubilder_liegen_schon_dort_82bebe06" xml:space="preserve">
+    <value>Miniatury już tam są.</value>
+  </data>
+  <data name="Der_neue_Ort_darf_nicht_im_bisherigen_liegen_und_f6cc7817" xml:space="preserve">
+    <value>Nowa lokalizacja nie może leżeć w obecnej ani obecna w nowej.</value>
+  </data>
+  <data name="FerrumPix_darf_in_diesem_Ordner_nicht_schreiben_2337990a" xml:space="preserve">
+    <value>FerrumPix nie ma uprawnień do zapisu w tym folderze.</value>
+  </data>
+  <data name="Im_Flatpak_sind_die_Systemordner_des_Rechners_wi_1b629a4b" xml:space="preserve">
+    <value>W Flatpaku foldery systemowe komputera, takie jak /usr, /etc i /tmp, są niedostępne.</value>
+  </data>
+  <data name="Die_Vorschaubilder_liegen_in_0_e64abee7" xml:space="preserve">
+    <value>Miniatury znajdują się w {0}.</value>
+  </data>
+  <data name="0_Gruppen_markiert_c8fd0ffe" xml:space="preserve">
+    <value>Zaznaczone grupy: {0}</value>
+  </data>
+  <data name="0_Gruppen_mit_zusammen_1_Gesichtern_Jedes_Gesich_25752e68" xml:space="preserve">
+    <value>Grupy: {0}, twarze łącznie: {1}. Każda twarz trafia do pojemnika 'Nieznane', jak przy 'Nie ta osoba'. Tam można ją ponownie przypisać pojedynczo, a nowe wyszukiwanie nie utworzy już z nich grupy.</value>
+  </data>
+  <data name="0_davon_tragen_einen_Namen_die_Namen_gehen_verlo_636586df" xml:space="preserve">
+    <value>Spośród nich nazwę ma {0}; nazwy zostaną utracone.</value>
+  </data>
+  <data name="Markierte_Gruppen_entfernen_48dc711d" xml:space="preserve">
+    <value>Usunąć zaznaczone grupy?</value>
+  </data>
+  <data name="Im_Bild_ein_Rechteck_um_das_Gesicht_aufziehen_ES_fae2b97a" xml:space="preserve">
+    <value>Narysuj na obrazie prostokąt wokół twarzy. ESC anuluje.</value>
+  </data>
+  <data name="Das_Rechteck_ist_zu_klein_Bitte_gr_er_um_das_Ges_191f0c20" xml:space="preserve">
+    <value>Prostokąt jest za mały. Narysuj go większy wokół twarzy.</value>
+  </data>
+  <data name="Gesicht_eingetragen_Der_Name_kommt_in_das_Feld_d_612c3ed2" xml:space="preserve">
+    <value>Twarz dodana. Wpisz imię w polu powyżej.</value>
+  </data>
+  <data name="Gesicht_eingetragen_Das_Modell_konnte_es_nicht_a_f777d1cd" xml:space="preserve">
+    <value>Twarz dodana. Model nie mógł jej wyrównać; nosi imię, ale nie daje propozycji dla innych obrazów.</value>
+  </data>
+  <data name="An_dieser_Stelle_steht_schon_ein_Gesicht_94ec83ba" xml:space="preserve">
+    <value>W tym miejscu jest już twarz.</value>
+  </data>
+  <data name="Das_Gesicht_lie_sich_nicht_eintragen_8d28725a" xml:space="preserve">
+    <value>Nie udało się dodać twarzy.</value>
+  </data>
+  <data name="0_weitere_benannte_Personen_kommen_in_diesem_Ord_5f17b74e" xml:space="preserve">
+    <value>Kolejne nazwane osoby, których nie ma w tym folderze: {0}.</value>
+  </data>
+  <data name="Das_Zeichen_oben_links_auf_einer_Kachel_markiert_dbf9f6a0" xml:space="preserve">
+    <value>Znak w lewym górnym rogu kafelka zaznacza go. Zaznaczone grupy można usunąć razem albo dodać do osoby.</value>
+  </data>
+  <data name="Alle_auf_dieser_Seite_markieren_b84747ba" xml:space="preserve">
+    <value>Zaznacz wszystko na tej stronie</value>
+  </data>
+  <data name="Name_der_Person_13d3aebd" xml:space="preserve">
+    <value>Imię osoby</value>
+  </data>
+  <data name="Hei_t_schon_jemand_so_werden_die_markierten_Grup_6ddbeaa4" xml:space="preserve">
+    <value>Jeśli ktoś już tak się nazywa, zaznaczone grupy zostaną połączone z tą osobą. W przeciwnym razie powstanie osoba o tym imieniu.</value>
+  </data>
+  <data name="Zu_Person_hinzuf_gen_368b6a83" xml:space="preserve">
+    <value>Dodaj do osoby</value>
+  </data>
+  <data name="Markierung_aufheben_7084b33e" xml:space="preserve">
+    <value>Usuń zaznaczenie</value>
+  </data>
+  <data name="Markieren_bc4e896e" xml:space="preserve">
+    <value>Zaznacz</value>
+  </data>
+  <data name="Ein_Name_den_es_schon_gibt_f_hrt_diese_Gruppe_mi_10fb8c4f" xml:space="preserve">
+    <value>Istniejące już imię łączy tę grupę z tą osobą.</value>
+  </data>
+  <data name="Ein_Gesicht_das_nicht_erkannt_wurde_im_Bild_mit__e47c9990" xml:space="preserve">
+    <value>Zaznacz prostokątem na obrazie twarz, która nie została rozpoznana. ESC anuluje.</value>
+  </data>
+  <data name="Gesicht_markieren_bdac8a3d" xml:space="preserve">
+    <value>Zaznacz twarz</value>
+  </data>
+  <data name="Alle_Personen_des_Katalogs_zeigen_a096ff69" xml:space="preserve">
+    <value>Pokaż wszystkie osoby z katalogu</value>
+  </data>
+  <data name="Dateien_zum_Hochladen_hier_ablegen_471f9847" xml:space="preserve">
+    <value>Upuść tutaj pliki, aby je przesłać</value>
+  </data>
+  <data name="Dateien_hochladen_cc58908b" xml:space="preserve">
+    <value>Prześlij pliki</value>
+  </data>
+  <data name="0_von_1_Dateien_hochgeladen_18b1984a" xml:space="preserve">
+    <value>Przesłano {0} z {1} plików</value>
+  </data>
+  <data name="Hochgeladen_a227895e" xml:space="preserve">
+    <value>Przesłano</value>
+  </data>
+  <data name="Fehlgeschlagen_f7b1b156" xml:space="preserve">
+    <value>Niepowodzenie</value>
+  </data>
+  <data name="Die_bertragung_wurde_unterbrochen_1dc90c16" xml:space="preserve">
+    <value>Przesyłanie zostało przerwane</value>
+  </data>
+  <data name="Bereit_zum_Herunterladen_f8026251" xml:space="preserve">
+    <value>Gotowe do pobrania</value>
+  </data>
+  <data name="Die_Datei_ist_gr_er_als_0_GB_5d04db62" xml:space="preserve">
+    <value>Plik jest większy niż {0} GB</value>
+  </data>
+  <data name="Die_Seite_ist_veraltet_Bitte_neu_laden_41bda2b3" xml:space="preserve">
+    <value>Strona jest nieaktualna. Załaduj ją ponownie.</value>
+  </data>
+  <data name="Der_Dateiname_ist_ung_ltig_77f457aa" xml:space="preserve">
+    <value>Nazwa pliku jest nieprawidłowa</value>
+  </data>
+  <data name="Die_Datei_ist_leer_db2c5c6e" xml:space="preserve">
+    <value>Plik jest pusty</value>
+  </data>
+  <data name="Als_Ebene_l_sst_sich_nur_ein_Bild_einf_gen_3a887426" xml:space="preserve">
+    <value>Jako warstwę można wstawić tylko obraz</value>
+  </data>
+  <data name="Diese_Dateiart_nimmt_FerrumPix_nicht_an_299a8ea6" xml:space="preserve">
+    <value>FerrumPix nie przyjmuje plików tego typu</value>
+  </data>
+  <data name="Hier_darf_FerrumPix_keine_Dateien_anlegen_92082505" xml:space="preserve">
+    <value>FerrumPix nie może tutaj tworzyć plików</value>
+  </data>
+  <data name="Auf_dem_Laufwerk_ist_nicht_genug_Platz_frei_6ba0c24f" xml:space="preserve">
+    <value>Na dysku jest za mało wolnego miejsca</value>
+  </data>
+  <data name="Erst_den_offenen_Dialog_schlie_en_8c1400a7" xml:space="preserve">
+    <value>Najpierw zamknij otwarte okno dialogowe</value>
+  </data>
+  <data name="Kein_Ordner_offen_in_den_die_Dateien_geh_ren_3c539817" xml:space="preserve">
+    <value>Nie jest otwarty żaden folder, do którego trafią pliki</value>
+  </data>
+  <data name="Die_Bilder_hier_liegen_auf_einem_Server_Hochlade_fa8cc635" xml:space="preserve">
+    <value>Te obrazy są na serwerze. Przesyłać można tylko do folderu na tym komputerze.</value>
+  </data>
+  <data name="Datenordner_1446557a" xml:space="preserve">
+    <value>Folder danych</value>
+  </data>
+  <data name="Katalog_Vorschaubilder_Modelle_Erweiterungen_ges_d75a6513" xml:space="preserve">
+    <value>Tutaj znajdują się katalog, miniatury, modele, rozszerzenia, zapisane korekty, ulubione i listy wyszukiwania. Inne miejsce, na przykład drugi dysk lub udział sieciowy, zabiera wszystko przy następnym uruchomieniu.</value>
+  </data>
+  <data name="Zur_cknehmen_1651c015" xml:space="preserve">
+    <value>Cofnij</value>
+  </data>
+  <data name="Ordner_f_r_die_Daten_von_FerrumPix_w_hlen_49493664" xml:space="preserve">
+    <value>Wybierz folder na dane FerrumPix</value>
+  </data>
+  <data name="Die_Daten_liegen_schon_dort_fbeb1a0b" xml:space="preserve">
+    <value>Dane już tam są.</value>
+  </data>
+  <data name="Der_Ordner_der_Einstellungen_l_sst_sich_nicht_al_b1781d9e" xml:space="preserve">
+    <value>Folderu ustawień nie można użyć jako folderu danych.</value>
+  </data>
+  <data name="Der_Katalog_wird_gerade_von_0_benutzt_Der_Dateno_5ac02e22" xml:space="preserve">
+    <value>Katalog jest obecnie używany przez {0}. Folder danych można przenieść dopiero po zamknięciu tam FerrumPix.</value>
+  </data>
+  <data name="Datenordner_verschieben_92acb274" xml:space="preserve">
+    <value>Przenieść folder danych?</value>
+  </data>
+  <data name="Die_Daten_von_FerrumPix_0_ziehen_beim_n_chsten_S_9503f5ab" xml:space="preserve">
+    <value>Dane FerrumPix ({0}) zostaną przeniesione do {1} przy następnym uruchomieniu. Na tym samym dysku dzieje się to od razu, na inny są kopiowane i to uruchomienie trwa odpowiednio dłużej. Stare miejsce jest czyszczone dopiero, gdy wszystko dotrze.</value>
+  </data>
+  <data name="Vorhandenen_Datenordner_verwenden_23ee4612" xml:space="preserve">
+    <value>Użyć istniejącego folderu danych?</value>
+  </data>
+  <data name="In_0_liegt_schon_ein_Datenordner_von_FerrumPix_A_ee7e4ce9" xml:space="preserve">
+    <value>W {0} jest już folder danych FerrumPix. Od następnego uruchomienia FerrumPix pracuje z nim; dotychczasowe dane zostają w {1}.</value>
+  </data>
+  <data name="Verwenden_8590499d" xml:space="preserve">
+    <value>Użyj</value>
+  </data>
+  <data name="Beim_n_chsten_Start_verwendet_FerrumPix_den_Date_82e8fbec" xml:space="preserve">
+    <value>Przy następnym uruchomieniu FerrumPix użyje folderu danych w {0}.</value>
+  </data>
+  <data name="Beim_n_chsten_Start_zieht_der_Datenordner_nach_0_ce1e5936" xml:space="preserve">
+    <value>Przy następnym uruchomieniu folder danych zostanie przeniesiony do {0}.</value>
+  </data>
+  <data name="Datenordner_nicht_erreichbar_9b1a712e" xml:space="preserve">
+    <value>Folder danych jest niedostępny</value>
+  </data>
+  <data name="Der_Datenordner_0_ist_nicht_erreichbar_Bis_er_wi_a6ecc803" xml:space="preserve">
+    <value>Folder danych {0} jest niedostępny. Dopóki nie wróci, FerrumPix działa bez katalogu, a modeli, rozszerzeń i zapisanych korekt brakuje.</value>
+  </data>
+  <data name="Datenordner_nicht_umgezogen_3673729f" xml:space="preserve">
+    <value>Folder danych nie został przeniesiony</value>
+  </data>
+  <data name="Der_Datenordner_konnte_nicht_nach_0_umziehen_wei_59bf6cf5" xml:space="preserve">
+    <value>Nie udało się przenieść folderu danych do {0}, ponieważ brakuje miejsca. Wszystko pozostaje w dotychczasowym miejscu.</value>
+  </data>
+  <data name="Der_Datenordner_konnte_nicht_nach_0_umziehen_All_4af32b64" xml:space="preserve">
+    <value>Nie udało się przenieść folderu danych do {0}. Wszystko pozostaje w dotychczasowym miejscu; szczegóły są w dzienniku.</value>
+  </data>
+  <data name="Daten_nicht_vollst_ndig_umgezogen_e2dbe176" xml:space="preserve">
+    <value>Dane nie zostały przeniesione w całości</value>
+  </data>
+  <data name="FerrumPix_legt_seine_Daten_jetzt_gesammelt_in_0__97509d2e" xml:space="preserve">
+    <value>FerrumPix przechowuje teraz swoje dane razem w {0}. Części nie udało się tam przenieść i nadal jest używana ze starego miejsca. Przy następnym uruchomieniu FerrumPix spróbuje ponownie; szczegóły są w dzienniku.</value>
+  </data>
+  <data name="Katalog_wird_von_0_benutzt_78eb557d" xml:space="preserve">
+    <value>Katalog jest używany przez {0}</value>
+  </data>
+  <data name="FerrumPix_l_uft_auf_0_mit_demselben_Katalog_seit_97dbe250" xml:space="preserve">
+    <value>FerrumPix działa na {0} z tym samym katalogiem, od {1}. Dwa komputery nie mogą otwierać go jednocześnie. Dopóki {0} go nie zwolni, FerrumPix pracuje tutaj bez katalogu, a to, co w tej sesji trafiłoby do katalogu, nie zostanie zapisane. Jeśli FerrumPix nie działa już na {0}, na przykład po awarii, blokadę można przejąć.</value>
+  </data>
+  <data name="Sperre_bernehmen_14672502" xml:space="preserve">
+    <value>Przejmij blokadę</value>
+  </data>
+  <data name="Ohne_Katalog_weiter_ba43ea48" xml:space="preserve">
+    <value>Kontynuuj bez katalogu</value>
+  </data>
+  <data name="Sperre_bernommen_7d2f823d" xml:space="preserve">
+    <value>Blokada przejęta</value>
+  </data>
+  <data name="Der_Katalog_geh_rt_jetzt_diesem_Rechner_Bitte_Fe_f21858c6" xml:space="preserve">
+    <value>Katalog należy teraz do tego komputera. Uruchom ponownie FerrumPix, aby został otwarty.</value>
+  </data>
+  <data name="Der_Ordner_f_r_Anpassungen_ist_nicht_erreichbar__f22a0510" xml:space="preserve">
+    <value>Folder korekt jest niedostępny: {0}.</value>
+  </data>
+  <data name="Hier_liegen_die_im_Editor_gespeicherten_Anpassun_d58c017e" xml:space="preserve">
+    <value>Tutaj znajdują się korekty zapisane w edytorze, każda jako osobny plik, każdy folder jako prawdziwy folder. Folder należy do folderu danych i przenosi się razem z nim.</value>
+  </data>
 </root>

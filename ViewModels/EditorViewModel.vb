@@ -260,6 +260,11 @@ Namespace ViewModels
         ''' dort wieder Dunst, gilt sie weiter (Haze). Ein negativer Wert und jedes Laden eines
         ''' Rezepts vergessen sie.
         Private _hazeModelBeforeZero As Integer = -1
+        ''' Tonfassung der Sitzung (ImageAdjustments.ToneRuleVersion): beim Oeffnen und Zuruecksetzen
+        ''' die aktuelle, eine geladene Bearbeitung, in der sie wirkt, bringt ihre mit
+        ''' (ApplyAdjustments). Die Regler aendern sie nie; ins Rezept geht sie nur, wo sie wirkt
+        ''' (BuildAdjustmentsFromFields).
+        Private _toneRuleVersion As Integer = ImageAdjustments.CurrentToneRuleVersion
         Private _addNoise As Double = 0
         Private _structure As Double = 0
         Private _glow As Double = 0
@@ -19096,8 +19101,7 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>True, wenn der Ordner der Anpassungen nicht erreichbar ist. Die Liste ist dann
-        ''' leer, und <see cref="AdjustmentPresetFolderHint"/> nennt den Ordner und den Weg zur
-        ''' Einstellung.</summary>
+        ''' leer, und <see cref="AdjustmentPresetFolderHint"/> nennt den Ordner.</summary>
         Public ReadOnly Property IsAdjustmentPresetFolderUnreachable As Boolean
             Get
                 Return _adjustmentPresetFolderUnreachable
@@ -20903,6 +20907,8 @@ Namespace ViewModels
                                                     .RemoveMetadata = RemoveMetadataCommand,
                                                     .CopyPath = CopyPathCommand,
                                                     .ShowInFileManager = OpenFileManagerCommand,
+                                                    .Download = MenuCommands.BrowserDownload(
+                                                        Function() ContextItems.Where(AddressOf ContextMenuBuilder.IsDownloadable).Select(Function(i) i.FilePath)),
                                                     .EditWithGmic = If(GmicService.IsAvailable, EditWithGmicCommand, Nothing),
                                                     .RemovePhotoBackground = RemovePhotoBackgroundCommand,
                                                     .Delete = DeleteCurrentCommand})
@@ -25787,6 +25793,8 @@ Namespace ViewModels
                             IO.Path.GetFileName(targetPath))
                     End If
                     MarkDocumentSaved()
+                    ' Im Browser kommt die neue Datei als Angebot zum Herunterladen in die Seite.
+                    If saveAs AndAlso BrowserBridge.IsActive Then BrowserBridge.OfferDownload({targetPath})
                     ' Die Bildpunkte DIESER Datei tragen jetzt die Bearbeitung, die vorher als Rezept
                     ' daneben lag (Speichern in die Datei bei einem JPG mit Rezept). Das Rezept muss
                     ' weg, sonst kaeme derselbe Zuschnitt beim Neuoeffnen gleich darunter ein zweites
@@ -26560,6 +26568,7 @@ Namespace ViewModels
                 .CalibrationBlueSaturation = CSng(_calibrationBlueSaturation),
                 .CalibrationShadowTint = CSng(_calibrationShadowTint),
                 .Highlights = CSng(_highlights),
+                .ToneRuleVersion = If(_exposure > 0 AndAlso _highlights < 0, _toneRuleVersion, 0),
                 .ShadowsLevel = CSng(_shadowsLevel),
                 .Whites = CSng(_whites),
                 .Blacks = CSng(_blacks),
@@ -28161,6 +28170,10 @@ Namespace ViewModels
             _calibrationShadowTint = adj.CalibrationShadowTint
             ReadCorrectionsFrom(adj)
             _highlights = adj.Highlights
+            ' Wirkt die Tonfassung im Rezept, gilt seine; sonst bleibt die der Sitzung (beim Oeffnen
+            ' die aktuelle, siehe ResetAdjustmentsInternal). Rueckgaengig ueber einen Stand ohne
+            ' Wirkung hebt eine geladene Bearbeitung so nicht still auf die neue Fassung.
+            If adj.ToneRuleMatters() Then _toneRuleVersion = adj.ToneRuleVersion
             _shadowsLevel = adj.ShadowsLevel
             _whites = adj.Whites
             _blacks = adj.Blacks
@@ -28860,6 +28873,7 @@ Namespace ViewModels
             _haze = 0
             _hazeModel = 0
             _hazeModelBeforeZero = -1
+            _toneRuleVersion = ImageAdjustments.CurrentToneRuleVersion
             _addNoise = 0
             _structure = 0
             _glow = 0
@@ -30200,6 +30214,23 @@ Namespace ViewModels
             AddSelectionImageAnnotationAt(rendered.Path, x, y, widthPercent, heightPercent,
                                           IO.Path.GetFileNameWithoutExtension(filePath))
             NameHistoryStep(LocalizationService.T("Bild eingefügt"))
+        End Function
+
+        ''' <summary>Eine Datei, die im Browser auf die Buehne abgelegt wurde, als Ebene einsetzen.
+        ''' Derselbe Weg wie das Ablegen einer Datei aus dem Dateimanager
+        ''' (<see cref="InsertFileAsLayerAtAsync"/>), nur dass die Datei vorher in den Ordner fuer
+        ''' Ebenenbilder dieses Dokuments wandert (<see cref="CreateSelectionAssetTempPath"/>), wie ein
+        ''' Bild aus der Zwischenablage: sie hat sonst keinen Ort auf diesem Rechner, gehoert nicht in
+        ''' den Fotoordner, wird beim Speichern als .fpx eingebettet und beim Dokumentwechsel mit
+        ''' geraeumt. Im eigenen Unterordner, damit sie ihren Namen behaelt; die Ebene heisst danach.</summary>
+        Public Async Function InsertUploadedFileAsLayerAsync(uploadedPath As String, xPercent As Double, yPercent As Double) As Task
+            If Not CanInsertAsLayer(uploadedPath) Then Return
+            Dim assetFolder = IO.Path.Combine(IO.Path.GetDirectoryName(CreateSelectionAssetTempPath("upload")),
+                                              "upload_" & Guid.NewGuid().ToString("N"))
+            IO.Directory.CreateDirectory(assetFolder)
+            Dim kept = IO.Path.Combine(assetFolder, IO.Path.GetFileName(uploadedPath))
+            IO.File.Move(uploadedPath, kept)
+            Await InsertFileAsLayerAtAsync(kept, xPercent, yPercent)
         End Function
 
         ''' <summary>Das Bild, das der Betrachter von dieser Datei zeigt, in voller Aufloesung als
@@ -34645,6 +34676,8 @@ Namespace ViewModels
                 If p.Name = NameOf(ImageAdjustments.HazeModel) Then Continue For
                 ' Ebenso die Fassung der Koernung.
                 If p.Name = NameOf(ImageAdjustments.GrainModel) Then Continue For
+                ' Und die Tonfassung, unten nach Belichtung und Lichtern.
+                If p.Name = NameOf(ImageAdjustments.ToneRuleVersion) Then Continue For
                 Dim a = p.GetValue(before)
                 Dim b = p.GetValue(after)
                 If Equals(a, b) Then Continue For
@@ -34667,6 +34700,15 @@ Namespace ViewModels
             result.HazeModel = If(result.Haze <= 0, 0, If(after.Haze > 0 AndAlso k > 0.005, after.HazeModel, before.HazeModel))
             ' Dasselbe fuer das Korn: es rechnet in der Fassung des Presets, solange das Korn bringt.
             result.GrainModel = If(result.Grain <= 0, 0, If(after.Grain > 0 AndAlso k > 0.005, after.GrainModel, before.GrainModel))
+            ' Die Tonfassung: wo sie im Ergebnis wirkt, die des Presets, wenn sie dort wirkt, sonst die
+            ' des Stands davor, wenn sie dort wirkt, sonst die aktuelle.
+            If Not result.ToneRuleMatters() Then
+                result.ToneRuleVersion = 0
+            ElseIf after.ToneRuleMatters() AndAlso k > 0.005 Then
+                result.ToneRuleVersion = after.ToneRuleVersion
+            Else
+                result.ToneRuleVersion = ImageAdjustments.ToneRuleVersionOnOpen(before)
+            End If
             Return result
         End Function
 
@@ -34876,6 +34918,9 @@ Namespace ViewModels
         ''' öffentlichen Eigenschaften, damit Vorschau und Bindings genauso benachrichtigt werden wie bei
         ''' Handbedienung. Geometrie, Beschnitt, Objekte und Auswahl fasst es NICHT an.
         Private Sub ApplyLookAdjustments(look As ImageAdjustments)
+            ' Setzt der Look Belichtung oder Lichter, gilt seine Tonfassung (wirkt sie in ihm nicht,
+            ' die aktuelle): ein Look ist eine neue Einstellung. Vor den Reglern, die sofort rendern.
+            If look.Exposure <> 0 OrElse look.Highlights <> 0 Then _toneRuleVersion = ImageAdjustments.ToneRuleVersionOnOpen(look)
             Exposure = look.Exposure
             Brightness = look.Brightness
             Contrast = look.Contrast
