@@ -589,6 +589,7 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_title, value)
+                Me.RaisePropertyChanged(NameOf(WindowTitle))
             End Set
         End Property
 
@@ -765,6 +766,8 @@ Namespace ViewModels
             Editor = New EditorViewModel(Me)
             ' Bewertung, Favorit und Etikett: wer sie auch setzt, alle Ansichten ziehen nach.
             AddHandler LibraryService.Instance.AttributesChanged, AddressOf OnCatalogAttributesChanged
+            ' Das Anmeldefenster (MainWindowViewModelLock.vb).
+            InitializeAppLock()
 
             ' Gleich zu Anfang klarstellen, wer vorne steht: der Setter von CurrentMode meldet es
             ' danach bei jedem Wechsel, aber ein Start in der Galerie wechselt nichts.

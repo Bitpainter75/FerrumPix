@@ -424,6 +424,8 @@ Public Class App
             ' Der aus einem Motion Photo herausgeschriebene Film einer Sitzung, die nicht ordentlich
             ' endete, liegt noch im Cache der Anwendung: weg damit, im Hintergrund.
             System.Threading.Tasks.Task.Run(Sub() Services.MotionPhotoService.ClearClipCache())
+            ' Mit Kennwort beginnt die Sitzung gesperrt, vor dem ersten Bild des Fensters.
+            AppLockService.LockAtStart()
             Dim vm = New MainWindowViewModel(initialImagePath, initialFolderPath)
             Dim win = New MainWindow()
             win.DataContext = vm
@@ -456,17 +458,32 @@ Public Class App
     Private Sub BuildApplicationMenu(vm As MainWindowViewModel)
         Try
             Dim about As New NativeMenuItem(LocalizationService.T("Über FerrumPix"))
-            AddHandler about.Click, Sub() vm?.OpenSettings()
+            ' Gesperrt oeffnet das Menue nichts: die Einstellungen laegen sonst unsichtbar hinter
+            ' dem Anmeldefenster bereit.
+            AddHandler about.Click, Sub() If vm IsNot Nothing AndAlso Not vm.IsAppLocked Then vm.OpenSettings()
 
             Dim settings As New NativeMenuItem(LocalizationService.T("Einstellungen")) With {
                 .Gesture = New Avalonia.Input.KeyGesture(Avalonia.Input.Key.OemComma,
                                                          Avalonia.Input.KeyModifiers.Meta)}
-            AddHandler settings.Click, Sub() vm?.OpenSettings()
+            AddHandler settings.Click, Sub() If vm IsNot Nothing AndAlso Not vm.IsAppLocked Then vm.OpenSettings()
+
+            ' Sperren, nur mit Kennwort sichtbar (AppLockService).
+            Dim lockItem As New NativeMenuItem(LocalizationService.T("Sperren")) With {
+                .Gesture = New Avalonia.Input.KeyGesture(Avalonia.Input.Key.L, Avalonia.Input.KeyModifiers.Meta),
+                .IsVisible = vm IsNot Nothing AndAlso vm.CanLockApp}
+            AddHandler lockItem.Click, Sub() vm?.LockApp()
+            If vm IsNot Nothing Then
+                AddHandler vm.PropertyChanged,
+                    Sub(s, e)
+                        If e.PropertyName = NameOf(MainWindowViewModel.CanLockApp) Then lockItem.IsVisible = vm.CanLockApp
+                    End Sub
+            End If
 
             Dim menu As New NativeMenu()
             menu.Add(about)
             menu.Add(New NativeMenuItemSeparator())
             menu.Add(settings)
+            menu.Add(lockItem)
             NativeMenu.SetMenu(Me, menu)
         Catch ex As Exception
             ' Ein Menue ist kein Grund, den Start zu verlieren.

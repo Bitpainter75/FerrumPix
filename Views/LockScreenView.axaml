@@ -1,0 +1,73 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="FerrumPix.Views.LockScreenView">
+
+    <!-- DAS ANMELDEFENSTER ueber der gesperrten Anwendung (AppLockService). Der Grund ist DECKEND
+         und nicht abgedunkelt: unter dem gesperrten Fenster soll nichts zu sehen sein, auch nicht
+         in einer Vorschau der Taskleiste. Er faengt jeden Klick und jedes Ablegen ab; ein Druck
+         auf den freien Grund verschiebt das Fenster (die Kopfleiste liegt darunter). -->
+    <Border x:Name="LockBackground"
+            Background="{DynamicResource FP.Bg.Root}"
+            IsHitTestVisible="True"
+            PointerPressed="OnBackgroundPointerPressed">
+        <!-- Dieselbe Bauweise wie die erste Seite des Einrichtungsassistenten: Welcome.jpg als
+             HINTERGRUND eines Rahmens mit derselben Rundung (ein eigenes Bild malte seine Ecken
+             ueber den runden Rand), darueber ein Schleier in der Kartenfarbe, der unten deckt.
+             Das Bild traegt Logo und Schriftzug selbst, ein Logo daneben waere doppelt. -->
+        <Border Background="{DynamicResource FP.Bg.Elevated}"
+                CornerRadius="16"
+                BoxShadow="0 24 70 0 #B0000000"
+                Width="600" Height="440"
+                Margin="24"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                PointerPressed="OnCardPointerPressed">
+            <Panel>
+                <Border CornerRadius="16" IsHitTestVisible="False">
+                    <Border.Background>
+                        <ImageBrush Source="avares://FerrumPix/Assets/Welcome.jpg" Stretch="UniformToFill"/>
+                    </Border.Background>
+                </Border>
+                <Border CornerRadius="16" Background="{DynamicResource FP.Bg.Elevated}" Opacity="0.9" IsHitTestVisible="False">
+                    <Border.OpacityMask>
+                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                            <GradientStop Offset="0" Color="#00000000"/>
+                            <GradientStop Offset="0.5" Color="#00000000"/>
+                            <GradientStop Offset="0.64" Color="#FF000000"/>
+                            <GradientStop Offset="1" Color="#FF000000"/>
+                        </LinearGradientBrush>
+                    </Border.OpacityMask>
+                </Border>
+
+                <StackPanel VerticalAlignment="Bottom" Margin="56,0,56,30" Spacing="12">
+                    <TextBlock Text="FerrumPix ist gesperrt."
+                               FontSize="{DynamicResource FP.Font.Subtitle}"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"/>
+                    <!-- Kein Hinweis darauf, wie lang das Kennwort ist oder sein muss. ENTER
+                         entsperrt (OnPasswordKeyDown). -->
+                    <TextBox x:Name="PasswordBox"
+                             PasswordChar="•"
+                             PlaceholderText="Kennwort"
+                             Text="{Binding Password, Mode=TwoWay}"
+                             FontSize="{DynamicResource FP.Font.Body}"/>
+                    <Button Classes="accent"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Padding="12,8"
+                            Command="{Binding UnlockCommand}">Entsperren</Button>
+                    <!-- Die Zeile steht immer da und ist nur leer, damit das Feld nicht springt. -->
+                    <TextBlock Classes="no-translate"
+                               Text="{Binding ErrorText}"
+                               Foreground="{DynamicResource FP.Text.Danger}"
+                               FontSize="{DynamicResource FP.Font.Body}"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center"
+                               MinHeight="18"/>
+                </StackPanel>
+
+                <Border CornerRadius="16" BorderBrush="{DynamicResource FP.Border.Strong}" BorderThickness="1"
+                        IsHitTestVisible="False"/>
+            </Panel>
+        </Border>
+    </Border>
+</UserControl>

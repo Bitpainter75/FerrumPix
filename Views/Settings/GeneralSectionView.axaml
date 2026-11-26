@@ -5,6 +5,15 @@
              xmlns:vm="clr-namespace:FerrumPix.ViewModels"
              xmlns:views="clr-namespace:FerrumPix.Views"
              x:Class="FerrumPix.Views.Settings.GeneralSectionView">
+                    <!-- Die Rueckmeldung unter "Zugang": gedaempft, ein Fehler in der Warnfarbe. -->
+                    <UserControl.Styles>
+                        <Style Selector="TextBlock.access-status">
+                            <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+                        </Style>
+                        <Style Selector="TextBlock.access-status.error">
+                            <Setter Property="Foreground" Value="{DynamicResource FP.Text.Danger}"/>
+                        </Style>
+                    </UserControl.Styles>
                     <StackPanel Spacing="16">
                         <Border Height="180" BorderThickness="0" Padding="0, 20" Margin="-22,0,0,0" >
                             <Grid HorizontalAlignment="Center">
@@ -325,6 +334,97 @@
                                           OnContent=""
                                           OffContent=""
                                           VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- ZUGANG: das Anmeldefenster (AppLockService, SettingsViewModelAccess.vb).
+                             Nichts davon wirkt sofort: erst "Übernehmen", und mit gesetztem Kennwort
+                             nur mit diesem. -->
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,8,0,0"/>
+
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Zugang" Foreground="{DynamicResource FP.Text.Accent}" FontSize="{DynamicResource FP.Font.Heading}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Ein Kennwort für FerrumPix. Mit Kennwort erscheint beim Start, nach der eingestellten Zeit ohne Eingabe und mit STRG+L ein Anmeldefenster; im Browser ersetzt es die Anmeldung des Browsers. Das Kennwort schützt die laufende Anwendung, nicht die Fotos: die Dateien liegen weiter offen auf der Platte." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Mit Kennwort schützen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Ein vergessenes Kennwort lässt sich hier nicht zurückholen. Dann bei beendeter Anwendung den Eintrag AppLockPasswordHash aus der Datei settings.json löschen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding AccessProtectionWanted}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <TextBlock Text="Das Kennwort kommt aus der Angabe beim Start und lässt sich nur dort ändern."
+                                   IsVisible="{Binding AccessPasswordFromStart}"
+                                   Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding AccessShowsCurrentPassword}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Aktuelles Kennwort" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Jede Änderung am Zugang verlangt das aktuelle Kennwort." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <TextBox Grid.Column="1" Width="260" PasswordChar="•"
+                                     Text="{Binding AccessCurrentPassword, Mode=TwoWay}"
+                                     VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding AccessShowsNewPassword}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Neues Kennwort" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Mindestens 10 Zeichen mit Großbuchstaben, Kleinbuchstaben, Zahl und Sonderzeichen; ein Leerzeichen zählt als Sonderzeichen. Zweimal eingeben. Leer lassen, um nur die Sperrzeit zu ändern." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center" Width="260">
+                                <TextBox PasswordChar="•" PlaceholderText="Neues Kennwort"
+                                         Text="{Binding AccessNewPassword, Mode=TwoWay}"/>
+                                <TextBox PasswordChar="•" PlaceholderText="Neues Kennwort wiederholen"
+                                         Text="{Binding AccessNewPasswordRepeat, Mode=TwoWay}"/>
+                                <!-- Was noch fehlt, eine Regel je Zeile, beim Tippen. "Übernehmen" wird
+                                     erst aktiv, wenn alles erfuellt ist (CanApplyAccess). -->
+                                <TextBlock Classes="no-translate"
+                                           Text="{Binding AccessPasswordHints}"
+                                           IsVisible="{Binding AccessHasPasswordHints}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding AccessShowsIdle}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Sperren nach Inaktivität" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Ohne Taste und Maus sperrt sich FerrumPix nach dieser Zeit. Im Browser endet damit auch die Anmeldung." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding AccessIdleOptions}"
+                                      SelectedItem="{Binding SelectedAccessIdle, Mode=TwoWay}"
+                                      MinWidth="200"
+                                      VerticalAlignment="Center"
+                                      FontSize="{DynamicResource FP.Font.Body}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Classes="no-translate access-status"
+                                       Text="{Binding AccessStatusText}"
+                                       Classes.error="{Binding AccessStatusIsError}"
+                                       FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"
+                                       VerticalAlignment="Center" Margin="0,0,40,0"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <Button Classes="ghost" Padding="12,7"
+                                        IsVisible="{Binding AccessIsProtected}"
+                                        Command="{Binding LockNowCommand}">Jetzt sperren</Button>
+                                <Button Classes="accent" Padding="12,7"
+                                        Command="{Binding ApplyAccessCommand}">Übernehmen</Button>
+                            </StackPanel>
                         </Grid>
                     </StackPanel>
 </UserControl>

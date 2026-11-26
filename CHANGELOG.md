@@ -62,6 +62,16 @@
 - FerrumPix in the browser is now also available as a container image for Docker and Podman, for
   amd64 and arm64, so it can run on a home server without a screen.
 
+- FerrumPix in the browser can now also be used without HTTPS inside your home network, if you
+  switch it on on purpose: it then only answers devices at home, needs a password, and the page
+  shows that the connection is not encrypted. HTTPS stays the recommended way.
+
+- FerrumPix can now be protected with a password (Settings, General, Access). A sign-in window
+  then covers the app at start, after a time without use that you choose, and whenever you lock
+  it by hand. In the browser the same sign-in window replaces the
+  browser's own password prompt, each browser stays signed in until the app is locked, and a
+  container started with a password is protected from the first start.
+
 ### Fixes
 
 - The People menu in the gallery now says when named people are missing because they don't appear

@@ -94,6 +94,8 @@ Namespace Views
             AddHandler LocalizationService.LanguageChanged, Sub(s, e) ApplyLocalization()
             Me.AddHandler(InputElement.KeyDownEvent, AddressOf OnWindowKeyDown, RoutingStrategies.Tunnel)
             AddHandler PointerPressed, AddressOf OnWindowPointerPressed
+            ' Das Anmeldefenster: Zeit ohne Eingabe (MainWindowLock.vb).
+            InstallAppLockHooks()
             WireWindowChrome()
         End Sub
 
@@ -352,6 +354,8 @@ Namespace Views
                 EnsureDialogOverlays(vm)
                 ' Im Browser: wohin abgelegte Dateien gehen (MainWindowBrowserFiles.vb).
                 InstallBrowserFileHooks()
+                ' Gesperrt beim Start: das Anmeldefenster steht, bevor die Ansicht zu sehen ist.
+                UpdateLockScreenView(vm)
                 ShowCurrentContent()
                 ApplyFullscreenState()
                 ' Der erste SizeChanged kann vor dem DataContext liegen - dann bliebe die Breite
@@ -382,6 +386,8 @@ Namespace Views
                 EnsureDialogOverlays(TryCast(sender, MainWindowViewModel))
             ElseIf e.PropertyName = NameOf(MainWindowViewModel.SetupAssistant) Then
                 UpdateSetupAssistantView(TryCast(sender, MainWindowViewModel))
+            ElseIf e.PropertyName = NameOf(MainWindowViewModel.LockScreen) Then
+                UpdateLockScreenView(TryCast(sender, MainWindowViewModel))
             ElseIf e.PropertyName = NameOf(MainWindowViewModel.CurrentContent) OrElse
                    e.PropertyName = NameOf(MainWindowViewModel.CurrentMode) Then
                 ' OHNE Uebersetzungsdurchlauf: den braucht nur eine FRISCH gebaute Ansicht, und den
@@ -1183,6 +1189,12 @@ Namespace Views
             Try
                 Dim vm = TryCast(DataContext, MainWindowViewModel)
                 If vm Is Nothing Then Return
+
+                ' GESPERRT: Tasten nur fuer das Anmeldefenster, kein Kuerzel, kein Dialog
+                ' (MainWindowLock.vb). Ganz oben, vor jedem anderen Zweig.
+                If HandleLockedKey(vm, e) Then Return
+                ' STRG+L sperrt in jedem Modus, auch wenn ein Dialog offen ist; er wartet darunter.
+                If HandleLockShortcut(vm, e) Then Return
 
                 ' Waehrend ein Modell geladen oder ein Download abgebrochen wird, erreicht KEINE Taste
                 ' die Ansichten: hinter der Anzeige startete sonst STRG+R einen zweiten Ablauf, und X

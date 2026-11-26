@@ -997,6 +997,14 @@ Namespace Services
         ''' noch nicht kennt: so erscheint der Assistent nach dem Update genau einmal auch bei
         ''' bestehenden Installationen, mit deren Einstellungen vorausgewaehlt.</summary>
         Public Property SetupAssistantDone As Boolean = False
+        ''' <summary>Das Kennwort des Anmeldefensters, nur als Hash (AppLockService.HashPassword:
+        ''' Verfahren, Rundenzahl, Salz und Ergebnis in einer Zeile). Leer heisst: die Anwendung ist
+        ''' nicht geschuetzt. Das Kennwort selbst steht nirgends. Wer es vergessen hat, loescht
+        ''' diesen Eintrag, solange die Anwendung nicht laeuft.</summary>
+        Public Property AppLockPasswordHash As String = ""
+        ''' <summary>Nach so vielen Minuten ohne Eingabe sperrt sich die Anwendung; 0 heisst nie.
+        ''' Erlaubt sind 0, 5, 15, 30 und 60 (AppLockService.NormalizeIdleMinutes).</summary>
+        Public Property AppLockIdleMinutes As Integer = 0
         ''' <summary>Die Bewertungsleiste oben im Vollbild und in der Diashow, ab Werk an. Sie kommt
         ''' und geht mit der Bedienleiste unten; aus, bleibt sie ganz weg.</summary>
         Public Property FullscreenRatingBarVisible As Boolean = True

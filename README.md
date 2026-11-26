@@ -214,24 +214,30 @@ No window opens. FerrumPix tells you the address instead, `http://127.0.0.1:1450
 
 Leave the terminal open while you use it. FerrumPix runs in that terminal, and closing it ends FerrumPix; the page in the browser then stops reacting.
 
-If you want a sign-in in front of it, give it a password, and a user name if you like. The browser then asks for them before it shows anything:
+If you want a sign-in in front of it, give it a password. Every browser then sees FerrumPix's own sign-in window first, in the look of the app, and stays signed in until FerrumPix is locked again. The password is the same as the one in Settings, Access, and FerrumPix keeps it from then on, so the app stays protected even if you start it without it later. It needs at least 10 characters with an uppercase and a lowercase letter, a digit and a special character (a space counts); a weaker one is refused at start. The user name is only for tools that sign in by themselves:
 
 ```
-ferrumpix --browser --browser-user=anna --browser-password=secret
+ferrumpix --browser --browser-user=anna --browser-password=Tea-Time-42
 ```
 
 To reach it from another device, such as a tablet or a laptop in the same network, one more thing is needed. FerrumPix does not encrypt the connection itself, and a password travelling through the network unprotected could be read by anyone listening. So it only lets other devices in through a reverse proxy that provides HTTPS, the kind of small web server many people already run in front of their home services. Tell FerrumPix that the proxy is there, and a password becomes mandatory:
 
 ```
-ferrumpix --browser --browser-tls-proxy --browser-user=anna --browser-password=secret
+ferrumpix --browser --browser-tls-proxy --browser-user=anna --browser-password=Tea-Time-42
 ```
 
 If you start it for other devices without that, FerrumPix does not start and tells you why. That is on purpose: it is better to be told once than to find out later that your password was readable.
 
+HTTPS is the recommended way. If you only use FerrumPix at home and trust your network, you can also allow plain HTTP on purpose. FerrumPix then only answers devices in your home network, insists on a password, and the page reminds you that the connection is not encrypted:
+
+```
+ferrumpix --browser --browser-allow-http --browser-bind=0.0.0.0:14500 --browser-password=Tea-Time-42
+```
+
 Everything you can pass on the command line can also come from the environment, which is handy for a service or a container and keeps the password out of the list of running programs:
 
 ```
-env FERRUMPIX_BROWSER_USER=anna FERRUMPIX_BROWSER_PASSWORD=secret ferrumpix --browser
+env FERRUMPIX_BROWSER_USER=anna FERRUMPIX_BROWSER_PASSWORD=Tea-Time-42 ferrumpix --browser
 ```
 
 If you installed FerrumPix from Flathub, it works the same way. What you would write after `ferrumpix` goes at the end of the Flatpak command, and settings from the environment are handed in with `--env`:
@@ -241,17 +247,18 @@ flatpak run io.github.bitpainter75.ferrumpix --browser
 ```
 
 ```
-flatpak run --env=FERRUMPIX_BROWSER_USER=anna --env=FERRUMPIX_BROWSER_PASSWORD=secret io.github.bitpainter75.ferrumpix --browser
+flatpak run --env=FERRUMPIX_BROWSER_USER=anna --env=FERRUMPIX_BROWSER_PASSWORD=Tea-Time-42 io.github.bitpainter75.ferrumpix --browser
 ```
 
 | On the command line | In the environment | What it does |
 |---|---|---|
 | `--browser` | | shows FerrumPix in the browser instead of a window |
 | `--browser-bind=127.0.0.1:8080` | `FERRUMPIX_BROWSER_BIND` | the address and port to listen on |
-| `--browser-user=anna` | `FERRUMPIX_BROWSER_USER` | the user name for the sign-in |
-| `--browser-password=secret` | `FERRUMPIX_BROWSER_PASSWORD` | the password for the sign-in |
+| `--browser-user=anna` | `FERRUMPIX_BROWSER_USER` | a user name, only for tools that sign in by themselves |
+| `--browser-password=Tea-Time-42` | `FERRUMPIX_BROWSER_PASSWORD` | the password for the sign-in window |
 | `--browser-tls-proxy` | `FERRUMPIX_BROWSER_TLS_PROXY=1` | a reverse proxy with HTTPS stands in front |
 | `--browser-proxy-address=192.168.1.2` | `FERRUMPIX_BROWSER_PROXY_ADDRESS` | where that proxy is, if it runs on a different computer |
+| `--browser-allow-http` | `FERRUMPIX_BROWSER_ALLOW_HTTP=1` | plain HTTP for devices in the home network, with a password |
 
 For a home server there is also a container image for Docker and Podman, for both amd64 and arm64 machines. Your photo folders go in under `/photos`, and everything FerrumPix keeps for itself goes into one volume:
 
@@ -260,7 +267,7 @@ docker run -d -p 127.0.0.1:14501:14500 -e FERRUMPIX_BROWSER_LOCAL_FORWARD=1 \
   -v ferrumpix-data:/data -v ~/Pictures:/photos/Pictures ghcr.io/bitpainter75/ferrumpix
 ```
 
-That keeps it on the server itself, at `http://127.0.0.1:14501`. For other devices the same rule as above applies: put a reverse proxy with HTTPS in front, tell FerrumPix where it is, and give it a password.
+That keeps it on the server itself, at `http://127.0.0.1:14501`. For other devices the same rule as above applies: put a reverse proxy with HTTPS in front, tell FerrumPix where it is, and give it a password, or allow plain HTTP for your home network as described above.
 
 Pictures travel both ways: drop files onto the page to put them into the folder you are looking at, or onto the picture in the editor to add them as a layer, and Download in the right-click menu brings pictures, and your exports, to the device you sit at.
 
@@ -275,6 +282,8 @@ The interface speaks German, English, Dutch, Swedish, Danish, Norwegian, Finnish
 Gallery and editor can be set up to match how you work: what a double-click opens, which details appear under a gallery tile, which tool the editor starts with, the order of the tool bar, which side the adjustment panel sits on, whether its scroll bar is always shown and whether it offers buttons to step to the next tool, whether the bottom bar is shown in gallery, viewer and editor, a default format for saving, which adjustment groups you want to see at all, and a compact mode that puts all adjustments into one panel. RAW development has its own settings: the base brightness per camera model, the lens correction, and which method turns the sensor data into a full picture (AHD, DCB or PPG).
 
 A drawing tablet setting makes buttons and menu entries act the moment the pen touches down instead of when it lifts, for pens that can drag a slider but press nothing. A trackpad mode adds gestures for laptops: pinch to zoom in the viewer, swipe to the next picture, and drag to move around an enlarged one.
+
+Under *Access* FerrumPix can be protected with a password. A sign-in window then covers it at start, after a time without use that you choose, and whenever you lock it yourself; in the browser it takes the place of the browser's own sign-in. The password protects the running app, not the photo files on the disk.
 
 The catalogue with ratings, keywords, people and places, the settings, favourites and saved searches can be backed up into a ZIP file and restored, each part on its own; server passwords only go in if you want them to.
 

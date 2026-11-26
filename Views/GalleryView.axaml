@@ -2185,6 +2185,24 @@
                                        VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
+                    <!-- Sperren: zeigt das Anmeldefenster (AppLockService). Nur mit Kennwort da
+                         (UpdateLockAppButton, beim Anhaengen und bei jedem Betreten der Galerie;
+                         geaendert wird der Schutz nur in den Einstellungen). Dieselbe Wirkung hat
+                         STRG+L in jedem Modus. -->
+                    <Button x:Name="LockAppButton"
+                            Classes="ghost"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Padding="8,7"
+                            IsVisible="False"
+                            Click="OnLockAppClick">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/lock-simple.svg"
+                                           Width="20" Height="20"/>
+                            <TextBlock Text="Sperren"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                     <!-- Eine Stufe groesser als die uebrigen Nebentexte (Small statt Caption): die
                          Zeile steht am unteren Rand der Leiste, in gedaempfter Farbe, und war in
                          Caption kaum zu lesen. Weiter ueber die Ressource und nicht als feste

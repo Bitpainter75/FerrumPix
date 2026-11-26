@@ -40,7 +40,8 @@ Namespace Views
 
         Private Function ResolveBrowserUpload(target As Window, point As Point?) As BrowserUploadTarget
             Dim vm = TryCast(DataContext, MainWindowViewModel)
-            If vm Is Nothing Then Return Nothing
+            ' Gesperrt kommt nichts hinein, auch nicht ueber eine noch offene Seite.
+            If vm Is Nothing OrElse vm.IsAppLocked Then Return Nothing
             Select Case vm.CurrentMode
                 Case AppMode.Editor
                     Dim editor = vm.Editor

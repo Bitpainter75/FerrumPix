@@ -12898,4 +12898,133 @@
   <data name="Im_Editor_ist_inzwischen_ein_anderes_Bild_offen__31ee6a86" xml:space="preserve">
     <value>Editorissa on nyt auki toinen kuva, tiedostoa ei lisätty</value>
   </data>
+  <data name="Unverschl_sselte_Verbindung_im_Heimnetz_5e258534" xml:space="preserve">
+    <value>Salaamaton yhteys kotiverkossa</value>
+  </data>
+  <data name="Kennwort_und_Bilder_gehen_lesbar_durch_das_Netz__7d04c297" xml:space="preserve">
+    <value>Salasana ja kuvat kulkevat verkossa luettavassa muodossa. Käytä HTTPS:ää kodin ulkopuolelta.</value>
+  </data>
+  <data name="FerrumPix_ist_gesperrt_af3ccc36" xml:space="preserve">
+    <value>FerrumPix on lukittu.</value>
+  </data>
+  <data name="Kennwort_834162a9" xml:space="preserve">
+    <value>Salasana</value>
+  </data>
+  <data name="Entsperren_03df2616" xml:space="preserve">
+    <value>Avaa lukitus</value>
+  </data>
+  <data name="Sperren_und_das_Anmeldefenster_zeigen_nur_mit_Ke_980f4874" xml:space="preserve">
+    <value>Lukitse ja näytä kirjautumisikkuna (vain salasanalla, katso Asetukset, Käyttöoikeus)</value>
+  </data>
+  <data name="STRG_L_7e7e1b77" xml:space="preserve">
+    <value>CTRL+L</value>
+  </data>
+  <data name="Zugang_c4f24d7a" xml:space="preserve">
+    <value>Käyttöoikeus</value>
+  </data>
+  <data name="Ein_Kennwort_f_r_FerrumPix_Mit_Kennwort_erschein_2fdf1d3a" xml:space="preserve">
+    <value>Salasana FerrumPixille. Salasanan kanssa kirjautumisikkuna näkyy käynnistettäessä, asetetun ajan jälkeen ilman syötettä ja painettaessa CTRL+L; selaimessa se korvaa selaimen oman kirjautumisen. Salasana suojaa käynnissä olevaa sovellusta, ei kuvia: tiedostot ovat edelleen luettavissa levyllä.</value>
+  </data>
+  <data name="Mit_Kennwort_sch_tzen_eaa7dfc6" xml:space="preserve">
+    <value>Suojaa salasanalla</value>
+  </data>
+  <data name="Ein_vergessenes_Kennwort_l_sst_sich_hier_nicht_z_d2d24926" xml:space="preserve">
+    <value>Unohtunutta salasanaa ei voi palauttaa täällä. Poista silloin merkintä AppLockPasswordHash tiedostosta settings.json sovelluksen ollessa suljettuna.</value>
+  </data>
+  <data name="Das_Kennwort_kommt_aus_der_Angabe_beim_Start_und_8a2c0a0f" xml:space="preserve">
+    <value>Salasana tulee käynnistysparametreista, ja sen voi muuttaa vain siellä.</value>
+  </data>
+  <data name="Aktuelles_Kennwort_16bce207" xml:space="preserve">
+    <value>Nykyinen salasana</value>
+  </data>
+  <data name="Jede_nderung_am_Zugang_verlangt_das_aktuelle_Ken_154f0f80" xml:space="preserve">
+    <value>Jokainen käyttöoikeuden muutos vaatii nykyisen salasanan.</value>
+  </data>
+  <data name="Neues_Kennwort_986990ac" xml:space="preserve">
+    <value>Uusi salasana</value>
+  </data>
+  <data name="Neues_Kennwort_wiederholen_a24b73aa" xml:space="preserve">
+    <value>Toista uusi salasana</value>
+  </data>
+  <data name="Sperren_nach_Inaktivit_t_0cf91592" xml:space="preserve">
+    <value>Lukitse käyttämättömyyden jälkeen</value>
+  </data>
+  <data name="Ohne_Taste_und_Maus_sperrt_sich_FerrumPix_nach_d_4d0f0d32" xml:space="preserve">
+    <value>Ilman näppäimistön tai hiiren syötettä FerrumPix lukittuu tämän ajan jälkeen. Selaimessa myös kirjautuminen päättyy silloin.</value>
+  </data>
+  <data name="Jetzt_sperren_e57bd532" xml:space="preserve">
+    <value>Lukitse nyt</value>
+  </data>
+  <data name="Nie_16926ab7" xml:space="preserve">
+    <value>Ei koskaan</value>
+  </data>
+  <data name="Nach_0_Minuten_e9b13a64" xml:space="preserve">
+    <value>{0} minuutin jälkeen</value>
+  </data>
+  <data name="Bitte_das_Kennwort_eingeben_7f0e107f" xml:space="preserve">
+    <value>Syötä salasana.</value>
+  </data>
+  <data name="Das_Kennwort_ist_falsch_8464f610" xml:space="preserve">
+    <value>Salasana on väärä.</value>
+  </data>
+  <data name="Zu_viele_Fehlversuche_Bitte_in_0_Sekunden_erneut_e41e47a8" xml:space="preserve">
+    <value>Liian monta epäonnistunutta yritystä. Yritä uudelleen {0} sekunnin kuluttua.</value>
+  </data>
+  <data name="Bitte_das_aktuelle_Kennwort_eingeben_e1de5bd7" xml:space="preserve">
+    <value>Syötä nykyinen salasana.</value>
+  </data>
+  <data name="Das_aktuelle_Kennwort_ist_falsch_81f32d87" xml:space="preserve">
+    <value>Nykyinen salasana on väärä.</value>
+  </data>
+  <data name="ber_das_Netz_braucht_FerrumPix_ein_Kennwort_Der__d1d1501d" xml:space="preserve">
+    <value>Verkon kautta FerrumPix tarvitsee salasanan. Suojaus pysyy päällä.</value>
+  </data>
+  <data name="Der_Schutz_mit_Kennwort_ist_ausgeschaltet_e73eec60" xml:space="preserve">
+    <value>Salasanasuojaus on pois päältä.</value>
+  </data>
+  <data name="Die_beiden_neuen_Kennw_rter_stimmen_nicht_berein_f65b2dc0" xml:space="preserve">
+    <value>Kaksi uutta salasanaa eivät täsmää.</value>
+  </data>
+  <data name="Bitte_ein_neues_Kennwort_eingeben_8a598225" xml:space="preserve">
+    <value>Syötä uusi salasana.</value>
+  </data>
+  <data name="Gespeichert_f6654de4" xml:space="preserve">
+    <value>Tallennettu.</value>
+  </data>
+  <data name="Das_neue_Kennwort_gilt_ab_sofort_5557cf43" xml:space="preserve">
+    <value>Uusi salasana on voimassa heti.</value>
+  </data>
+  <data name="Die_Anwendung_ist_jetzt_mit_einem_Kennwort_gesch_62307451" xml:space="preserve">
+    <value>Sovellus on nyt suojattu salasanalla.</value>
+  </data>
+  <data name="Die_nderung_lie_sich_nicht_speichern_634f13d3" xml:space="preserve">
+    <value>Muutosta ei voitu tallentaa.</value>
+  </data>
+  <data name="Die_Anmeldung_ist_fehlgeschlagen_b68a9fd0" xml:space="preserve">
+    <value>Kirjautuminen epäonnistui.</value>
+  </data>
+  <data name="Abmelden_7e324c5c" xml:space="preserve">
+    <value>Kirjaudu ulos</value>
+  </data>
+  <data name="Mindestens_10_Zeichen_mit_Gro_buchstaben_Kleinbu_6da2d56e" xml:space="preserve">
+    <value>Vähintään 10 merkkiä, joissa isoja ja pieniä kirjaimia, numero ja erikoismerkki; välilyönti lasketaan erikoismerkiksi. Syötä se kahdesti. Jätä tyhjäksi, jos haluat muuttaa vain lukitusaikaa.</value>
+  </data>
+  <data name="Die_Wiederholung_stimmt_noch_nicht_mit_dem_neuen_eaa3a18a" xml:space="preserve">
+    <value>Toisto ei vielä vastaa uutta salasanaa.</value>
+  </data>
+  <data name="Noch_n_tig_mindestens_0_Zeichen_cc8d66aa" xml:space="preserve">
+    <value>Vielä tarvitaan: vähintään {0} merkkiä.</value>
+  </data>
+  <data name="Noch_n_tig_ein_Gro_buchstabe_4b2000f9" xml:space="preserve">
+    <value>Vielä tarvitaan: iso kirjain.</value>
+  </data>
+  <data name="Noch_n_tig_ein_Kleinbuchstabe_37b79cf1" xml:space="preserve">
+    <value>Vielä tarvitaan: pieni kirjain.</value>
+  </data>
+  <data name="Noch_n_tig_eine_Zahl_bb860bf6" xml:space="preserve">
+    <value>Vielä tarvitaan: numero.</value>
+  </data>
+  <data name="Noch_n_tig_ein_Sonderzeichen_auch_ein_Leerzeiche_c0e66159" xml:space="preserve">
+    <value>Vielä tarvitaan: erikoismerkki; myös välilyönti käy.</value>
+  </data>
 </root>

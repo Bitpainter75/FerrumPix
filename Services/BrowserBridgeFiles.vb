@@ -131,7 +131,7 @@ Namespace Services
         ''' <summary>Die Texte der Seite in der Sprache der Anwendung. Sie stehen hier und nicht in
         ''' der Seite, damit sie durch dieselbe Uebersetzung gehen wie jeder andere Text.</summary>
         Private Shared Function PageTexts() As Dictionary(Of String, String)
-            Return New Dictionary(Of String, String) From {
+            Dim texts = New Dictionary(Of String, String) From {
                 {"dropHere", LocalizationService.T("Dateien zum Hochladen hier ablegen")},
                 {"upload", LocalizationService.T("Dateien hochladen")},
                 {"cancel", LocalizationService.T("Abbrechen")},
@@ -145,6 +145,15 @@ Namespace Services
                 {"ready", LocalizationService.T("Bereit zum Herunterladen")},
                 {"tooLarge", MaxUploadText()},
                 {"maxBytes", MaxUploadBytes.ToString(CultureInfo.InvariantCulture)}}
+            ' Der Hinweis steht nur im unverschluesselten Betrieb im Heimnetz in der Seite; fehlt
+            ' er, zeigt die Seite nichts.
+            If _allowHttp Then
+                texts("httpNotice") = LocalizationService.T("Unverschlüsselte Verbindung im Heimnetz")
+                texts("httpNoticeDetail") = LocalizationService.T("Kennwort und Bilder gehen lesbar durch das Netz. Für den Zugriff von unterwegs HTTPS verwenden.")
+            End If
+            ' Abmelden nur mit Kennwort; ohne gibt es keine Sitzung (BrowserBridgeSessions.vb).
+            If NeedsSignIn Then texts("logout") = LocalizationService.T("Abmelden")
+            Return texts
         End Function
 
         Private Shared Function PageTextsJson() As String
@@ -168,10 +177,9 @@ Namespace Services
             ' gelesen ist, laege der Rest sonst auf der Verbindung, und die naechste Anfrage darauf
             ' hinge oder laese ihn als ihren Kopf.
             context.Response.KeepAlive = False
-            If Not IsSignedInByHeader(request) Then
-                Await Task.Delay(1000)
+            ' Sitzung oder, fuer Werkzeuge, Basic (BrowserBridgeSessions.vb). Nie WWW-Authenticate.
+            If Not IsSignedIn(context) Then
                 context.Response.StatusCode = 401
-                context.Response.Headers("WWW-Authenticate") = $"Basic realm=""{Realm}"", charset=""UTF-8"""
                 context.Response.Close()
                 Return
             End If
@@ -317,24 +325,6 @@ Namespace Services
             End If
             Await WriteResultAsync(context, 200, Path.GetFileName(finalPath), Nothing)
             Return finalPath
-        End Function
-
-        ''' <summary>Die Anmeldung des Hochladens, aus dem Kopf Authorization gelesen. Der Listener
-        ''' prueft sie fuer diesen Weg nicht selbst (siehe Start), dieselbe Regel gilt trotzdem:
-        ''' ohne gesetztes Kennwort keine Anmeldung, sonst Kennwort und, wenn gesetzt, Name.</summary>
-        Private Shared Function IsSignedInByHeader(request As HttpListenerRequest) As Boolean
-            If _password.Length = 0 Then Return True
-            Dim header = request.Headers("Authorization")
-            If String.IsNullOrEmpty(header) OrElse Not header.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase) Then Return False
-            Dim decoded As String
-            Try
-                decoded = Encoding.UTF8.GetString(Convert.FromBase64String(header.Substring(6).Trim()))
-            Catch ex As FormatException
-                Return False
-            End Try
-            Dim separator = decoded.IndexOf(":"c)
-            If separator < 0 Then Return False
-            Return CredentialsMatch(decoded.Substring(0, separator), decoded.Substring(separator + 1))
         End Function
 
         ''' <summary>Liest genau <paramref name="length"/> Bytes in die Teildatei. False, wenn die
@@ -671,9 +661,7 @@ Namespace Services
         Private Shared Async Function HandleDownloadAsync(context As HttpListenerContext) As Task
             Dim request = context.Request
             If Not IsSignedIn(context) Then
-                Await Task.Delay(1000)
                 context.Response.StatusCode = 401
-                context.Response.Headers("WWW-Authenticate") = $"Basic realm=""{Realm}"", charset=""UTF-8"""
                 context.Response.Close()
                 Return
             End If

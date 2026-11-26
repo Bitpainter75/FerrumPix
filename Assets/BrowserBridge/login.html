@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="__FERRUMPIX_LANG__">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>FerrumPix</title>
+<!-- Das Anmeldefenster im Browser, die Gegenstelle zu Services/BrowserBridgeSessions.vb. Es sieht
+     aus wie das Anmeldefenster der Anwendung (Views/LockScreenView.axaml): Welcome.jpg als
+     Hintergrund der Karte, unten ein Schleier in der Kartenfarbe, darauf Feld und Knopf. Farben
+     und Texte setzt der Server beim Ausliefern ein, aus dem Erscheinungsbild und der Sprache der
+     Anwendung. Alles steht in dieser Datei; nachgeladen wird nur das Bild, von demselben Server.
+     Skript und Stil tragen eine Kennung je Auslieferung (nonce), der Kopf Content-Security-Policy
+     laesst nichts anderes zu. -->
+<style nonce="__FERRUMPIX_NONCE__">
+  :root { __FERRUMPIX_COLORS__ }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--root); color: var(--text); font: 14px/1.4 system-ui, "Segoe UI", Cantarell, sans-serif;
+         display: flex; align-items: center; justify-content: center; }
+  .card { position: relative; width: min(600px, calc(100vw - 32px)); height: 440px; border-radius: 16px; overflow: hidden;
+          background: var(--elevated) url("/login/welcome.jpg") center / cover no-repeat;
+          box-shadow: 0 24px 70px rgba(0, 0, 0, 0.69); border: 1px solid var(--border); box-sizing: border-box; }
+  .veil { position: absolute; inset: 0; background: var(--elevated); opacity: 0.9;
+          -webkit-mask-image: linear-gradient(to bottom, transparent 0%, transparent 50%, #000 64%, #000 100%);
+          mask-image: linear-gradient(to bottom, transparent 0%, transparent 50%, #000 64%, #000 100%); }
+  form { position: absolute; left: 56px; right: 56px; bottom: 30px; display: flex; flex-direction: column; gap: 12px; margin: 0; }
+  h1 { margin: 0; font-size: 15px; font-weight: 600; text-align: center; }
+  input { font: inherit; color: var(--text); background: var(--input); border: 1px solid var(--border-normal); border-radius: 8px;
+          padding: 7px 12px; outline: none; caret-color: var(--accent); }
+  input:focus { border-color: var(--accent); }
+  button { font: inherit; font-weight: 600; color: var(--accent); background: transparent; border: 1.5px solid var(--accent);
+           border-radius: 6px; padding: 8px 12px; cursor: pointer; }
+  button:hover { background: var(--elevated); }
+  button:disabled { opacity: 0.6; cursor: default; }
+  #error { min-height: 18px; color: var(--danger); text-align: center; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="veil"></div>
+  <form id="login" autocomplete="on">
+    <h1 id="title"></h1>
+    <input id="password" type="password" name="password" autocomplete="current-password" required autofocus>
+    <button id="unlock" type="submit"></button>
+    <div id="error" role="alert"></div>
+  </form>
+</div>
+<script nonce="__FERRUMPIX_NONCE__">
+'use strict';
+const texts = __FERRUMPIX_LOGIN_TEXTS__;
+const form = document.getElementById('login');
+const password = document.getElementById('password');
+const unlock = document.getElementById('unlock');
+const error = document.getElementById('error');
+document.getElementById('title').textContent = texts.title;
+password.placeholder = texts.password;
+password.setAttribute('aria-label', texts.password);
+unlock.textContent = texts.unlock;
+
+// Angemeldet wird mit einer eigenen Anfrage und JSON: eine fremde Seite kann so keinen Versuch
+// abschicken, ohne dass der Browser vorher beim Server nachfragt, und der Server prueft die
+// Herkunft ausserdem selbst. Bei Erfolg setzt der Server das Sitzungs-Cookie, und die Seite laedt
+// neu: dann kommt die Anwendung.
+form.addEventListener('submit', async event => {
+  event.preventDefault();
+  if (password.value.length === 0) {
+    error.textContent = texts.empty;
+    return;
+  }
+  unlock.disabled = true;
+  error.textContent = '';
+  try {
+    const response = await fetch('/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: password.value }),
+      credentials: 'same-origin',
+      cache: 'no-store'
+    });
+    let answer = {};
+    try { answer = await response.json(); } catch (ignored) { }
+    if (response.ok && answer.ok) {
+      location.replace('/');
+      return;
+    }
+    error.textContent = answer.error || texts.failed;
+  } catch (ignored) {
+    error.textContent = texts.failed;
+  } finally {
+    password.value = '';
+    unlock.disabled = false;
+    password.focus();
+  }
+});
+password.focus();
+</script>
+</body>
+</html>

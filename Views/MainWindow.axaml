@@ -3,7 +3,7 @@
         xmlns:icons="clr-namespace:FerrumPix.Controls"
         xmlns:views="clr-namespace:FerrumPix.Views"
         x:Class="FerrumPix.Views.MainWindow"
-        Title="{Binding Title}"
+        Title="{Binding WindowTitle}"
         Width="1280" Height="800"
         MinWidth="800" MinHeight="600"
         CanResize="True"
@@ -192,6 +192,11 @@
                  Standard-Dialog-Overlay (500), damit Meldungen wie "Drucken fehlgeschlagen"
                  immer davor liegen statt dahinter zu verschwinden. -->
             <ContentControl x:Name="PrintDialogOverlayHost" ZIndex="499"/>
+
+            <!-- Das Anmeldefenster (LockScreenView, AppLockService). UEBER allem, auch ueber den
+                 Dialogen und den Fensterknoepfen: gesperrt ist nichts von der Anwendung zu sehen
+                 und zu bedienen. Ein Dialog, der waehrenddessen aufgeht, wartet darunter. -->
+            <ContentControl x:Name="LockScreenHost" ZIndex="900" IsVisible="False"/>
 
             <!-- Die Knoepfe liegen NICHT in der Leiste, sondern darueber im Fenstergitter - der
                  obere Rand haelt sie in ihrer Mitte. Bei einer Leiste von 32 und Knoepfen von 24

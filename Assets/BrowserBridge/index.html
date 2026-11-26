@@ -17,6 +17,12 @@
                   border: 1px solid #2A333C; border-right: none; border-radius: 8px 0 0 8px; background: #192128;
                   color: #E7ECF0; opacity: 0.45; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   #uploadButton:hover, #uploadButton:focus-visible { opacity: 1; }
+  /* Abmelden, nur mit Kennwort: unter dem Knopf zum Hochladen, in derselben Art. */
+  #logoutButton { right: 0; top: calc(50% + 32px); width: 26px; height: 34px; padding: 0;
+                  border: 1px solid #2A333C; border-right: none; border-radius: 8px 0 0 8px; background: #192128;
+                  color: #E7ECF0; opacity: 0.45; cursor: pointer; display: none; align-items: center; justify-content: center; }
+  #logoutButton.on { display: flex; }
+  #logoutButton:hover, #logoutButton:focus-visible { opacity: 1; }
   #panel { right: 16px; bottom: 16px; width: min(380px, calc(100vw - 32px)); max-height: 60vh; display: none;
            flex-direction: column; background: #192128; border: 1px solid #2A333C; border-radius: 10px;
            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5); overflow: hidden; }
@@ -40,6 +46,16 @@
   .offer { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #192128;
            border: 1px solid #2A333C; border-radius: 10px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5); }
   .offer span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Unverschluesselt im Heimnetz: ein dezenter Hinweis oben in der Mitte, ueber der Kopfleiste.
+     Nach ein paar Sekunden tritt er zurueck, bleibt aber sichtbar. */
+  #httpNotice { top: 6px; left: 50%; transform: translateX(-50%); display: none; align-items: center; gap: 6px;
+                padding: 3px 10px; font-size: 12px; background: #192128; border: 1px solid #2A333C;
+                border-radius: 999px; color: #E7ECF0; opacity: 0.9; transition: opacity 1.5s; white-space: nowrap;
+                max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; }
+  #httpNotice.on { display: flex; }
+  #httpNotice.quiet { opacity: 0.45; }
+  #httpNotice:hover { opacity: 1; }
+  #httpNotice svg { flex: none; color: #F08A1A; }
 </style>
 </head>
 <body>
@@ -48,6 +64,9 @@
 <button id="uploadButton" class="fp-layer" type="button">
   <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M228 152v56a20 20 0 0 1-20 20H48a20 20 0 0 1-20-20v-56a12 12 0 0 1 24 0v52h152v-52a12 12 0 0 1 24 0ZM96.49 88.49 116 69v83a12 12 0 0 0 24 0V69l19.51 19.52a12 12 0 1 0 17-17l-40-40a12 12 0 0 0-17 0l-40 40a12 12 0 1 0 17 17Z"/></svg>
 </button>
+<button id="logoutButton" class="fp-layer" type="button">
+  <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M116 216a12 12 0 0 1-12 12H48a20 20 0 0 1-20-20V48a20 20 0 0 1 20-20h56a12 12 0 0 1 0 24H52v152h52a12 12 0 0 1 12 12Zm108.49-96.49-40-40a12 12 0 0 0-17 17L187 116h-83a12 12 0 0 0 0 24h83l-19.52 19.51a12 12 0 0 0 17 17l40-40a12 12 0 0 0 .01-17Z"/></svg>
+</button>
 <input id="filePicker" type="file" multiple hidden>
 <div id="panel" class="fp-layer">
   <header><span id="panelTitle"></span><button id="panelCancel" class="fp-button" type="button"></button><button id="panelClose" class="fp-button" type="button"></button></header>
@@ -55,6 +74,10 @@
   <div id="overall" class="bar"><div></div></div>
 </div>
 <div id="offers" class="fp-layer"></div>
+<div id="httpNotice" class="fp-layer" role="status">
+  <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M208 76h-84V56a28 28 0 0 1 54.39-9.37 12 12 0 1 0 22.62-8A52 52 0 0 0 100 56v20H48a20 20 0 0 0-20 20v112a20 20 0 0 0 20 20h160a20 20 0 0 0 20-20V96a20 20 0 0 0-20-20Zm-4 128H52V100h152Z"/></svg>
+  <span></span>
+</div>
 <script>
 'use strict';
 // Die Gegenstelle zu Services/BrowserBridge*.vb. Je Fenster der Anwendung ein Canvas; der Server
@@ -93,8 +116,8 @@ function onText(message) {
   } else if (message.t === 'offer') {
     showOffer(message);
   } else if (message.t === 'reload') {
-    // Die Kennung gilt nicht mehr, etwa weil die Anwendung neu gestartet wurde. Neu laden holt
-    // eine frische; ist eine Anmeldung gesetzt, fragt der Browser dabei von selbst danach.
+    // Die Kennung oder die Sitzung gilt nicht mehr: die Anwendung wurde neu gestartet oder
+    // gesperrt. Neu laden holt eine frische Kennung oder, ohne Sitzung, das Anmeldefenster.
     socket.onclose = null;
     setTimeout(() => location.reload(), 1000);
   }
@@ -276,6 +299,31 @@ uploadButton.title = text('upload');
 uploadButton.setAttribute('aria-label', text('upload'));
 panelCancel.textContent = text('cancel');
 panelClose.textContent = text('close');
+
+// Unverschluesselt im Heimnetz: den Hinweis setzt der Server nur in diesem Betrieb in die Texte.
+if (texts.httpNotice) {
+  const notice = document.getElementById('httpNotice');
+  notice.querySelector('span').textContent = texts.httpNotice;
+  notice.title = texts.httpNoticeDetail || '';
+  notice.classList.add('on');
+  setTimeout(() => notice.classList.add('quiet'), 8000);
+}
+
+// Abmelden: beendet die Sitzung dieses Browsers, die anderen bleiben angemeldet. Den Text gibt
+// es nur mit Kennwort; ohne bleibt der Knopf verborgen.
+if (texts.logout) {
+  const logoutButton = document.getElementById('logoutButton');
+  logoutButton.title = texts.logout;
+  logoutButton.setAttribute('aria-label', texts.logout);
+  logoutButton.classList.add('on');
+  logoutButton.addEventListener('click', async () => {
+    try {
+      await fetch('/logout', { method: 'POST', credentials: 'same-origin', cache: 'no-store' });
+    } catch (ignored) { }
+    if (socket) socket.onclose = null;
+    location.replace('/');
+  });
+}
 
 // Ablegen auf der Seite. Der Browser oeffnete die Datei sonst selbst und verliesse die Anwendung;
 // deshalb wird auch ein Ablegen von etwas anderem als Dateien abgefangen. Der Zaehler gleicht aus,

@@ -12858,4 +12858,133 @@
   <data name="Im_Editor_ist_inzwischen_ein_anderes_Bild_offen__31ee6a86" xml:space="preserve">
     <value>En el editor ya hay otra imagen abierta, el archivo no se insertó</value>
   </data>
+  <data name="Unverschl_sselte_Verbindung_im_Heimnetz_5e258534" xml:space="preserve">
+    <value>Conexión sin cifrar en la red doméstica</value>
+  </data>
+  <data name="Kennwort_und_Bilder_gehen_lesbar_durch_das_Netz__7d04c297" xml:space="preserve">
+    <value>La contraseña y las imágenes viajan legibles por la red. Usa HTTPS para acceder desde fuera.</value>
+  </data>
+  <data name="FerrumPix_ist_gesperrt_af3ccc36" xml:space="preserve">
+    <value>FerrumPix está bloqueado.</value>
+  </data>
+  <data name="Kennwort_834162a9" xml:space="preserve">
+    <value>Contraseña</value>
+  </data>
+  <data name="Entsperren_03df2616" xml:space="preserve">
+    <value>Desbloquear</value>
+  </data>
+  <data name="Sperren_und_das_Anmeldefenster_zeigen_nur_mit_Ke_980f4874" xml:space="preserve">
+    <value>Bloquear y mostrar la ventana de inicio de sesión (solo con contraseña, ver Ajustes, Acceso)</value>
+  </data>
+  <data name="STRG_L_7e7e1b77" xml:space="preserve">
+    <value>CTRL+L</value>
+  </data>
+  <data name="Zugang_c4f24d7a" xml:space="preserve">
+    <value>Acceso</value>
+  </data>
+  <data name="Ein_Kennwort_f_r_FerrumPix_Mit_Kennwort_erschein_2fdf1d3a" xml:space="preserve">
+    <value>Una contraseña para FerrumPix. Con contraseña aparece una ventana de inicio de sesión al iniciar, tras el tiempo configurado sin actividad y con CTRL+L; en el navegador sustituye al inicio de sesión propio del navegador. La contraseña protege la aplicación en ejecución, no las fotos: los archivos siguen siendo legibles en el disco.</value>
+  </data>
+  <data name="Mit_Kennwort_sch_tzen_eaa7dfc6" xml:space="preserve">
+    <value>Proteger con contraseña</value>
+  </data>
+  <data name="Ein_vergessenes_Kennwort_l_sst_sich_hier_nicht_z_d2d24926" xml:space="preserve">
+    <value>Una contraseña olvidada no se puede recuperar aquí. En ese caso, borra la entrada AppLockPasswordHash del archivo settings.json con la aplicación cerrada.</value>
+  </data>
+  <data name="Das_Kennwort_kommt_aus_der_Angabe_beim_Start_und_8a2c0a0f" xml:space="preserve">
+    <value>La contraseña procede de los parámetros de inicio y solo se puede cambiar allí.</value>
+  </data>
+  <data name="Aktuelles_Kennwort_16bce207" xml:space="preserve">
+    <value>Contraseña actual</value>
+  </data>
+  <data name="Jede_nderung_am_Zugang_verlangt_das_aktuelle_Ken_154f0f80" xml:space="preserve">
+    <value>Cada cambio en el acceso requiere la contraseña actual.</value>
+  </data>
+  <data name="Neues_Kennwort_986990ac" xml:space="preserve">
+    <value>Nueva contraseña</value>
+  </data>
+  <data name="Neues_Kennwort_wiederholen_a24b73aa" xml:space="preserve">
+    <value>Repetir nueva contraseña</value>
+  </data>
+  <data name="Sperren_nach_Inaktivit_t_0cf91592" xml:space="preserve">
+    <value>Bloquear tras inactividad</value>
+  </data>
+  <data name="Ohne_Taste_und_Maus_sperrt_sich_FerrumPix_nach_d_4d0f0d32" xml:space="preserve">
+    <value>Sin entrada de teclado ni ratón, FerrumPix se bloquea tras este tiempo. En el navegador termina también la sesión.</value>
+  </data>
+  <data name="Jetzt_sperren_e57bd532" xml:space="preserve">
+    <value>Bloquear ahora</value>
+  </data>
+  <data name="Nie_16926ab7" xml:space="preserve">
+    <value>Nunca</value>
+  </data>
+  <data name="Nach_0_Minuten_e9b13a64" xml:space="preserve">
+    <value>Tras {0} minutos</value>
+  </data>
+  <data name="Bitte_das_Kennwort_eingeben_7f0e107f" xml:space="preserve">
+    <value>Introduce la contraseña.</value>
+  </data>
+  <data name="Das_Kennwort_ist_falsch_8464f610" xml:space="preserve">
+    <value>La contraseña es incorrecta.</value>
+  </data>
+  <data name="Zu_viele_Fehlversuche_Bitte_in_0_Sekunden_erneut_e41e47a8" xml:space="preserve">
+    <value>Demasiados intentos fallidos. Vuelve a intentarlo dentro de {0} segundos.</value>
+  </data>
+  <data name="Bitte_das_aktuelle_Kennwort_eingeben_e1de5bd7" xml:space="preserve">
+    <value>Introduce la contraseña actual.</value>
+  </data>
+  <data name="Das_aktuelle_Kennwort_ist_falsch_81f32d87" xml:space="preserve">
+    <value>La contraseña actual es incorrecta.</value>
+  </data>
+  <data name="ber_das_Netz_braucht_FerrumPix_ein_Kennwort_Der__d1d1501d" xml:space="preserve">
+    <value>A través de la red FerrumPix necesita una contraseña. La protección sigue activada.</value>
+  </data>
+  <data name="Der_Schutz_mit_Kennwort_ist_ausgeschaltet_e73eec60" xml:space="preserve">
+    <value>La protección con contraseña está desactivada.</value>
+  </data>
+  <data name="Die_beiden_neuen_Kennw_rter_stimmen_nicht_berein_f65b2dc0" xml:space="preserve">
+    <value>Las dos contraseñas nuevas no coinciden.</value>
+  </data>
+  <data name="Bitte_ein_neues_Kennwort_eingeben_8a598225" xml:space="preserve">
+    <value>Introduce una contraseña nueva.</value>
+  </data>
+  <data name="Gespeichert_f6654de4" xml:space="preserve">
+    <value>Guardado.</value>
+  </data>
+  <data name="Das_neue_Kennwort_gilt_ab_sofort_5557cf43" xml:space="preserve">
+    <value>La nueva contraseña es válida desde ahora.</value>
+  </data>
+  <data name="Die_Anwendung_ist_jetzt_mit_einem_Kennwort_gesch_62307451" xml:space="preserve">
+    <value>La aplicación está ahora protegida con una contraseña.</value>
+  </data>
+  <data name="Die_nderung_lie_sich_nicht_speichern_634f13d3" xml:space="preserve">
+    <value>No se pudo guardar el cambio.</value>
+  </data>
+  <data name="Die_Anmeldung_ist_fehlgeschlagen_b68a9fd0" xml:space="preserve">
+    <value>Error al iniciar sesión.</value>
+  </data>
+  <data name="Abmelden_7e324c5c" xml:space="preserve">
+    <value>Cerrar sesión</value>
+  </data>
+  <data name="Mindestens_10_Zeichen_mit_Gro_buchstaben_Kleinbu_6da2d56e" xml:space="preserve">
+    <value>Al menos 10 caracteres con mayúsculas, minúsculas, un número y un carácter especial; un espacio cuenta como carácter especial. Introdúcela dos veces. Déjala vacía para cambiar solo el tiempo de bloqueo.</value>
+  </data>
+  <data name="Die_Wiederholung_stimmt_noch_nicht_mit_dem_neuen_eaa3a18a" xml:space="preserve">
+    <value>La repetición aún no coincide con la nueva contraseña.</value>
+  </data>
+  <data name="Noch_n_tig_mindestens_0_Zeichen_cc8d66aa" xml:space="preserve">
+    <value>Aún falta: al menos {0} caracteres.</value>
+  </data>
+  <data name="Noch_n_tig_ein_Gro_buchstabe_4b2000f9" xml:space="preserve">
+    <value>Aún falta: una mayúscula.</value>
+  </data>
+  <data name="Noch_n_tig_ein_Kleinbuchstabe_37b79cf1" xml:space="preserve">
+    <value>Aún falta: una minúscula.</value>
+  </data>
+  <data name="Noch_n_tig_eine_Zahl_bb860bf6" xml:space="preserve">
+    <value>Aún falta: un número.</value>
+  </data>
+  <data name="Noch_n_tig_ein_Sonderzeichen_auch_ein_Leerzeiche_c0e66159" xml:space="preserve">
+    <value>Aún falta: un carácter especial; un espacio también cuenta.</value>
+  </data>
 </root>

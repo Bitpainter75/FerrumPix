@@ -441,6 +441,7 @@ Namespace Views
         ''' haengt diese hier nur beim ersten Mal an den Baum (siehe IModeView).</summary>
         Public Sub OnModeEntered() Implements IModeView.OnModeEntered
             Dispatcher.UIThread.Post(Sub() Me.Focus(), DispatcherPriority.Background)
+            UpdateLockAppButton()
             ' Den Stand der Info-Leiste aus den Einstellungen holen: er kann in den Einstellungen
             ' umgestellt worden sein, waehrend die Galerie unsichtbar war.
             GetVm()?.RefreshInfoSidebarState()
@@ -460,8 +461,17 @@ Namespace Views
             Dispatcher.UIThread.Post(restoreSelection, DispatcherPriority.Background)
         End Sub
 
+        ''' <summary>"Sperren" in der Seitenleiste gibt es nur mit Kennwort. Der Schutz aendert sich
+        ''' nur in den Einstellungen, also reicht es, beim Anhaengen und beim Betreten der Galerie
+        ''' nachzusehen.</summary>
+        Private Sub UpdateLockAppButton()
+            Dim button = Me.FindControl(Of Button)("LockAppButton")
+            If button IsNot Nothing Then button.IsVisible = AppLockService.IsProtected
+        End Sub
+
         Private Sub OnGalleryAttachedToVisualTree(sender As Object, e As VisualTreeAttachmentEventArgs)
             _isAttached = True
+            UpdateLockAppButton()
             RebindViewModel()
             Dispatcher.UIThread.Post(Sub() Me.Focus(), DispatcherPriority.Background)
             RestoreFolderTreeSelectionAfterRecreation()
@@ -3601,6 +3611,13 @@ Namespace Views
         Public Sub OnSettingsClick(sender As Object, e As RoutedEventArgs)
             Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
             mainVm?.OpenSettings()
+            e.Handled = True
+        End Sub
+
+        ''' <summary>Sperren aus der Seitenleiste: zeigt das Anmeldefenster.</summary>
+        Public Sub OnLockAppClick(sender As Object, e As RoutedEventArgs)
+            Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
+            mainVm?.LockApp()
             e.Handled = True
         End Sub
 
