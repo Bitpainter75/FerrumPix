@@ -643,10 +643,20 @@ Namespace Services
 
         ''' <summary>Erzeugt den editierbaren Mehrregler-Look für Editor, Stapel und Export.
         ''' Die Stärke mischt jede Einstellung gegen ihre neutrale Stellung; Farbtöne von Tönung und
-        ''' Graumischung bleiben stehen, es mischt ihre Sättigung.</summary>
-        Public Shared Function CreateBuiltInLook(name As String, strengthPercent As Double) As ImageAdjustments
+        ''' Graumischung bleiben stehen, es mischt ihre Sättigung.
+        '''
+        ''' <paramref name="grainModel"/>: die Fassung, in der das Korn des Looks rechnet. Ab Werk die
+        ''' aktuelle, mit den Werten aus <see cref="BuiltInLookGrainFilm"/>; 0 gibt die Werte von
+        ''' BuiltInLookValues in der alten Rechnung, wie sie in gespeicherten Bearbeitungen stehen
+        ''' (der Zuruecksetzer der Filtergruppe vergleicht damit).</summary>
+        Public Shared Function CreateBuiltInLook(name As String, strengthPercent As Double,
+                                                 Optional grainModel As Integer = CurrentGrainModel) As ImageAdjustments
             Dim look = BuiltInLookValues(name)
             If look Is Nothing Then Return Nothing
+            Dim film As (Grain As Single, Size As Single, Roughness As Single) = Nothing
+            If grainModel >= 1 AndAlso look.Grain > 0 AndAlso BuiltInLookGrainFilm.TryGetValue(name.Trim(), film) Then
+                look.Grain = film.Grain : look.GrainSize = film.Size : look.GrainFrequency = film.Roughness
+            End If
 
             Dim strength = CSng(Math.Max(0, Math.Min(100, strengthPercent)) / 100.0)
             look.Exposure *= strength : look.Temperature *= strength : look.Tint *= strength
@@ -674,10 +684,26 @@ Namespace Services
             look.CurveBluePoints = ScaleLookCurve(look.CurveBluePoints, strength)
             ' Ein Look setzt den Dunst neu: hinzugefuegter Dunst bekommt die aktuelle Fassung.
             look.HazeModel = HazeModelAfter(0, 0, look.Haze)
+            ' Ebenso das Korn: ein Look mit Koernung bekommt die aktuelle Fassung (oder die verlangte 0).
+            look.GrainModel = If(grainModel >= 1, GrainModelAfter(0, 0, look.Grain), 0)
             look.FilterPreset = name.Trim()
             look.FilterStrength = CSng(Math.Max(0, Math.Min(100, strengthPercent)))
             Return look
         End Function
+
+        ''' <summary>Staerke (bei Look-Staerke 100), Groesse und Rauheit des Korns der eingebauten Looks
+        ''' in Fassung 1. Geeicht auf das Korn, das derselbe Look in Fassung 0 hatte, an einem grauen
+        ''' Bild mit kurzer Kante 4000 bei Helligkeit 0,35 (Kornmessung looks, Werte in
+        ''' Plaene/KORN_ECHTER.md): Groesse und Rauheit nach Halbwert und Korrelation, die Staerke so,
+        ''' dass die Streuung bei Look-Staerke 100 und 50 zusammen am naechsten liegt (Fassung 0 hat
+        ''' einen hoeheren Sockel, beides zugleich geht nicht). Ein Look mit Korn, der hier fehlt,
+        ''' behaelt seine Werte aus BuiltInLookValues; die Pruefung "Koernung Fassung 1: eingebaute
+        ''' Looks ..." meldet ihn.</summary>
+        Public Shared ReadOnly BuiltInLookGrainFilm As New Dictionary(Of String, (Grain As Single, Size As Single, Roughness As Single))(StringComparer.Ordinal) From {
+            {"Cremeweiß", (68.0F, 10.0F, 100.0F)},
+            {"Kornfilm", (37.0F, 10.0F, 100.0F)},
+            {"Zeitlos", (88.0F, 0.0F, 0.0F)}
+        }
 
         ''' <summary>Die Stärke, mit der ein frisch gewählter Filter startet. S/W und Sepia sind Umwandlungen -
         ''' halb angewendet ergeben sie nur ein blasses Bild, sie starten deshalb voll. Alle übrigen sind
@@ -1219,10 +1245,14 @@ Namespace Services
         Public Property Grain As Single = 0
         ''' <summary>Körnungsgröße, 0-100. 0 = feinstes Korn (1 px, bisheriges Verhalten); höher =
         ''' gröberes Korn (das Rauschen wird zellenweise über größere Blöcke konstant gehalten).
-        ''' Bei 0 UND GrainFrequency 0 rechnet ApplyGrain bitgenau wie zuvor.</summary>
+        ''' Bei 0 UND GrainFrequency 0 rechnet ApplyGrain bitgenau wie zuvor. So in Fassung 0; in
+        ''' Fassung 1 (<see cref="GrainModel"/>) ist die Groesse ein Anteil der kurzen Kante des
+        ''' Bildes, geeicht auf crs:GrainSize.</summary>
         Public Property GrainSize As Single = 0
         ''' <summary>Körnungsfrequenz/Unregelmäßigkeit, 0-100. 0 = gleichmäßiges Korn; höher = eine
-        ''' feine zweite Lage wird eingemischt, das Korn wirkt unruhiger.</summary>
+        ''' feine zweite Lage wird eingemischt, das Korn wirkt unruhiger. In Fassung 1
+        ''' (<see cref="GrainModel"/>) eine zweite, doppelt so grobe Lage, geeicht auf
+        ''' crs:GrainFrequency.</summary>
         Public Property GrainFrequency As Single = 0
         ''' <summary>Farbigkeit des Korns, 0-100. 0 = monochromes Korn (derselbe Rauschwert auf R, G
         ''' und B, bisheriges Verhalten und bitgenau unveraendert); hoeher = die drei Kanaele driften
@@ -1230,6 +1260,39 @@ Namespace Services
         ''' KEIN Adobe-Gegenstueck: crs:Grain* kennt nur Staerke, Groesse und Frequenz. Der Wert
         ''' steht deshalb nur in .fpxmp und .fpx, ein XMP-Import kann ihn nicht setzen.</summary>
         Public Property GrainColor As Single = 0
+        ''' <summary>Fassung der Koernung (<see cref="Grain"/> ueber 0). 0 ist der Weg bis 0.9.91 und
+        ''' gilt fuer jedes Rezept ohne das Feld: gleichverteilter Streuwert je Zelle von 1 bis 6
+        ''' Bildpunkten, auf jedem Tonwert gleich stark, Groesse und Rauheit in Bildpunkten. 1
+        ''' (<see cref="CurrentGrainModel"/>): ein weiches Rauschfeld, dessen Korngroesse ein Anteil
+        ''' der kurzen Kante des Bildes ist, mit einer zweiten, groeberen Lage fuer die Rauheit, in
+        ''' den Mitten am staerksten und zu Schwarz und Weiss hin auslaufend, die Farbe aus drei
+        ''' eigenen Feldern (ImageProcessor.ApplyGrainFilm). Vorschau, Export in jeder Groesse und
+        ''' Druck zeigen damit dasselbe Korn.
+        '''
+        ''' WANN EIN REZEPT DIE NEUE FASSUNG BEKOMMT: wie beim Dunst (<see cref="HazeModel"/>), sobald
+        ''' Korn NEU entsteht, das Rezept vorher also keines hatte (<see cref="GrainModelAfter"/>):
+        ''' der Regler im Editor aus null heraus, ein XMP-Preset oder eine Beistelldatei beim
+        ''' Einlesen, ein eingebauter Look. Steht schon Korn im Rezept, bleibt seine Fassung, auch
+        ''' wenn der Regler weiter verstellt wird; zurueck auf null geht sie auf 0. Gespeicherte
+        ''' Bearbeitungen sehen so bitgleich aus wie zuvor.
+        '''
+        ''' EIN PIXELREGLER, wandert also mit dem Korn: Kopieren und Einfuegen, Vorlagen (Eintrag
+        ''' Staerke der Koernung, AdjustmentEntries), Korrekturebenen und Objekte, Stapel. Allein
+        ''' zaehlt das Feld nie als Bearbeitung (HasPixelAdjustments, IsEditedComparedTo,
+        ''' AdjustmentEntries.NonNeutralEntries).</summary>
+        Public Property GrainModel As Integer = 0
+        ''' <summary>Die Fassung, die neu hinzugefuegtes Korn bekommt (siehe <see cref="GrainModel"/>).</summary>
+        Public Const CurrentGrainModel As Integer = 1
+
+        ''' <summary>Die Fassung nach einer neuen Staerke der Koernung: ohne Korn 0; hatte das Rezept
+        ''' schon welches, bleibt seine Fassung; sonst die aktuelle. Die eine Regel fuer Editor,
+        ''' XMP-Leser und eingebaute Looks.</summary>
+        Public Shared Function GrainModelAfter(previousGrain As Double, previousModel As Integer, newGrain As Double) As Integer
+            If newGrain <= 0 Then Return 0
+            If previousGrain > 0 Then Return previousModel
+            Return CurrentGrainModel
+        End Function
+
         Public Property Clarity As Single = 0
 
         ''' <summary>Gescanntes Filmnegativ in ein Positiv umkehren.</summary>
@@ -1858,6 +1921,7 @@ Namespace Services
             For Each p In PixelAdjustmentProperties()
                 ' Die Fassung des Dunstes geht mit dem Dunst, nicht allein (siehe unten).
                 If p.Name = NameOf(HazeModel) Then Continue For
+                If p.Name = NameOf(GrainModel) Then Continue For
                 Dim value = p.GetValue(look)
                 Dim standard = p.GetValue(neutral)
                 If Not Equals(value, standard) Then p.SetValue(Me, value)
@@ -1865,6 +1929,8 @@ Namespace Services
             ' Setzt der Look den Dunst, bringt er seine Fassung mit; eine Fassung 0 des Looks waere
             ' sonst als Neutralwert uebergangen und der Dunst rechnete in der Fassung des Ziels.
             If look.Haze <> neutral.Haze Then HazeModel = If(look.Haze > 0, look.HazeModel, 0)
+            ' Dasselbe fuer das Korn und seine Fassung.
+            If look.Grain <> neutral.Grain Then GrainModel = If(look.Grain > 0, look.GrainModel, 0)
         End Sub
 
         ''' <summary>Die Pixel-Anpassungen als eigenes Rezept - für eine Maskenebene oder ein
@@ -2084,6 +2150,8 @@ Namespace Services
             For Each p In PixelAdjustmentProperties()
                 ' Die Fassung des Dunstes allein ist keine Anpassung; mit Dunst zaehlt der Dunst.
                 If p.Name = NameOf(HazeModel) Then Continue For
+                ' Ebenso die Fassung der Koernung.
+                If p.Name = NameOf(GrainModel) Then Continue For
                 If Not Object.Equals(p.GetValue(Me), p.GetValue(neutral)) Then Return True
             Next
             Return False
@@ -2143,6 +2211,15 @@ Namespace Services
             ' Ohne hinzugefuegten Dunst ist dessen Fassung bedeutungslos (HazeModel).
             If own.Haze <= 0 Then own.HazeModel = 0
             If reference.Haze <= 0 Then reference.HazeModel = 0
+            ' Ohne Korn ebenso dessen Fassung (GrainModel).
+            If own.Grain <= 0 Then own.GrainModel = 0
+            If reference.Grain <= 0 Then reference.GrainModel = 0
+            ' Ohne Korn wirken auch Groesse, Rauheit und Farbe des Korns nicht. Neues Korn setzt Groesse
+            ' und Rauheit auf seine Startwerte (EditorViewModel.Grain); zurueck auf null bleiben sie
+            ' stehen und sollen das Bild nicht zur Bearbeitung machen.
+            If own.Grain <= 0 Then
+                own.GrainSize = reference.GrainSize : own.GrainFrequency = reference.GrainFrequency : own.GrainColor = reference.GrainColor
+            End If
             ' Nachsichtig gilt auch 0 als Startwert: Rezepte aus der Zeit vor der Kameratabelle tragen
             ' dort 0 statt der heutigen Grundbelichtung.
             If lenient AndAlso (own.Exposure = 0.0F OrElse
@@ -2258,6 +2335,7 @@ Namespace Services
                 .TiltShiftFocus = TiltShiftFocus,
                 .TiltShiftTransition = TiltShiftTransition,
                 .Grain = Grain,
+                .GrainModel = GrainModel,
                 .Clarity = Clarity,
                 .NegativeEnabled = NegativeEnabled,
                 .NegativeMonochrome = NegativeMonochrome,

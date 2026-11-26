@@ -15673,7 +15673,8 @@ Namespace ViewModels
                     ' gibt es an dieser Stelle nicht. Für diesen Fall bleibt es bei der Näherung
                     ' über D65 (siehe XmpPresetService.LoadLook). Wer das ändern will, muss den
                     ' Weißabgleich pro Bild auflösen, nicht die Vorlage erweitern.
-                    Return XmpPresetService.LoadLook(result.PresetPath)
+                    ' Ein Preset mit Feldliste (aus "Anpassung speichern") traegt nur seine Auswahl.
+                    Return XmpPresetService.LoadBatchLook(result.PresetPath)
 
                 Case BatchFilterDialogResult.SourceAdjustmentPreset
                     Return LoadAdjustmentPresetLook(result.PresetId, result.DisplayName)
@@ -17437,7 +17438,8 @@ Namespace ViewModels
             Dim template As ImageAdjustments
             Select Case result.LookKind
                 Case BatchFilterDialogResult.SourceXmpPreset
-                    template = XmpPresetService.LoadLook(result.LookPath)
+                    ' Ein Preset mit Feldliste (aus "Anpassung speichern") traegt nur seine Auswahl.
+                    template = XmpPresetService.LoadBatchLook(result.LookPath)
                 Case BatchFilterDialogResult.SourceAdjustmentPreset
                     ' Kein Pfad: die Vorlage wird ueber ihre Kennung im Ordner der Anpassungen
                     ' gefunden. Der Ordner wird im Hintergrund gelesen, wenn kein Stand gemerkt ist.

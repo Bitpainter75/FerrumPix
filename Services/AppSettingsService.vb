@@ -1218,6 +1218,10 @@ Namespace Services
         ''' gesetzt und nicht erreichbar, bleibt die Liste leer; es wird NICHT auf die Vorgabe
         ''' ausgewichen, sonst entstuenden zwei Bestaende.
         Public Property AdjustmentPresetFolder As String = ""
+        ''' Der Ordner, in den zuletzt eine Anpassung als XMP-Preset oder LUT geschrieben wurde;
+        ''' dort schlaegt der Dialog "Anpassung speichern" die naechste Datei vor. Leer heisst der
+        ''' Bilderordner.
+        Public Property AdjustmentExportFolder As String = ""
         ' Der Name bleibt so: er ist der Schluessel in der settings.json. Umbenennen hiesse,
         ' dass bereits gespeicherte Presets bei vorhandenen Installationen verschwinden.
         ''' <summary>Objektivkorrektur (Verzeichnung, Farbquerfehler, Vignettierung) als

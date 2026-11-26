@@ -321,8 +321,15 @@ Namespace Services
             If TryGetXmpDouble(values, "LuminanceSmoothing", d) Then adj.NoiseReduction = Clamp(d, 0, 100)
             If TryGetXmpDouble(values, "LuminanceNoiseReductionDetail", d) Then adj.NoiseReductionDetail = Clamp(d, 0, 100)
             If TryGetXmpDouble(values, "ColorNoiseReduction", d) Then adj.ColorNoiseReduction = Clamp(d, 0, 100)
-            If TryGetXmpDouble(values, "GrainAmount", d) Then adj.Grain = Clamp(d, 0, 100)
-            ' crs:GrainSize/GrainFrequency sind 0..100 wie unsere Regler.
+            If TryGetXmpDouble(values, "GrainAmount", d) Then
+                ' Die Fassung nach der einen Regel (ImageAdjustments.GrainModelAfter), wie beim Dunst:
+                ' neu hinzugefuegtes Korn bekommt die aktuelle, ein Look mit Korn behaelt seine.
+                Dim previousGrain = adj.Grain
+                adj.Grain = Clamp(d, 0, 100)
+                adj.GrainModel = ImageAdjustments.GrainModelAfter(previousGrain, adj.GrainModel, adj.Grain)
+            End If
+            ' crs:GrainSize/GrainFrequency sind 0..100 wie unsere Regler; in Fassung 1 der Koernung
+            ' sind beide Regler auf diese Werte geeicht (ImageProcessor.GrainFilmPlanFor).
             If TryGetXmpDouble(values, "GrainSize", d) Then adj.GrainSize = Clamp(d, 0, 100)
             If TryGetXmpDouble(values, "GrainFrequency", d) Then adj.GrainFrequency = Clamp(d, 0, 100)
             If TryGetXmpDouble(values, "PostCropVignetteAmount", d) Then
@@ -661,7 +668,70 @@ Namespace Services
                 If blueCurve IsNot Nothing Then adj.CurveBluePoints = blueCurve
             End If
 
+            ' DER EIGENE NAMENSRAUM (XmpPresetWriter): die Regler ohne crs:-Gegenstueck unter ihrem
+            ' Feldnamen. Er gilt zuletzt und damit vor jeder Folgeregel oben (Fassung des Dunstes und
+            ' des Korns, Ueberblendung ohne Angabe). In einer fremden Datei steht er nicht.
+            ApplyPresetNamespace(xmpText, adj)
+
             Return adj
+        End Function
+
+        ''' <summary>Legt die Felder des eigenen Namensraums auf das Rezept. Nur Pixelregler
+        ''' (ImageAdjustments.PixelAdjustmentProperties), nie Strukturfelder; ein Feld, das diese
+        ''' Fassung nicht kennt, und ein Wert, der nicht zur Art passt, fallen weg.</summary>
+        Private Shared Sub ApplyPresetNamespace(text As String, adj As ImageAdjustments)
+            Dim prefix = PresetPrefixIn(text)
+            If prefix Is Nothing Then Return
+            Dim pixel = ImageAdjustments.PixelAdjustmentProperties().ToDictionary(Function(p) p.Name, StringComparer.Ordinal)
+            Dim pattern = "(?<![A-Za-z0-9_:])" & Regex.Escape(prefix) & ":(?<name>[A-Za-z0-9]+)\s*=\s*""(?<value>[^""]*)"""
+            For Each m As Match In Regex.Matches(text, pattern)
+                Dim fieldName = m.Groups("name").Value
+                If fieldName = XmpPresetWriter.PresetFieldsName Then Continue For
+                Dim p As Reflection.PropertyInfo = Nothing
+                If Not pixel.TryGetValue(fieldName, p) Then Continue For
+                Dim value = XmpPresetWriter.ReadOwnValue(p, Net.WebUtility.HtmlDecode(m.Groups("value").Value))
+                If value IsNot Nothing Then p.SetValue(adj, value)
+            Next
+        End Sub
+
+        ''' <summary>Die Feldliste eines Presets, das FerrumPix geschrieben hat
+        ''' (XmpPresetWriter, <c>fpx:PresetFields</c>); Nothing bei jeder anderen .xmp. Mit Liste
+        ''' verhaelt sich das Preset beim Anwenden wie eine gespeicherte Anpassung mit dieser Auswahl
+        ''' (AdjustmentEntries.ApplyPreset): nur diese Regler, auch mit dem Neutralwert, alles andere
+        ''' bleibt. Ohne Liste ersetzt es wie jedes XMP-Preset den ganzen Look.</summary>
+        Public Shared Function PresetFieldsFromText(rawText As String) As List(Of String)
+            Dim prefix = PresetPrefixIn(rawText)
+            If prefix Is Nothing Then Return Nothing
+            Dim m = Regex.Match(rawText, "\b" & Regex.Escape(prefix) & ":" & XmpPresetWriter.PresetFieldsName & "\s*=\s*""(?<v>[^""]*)""")
+            If Not m.Success Then Return Nothing
+            Return m.Groups("v").Value.Split({","c}, StringSplitOptions.RemoveEmptyEntries).
+                Select(Function(f) f.Trim()).Where(Function(f) f.Length > 0).ToList()
+        End Function
+
+        ''' <summary>Wie <see cref="PresetFieldsFromText"/>, aus einer Datei.</summary>
+        Public Shared Function LoadPresetFields(xmpPath As String) As List(Of String)
+            If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return Nothing
+            Return PresetFieldsFromText(File.ReadAllText(xmpPath))
+        End Function
+
+        ''' <summary>Der Look fuer den Stapel der Galerie: bei einem Preset mit Feldliste nur die
+        ''' gewaehlten Regler, alles andere neutral (wie eine gespeicherte Anpassung,
+        ''' AdjustmentEntries.LoadPresetLook); sonst der ganze Look wie bisher.</summary>
+        Public Shared Function LoadBatchLook(xmpPath As String) As ImageAdjustments
+            Dim look = LoadLook(xmpPath)
+            If look Is Nothing Then Return Nothing
+            Dim fields = LoadPresetFields(xmpPath)
+            If fields Is Nothing Then Return look
+            Return AdjustmentEntries.Extract(look, AdjustmentEntries.EntriesForFields(fields))
+        End Function
+
+        ''' <summary>Das Kuerzel, unter dem der Text den eigenen Namensraum der Presets bindet
+        ''' (XmpPresetWriter.PresetNamespace); Nothing, wenn er ihn nicht nennt. Gesucht wird die
+        ''' Adresse, nicht das Kuerzel: ein fremdes "fpx:" mit anderer Adresse zaehlt nicht.</summary>
+        Private Shared Function PresetPrefixIn(text As String) As String
+            If String.IsNullOrEmpty(text) Then Return Nothing
+            Dim m = Regex.Match(text, "xmlns:(?<p>[A-Za-z_][A-Za-z0-9_.-]*)\s*=\s*""" & Regex.Escape(XmpPresetWriter.PresetNamespace) & """")
+            Return If(m.Success, m.Groups("p").Value, Nothing)
         End Function
 
         ' ── Prozessversion (Plan PROZESSVERSION.md) ───────────────────────────────────────────

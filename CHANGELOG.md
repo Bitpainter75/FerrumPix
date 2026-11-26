@@ -6,6 +6,11 @@
   sunset gets a warm haze instead of always the same cool grey. This applies to new edits; pictures
   you edited before look exactly as they did.
 
+- Grain added in the editor is now soft and film-like: it is strongest in the midtones, fades
+  toward black and white, and its size follows the picture, so the preview and exports in any size
+  show the same grain. This applies to new edits; pictures you edited before look exactly as they
+  did.
+
 - The editor's tool bar can now stand on the left, on the right, or on the side of the adjustments
   panel (Settings, Editor). A new automatic mode keeps it narrow and opens it over the picture when
   the pointer rests on it, without taking room from the picture. The collapse button stays where it
@@ -15,12 +20,20 @@
 - The buttons at the bottom of the adjustments panel that step to the previous and next tool now
   show the icon of that tool next to its name, the same one as in the tool bar.
 
+- **Save adjustment as XMP preset or LUT.** The Save adjustment dialog can now also write your
+  look as an XMP preset that other raw developers read, and that FerrumPix reads back completely,
+  or as a .cube LUT for video editors and other programs, with 17, 33 or 65 grid points. Sliders a
+  target can't carry are grayed out, and the dialog says why.
+
 - Spot removal from Lightroom now comes along when a raw picture's Lightroom settings are taken
   over, from a sidecar file or from a Lightroom catalog: clone spots keep their source, heal spots
   are filled by FerrumPix's own repair. Red eye corrections are not taken over yet. Presets never
   bring spots with them, since a dust spot belongs to one picture only.
 
 ### Fixes
+
+- On Linux, videos in the viewer could stay black while the sound played. They show their picture
+  again.
 
 - Olympus, OM System and Panasonic pictures taken with the camera's own shading compensation
   switched on no longer get their corners brightened a second time by the lens profile. Distortion

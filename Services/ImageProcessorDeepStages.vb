@@ -1244,6 +1244,42 @@ Namespace Services
                 End Sub)
         End Function
 
+        ''' <summary>Das Korn in Fassung 1 auf dem tiefen Bild, dieselbe Rechnung wie
+        ''' <see cref="ApplyGrainFilm"/>: dieselben Felder (ForEachGrainFilmRow), dieselbe Glocke und
+        ''' dieselbe Begrenzung, nur ohne Runden auf 8 Bit.</summary>
+        Private Shared Function ApplyGrainFilmDeep(deep As SKBitmap, amount As Single, sizeAmount As Single,
+                                                   freqAmount As Single, colorAmount As Single) As SKBitmap
+            If Clamp(amount, 0, 1) <= 0 Then Return Nothing
+            Dim w = deep.Width, h = deep.Height
+            Dim sourcePixels = deep.GetPixels()
+            If sourcePixels = IntPtr.Zero OrElse w <= 0 OrElse h <= 0 Then Return Nothing
+            Dim result = NewDeepBitmap(w, h, deep.AlphaType)
+            If result Is Nothing Then Return Nothing
+            Dim targetPixels = result.GetPixels()
+            Dim premul = deep.AlphaType = SKAlphaType.Premul
+            Dim plan = GrainFilmPlanFor(w, h, amount, sizeAmount, freqAmount, colorAmount)
+            Dim amplitude = CSng(plan.Amplitude)
+            ' Die Felder kommen zeilenweise aus den Baendern; jede Zeile liest und schreibt nur sich.
+            ForEachGrainFilmRow(w, h, plan,
+                Sub(y, rows)
+                    Dim row(w * 4 - 1) As Short
+                    ReadDeepRow(deep, sourcePixels, y, row)
+                    For x = 0 To w - 1
+                        Dim o = x * 4
+                        Dim cr As Single, cg As Single, cb As Single, a As Integer
+                        ReadDeepUnpremultiplied(row, o, premul, cr, cg, cb, a)
+                        Dim nr As Single, ng As Single, nb As Single
+                        GrainFilmNoise(plan, rows, x, nr, ng, nb)
+                        Dim amp = amplitude * GrainFilmBell((0.299F * cr + 0.587F * cg + 0.114F * cb) / 255.0F)
+                        WriteDeepPremultiplied(row, o, premul,
+                                               GrainFilmChannel(cr, nr, amp), GrainFilmChannel(cg, ng, amp),
+                                               GrainFilmChannel(cb, nb, amp), a)
+                    Next
+                    WriteDeepRow(result, targetPixels, y, row)
+                End Sub)
+            Return result
+        End Function
+
         ''' <summary>Wie <see cref="MapDeepRows"/> fuer eine Stufe, die ihren Zufall aus EINEM Strom
         ''' zieht: <paramref name="body"/> bekommt zur Zeile ihren Abschnitt des Stroms, je Bildpunkt
         ''' <paramref name="perPixel"/> Zuege in der Reihenfolge, in der eine Schleife Zeile fuer Zeile

@@ -38,6 +38,7 @@ Namespace Services
         Private Const PropPause As ULong = 3UL
         Private Const PropMute As ULong = 4UL
         Private Const PropVid As ULong = 5UL
+        Private Const PropVoConfigured As ULong = 6UL
 
         ''' <summary>MPV_ERROR_VO_INIT_FAILED (client.h): die Bildausgabe liess sich nicht aufbauen.</summary>
         Friend Const MpvErrorVoInitFailed As Integer = -15
@@ -154,6 +155,15 @@ Namespace Services
         Public Event PauseChanged(isPaused As Boolean)
         Public Event MuteChanged(isMuted As Boolean)
         Public Event EndReached(reason As Integer, [error] As Integer)
+
+        ''' <summary>mpv meldet, ob seine Bildausgabe steht (Eigenschaft <c>vo-configured</c>).
+        '''
+        ''' WOFUER: der Betrachter schiebt die native Flaeche fuer das Standbild aus dem Hauptfenster
+        ''' (ViewerView.UpdateVideoPosterCover). Baut mpv seine Ausgabe auf, WAEHREND das Fenster dort
+        ''' draussen liegt, bekommt es unter Linux keinen OpenGL-Kontext ("Could not make context
+        ''' current"), waehlt die Bildspur ab und spielt nur den Ton. Verschoben wird deshalb erst,
+        ''' wenn diese Meldung wahr ist.</summary>
+        Public Event VideoOutputConfiguredChanged(configured As Boolean)
 
         ''' <summary>Ein Ladebefehl ist WIRKLICH an mpv gegangen. Feuert nicht, wenn der Riegel in
         ''' <see cref="LoadCore"/> ein zweites Laden desselben Films abgewiesen hat.
@@ -801,6 +811,9 @@ Namespace Services
                 ' Faellt die Bildspur weg, weil die Bildausgabe scheiterte, setzt mpv "vid" auf
                 ' "no" und spielt den Ton weiter (siehe IsVideoTrackDroppedByOutput).
                 ObservePropertyRaw(PropVid, "vid", MpvInterop.MpvFormat.String)
+                ' Ob die Bildausgabe steht: erst danach darf die native Flaeche fuer das Standbild
+                ' aus dem Fenster (siehe VideoOutputConfiguredChanged).
+                ObservePropertyRaw(PropVoConfigured, "vo-configured", MpvInterop.MpvFormat.Flag)
 
                 Dim muted As Boolean
                 SyncLock _syncRoot
@@ -1032,6 +1045,11 @@ Namespace Services
                     Dim textPtr = Marshal.ReadIntPtr(prop.Data)
                     Dim vid = If(textPtr = IntPtr.Zero, Nothing, Marshal.PtrToStringUTF8(textPtr))
                     If String.Equals(vid, "no", StringComparison.Ordinal) Then CheckVideoOutputFailureLater(vid, -1, 0)
+                Case PropVoConfigured
+                    If prop.Format <> MpvInterop.MpvFormat.Flag OrElse prop.Data = IntPtr.Zero Then Return
+                    Dim configured = Marshal.ReadInt32(prop.Data) <> 0
+                    DiagnosticLogService.LogAlways("VideoPlayback.Weg", If(configured, "Bildausgabe steht", "Bildausgabe abgebaut"))
+                    RaiseEvent VideoOutputConfiguredChanged(configured)
             End Select
         End Sub
 

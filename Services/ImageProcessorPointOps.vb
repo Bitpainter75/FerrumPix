@@ -254,6 +254,101 @@ Namespace Services
             Return RunPointOpChain(source, chain)
         End Function
 
+        ''' <summary>Rechnet ein neutrales RGB-Gitter mit <paramref name="gridSize"/> Punkten je Achse
+        ''' durch die verschmolzene Kette und gibt die Ausgabe in der Reihenfolge einer .cube-Datei
+        ''' zurueck (Rot laeuft am schnellsten, je Punkt drei Werte 0 bis 1). Der Weg der LUT, die
+        ''' der Dialog "Anpassung speichern" schreibt (CubeLutWriter).
+        '''
+        ''' GERECHNET WIRD JEDER PUNKT FUER SICH (_pointwiseChain): auf dem Gitter liegen Farben
+        ''' nebeneinander, die im Bild nie Nachbarn sind. Lichter und Tiefen wirken deshalb wie auf
+        ''' einer glatten Flaeche, und ihre Kennlinie waehlen sie nach <paramref name="toneReference"/>,
+        ''' der Helligkeit des Fotos, nicht des Gitters. Ungemessen misst die Kette am Gitter.
+        '''
+        ''' Eingang und Ausgang laufen ueber das tiefe Bild (16 Bit, ohne Dither): ein Gitterpunkt
+        ''' wie 1/32 liegt zwischen zwei Bytewerten, und der Dither des 8-Bit-Bilds waere in der
+        ''' Tabelle Rauschen. Auf dem Prozessor, nie auf der Karte: nur dort gilt der Schalter.
+        ''' Das Filmnegativ bleibt draussen; es misst seine Grundfarbe am Bild.</summary>
+        Friend Shared Function RenderPointOpLutGrid(adj As ImageAdjustments, gridSize As Integer,
+                                                    Optional toneReference As ToneReference = Nothing) As Single()
+            Dim n = Math.Max(2, Math.Min(256, gridSize))
+            Dim table(n * n * n * 3 - 1) As Single
+            Dim recipe = If(adj Is Nothing, New ImageAdjustments(), adj.Clone())
+            recipe.NegativeEnabled = False
+            Dim width = n * n
+            Using grid As New SKBitmap(New SKImageInfo(width, n, SKColorType.Rgba8888, SKAlphaType.Premul))
+                Dim deep = NewDeepBitmap(width, n, SKAlphaType.Premul)
+                If deep Is Nothing Then Throw New InvalidOperationException("kein Speicher fuer das Gitter der LUT")
+                Dim bytes(width * n * 4 - 1) As Byte
+                Dim deepPixels = deep.GetPixels()
+                For b = 0 To n - 1
+                    Dim deepRow(width * 4 - 1) As Short
+                    For g = 0 To n - 1
+                        For r = 0 To n - 1
+                            Dim x = g * n + r
+                            Dim o = (b * width + x) * 4
+                            Dim rv = r / CSng(n - 1), gv = g / CSng(n - 1), bv = b / CSng(n - 1)
+                            bytes(o) = CByte(Math.Round(rv * 255.0F))
+                            bytes(o + 1) = CByte(Math.Round(gv * 255.0F))
+                            bytes(o + 2) = CByte(Math.Round(bv * 255.0F))
+                            bytes(o + 3) = 255
+                            deepRow(x * 4) = QuantizeDeep(rv)
+                            deepRow(x * 4 + 1) = QuantizeDeep(gv)
+                            deepRow(x * 4 + 2) = QuantizeDeep(bv)
+                            deepRow(x * 4 + 3) = ToDeepShort(65535)
+                        Next
+                    Next
+                    WriteDeepRow(deep, deepPixels, b, deepRow)
+                Next
+                Marshal.Copy(bytes, 0, grid.GetPixels(), bytes.Length)
+                AttachDeep(grid, deep)
+                Dim result As SKBitmap = Nothing
+                Try
+                    Dim chain = BuildPointOpChain(recipe, grid, toneReference)
+                    If Not chain.IsIdentity Then
+                        Dim previous = _pointwiseChain
+                        _pointwiseChain = True
+                        Try
+                            result = RunPointOpChainCore(grid, chain, DeepOf(grid))
+                        Finally
+                            _pointwiseChain = previous
+                        End Try
+                    End If
+                    Dim output = If(result, grid)
+                    Dim outDeep = DeepOf(output)
+                    If outDeep IsNot Nothing Then
+                        Dim outPixels = outDeep.GetPixels()
+                        Dim row(width * 4 - 1) As Short
+                        For b = 0 To n - 1
+                            ReadDeepRow(outDeep, outPixels, b, row)
+                            For x = 0 To width - 1
+                                Dim t = (b * width + x) * 3
+                                table(t) = (row(x * 4) And &HFFFF) / 65535.0F
+                                table(t + 1) = (row(x * 4 + 1) And &HFFFF) / 65535.0F
+                                table(t + 2) = (row(x * 4 + 2) And &HFFFF) / 65535.0F
+                            Next
+                        Next
+                    Else
+                        ' Ohne tiefes Ergebnis (kein Speicher dafuer) bleibt das 8-Bit-Bild.
+                        Dim outBytes(width * n * 4 - 1) As Byte
+                        Marshal.Copy(output.GetPixels(), outBytes, 0, outBytes.Length)
+                        Dim swap = output.ColorType = SKColorType.Bgra8888
+                        For i = 0 To width * n - 1
+                            table(i * 3) = outBytes(i * 4 + If(swap, 2, 0)) / 255.0F
+                            table(i * 3 + 1) = outBytes(i * 4 + 1) / 255.0F
+                            table(i * 3 + 2) = outBytes(i * 4 + If(swap, 0, 2)) / 255.0F
+                        Next
+                    End If
+                Finally
+                    If result IsNot Nothing AndAlso result IsNot grid Then
+                        DropDeep(result)
+                        result.Dispose()
+                    End If
+                    DropDeep(grid)
+                End Try
+            End Using
+            Return table
+        End Function
+
         ''' <summary>Baut den Ketten-Zustand. Die Frueh-Ausstiege der Altfunktionen werden hier exakt
         ''' nachgebildet: ein neutraler Regler muss weiterhin GAR NICHTS tun, sonst kostet die Kette
         ''' Zeit, wo heute nur ein If steht.</summary>
@@ -3293,6 +3388,14 @@ Namespace Services
         <ThreadStatic> Private Shared _toneMeasureMaskWidth As Integer
         <ThreadStatic> Private Shared _toneMeasureMaskHeight As Integer
 
+        ''' <summary>Rechnet die Kette jeden Bildpunkt fuer sich, ohne Nachbarn? Gesetzt nur fuer
+        ''' das Gitter einer LUT (RenderPointOpLutGrid): dort liegen nebeneinander Farben, die im
+        ''' Bild nie Nachbarn sind. Die oertliche Basis der Lichter und Tiefen folgt dann dem
+        ''' Bildpunkt selbst (wie auf einer glatten Flaeche), und der Farbmischer nimmt seine
+        ''' Fuehrung am Bildpunkt statt am geglaetteten Bild. Je Faden wie _localToneReferenceEdge;
+        ''' gelesen vor dem verteilten Durchlauf.</summary>
+        <ThreadStatic> Private Shared _pointwiseChain As Boolean
+
         ''' <summary>Fuehrt <paramref name="work"/> mit <paramref name="mask"/> als Messmaske aus und
         ''' stellt danach die vorige her. Nothing als Maske misst wie gewohnt alles.</summary>
         Friend Shared Function WithToneMeasureMask(mask As Byte(), width As Integer, height As Integer,
@@ -3337,6 +3440,9 @@ Namespace Services
             Public MeanA As Single()
             Public MeanB As Single()
             Public Smooth As Single()
+            ''' Die Basis ist der Grauwert des Bildpunkts selbst, wie auf einer glatten Flaeche;
+            ''' Raster und Koeffizienten bleiben leer. Nur fuer das Gitter einer LUT.
+            Public FollowsPixel As Boolean
             Private _shaderValues As Short()
             Private ReadOnly _shaderValuesLock As New Object()
 
@@ -3350,6 +3456,11 @@ Namespace Services
             End Function
 
             Public Sub Sample(x As Integer, y As Integer, gray As Single, ByRef baseValue As Single, ByRef smoothValue As Single)
+                If FollowsPixel Then
+                    baseValue = gray
+                    smoothValue = gray
+                    Return
+                End If
                 Dim gx = Math.Max(0.0F, Math.Min(Width - 1.0F, (x - OriginX + 0.5F) / StepSize - 0.5F))
                 Dim gy = Math.Max(0.0F, Math.Min(Height - 1.0F, (y - OriginY + 0.5F) / StepSize - 0.5F))
                 Dim x0 = CInt(Math.Floor(gx))
@@ -4285,7 +4396,9 @@ Namespace Services
             Dim localDetail = chain.LocalDetailGain
             Dim localColor = chain.LocalColorGain
             Dim localBase As LocalToneBase = Nothing
-            If localZones IsNot Nothing Then
+            If localZones IsNot Nothing AndAlso _pointwiseChain Then
+                localBase = New LocalToneBase With {.FollowsPixel = True}
+            ElseIf localZones IsNot Nothing Then
                 ' Eigener Messpunkt: die Basis ist eine Nachbarschaftsrechnung und steckt sonst
                 ' unsichtbar in "Punktkette" - ob deren Zeit in der Punktrechnung oder hier liegt,
                 ' entscheidet, was zuerst schneller werden muss.
@@ -4296,7 +4409,7 @@ Namespace Services
             Dim stages = New PreMixerStages(chain, localBase, toLinear, toGamma)
             ' Die Fuehrung des Farbmischers in derselben Anordnung wie die Quelle (Zeilenbreite,
             ' Kanalfolge), damit derselbe Versatz beide liest.
-            If hslAdj IsNot Nothing Then
+            If hslAdj IsNot Nothing AndAlso Not _pointwiseChain Then
                 Using guide = PerformanceTraceService.Measure("Pixel: Punktkette, Fuehrung des Farbmischers",
                                                               Function() BuildMixerGuide(source, chain))
                     If guide IsNot Nothing Then

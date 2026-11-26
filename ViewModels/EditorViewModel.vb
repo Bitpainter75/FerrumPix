@@ -275,6 +275,16 @@ Namespace ViewModels
         Private _grainSize As Double = 0
         Private _grainFrequency As Double = 0
         Private _grainColor As Double = 0
+        ''' Fassung der Koernung (ImageAdjustments.GrainModel), wie _hazeModel: ein geladenes Rezept
+        ''' bringt seine mit, neu hinzugefuegtes Korn bekommt die aktuelle (Grain). Ins Rezept geht
+        ''' sie nur mit Korn, sonst als 0 (BuildAdjustmentsFromFields).
+        Private _grainModel As Integer = 0
+        ''' Die Fassung der Koernung, bevor der Regler auf 0 ging; -1 ohne. Holt der Regler von dort
+        ''' wieder Korn, gilt sie weiter (Grain). Jedes Laden eines Rezepts vergisst sie.
+        Private _grainModelBeforeZero As Integer = -1
+        ''' Groesse und Rauheit, mit denen neues Korn in Fassung 1 beginnt (Grain).
+        Private Const FreshGrainSize As Double = 25
+        Private Const FreshGrainRoughness As Double = 50
         Private _clarity As Double = 0
         Private _negativeEnabled As Boolean = False
         Private _negativeMonochrome As Boolean = False
@@ -2381,6 +2391,16 @@ Namespace ViewModels
             ' der gespeicherten Stärke. Sonst leerte der Pfeil nur den Namen.
             If applied Is Nothing OrElse Not String.Equals(applied.FilterPreset, current.FilterPreset, StringComparison.Ordinal) Then
                 applied = FilterPreviewAdjustments(current, current.FilterPreset, current.FilterStrength)
+                ' Eine aeltere Bearbeitung traegt das Korn des Looks in Fassung 0, mit dessen alten
+                ' Werten (ImageAdjustments.BuiltInLookGrainFilm). Verglichen wird dann mit diesen,
+                ' sonst bliebe das Korn beim Zuruecksetzen stehen.
+                If applied IsNot Nothing AndAlso current.Grain > 0 AndAlso current.GrainModel = 0 Then
+                    Dim legacy = ImageAdjustments.CreateBuiltInLook(current.FilterPreset, current.FilterStrength, 0)
+                    If legacy IsNot Nothing Then
+                        applied.Grain = legacy.Grain : applied.GrainSize = legacy.GrainSize
+                        applied.GrainFrequency = legacy.GrainFrequency : applied.GrainModel = 0
+                    End If
+                End If
             End If
             Dim target = current.Clone()
             If applied IsNot Nothing AndAlso String.Equals(applied.FilterPreset, current.FilterPreset, StringComparison.Ordinal) Then
@@ -8887,7 +8907,38 @@ Namespace ViewModels
                 Return _grain
             End Get
             Set(value As Double)
-                SetUndoableDouble(_grain, Math.Max(0, Math.Min(100, value)), NameOf(Grain))
+                Dim clamped = Math.Max(0, Math.Min(100, value))
+                ' Die Fassung VOR dem Setzen, wie beim Dunst (Haze): aus null heraus bekommt neues Korn
+                ' die aktuelle, schon vorhandenes behaelt seine. AUF NULL UND ZURUECK bleibt sie: der
+                ' Einzelvergleich am Regler setzt den Standardwert 0 und holt den Wert danach zurueck,
+                ' und das ist dasselbe Korn.
+                Dim freshGrain = False
+                If clamped > 0 Then
+                    If _grain = 0 AndAlso _grainModelBeforeZero >= 0 Then
+                        _grainModel = _grainModelBeforeZero
+                    Else
+                        freshGrain = _grain <= 0
+                        _grainModel = ImageAdjustments.GrainModelAfter(_grain, _grainModel, clamped)
+                    End If
+                    _grainModelBeforeZero = -1
+                ElseIf _grain > 0 Then
+                    _grainModelBeforeZero = _grainModel
+                End If
+                ' STARTWERTE FUER NEUES KORN: entsteht Korn in Fassung 1 aus null heraus und stehen
+                ' Groesse und Rauheit beide noch auf 0, beginnt es bei Groesse 25 und Rauheit 50. Auf
+                ' Groesse 0 waere es in Fassung 1 so fein, dass es sich in der eingepassten Ansicht
+                ' fast wegmittelt. Ein Look oder ein Preset setzt Groesse und Rauheit gleich danach
+                ' selbst (ApplyLookAdjustments), geladene Rezepte laufen nicht ueber diesen Setter.
+                ' EIN Schritt fuer Rueckgaengig: der Stand wird vor allen drei Werten gesichert, und
+                ' SetUndoableDouble legt fuer dieselbe Eigenschaft keinen zweiten an.
+                If freshGrain AndAlso _grainModel >= 1 AndAlso _grainSize = 0 AndAlso _grainFrequency = 0 Then
+                    CaptureUndoState(NameOf(Grain))
+                    _grainSize = FreshGrainSize
+                    _grainFrequency = FreshGrainRoughness
+                    Me.RaisePropertyChanged(NameOf(GrainSize))
+                    Me.RaisePropertyChanged(NameOf(GrainFrequency))
+                End If
+                SetUndoableDouble(_grain, clamped, NameOf(Grain))
             End Set
         End Property
 
@@ -19220,7 +19271,18 @@ Namespace ViewModels
             Return New AdjustmentPresetSaveDialogViewModel(_adjustmentPresetNameDraft,
                                                            AdjustmentEntries.NonNeutralEntries(transferable), hasFrame,
                                                            _adjustmentPresetFolders,
-                                                           If(_selectedAdjustmentPreset?.Folder, ""))
+                                                           If(_selectedAdjustmentPreset?.Folder, ""),
+                                                           isRaw:=IsRawForAdjustmentExport(),
+                                                           recipe:=transferable,
+                                                           exportFolder:=AppSettingsService.Load().AdjustmentExportFolder)
+        End Function
+
+        ''' <summary>Kommt das geoeffnete Bild aus einer RAW-Datei? Dann wirken Belichtung und
+        ''' Weissabgleich in der RAW-Stufe vor der Kette und fehlen in einer LUT. Gefragt wird die
+        ''' Datei, nicht ob gerade gebackener Inhalt darauf liegt: auch dann stammen Belichtung und
+        ''' Weissabgleich des Rezepts aus dem Entwickeln.</summary>
+        Private Function IsRawForAdjustmentExport() As Boolean
+            Return Not String.IsNullOrEmpty(RenderSourcePath) AndAlso RawPreviewService.IsSupportedRaw(RenderSourcePath)
         End Function
 
         ''' <summary>Der Knopf "Speichern": der Dialog mit Name, Ordner und Auswahl, danach das
@@ -19235,10 +19297,69 @@ Namespace ViewModels
             Await SaveAdjustmentPresetFromDialogAsync(dialog)
         End Function
 
-        ''' <summary>Speichert, was im bestaetigten Dialog steht.</summary>
+        ''' <summary>Speichert, was im bestaetigten Dialog steht: als eigene Anpassung, als
+        ''' XMP-Preset oder als LUT.</summary>
         Public Async Function SaveAdjustmentPresetFromDialogAsync(dialog As AdjustmentPresetSaveDialogViewModel) As Task(Of Boolean)
             If dialog Is Nothing OrElse dialog.IsPaste OrElse Not dialog.CanConfirm Then Return False
+            Select Case dialog.Target
+                Case AdjustmentSaveTarget.Xmp, AdjustmentSaveTarget.Lut
+                    Return Await ExportAdjustmentFileAsync(dialog)
+            End Select
             Return Await SaveAdjustmentPresetAsync(dialog.Name, dialog.SelectedEntries(), dialog.FolderPath)
+        End Function
+
+        ''' <summary>Schreibt die gewaehlten Regler als XMP-Preset (XmpPresetWriter) oder als LUT
+        ''' (CubeLutWriter) in die Datei des Dialogs. Eine vorhandene Datei wird nur nach Rueckfrage
+        ''' ersetzt, ausser der Dateidialog hat schon danach gefragt. Der Ordner wird fuer das
+        ''' naechste Mal gemerkt.
+        '''
+        ''' Die LUT rechnet mit der Helligkeit des geoeffneten Bildes (ToneReference): gemessen hier
+        ''' auf dem Faden der Oberflaeche an der Vorschauquelle, die nur er wechselt; das Gitter
+        ''' laeuft danach im Hintergrund.</summary>
+        ''' <returns>Ob geschrieben wurde.</returns>
+        Public Async Function ExportAdjustmentFileAsync(dialog As AdjustmentPresetSaveDialogViewModel) As Task(Of Boolean)
+            If Not HasDocument OrElse dialog Is Nothing Then Return False
+            Dim targetPath = If(dialog.TargetFilePath, "").Trim()
+            Dim presetName = If(dialog.Name, "").Trim()
+            If targetPath.Length = 0 OrElse presetName.Length = 0 Then Return False
+            Dim folder = IO.Path.GetDirectoryName(targetPath)
+            If String.IsNullOrEmpty(folder) OrElse Not Directory.Exists(folder) Then
+                StatusText = String.Format(LocalizationService.T("Den Ordner gibt es nicht: {0}"), folder)
+                Return False
+            End If
+            If File.Exists(targetPath) AndAlso Not dialog.FileConfirmedByPicker AndAlso _mainVm IsNot Nothing Then
+                Dim overwrite = Await _mainVm.ShowConfirmAsync(LocalizationService.T("Anpassung speichern"),
+                    String.Format(LocalizationService.T("Die Datei {0} gibt es schon. Soll sie ersetzt werden?"), IO.Path.GetFileName(targetPath)),
+                    "Ersetzen", "Abbrechen")
+                If Not overwrite Then Return False
+            End If
+
+            Dim entries = dialog.SelectedEntries()
+            Dim transferable = GetCurrentAdjustments().ExtractTransferableAdjustments()
+            Dim isLut = dialog.Target = AdjustmentSaveTarget.Lut
+            Try
+                If isLut Then
+                    Dim recipe = AdjustmentEntries.Extract(transferable, entries)
+                    Dim gridSize = dialog.SelectedGridSize
+                    Dim reference As ImageProcessor.ToneReference = Nothing
+                    If _previewSource IsNot Nothing AndAlso recipe.ReadsImageStatistics() Then
+                        reference = ImageProcessor.MeasureToneReference(_previewSource)
+                    End If
+                    Await Task.Run(Sub() CubeLutWriter.WriteFile(targetPath, presetName, gridSize,
+                                                                 CubeLutWriter.BuildTable(recipe, gridSize, reference)))
+                Else
+                    Await Task.Run(Function() XmpPresetWriter.WriteFile(targetPath, presetName, transferable, entries))
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.ExportAdjustmentFile", ex)
+                StatusText = String.Format(LocalizationService.T("Die Datei ließ sich nicht schreiben: {0}"), ex.Message)
+                Return False
+            End Try
+            AppSettingsService.Update(Sub(s) s.AdjustmentExportFolder = folder)
+            StatusText = String.Format(If(isLut, LocalizationService.T("LUT gespeichert: {0}"),
+                                              LocalizationService.T("XMP-Preset gespeichert: {0}")),
+                                       IO.Path.GetFileName(targetPath))
+            Return True
         End Function
 
         ''' <summary>Der Knopf "Verwalten": das Fenster mit Ordnerbaum und Anpassungen. Danach
@@ -26482,6 +26603,7 @@ Namespace ViewModels
                 .GrainSize = CSng(_grainSize),
                 .GrainFrequency = CSng(_grainFrequency),
                 .GrainColor = CSng(_grainColor),
+                .GrainModel = If(_grain > 0, _grainModel, 0),
                 .Clarity = CSng(_clarity),
                 .NegativeEnabled = _negativeEnabled AndAlso Not (forPreview AndAlso _suppressNegativeForPick),
                 .NegativeMonochrome = _negativeMonochrome,
@@ -28112,6 +28234,8 @@ Namespace ViewModels
             _grainSize = adj.GrainSize
             _grainFrequency = adj.GrainFrequency
             _grainColor = adj.GrainColor
+            _grainModel = adj.GrainModel
+            _grainModelBeforeZero = -1
             _clarity = adj.Clarity
             _negativeEnabled = adj.NegativeEnabled
             _negativeMonochrome = adj.NegativeMonochrome
@@ -28721,6 +28845,8 @@ Namespace ViewModels
             _grainSize = 0
             _grainFrequency = 0
             _grainColor = 0
+            _grainModel = 0
+            _grainModelBeforeZero = -1
             _clarity = 0
             ' VOLLSTAENDIGKEIT: diese Felder fehlten hier und ueberlebten damit
             ' den Bildwechsel - Bild B erbte Dunst/Staub/Kalibrierung/Vignettenform/Weissabgleich
@@ -34354,6 +34480,13 @@ Namespace ViewModels
                 ' braucht der Import die Aufnahmetemperatur dieses Fotos als Bezug.
                 Dim look = XmpPresetService.LoadLook(xmpPath, imagePath:=_currentImagePath)
                 If look Is Nothing Then Return
+                ' Ein Preset mit Feldliste (aus "Anpassung speichern") verhaelt sich wie eine
+                ' gespeicherte Anpassung mit dieser Auswahl.
+                Dim presetFields = XmpPresetService.LoadPresetFields(xmpPath)
+                If presetFields IsNot Nothing Then
+                    ApplyXmpPresetWithFields(xmpPath, look, presetFields)
+                    Return
+                End If
 
                 PushUndo(LocalizationService.T("Preset angewendet"))
                 ' Der Stand VOR dem Preset, fuer die Preset-Staerke (nach PushUndo: das beendet eine
@@ -34398,6 +34531,27 @@ Namespace ViewModels
             Catch ex As Exception
                 StatusText = LocalizationService.T("XMP-Preset konnte nicht geladen werden: ") & ex.Message
             End Try
+        End Sub
+
+        ''' <summary>Ein XMP-Preset mit Feldliste (XmpPresetWriter): derselbe Schritt wie beim
+        ''' Anwenden einer gespeicherten Anpassung (<see cref="ApplyAdjustmentPreset"/>). Nur die
+        ''' gewaehlten Regler ersetzen die des Bildes, auch mit dem Neutralwert; alles andere bleibt,
+        ''' auch eine geladene LUT. Ohne Staerkeregler, wie die gespeicherte Anpassung.</summary>
+        Private Sub ApplyXmpPresetWithFields(xmpPath As String, look As ImageAdjustments, presetFields As List(Of String))
+            DropAdjustmentPresetHover()
+            PushUndo(LocalizationService.T("Preset angewendet"))
+            Dim target = GetCurrentAdjustments()
+            ApplyPresetLook(target, look, presetFields)
+            ApplyAdjustments(target)
+            MeasurePendingFilmNegativeGrayBalance()
+            _hasChanges = True
+            Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+            RaiseResetButtonStateChanged()
+            RaiseExtendedAdjustmentProperties()
+            SetLastAppliedXmpPreset(xmpPath)
+            StatusText = LocalizationService.T("XMP-Preset angewendet")
+            SchedulePreviewForCurrentTarget()
+            BeginLookRenderWait()
         End Sub
 
         ' ── Preset-Staerke ──────────────────────────────────────────────────────────────────
@@ -34489,6 +34643,8 @@ Namespace ViewModels
             For Each p In ImageAdjustments.PixelAdjustmentProperties()
                 ' Die Fassung des Dunstes ist keine Zahl zum Mischen, sie folgt unten dem Dunst.
                 If p.Name = NameOf(ImageAdjustments.HazeModel) Then Continue For
+                ' Ebenso die Fassung der Koernung.
+                If p.Name = NameOf(ImageAdjustments.GrainModel) Then Continue For
                 Dim a = p.GetValue(before)
                 Dim b = p.GetValue(after)
                 If Equals(a, b) Then Continue For
@@ -34509,6 +34665,8 @@ Namespace ViewModels
             ' Gemischter Dunst rechnet in der Fassung des Presets, solange es Dunst hinzufuegt; sonst
             ' in der des Stands davor.
             result.HazeModel = If(result.Haze <= 0, 0, If(after.Haze > 0 AndAlso k > 0.005, after.HazeModel, before.HazeModel))
+            ' Dasselbe fuer das Korn: es rechnet in der Fassung des Presets, solange das Korn bringt.
+            result.GrainModel = If(result.Grain <= 0, 0, If(after.Grain > 0 AndAlso k > 0.005, after.GrainModel, before.GrainModel))
             Return result
         End Function
 
@@ -34747,6 +34905,9 @@ Namespace ViewModels
             ' bliebe ein eingefaerbtes Rauschen unter einem frisch geladenen Look stehen.
             ColorNoiseAdd = look.ColorNoiseAdd
             Grain = look.Grain
+            ' Mit dem Korn seine Fassung, wie beim Dunst oben (ImageAdjustments.GrainModelAfter).
+            If look.Grain > 0 Then _grainModel = look.GrainModel
+            _grainModelBeforeZero = -1
             GrainSize = look.GrainSize
             GrainFrequency = look.GrainFrequency
             ' Ohne Adobe-Gegenstueck bringt ein Preset hier immer 0 mit. Zugewiesen wird trotzdem,

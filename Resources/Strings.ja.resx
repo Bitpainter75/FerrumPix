@@ -12541,4 +12541,55 @@
   <data name="Mit_Anpassungen_541da366" xml:space="preserve">
     <value>調整付き</value>
   </data>
+  <data name="H_ngt_vom_Ort_im_Bild_ab_und_passt_in_keine_LUT_06971464" xml:space="preserve">
+    <value>画像内の位置に依存するため、LUT には入りません。</value>
+  </data>
+  <data name="Das_Filmnegativ_misst_seine_Grundfarbe_am_Bild_u_56d2dfa7" xml:space="preserve">
+    <value>フィルムネガはベース色を画像から測定するため、LUT には入りません。</value>
+  </data>
+  <data name="Wirkt_beim_Entwickeln_der_RAW_und_passt_in_keine_a547a376" xml:space="preserve">
+    <value>RAW の現像時に作用するため、LUT には入りません。</value>
+  </data>
+  <data name="Der_Rahmen_hat_in_einem_XMP_Preset_kein_Gegenst__9e90fed1" xml:space="preserve">
+    <value>フレームには XMP プリセットに対応する項目がありません。</value>
+  </data>
+  <data name="FerrumPix_Anpassung_02bfa9b2" xml:space="preserve">
+    <value>FerrumPix の調整</value>
+  </data>
+  <data name="Das_XMP_Preset_lesen_auch_andere_Entwickler_Regl_e8a6060c" xml:space="preserve">
+    <value>XMP プリセットはほかの RAW 現像ソフトでも読み込めます。対応項目のないスライダーは、FerrumPix だけが読む専用の領域に保存されます。</value>
+  </data>
+  <data name="Eine_LUT_tr_gt_nur_Regler_die_jeden_Bildpunkt_f__bed91772" xml:space="preserve">
+    <value>LUT に入るのは、各ピクセルを単独で変えるスライダーだけです。ハイライト、シャドウ、白レベルはこの画像の明るさに合わせて決まるため、LUT は似た画像に最も適しています。</value>
+  </data>
+  <data name="Belichtung_und_Wei_abgleich_wirken_bei_einer_RAW_117535d8" xml:space="preserve">
+    <value>RAW では露出とホワイトバランスが現像時に作用するため、LUT には含まれません。</value>
+  </data>
+  <data name="Anpassung_speichern_als_59f73b3e" xml:space="preserve">
+    <value>調整を名前を付けて保存</value>
+  </data>
+  <data name="Den_Ordner_gibt_es_nicht_0_76cd6749" xml:space="preserve">
+    <value>フォルダーがありません: {0}</value>
+  </data>
+  <data name="Die_Datei_0_gibt_es_schon_Soll_sie_ersetzt_werde_d00e9b88" xml:space="preserve">
+    <value>ファイル {0} は既にあります。置き換えますか？</value>
+  </data>
+  <data name="Die_Datei_lie_sich_nicht_schreiben_0_29e3bcf1" xml:space="preserve">
+    <value>ファイルを書き込めませんでした: {0}</value>
+  </data>
+  <data name="LUT_gespeichert_0_60ecaef8" xml:space="preserve">
+    <value>LUT を保存しました: {0}</value>
+  </data>
+  <data name="XMP_Preset_gespeichert_0_51a229d8" xml:space="preserve">
+    <value>XMP プリセットを保存しました: {0}</value>
+  </data>
+  <data name="Speichern_als_efffd1d6" xml:space="preserve">
+    <value>保存形式</value>
+  </data>
+  <data name="Gitterpunkte_je_Achse_ff5b824e" xml:space="preserve">
+    <value>軸あたりのグリッド点数</value>
+  </data>
+  <data name="Mehr_Punkte_geben_feinere_berg_nge_und_eine_gr_e_87716011" xml:space="preserve">
+    <value>点数が多いほど階調の移り変わりが細かくなり、ファイルも大きくなります。</value>
+  </data>
 </root>

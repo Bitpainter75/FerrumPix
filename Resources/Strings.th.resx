@@ -12545,4 +12545,55 @@
   <data name="Mit_Anpassungen_541da366" xml:space="preserve">
     <value>พร้อมการปรับแต่ง</value>
   </data>
+  <data name="H_ngt_vom_Ort_im_Bild_ab_und_passt_in_keine_LUT_06971464" xml:space="preserve">
+    <value>ขึ้นอยู่กับตำแหน่งในภาพ จึงใส่ใน LUT ไม่ได้</value>
+  </data>
+  <data name="Das_Filmnegativ_misst_seine_Grundfarbe_am_Bild_u_56d2dfa7" xml:space="preserve">
+    <value>ฟิล์มเนกาทีฟวัดสีฐานจากภาพ จึงใส่ใน LUT ไม่ได้</value>
+  </data>
+  <data name="Wirkt_beim_Entwickeln_der_RAW_und_passt_in_keine_a547a376" xml:space="preserve">
+    <value>มีผลตอนล้างไฟล์ RAW จึงใส่ใน LUT ไม่ได้</value>
+  </data>
+  <data name="Der_Rahmen_hat_in_einem_XMP_Preset_kein_Gegenst__9e90fed1" xml:space="preserve">
+    <value>กรอบไม่มีค่าที่เทียบเท่าในพรีเซ็ต XMP</value>
+  </data>
+  <data name="FerrumPix_Anpassung_02bfa9b2" xml:space="preserve">
+    <value>การปรับแต่ง FerrumPix</value>
+  </data>
+  <data name="Das_XMP_Preset_lesen_auch_andere_Entwickler_Regl_e8a6060c" xml:space="preserve">
+    <value>โปรแกรมล้าง RAW อื่นก็อ่านพรีเซ็ต XMP นี้ได้ ตัวเลื่อนที่ไม่มีค่าเทียบเท่าจะเก็บในส่วนแยกที่มีเฉพาะ FerrumPix อ่าน</value>
+  </data>
+  <data name="Eine_LUT_tr_gt_nur_Regler_die_jeden_Bildpunkt_f__bed91772" xml:space="preserve">
+    <value>LUT เก็บได้เฉพาะตัวเลื่อนที่เปลี่ยนแต่ละพิกเซลแยกกัน ส่วนสว่าง ส่วนมืด และสีขาวปรับตามความสว่างของภาพนี้ LUT จึงเหมาะกับภาพที่คล้ายกันที่สุด</value>
+  </data>
+  <data name="Belichtung_und_Wei_abgleich_wirken_bei_einer_RAW_117535d8" xml:space="preserve">
+    <value>สำหรับไฟล์ RAW ค่าแสงและสมดุลแสงขาวมีผลตอนล้างไฟล์ จึงไม่อยู่ใน LUT</value>
+  </data>
+  <data name="Anpassung_speichern_als_59f73b3e" xml:space="preserve">
+    <value>บันทึกการปรับแต่งเป็น</value>
+  </data>
+  <data name="Den_Ordner_gibt_es_nicht_0_76cd6749" xml:space="preserve">
+    <value>ไม่มีโฟลเดอร์นี้: {0}</value>
+  </data>
+  <data name="Die_Datei_0_gibt_es_schon_Soll_sie_ersetzt_werde_d00e9b88" xml:space="preserve">
+    <value>มีไฟล์ {0} อยู่แล้ว ต้องการแทนที่หรือไม่</value>
+  </data>
+  <data name="Die_Datei_lie_sich_nicht_schreiben_0_29e3bcf1" xml:space="preserve">
+    <value>เขียนไฟล์ไม่ได้: {0}</value>
+  </data>
+  <data name="LUT_gespeichert_0_60ecaef8" xml:space="preserve">
+    <value>บันทึก LUT แล้ว: {0}</value>
+  </data>
+  <data name="XMP_Preset_gespeichert_0_51a229d8" xml:space="preserve">
+    <value>บันทึกพรีเซ็ต XMP แล้ว: {0}</value>
+  </data>
+  <data name="Speichern_als_efffd1d6" xml:space="preserve">
+    <value>บันทึกเป็น</value>
+  </data>
+  <data name="Gitterpunkte_je_Achse_ff5b824e" xml:space="preserve">
+    <value>จุดกริดต่อแกน</value>
+  </data>
+  <data name="Mehr_Punkte_geben_feinere_berg_nge_und_eine_gr_e_87716011" xml:space="preserve">
+    <value>จุดมากขึ้นให้การไล่ระดับละเอียดขึ้นและไฟล์ใหญ่ขึ้น</value>
+  </data>
 </root>

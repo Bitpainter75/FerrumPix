@@ -4462,6 +4462,7 @@ Namespace ViewModels
         Private Sub EnsureMediaPlayer()
             If _mediaPlayer IsNot Nothing Then Return
             If Not IsVideoPlaybackAvailable Then Return
+            IsVideoOutputConfigured = False
             Try
                 _mediaPlayer = New MpvPlayer(AppSettingsService.Load().VideoHardwareAcceleration)
                 _mediaPlayer.SetMuted(_isVideoMuted)
@@ -4602,6 +4603,7 @@ Namespace ViewModels
                 _mediaPlayer.Dispose()
                 _mediaPlayer = Nothing
             End If
+            IsVideoOutputConfigured = False
         End Sub
 
         Private Sub DetachMediaPlayerHandlers(player As MpvPlayer)
@@ -4634,6 +4636,7 @@ Namespace ViewModels
                 AddHandler player.MuteChanged, AddressOf OnMute
                 AddHandler player.InitializationFailed, AddressOf OnFailed
                 AddHandler player.PlaybackTerminated, AddressOf OnTerminated
+                AddHandler player.VideoOutputConfiguredChanged, AddressOf OnVideoOutputConfigured
             End Sub
 
             Public Sub Detach()
@@ -4645,6 +4648,11 @@ Namespace ViewModels
                 RemoveHandler Player.MuteChanged, AddressOf OnMute
                 RemoveHandler Player.InitializationFailed, AddressOf OnFailed
                 RemoveHandler Player.PlaybackTerminated, AddressOf OnTerminated
+                RemoveHandler Player.VideoOutputConfiguredChanged, AddressOf OnVideoOutputConfigured
+            End Sub
+
+            Private Sub OnVideoOutputConfigured(configured As Boolean)
+                _owner.OnVideoOutputConfiguredChanged(Player, configured)
             End Sub
 
             Private Sub OnTime(seconds As Double)
@@ -4820,6 +4828,28 @@ Namespace ViewModels
             Dispatcher.UIThread.Post(Sub()
                                          If Not IsCurrentPlayer(player) Then Return
                                          IsVideoPlaying = Not isPaused AndAlso Not _isVideoEnded
+                                     End Sub)
+        End Sub
+
+        Private _isVideoOutputConfigured As Boolean = False
+
+        ''' <summary>Steht die Bildausgabe des aktuellen Spielers (mpvs <c>vo-configured</c>)? Erst
+        ''' dann darf die Ansicht die native Flaeche fuer das Standbild aus dem Fenster schieben
+        ''' (ViewerView.UpdateVideoPosterCover, MpvPlayer.VideoOutputConfiguredChanged). Falsch mit
+        ''' jedem neuen oder weggeworfenen Spieler.</summary>
+        Public Property IsVideoOutputConfigured As Boolean
+            Get
+                Return _isVideoOutputConfigured
+            End Get
+            Private Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_isVideoOutputConfigured, value)
+            End Set
+        End Property
+
+        Private Sub OnVideoOutputConfiguredChanged(player As MpvPlayer, configured As Boolean)
+            Dispatcher.UIThread.Post(Sub()
+                                         If Not IsCurrentPlayer(player) Then Return
+                                         IsVideoOutputConfigured = configured
                                      End Sub)
         End Sub
 

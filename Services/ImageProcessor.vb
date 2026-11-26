@@ -3829,7 +3829,13 @@ Namespace Services
             ' das Ergebnis gekoernt, dahinter rechnet die Erweiterung das Korn mit (etwa beim Tonen).
             processed = ApplyExtensionStages(session, processed, owned, adj, ExtensionStages.BeforeGrain)
 
-            If adj.Grain > 0 Then
+            If adj.Grain > 0 AndAlso adj.GrainModel >= 1 Then
+                ' Fassung 1 (ImageAdjustments.GrainModel): weiches Korn am Bild, nach der Helligkeit.
+                processed = RunDetailStage(session, processed, owned, "Pixel: Koernung",
+                                           GrainFilmOnGpu(adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F),
+                                           Function(s) ApplyGrainFilm(s, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F),
+                                           Function(d) ApplyGrainFilmDeep(d, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F))
+            ElseIf adj.Grain > 0 Then
                 processed = RunDetailStage(session, processed, owned, "Pixel: Koernung",
                                            GrainOnGpu(processed, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F),
                                            Function(s) ApplyGrain(s, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F),
@@ -5714,6 +5720,7 @@ Namespace Services
             tone.ExtensionSettings = neutral.ExtensionSettings
             tone.Grain = neutral.Grain : tone.GrainSize = neutral.GrainSize
             tone.GrainFrequency = neutral.GrainFrequency : tone.GrainColor = neutral.GrainColor
+            tone.GrainModel = neutral.GrainModel
             tone.AddNoise = neutral.AddNoise
             If String.Equals(If(tone.FilterPreset, "").Trim(), "weich", StringComparison.OrdinalIgnoreCase) Then
                 tone.FilterPreset = "" : tone.FilterStrength = 0
@@ -5947,7 +5954,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.TiltShiftFocus, adj.TiltShiftTransition,
                 LightSourcesKey(adj),
                 ExtensionsKey(adj),
-                adj.Grain, adj.GrainSize, adj.GrainFrequency, adj.GrainColor, adj.Clarity,
+                adj.Grain, adj.GrainSize, adj.GrainFrequency, adj.GrainColor, adj.GrainModel, adj.Clarity,
                 adj.NegativeEnabled, adj.NegativeMonochrome, adj.NegativeBaseColor, adj.NegativeDensityColor, adj.NegativeGamma,
                 adj.NegativeModel, adj.NegativeGrayBalance,
                 adj.CurveRgbPoints, adj.CurveRedPoints, adj.CurveGreenPoints, adj.CurveBluePoints, adj.CurveLuminancePoints,

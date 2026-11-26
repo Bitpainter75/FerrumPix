@@ -1833,7 +1833,8 @@ Namespace Views
                 UpdateVideoPosterCover()
             End If
 
-            If e.PropertyName = NameOf(ViewerViewModel.ShowVideoPoster) Then UpdateVideoPosterCover()
+            If e.PropertyName = NameOf(ViewerViewModel.ShowVideoPoster) OrElse
+               e.PropertyName = NameOf(ViewerViewModel.IsVideoOutputConfigured) Then UpdateVideoPosterCover()
 
             If e.PropertyName = NameOf(ViewerViewModel.CurrentFilmstripIndex) Then
                 _filmstripController.ScrollToCurrent()
@@ -2102,6 +2103,13 @@ Namespace Views
         ''' etwas mehr, damit auch eine Flaeche am rechten Rand ganz verschwindet; so bleibt der Wert
         ''' auch bei doppelter Punktdichte weit in dem Bereich, den X11 fuer eine Lage zulaesst.
         '''
+        ''' ERST NACH DEM AUFBAU DER BILDAUSGABE (ViewerViewModel.IsVideoOutputConfigured). Baut mpv
+        ''' seine Ausgabe auf, waehrend das Fenster draussen liegt, bekommt es unter Linux keinen
+        ''' OpenGL-Kontext ("Could not make context current"), waehlt die Bildspur ab und spielt nur
+        ''' den Ton; das Neuladen traf dasselbe draussen liegende Fenster und scheiterte genauso. Bis
+        ''' die Ausgabe steht, liegt die Flaeche deshalb an ihrem Platz und zeigt einen Augenblick
+        ''' lang das erste Bild des Films; danach geht sie fuer das Standbild aus dem Weg.
+        '''
         ''' Avalonia setzt das native Fenster nur bei einer Aenderung von Groesse oder Sichtbarkeit
         ''' neu, nicht bei einer Verschiebung; deshalb wird hier ausdruecklich nachgezogen, und bei
         ''' jeder Groessenaenderung der Flaeche noch einmal (das Hauptfenster kann gewachsen sein).
@@ -2115,7 +2123,8 @@ Namespace Views
             End If
 
             Dim vm = GetVm()
-            Dim cover = vm IsNot Nothing AndAlso vm.ShowVideoPoster AndAlso Not MpvPlayer.UsesRenderSurfaceOnThisPlatform
+            Dim cover = vm IsNot Nothing AndAlso vm.ShowVideoPoster AndAlso vm.IsVideoOutputConfigured AndAlso
+                        Not MpvPlayer.UsesRenderSurfaceOnThisPlatform
             If cover Then
                 Dim root = TopLevel.GetTopLevel(videoView)
                 Dim rootWidth = If(root IsNot Nothing, root.Bounds.Width, videoView.Bounds.Width)

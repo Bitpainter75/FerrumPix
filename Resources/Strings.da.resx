@@ -12541,4 +12541,55 @@
   <data name="Mit_Anpassungen_541da366" xml:space="preserve">
     <value>Med justeringer</value>
   </data>
+  <data name="H_ngt_vom_Ort_im_Bild_ab_und_passt_in_keine_LUT_06971464" xml:space="preserve">
+    <value>Afhænger af stedet i billedet og passer ikke i en LUT.</value>
+  </data>
+  <data name="Das_Filmnegativ_misst_seine_Grundfarbe_am_Bild_u_56d2dfa7" xml:space="preserve">
+    <value>Filmnegativet måler sin grundfarve i billedet og passer ikke i en LUT.</value>
+  </data>
+  <data name="Wirkt_beim_Entwickeln_der_RAW_und_passt_in_keine_a547a376" xml:space="preserve">
+    <value>Virker ved fremkaldelsen af RAW-filen og passer ikke i en LUT.</value>
+  </data>
+  <data name="Der_Rahmen_hat_in_einem_XMP_Preset_kein_Gegenst__9e90fed1" xml:space="preserve">
+    <value>Rammen har intet modstykke i en XMP-forudindstilling.</value>
+  </data>
+  <data name="FerrumPix_Anpassung_02bfa9b2" xml:space="preserve">
+    <value>FerrumPix-justering</value>
+  </data>
+  <data name="Das_XMP_Preset_lesen_auch_andere_Entwickler_Regl_e8a6060c" xml:space="preserve">
+    <value>Andre RAW-fremkaldere kan også læse XMP-forudindstillingen. Skydere uden modstykke gemmes i et eget afsnit, som kun FerrumPix læser.</value>
+  </data>
+  <data name="Eine_LUT_tr_gt_nur_Regler_die_jeden_Bildpunkt_f__bed91772" xml:space="preserve">
+    <value>En LUT indeholder kun skydere, der ændrer hver pixel for sig. Højlys, skygger og hvide følger lysstyrken i dette billede, så LUT'en passer bedst til lignende billeder.</value>
+  </data>
+  <data name="Belichtung_und_Wei_abgleich_wirken_bei_einer_RAW_117535d8" xml:space="preserve">
+    <value>For en RAW-fil virker eksponering og hvidbalance ved fremkaldelsen og mangler i LUT'en.</value>
+  </data>
+  <data name="Anpassung_speichern_als_59f73b3e" xml:space="preserve">
+    <value>Gem justering som</value>
+  </data>
+  <data name="Den_Ordner_gibt_es_nicht_0_76cd6749" xml:space="preserve">
+    <value>Mappen findes ikke: {0}</value>
+  </data>
+  <data name="Die_Datei_0_gibt_es_schon_Soll_sie_ersetzt_werde_d00e9b88" xml:space="preserve">
+    <value>Filen {0} findes allerede. Skal den erstattes?</value>
+  </data>
+  <data name="Die_Datei_lie_sich_nicht_schreiben_0_29e3bcf1" xml:space="preserve">
+    <value>Filen kunne ikke skrives: {0}</value>
+  </data>
+  <data name="LUT_gespeichert_0_60ecaef8" xml:space="preserve">
+    <value>LUT gemt: {0}</value>
+  </data>
+  <data name="XMP_Preset_gespeichert_0_51a229d8" xml:space="preserve">
+    <value>XMP-forudindstilling gemt: {0}</value>
+  </data>
+  <data name="Speichern_als_efffd1d6" xml:space="preserve">
+    <value>Gem som</value>
+  </data>
+  <data name="Gitterpunkte_je_Achse_ff5b824e" xml:space="preserve">
+    <value>Gitterpunkter pr. akse</value>
+  </data>
+  <data name="Mehr_Punkte_geben_feinere_berg_nge_und_eine_gr_e_87716011" xml:space="preserve">
+    <value>Flere punkter giver finere overgange og en større fil.</value>
+  </data>
 </root>

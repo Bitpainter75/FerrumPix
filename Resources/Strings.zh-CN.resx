@@ -12499,4 +12499,55 @@
   <data name="Mit_Anpassungen_541da366" xml:space="preserve">
     <value>带调整</value>
   </data>
+  <data name="H_ngt_vom_Ort_im_Bild_ab_und_passt_in_keine_LUT_06971464" xml:space="preserve">
+    <value>取决于图像中的位置，无法写入 LUT。</value>
+  </data>
+  <data name="Das_Filmnegativ_misst_seine_Grundfarbe_am_Bild_u_56d2dfa7" xml:space="preserve">
+    <value>胶片负片会在图像上测量其片基颜色，无法写入 LUT。</value>
+  </data>
+  <data name="Wirkt_beim_Entwickeln_der_RAW_und_passt_in_keine_a547a376" xml:space="preserve">
+    <value>在冲洗 RAW 时生效，无法写入 LUT。</value>
+  </data>
+  <data name="Der_Rahmen_hat_in_einem_XMP_Preset_kein_Gegenst__9e90fed1" xml:space="preserve">
+    <value>边框在 XMP 预设中没有对应项。</value>
+  </data>
+  <data name="FerrumPix_Anpassung_02bfa9b2" xml:space="preserve">
+    <value>FerrumPix 调整</value>
+  </data>
+  <data name="Das_XMP_Preset_lesen_auch_andere_Entwickler_Regl_e8a6060c" xml:space="preserve">
+    <value>其他 RAW 处理软件也能读取该 XMP 预设。没有对应项的滑块保存在只有 FerrumPix 读取的独立部分中。</value>
+  </data>
+  <data name="Eine_LUT_tr_gt_nur_Regler_die_jeden_Bildpunkt_f__bed91772" xml:space="preserve">
+    <value>LUT 只包含逐个改变每个像素的滑块。高光、阴影和白色取决于此图像的亮度，因此该 LUT 最适合类似的图像。</value>
+  </data>
+  <data name="Belichtung_und_Wei_abgleich_wirken_bei_einer_RAW_117535d8" xml:space="preserve">
+    <value>对于 RAW，曝光和白平衡在冲洗时生效，因此 LUT 中不包含它们。</value>
+  </data>
+  <data name="Anpassung_speichern_als_59f73b3e" xml:space="preserve">
+    <value>将调整另存为</value>
+  </data>
+  <data name="Den_Ordner_gibt_es_nicht_0_76cd6749" xml:space="preserve">
+    <value>文件夹不存在：{0}</value>
+  </data>
+  <data name="Die_Datei_0_gibt_es_schon_Soll_sie_ersetzt_werde_d00e9b88" xml:space="preserve">
+    <value>文件 {0} 已存在。要替换吗？</value>
+  </data>
+  <data name="Die_Datei_lie_sich_nicht_schreiben_0_29e3bcf1" xml:space="preserve">
+    <value>无法写入文件：{0}</value>
+  </data>
+  <data name="LUT_gespeichert_0_60ecaef8" xml:space="preserve">
+    <value>已保存 LUT：{0}</value>
+  </data>
+  <data name="XMP_Preset_gespeichert_0_51a229d8" xml:space="preserve">
+    <value>已保存 XMP 预设：{0}</value>
+  </data>
+  <data name="Speichern_als_efffd1d6" xml:space="preserve">
+    <value>保存为</value>
+  </data>
+  <data name="Gitterpunkte_je_Achse_ff5b824e" xml:space="preserve">
+    <value>每轴网格点数</value>
+  </data>
+  <data name="Mehr_Punkte_geben_feinere_berg_nge_und_eine_gr_e_87716011" xml:space="preserve">
+    <value>点数越多，过渡越细腻，文件也越大。</value>
+  </data>
 </root>

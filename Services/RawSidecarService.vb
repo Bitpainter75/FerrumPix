@@ -176,8 +176,12 @@ Namespace Services
         '''
         ''' HazeModel: kam nach dem Release 0.9.91-1. Ohne Schwelle liesse 0.9.91 ein Rezept mit
         ''' neuem Dunst beschreibbar, verloere das Feld beim naechsten Stern, und der Dunst kaeme
-        ''' danach in der alten Rechnung.</summary>
-        Friend Shared ReadOnly RecipeFieldsSinceFloor As String() = {"HazeModel"}
+        ''' danach in der alten Rechnung.
+        '''
+        ''' GrainModel: aus demselben Grund. Ohne Schwelle verloere eine aeltere Fassung das Feld,
+        ''' und neues Korn kaeme danach in der alten Rechnung, mit anderer Bedeutung von Groesse und
+        ''' Rauheit.</summary>
+        Friend Shared ReadOnly RecipeFieldsSinceFloor As String() = {"HazeModel", "GrainModel"}
         Private Shared ReadOnly Ns As XNamespace = "https://github.com/Bitpainter75/FerrumPix/ns/recipe/1.0"
         Private Shared ReadOnly _writeLock As New Object()
 

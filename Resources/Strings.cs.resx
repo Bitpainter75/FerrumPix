@@ -12541,4 +12541,55 @@
   <data name="Mit_Anpassungen_541da366" xml:space="preserve">
     <value>S úpravami</value>
   </data>
+  <data name="H_ngt_vom_Ort_im_Bild_ab_und_passt_in_keine_LUT_06971464" xml:space="preserve">
+    <value>Závisí na místě v obraze a do LUT se nevejde.</value>
+  </data>
+  <data name="Das_Filmnegativ_misst_seine_Grundfarbe_am_Bild_u_56d2dfa7" xml:space="preserve">
+    <value>Filmový negativ měří svou základní barvu na obraze a do LUT se nevejde.</value>
+  </data>
+  <data name="Wirkt_beim_Entwickeln_der_RAW_und_passt_in_keine_a547a376" xml:space="preserve">
+    <value>Působí při vyvolání RAW a do LUT se nevejde.</value>
+  </data>
+  <data name="Der_Rahmen_hat_in_einem_XMP_Preset_kein_Gegenst__9e90fed1" xml:space="preserve">
+    <value>Rámeček nemá v předvolbě XMP žádný protějšek.</value>
+  </data>
+  <data name="FerrumPix_Anpassung_02bfa9b2" xml:space="preserve">
+    <value>Úprava FerrumPix</value>
+  </data>
+  <data name="Das_XMP_Preset_lesen_auch_andere_Entwickler_Regl_e8a6060c" xml:space="preserve">
+    <value>Předvolbu XMP přečtou i jiné vývojky RAW. Posuvníky bez protějšku se ukládají do vlastní části, kterou čte jen FerrumPix.</value>
+  </data>
+  <data name="Eine_LUT_tr_gt_nur_Regler_die_jeden_Bildpunkt_f__bed91772" xml:space="preserve">
+    <value>LUT obsahuje jen posuvníky, které mění každý pixel samostatně. Světla, stíny a bílé se řídí jasem tohoto obrazu, proto se LUT nejlépe hodí k podobným obrazům.</value>
+  </data>
+  <data name="Belichtung_und_Wei_abgleich_wirken_bei_einer_RAW_117535d8" xml:space="preserve">
+    <value>U RAW působí expozice a vyvážení bílé při vyvolání a v LUT chybějí.</value>
+  </data>
+  <data name="Anpassung_speichern_als_59f73b3e" xml:space="preserve">
+    <value>Uložit úpravu jako</value>
+  </data>
+  <data name="Den_Ordner_gibt_es_nicht_0_76cd6749" xml:space="preserve">
+    <value>Složka neexistuje: {0}</value>
+  </data>
+  <data name="Die_Datei_0_gibt_es_schon_Soll_sie_ersetzt_werde_d00e9b88" xml:space="preserve">
+    <value>Soubor {0} už existuje. Nahradit ho?</value>
+  </data>
+  <data name="Die_Datei_lie_sich_nicht_schreiben_0_29e3bcf1" xml:space="preserve">
+    <value>Soubor se nepodařilo zapsat: {0}</value>
+  </data>
+  <data name="LUT_gespeichert_0_60ecaef8" xml:space="preserve">
+    <value>LUT uložena: {0}</value>
+  </data>
+  <data name="XMP_Preset_gespeichert_0_51a229d8" xml:space="preserve">
+    <value>Předvolba XMP uložena: {0}</value>
+  </data>
+  <data name="Speichern_als_efffd1d6" xml:space="preserve">
+    <value>Uložit jako</value>
+  </data>
+  <data name="Gitterpunkte_je_Achse_ff5b824e" xml:space="preserve">
+    <value>Body mřížky na osu</value>
+  </data>
+  <data name="Mehr_Punkte_geben_feinere_berg_nge_und_eine_gr_e_87716011" xml:space="preserve">
+    <value>Více bodů dává jemnější přechody a větší soubor.</value>
+  </data>
 </root>

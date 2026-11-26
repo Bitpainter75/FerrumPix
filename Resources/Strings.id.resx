@@ -12545,4 +12545,55 @@
   <data name="Mit_Anpassungen_541da366" xml:space="preserve">
     <value>Dengan penyesuaian</value>
   </data>
+  <data name="H_ngt_vom_Ort_im_Bild_ab_und_passt_in_keine_LUT_06971464" xml:space="preserve">
+    <value>Bergantung pada posisi dalam gambar dan tidak muat dalam LUT.</value>
+  </data>
+  <data name="Das_Filmnegativ_misst_seine_Grundfarbe_am_Bild_u_56d2dfa7" xml:space="preserve">
+    <value>Negatif film mengukur warna dasarnya pada gambar dan tidak muat dalam LUT.</value>
+  </data>
+  <data name="Wirkt_beim_Entwickeln_der_RAW_und_passt_in_keine_a547a376" xml:space="preserve">
+    <value>Bekerja saat RAW dikembangkan dan tidak muat dalam LUT.</value>
+  </data>
+  <data name="Der_Rahmen_hat_in_einem_XMP_Preset_kein_Gegenst__9e90fed1" xml:space="preserve">
+    <value>Bingkai tidak memiliki padanan dalam praatur XMP.</value>
+  </data>
+  <data name="FerrumPix_Anpassung_02bfa9b2" xml:space="preserve">
+    <value>Penyesuaian FerrumPix</value>
+  </data>
+  <data name="Das_XMP_Preset_lesen_auch_andere_Entwickler_Regl_e8a6060c" xml:space="preserve">
+    <value>Pengembang RAW lain juga dapat membaca praatur XMP ini. Penggeser tanpa padanan disimpan di bagian tersendiri yang hanya dibaca FerrumPix.</value>
+  </data>
+  <data name="Eine_LUT_tr_gt_nur_Regler_die_jeden_Bildpunkt_f__bed91772" xml:space="preserve">
+    <value>LUT hanya memuat penggeser yang mengubah setiap piksel secara terpisah. Sorotan, bayangan, dan putih mengikuti kecerahan gambar ini, sehingga LUT paling cocok untuk gambar serupa.</value>
+  </data>
+  <data name="Belichtung_und_Wei_abgleich_wirken_bei_einer_RAW_117535d8" xml:space="preserve">
+    <value>Pada RAW, eksposur dan keseimbangan putih bekerja saat pengembangan dan tidak ada di LUT.</value>
+  </data>
+  <data name="Anpassung_speichern_als_59f73b3e" xml:space="preserve">
+    <value>Simpan penyesuaian sebagai</value>
+  </data>
+  <data name="Den_Ordner_gibt_es_nicht_0_76cd6749" xml:space="preserve">
+    <value>Folder tidak ada: {0}</value>
+  </data>
+  <data name="Die_Datei_0_gibt_es_schon_Soll_sie_ersetzt_werde_d00e9b88" xml:space="preserve">
+    <value>Berkas {0} sudah ada. Ganti?</value>
+  </data>
+  <data name="Die_Datei_lie_sich_nicht_schreiben_0_29e3bcf1" xml:space="preserve">
+    <value>Berkas tidak dapat ditulis: {0}</value>
+  </data>
+  <data name="LUT_gespeichert_0_60ecaef8" xml:space="preserve">
+    <value>LUT disimpan: {0}</value>
+  </data>
+  <data name="XMP_Preset_gespeichert_0_51a229d8" xml:space="preserve">
+    <value>Praatur XMP disimpan: {0}</value>
+  </data>
+  <data name="Speichern_als_efffd1d6" xml:space="preserve">
+    <value>Simpan sebagai</value>
+  </data>
+  <data name="Gitterpunkte_je_Achse_ff5b824e" xml:space="preserve">
+    <value>Titik kisi per sumbu</value>
+  </data>
+  <data name="Mehr_Punkte_geben_feinere_berg_nge_und_eine_gr_e_87716011" xml:space="preserve">
+    <value>Lebih banyak titik memberi transisi lebih halus dan berkas lebih besar.</value>
+  </data>
 </root>
