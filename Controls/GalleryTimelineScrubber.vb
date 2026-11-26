@@ -41,6 +41,13 @@ Namespace Controls
             Return _isDragging OrElse point.X >= Bounds.Width - HitStripWidth
         End Function
 
+        ' Avalonia gibt seit 12.2 fuer die Pruefung mit einer Flaeche einen vorgegebenen Rumpf mit
+        ' Empty vor; VB.NET uebernimmt solche Ruempfe nicht und verlangt die Methode ausdruecklich.
+        ' Dieselbe Antwort wie der vorgegebene Rumpf, das Verhalten bleibt also wie vorher.
+        Public Function HitTest(geometry As Avalonia.Media.Geometry) As Avalonia.Media.IntersectionResult Implements ICustomHitTest.HitTest
+            Return Avalonia.Media.IntersectionResult.Empty
+        End Function
+
         Public Shared ReadOnly LabelBrushProperty As StyledProperty(Of IBrush) =
             AvaloniaProperty.Register(Of GalleryTimelineScrubber, IBrush)(NameOf(LabelBrush), Brushes.Gray)
         Public Shared ReadOnly AccentBrushProperty As StyledProperty(Of IBrush) =

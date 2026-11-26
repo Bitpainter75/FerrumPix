@@ -289,7 +289,15 @@ Namespace Services
             If TryGetXmpDouble(values, "Blacks2012", d) Then adj.Blacks = Clamp100(d)
             If TryGetXmpDouble(values, "Clarity2012", d) Then adj.Clarity = Clamp100(d)
             If TryGetXmpDouble(values, "Texture", d) Then adj.[Structure] = Clamp100(d)
-            If TryGetXmpDouble(values, "Dehaze", d) Then adj.Haze = Clamp100(-d)
+            If TryGetXmpDouble(values, "Dehaze", d) Then
+                ' Die Fassung nach der einen Regel (ImageAdjustments.HazeModelAfter): ein Preset oder
+                ' eine Beistelldatei, die Dunst neu hinzufuegt, bekommt die aktuelle; traegt der
+                ' Ausgangslook schon Dunst, bleibt dessen Fassung. Ins crs: gehoert das Feld nicht,
+                ' es steht nur in den eigenen Rezepten.
+                Dim previousHaze = adj.Haze
+                adj.Haze = Clamp100(-d)
+                adj.HazeModel = ImageAdjustments.HazeModelAfter(previousHaze, adj.HazeModel, adj.Haze)
+            End If
             If TryGetXmpDouble(values, "Vibrance", d) Then adj.Vibrance = Clamp100(d)
             If TryGetXmpDouble(values, "Saturation", d) Then adj.Saturation = Clamp100(d)
             ' Schaerfe und Rauschminderung gelten AUCH im Kanalkurven-Look: sie haben mit dem
@@ -1024,6 +1032,8 @@ Namespace Services
             a.Blacks = Clamp100(CorrAttr(chunk, "LocalBlacks2012", 0) * 100.0)
             a.Clarity = Clamp100(CorrAttr(chunk, "LocalClarity2012", 0) * 100.0)
             a.Haze = Clamp100(-CorrAttr(chunk, "LocalDehaze", 0) * 100.0)
+            ' Eine neue Ebene: hinzugefuegter Dunst bekommt die aktuelle Fassung.
+            a.HazeModel = ImageAdjustments.HazeModelAfter(0, 0, a.Haze)
             a.Saturation = Clamp100(CorrAttr(chunk, "LocalSaturation", 0) * 100.0)
             a.Temperature = Clamp100(CorrAttr(chunk, "LocalTemperature", 0) * 100.0)
             a.Tint = Clamp100(CorrAttr(chunk, "LocalTint", 0) * 100.0)

@@ -3823,6 +3823,10 @@ Namespace ViewModels
                 '
                 ' Ein erster Ladeauftrag, der mangels Ausgabeflaeche liegen blieb, geht weiterhin
                 ' nicht verloren: den holt LoadPending nach (StartPendingVideoAutoplay).
+                '
+                ' Bis der Film laeuft, steht seine Kachel ueber der Flaeche: sonst zeigte sie das
+                ' erste Bild, und das ist bei vielen Filmen schwarz (ViewerViewModelVideoPoster.vb).
+                BeginVideoPoster(_currentImagePath)
                 LoadVideo(_currentImagePath)
                 Return
             End If
@@ -4577,6 +4581,8 @@ Namespace ViewModels
             ' Wer den Spieler anhaelt, beendet auch ein laufendes Bewegtbild: sonst bliebe die
             ' Videoflaeche ueber dem Standbild stehen, ohne dass noch etwas laeuft.
             EndMotionPlayback(stopPlayer:=False)
+            ' Der Film verlaesst die Flaeche; zeigt man ihn wieder, beginnt sein Standbild neu.
+            ClearVideoPoster()
             If _mediaPlayer Is Nothing Then Return
             Try
                 _mediaPlayer.Stop()
@@ -4697,6 +4703,8 @@ Namespace ViewModels
             If _videoDurationSeconds > 0 Then target = Math.Min(target, _videoDurationSeconds)
             _ignoreVideoTimeUpdatesUntilUtc = DateTime.UtcNow.AddMilliseconds(250)
             _mediaPlayer.Seek(target)
+            ' Wer springt, will die Stelle sehen und nicht mehr das Standbild.
+            EndVideoPoster()
             VideoPositionSeconds = target
         End Sub
 
@@ -4708,6 +4716,7 @@ Namespace ViewModels
                                          If _isVideoScrubbing Then Return
                                          If DateTime.UtcNow < _ignoreVideoTimeUpdatesUntilUtc Then Return
                                          VideoPositionSeconds = seconds
+                                         NoteVideoPlaybackProgress(seconds, player.IsPlaying)
                                      End Sub)
         End Sub
 
@@ -4718,6 +4727,7 @@ Namespace ViewModels
                                           ' nimmt dem jetzigen nichts weg.
                                           If Not IsCurrentPlayer(player) Then Return
                                           _videoPlaybackRuntimeFailed = True
+                                          EndVideoPoster()
                                           _pendingVideoAutoplay = False
                                           IsVideoPlaying = False
                                           _isVideoEnded = False
@@ -4745,6 +4755,7 @@ Namespace ViewModels
                                           _pendingVideoAutoplay = False
                                           IsVideoPlaying = False
                                           _isVideoEnded = True
+                                          EndVideoPoster()
                                           ShutdownVideo()
                                           Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
                                       End Sub)
@@ -4798,6 +4809,7 @@ Namespace ViewModels
                                               Return
                                           End If
                                           _isVideoEnded = True
+                                          EndVideoPoster()
                                           Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
                                           IsVideoPlaying = False
                                           VideoPositionSeconds = VideoDurationSeconds

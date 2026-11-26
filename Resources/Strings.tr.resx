@@ -12098,11 +12098,11 @@
   <data name="EXR_Dateien_lesen_49df259a" xml:space="preserve">
     <value>EXR dosyalarını okuma</value>
   </data>
-  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__7934f082" xml:space="preserve">
-    <value>OpenJPEG, HTJ2K dahil JPEG 2000 dosyalarını okur ve BSD lisansı altındadır. Windows ve Linux onu birlikte getirir, Flatpak onu kendi çalışma ortamından alır; macOS'ta henüz yoktur. Olmadığında yalnızca bu dosyalar açılmaz.</value>
+  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__e382d8fe" xml:space="preserve">
+    <value>OpenJPEG, HTJ2K dahil JPEG 2000 dosyalarını okur ve BSD lisansı altındadır. Windows, Linux ve macOS onu birlikte getirir, Flatpak onu kendi çalışma ortamından alır. Olmadığında yalnızca bu dosyalar açılmaz.</value>
   </data>
-  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_62671d4b" xml:space="preserve">
-    <value>OpenEXR, EXR dosyalarını okur ve BSD lisansı altındadır; içerdiği libdeflate, OpenJPH ve zstd MIT ve BSD lisansları altındadır. Windows, Linux ve Flatpak onu birlikte getirir; macOS'ta henüz yoktur. Olmadığında yalnızca bu dosyalar açılmaz.</value>
+  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_c861eac1" xml:space="preserve">
+    <value>OpenEXR, EXR dosyalarını okur ve BSD lisansı altındadır; içerdiği libdeflate, OpenJPH ve zstd MIT ve BSD lisansları altındadır. Windows, Linux, macOS ve Flatpak onu birlikte getirir. Olmadığında yalnızca bu dosyalar açılmaz.</value>
   </data>
   <data name="OpenJPEG_fc68646e" xml:space="preserve">
     <value>OpenJPEG</value>

@@ -5,10 +5,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>FerrumPix</RootNamespace>
     <AssemblyName>FerrumPix</AssemblyName>
-    <Version>0.9.90</Version>
-    <AssemblyVersion>0.9.90.0</AssemblyVersion>
-    <FileVersion>0.9.90.0</FileVersion>
-    <InformationalVersion>0.9.90-3</InformationalVersion>
+    <Version>0.9.91</Version>
+    <AssemblyVersion>0.9.91.0</AssemblyVersion>
+    <FileVersion>0.9.91.0</FileVersion>
+    <InformationalVersion>0.9.91-1</InformationalVersion>
     <Nullable>enable</Nullable>
     <PublishTrimmed>false</PublishTrimmed>
     <PublishSingleFile>true</PublishSingleFile>
@@ -29,11 +29,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.1.6" />
-    <PackageReference Include="Avalonia.Desktop" Version="12.1.6" />
+    <PackageReference Include="Avalonia" Version="12.2.0" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.2.0" />
     <!-- Zeichnen ohne Bildschirm: der Start mit dem Schalter fuer den Browser (BrowserBridge). -->
-    <PackageReference Include="Avalonia.Headless" Version="12.1.6" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.6" />
+    <PackageReference Include="Avalonia.Headless" Version="12.2.0" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.2.0" />
     <PackageReference Include="Avalonia.Controls.ItemsRepeater" Version="12.0.0" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.31.1" />
     <!-- Die Grafikbeschleunigung fuer die gelernten Modelle: EINE Bibliothek je System, die
@@ -49,7 +49,7 @@
     <PackageReference Include="Microsoft.ML.OnnxRuntime.EP.WebGpu" Version="0.5.0" />
     <PackageReference Include="ReactiveUI.Avalonia" Version="12.1.7" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.15" />
-    <PackageReference Include="QRCoder" Version="1.8.1" />
+    <PackageReference Include="QRCoder" Version="1.9.0" />
     <PackageReference Include="SkiaSharp" Version="3.119.4" />
     <PackageReference Include="MetadataExtractor" Version="2.9.3" />
     <!-- MetadataExtractor lädt den XMP-Leser erst beim Auswerten eines JPEG-Segments. Als

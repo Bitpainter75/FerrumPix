@@ -91,6 +91,13 @@ Namespace Controls
                 Return _destRect.Contains(p)
             End Function
 
+            ' Avalonia gibt seit 12.2 fuer die Pruefung mit einer Flaeche einen vorgegebenen Rumpf mit
+            ' Empty vor; VB.NET uebernimmt solche Ruempfe nicht und verlangt die Methode ausdruecklich.
+            ' Dieselbe Antwort wie der vorgegebene Rumpf, das Verhalten bleibt also wie vorher.
+            Public Function HitTest(geometry As Avalonia.Media.Geometry) As Avalonia.Media.IntersectionResult Implements ICustomDrawOperation.HitTest
+                Return Avalonia.Media.IntersectionResult.Empty
+            End Function
+
             ''' <summary>NIE GLEICH. Der Editor beschreibt seine Bitmap an Ort und Stelle neu und
             ''' zeichnet dann neu an; dieselbe Bitmap mit denselben Rechtecken hiesse für den
             ''' Compositor "unverändert", und er liesse das alte Bild stehen. Neu aufgezeichnet wird

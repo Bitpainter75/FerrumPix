@@ -251,6 +251,11 @@ Namespace ViewModels
         Private _noiseReductionMethod As NoiseReductionMethod = NoiseReductionMethod.AdaptiveGuided
         Private _dustScratches As Double = 0
         Private _haze As Double = 0
+        ''' Fassung des hinzugefuegten Dunstes (ImageAdjustments.HazeModel): ein geladenes Rezept
+        ''' bringt seine mit, neu hinzugefuegter Dunst bekommt die aktuelle (Haze). Ins Rezept geht
+        ''' sie nur bei hinzugefuegtem Dunst, sonst als 0 (BuildAdjustmentsFromFields); die
+        ''' Zuruecksetzer, die nur _haze leeren, brauchen sie deshalb nicht anzufassen.
+        Private _hazeModel As Integer = 0
         Private _addNoise As Double = 0
         Private _structure As Double = 0
         Private _glow As Double = 0
@@ -7809,7 +7814,13 @@ Namespace ViewModels
                 Return _haze
             End Get
             Set(value As Double)
-                SetUndoableDouble(_haze, Math.Max(-100, Math.Min(100, value)), NameOf(Haze))
+                Dim clamped = Math.Max(-100, Math.Min(100, value))
+                ' Die Fassung VOR dem Setzen: SetUndoableDouble rendert ein markiertes Objekt sofort.
+                ' Den Stand fuer Rueckgaengig verfaelscht das nicht, denn sie aendert sich nur, wenn
+                ' bisher kein Dunst hinzugefuegt war, und dann geht sie ohnehin als 0 ins Rezept. Zurueck
+                ' auf null bleibt das Feld stehen und wird beim Bauen des Rezepts zu 0.
+                If clamped > 0 Then _hazeModel = ImageAdjustments.HazeModelAfter(_haze, _hazeModel, clamped)
+                SetUndoableDouble(_haze, clamped, NameOf(Haze))
             End Set
         End Property
 
@@ -26372,6 +26383,7 @@ Namespace ViewModels
                 .NoiseReductionMethod = _noiseReductionMethod,
                 .DustScratches = CSng(_dustScratches),
                 .Haze = CSng(_haze),
+                .HazeModel = If(_haze > 0, _hazeModel, 0),
                 .AddNoise = CSng(_addNoise),
                 .[Structure] = CSng(_structure),
                 .Glow = CSng(_glow),
@@ -28000,6 +28012,7 @@ Namespace ViewModels
             _noiseReductionMethod = adj.NoiseReductionMethod
             _dustScratches = adj.DustScratches
             _haze = adj.Haze
+            _hazeModel = adj.HazeModel
             _addNoise = adj.AddNoise
             _structure = adj.[Structure]
             _glow = adj.Glow
@@ -28634,6 +28647,7 @@ Namespace ViewModels
             ' Kalibrierung einer RAW gehen dort auf ihre Startwerte statt auf Null.
             _dustScratches = 0
             _haze = 0
+            _hazeModel = 0
             _addNoise = 0
             _structure = 0
             _glow = 0
@@ -34387,6 +34401,8 @@ Namespace ViewModels
         Friend Shared Function BlendPresetAmount(before As ImageAdjustments, after As ImageAdjustments, k As Double) As ImageAdjustments
             Dim result = after.Clone()
             For Each p In ImageAdjustments.PixelAdjustmentProperties()
+                ' Die Fassung des Dunstes ist keine Zahl zum Mischen, sie folgt unten dem Dunst.
+                If p.Name = NameOf(ImageAdjustments.HazeModel) Then Continue For
                 Dim a = p.GetValue(before)
                 Dim b = p.GetValue(after)
                 If Equals(a, b) Then Continue For
@@ -34404,6 +34420,9 @@ Namespace ViewModels
                     p.SetValue(result, If(k > 0.005, b, a))
                 End If
             Next
+            ' Gemischter Dunst rechnet in der Fassung des Presets, solange es Dunst hinzufuegt; sonst
+            ' in der des Stands davor.
+            result.HazeModel = If(result.Haze <= 0, 0, If(after.Haze > 0 AndAlso k > 0.005, after.HazeModel, before.HazeModel))
             Return result
         End Function
 
@@ -34623,6 +34642,9 @@ Namespace ViewModels
             Clarity = look.Clarity
             [Structure] = look.[Structure]
             Haze = look.Haze
+            ' Mit dem Dunst seine Fassung: der Look hat sie schon nach der einen Regel gesetzt
+            ' (ImageAdjustments.HazeModelAfter); die Regel des Reglers oben kennt nur den Wert.
+            If look.Haze > 0 Then _hazeModel = look.HazeModel
             Vibrance = look.Vibrance
             Saturation = look.Saturation
             Sharpness = look.Sharpness

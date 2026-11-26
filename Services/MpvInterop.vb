@@ -327,6 +327,27 @@ Namespace Services
             Return $"{Marshal.PtrToStringUTF8(message.Prefix)}/{Marshal.PtrToStringUTF8(message.Level)}: {text}"
         End Function
 
+        ''' <summary>mpv_log_level: Fehler. Kleinere Zahlen sind schwerer (fatal = 10).</summary>
+        Private Const LogLevelError As Integer = 20
+
+        ''' <summary>Ist dieses LogMessage-Ereignis ein Fehler der BILDAUSGABE? Entschieden am
+        ''' Modulfeld des Ereignisses ("vo" oder "vo/..."), nicht am Wortlaut: der Wortlaut ist
+        ''' Text fuer Menschen und kann sich mit jeder Fassung von mpv aendern, das Modul nicht.
+        ''' Ein fehlender Decoder meldet sich unter "vd" und zaehlt hier nicht.</summary>
+        Friend Shared Function IsVideoOutputError(ev As MpvEvent) As Boolean
+            If ev.EventId <> MpvEventId.LogMessage OrElse ev.Data = IntPtr.Zero Then Return False
+            Dim message = Marshal.PtrToStructure(Of MpvEventLogMessage)(ev.Data)
+            If message.LogLevel > LogLevelError Then Return False
+            Return IsVideoOutputModule(Marshal.PtrToStringUTF8(message.Prefix))
+        End Function
+
+        ''' <summary>Das Modul der Bildausgabe: "vo" selbst oder eines darunter ("vo/gpu/opengl").</summary>
+        Friend Shared Function IsVideoOutputModule(prefix As String) As Boolean
+            If String.IsNullOrEmpty(prefix) Then Return False
+            Return String.Equals(prefix, "vo", StringComparison.Ordinal) OrElse
+                   prefix.StartsWith("vo/", StringComparison.Ordinal)
+        End Function
+
         ' ── Render-API ───────────────────────────────────────────────────────────
         '
         ' Der zweite Ausgabeweg von libmpv: statt in ein Fenster zu zeichnen, gibt mpv das

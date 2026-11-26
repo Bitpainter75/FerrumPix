@@ -12098,11 +12098,11 @@
   <data name="EXR_Dateien_lesen_49df259a" xml:space="preserve">
     <value>การอ่านไฟล์ EXR</value>
   </data>
-  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__7934f082" xml:space="preserve">
-    <value>OpenJPEG อ่านไฟล์ JPEG 2000 รวมถึง HTJ2K และใช้สัญญาอนุญาต BSD Windows และ Linux มีมาให้ Flatpak ใช้จากรันไทม์ของตน ส่วน macOS ยังไม่มี หากไม่มี จะเปิดไม่ได้เฉพาะไฟล์เหล่านี้</value>
+  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__e382d8fe" xml:space="preserve">
+    <value>OpenJPEG อ่านไฟล์ JPEG 2000 รวมถึง HTJ2K และใช้สัญญาอนุญาต BSD Windows, Linux และ macOS มีมาให้ Flatpak ใช้จากรันไทม์ของตน หากไม่มี จะเปิดไม่ได้เฉพาะไฟล์เหล่านี้</value>
   </data>
-  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_62671d4b" xml:space="preserve">
-    <value>OpenEXR อ่านไฟล์ EXR และใช้สัญญาอนุญาต BSD ส่วน libdeflate, OpenJPH และ zstd ที่รวมอยู่ใช้สัญญาอนุญาต MIT และ BSD Windows, Linux และ Flatpak มีมาให้ ส่วน macOS ยังไม่มี หากไม่มี จะเปิดไม่ได้เฉพาะไฟล์เหล่านี้</value>
+  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_c861eac1" xml:space="preserve">
+    <value>OpenEXR อ่านไฟล์ EXR และใช้สัญญาอนุญาต BSD ส่วน libdeflate, OpenJPH และ zstd ที่รวมอยู่ใช้สัญญาอนุญาต MIT และ BSD Windows, Linux, macOS และ Flatpak มีมาให้ หากไม่มี จะเปิดไม่ได้เฉพาะไฟล์เหล่านี้</value>
   </data>
   <data name="OpenJPEG_fc68646e" xml:space="preserve">
     <value>OpenJPEG</value>

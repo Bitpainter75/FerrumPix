@@ -183,6 +183,13 @@ Namespace Controls
             Return HasViewport(ViewRect) AndAlso New Rect(Bounds.Size).Contains(point)
         End Function
 
+        ' Avalonia gibt seit 12.2 fuer die Pruefung mit einer Flaeche einen vorgegebenen Rumpf mit
+        ' Empty vor; VB.NET uebernimmt solche Ruempfe nicht und verlangt die Methode ausdruecklich.
+        ' Dieselbe Antwort wie der vorgegebene Rumpf, das Verhalten bleibt also wie vorher.
+        Private Function HitTest(geometry As Avalonia.Media.Geometry) As Avalonia.Media.IntersectionResult Implements ICustomHitTest.HitTest
+            Return Avalonia.Media.IntersectionResult.Empty
+        End Function
+
         Protected Overrides Sub OnPointerPressed(e As PointerPressedEventArgs)
             MyBase.OnPointerPressed(e)
             If Not HasViewport(ViewRect) OrElse Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then Return

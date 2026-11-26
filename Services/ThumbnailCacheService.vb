@@ -523,7 +523,17 @@ Namespace Services
             Dim lastWriteTicksUtc = lastWriteTime.ToUniversalTime().Ticks
             Return $"{imageHash}_{lastWriteTicksUtc}_{fileSize}_q{quality}_w{width}" &
                    $"{SidecarRotationSuffix(filePath)}{DevelopedThumbnailSuffix(filePath)}" &
-                   $"{DemosaicSuffix(filePath)}_v{CacheFormatVersion}.jpg"
+                   $"{DemosaicSuffix(filePath)}{VideoTileSuffix(filePath)}_v{CacheFormatVersion}.jpg"
+        End Function
+
+        ''' <summary>Teil des Namens nur fuer Videos: die Fassung des Standbilds
+        ''' (<see cref="VideoPreviewService.TileVersion"/>). Aendert sich, welches Bild eines Films
+        ''' die Kachel zeigt, werden so nur die Video-Kacheln neu gerechnet; Fotos behalten ihren
+        ''' Namen. Die alte Kachel gilt danach als veraltet, die Galerie zeigt sie bis zum Ersatz
+        ''' und <see cref="DeleteStaleCacheFiles"/> raeumt sie beim Schreiben weg.</summary>
+        Private Shared Function VideoTileSuffix(filePath As String) As String
+            If Not VideoPreviewService.IsSupportedVideo(filePath) Then Return ""
+            Return "_vid" & VideoPreviewService.TileVersion.ToString(Globalization.CultureInfo.InvariantCulture)
         End Function
 
         ''' <summary>Was ein Lauf von <see cref="EnsureCached"/> ergeben hat.</summary>

@@ -2109,12 +2109,13 @@ Namespace Services
         End Function
 
         ''' <summary>Dunst: positiv fuegt Dunst hinzu (<see cref="ApplyAddedHaze"/>), negativ entfernt
-        ''' ihn (<see cref="ApplyDehaze"/>). Beide wirken oertlich.</summary>
-        Private Shared Function ApplyHaze(source As SKBitmap, amount As Single) As SKBitmap
+        ''' ihn (<see cref="ApplyDehaze"/>). Beide wirken oertlich. <paramref name="hazeModel"/> ist
+        ''' die Fassung des Rezepts (ImageAdjustments.HazeModel), nur das Hinzufuegen kennt sie.</summary>
+        Private Shared Function ApplyHaze(source As SKBitmap, amount As Single, hazeModel As Integer) As SKBitmap
             Dim strength = Clamp(amount, -1, 1)
             If Math.Abs(strength) <= 0.001F Then Return source
             If strength < 0 Then Return ApplyDehaze(source, -strength)
-            Return ApplyAddedHaze(source, strength)
+            Return ApplyAddedHaze(source, strength, hazeModel)
         End Function
 
         ' ── Dunst hinzufuegen ──────────────────────────────────────────────────────────────────
@@ -2129,7 +2130,11 @@ Namespace Services
         ' Kanals der Bildpunkte, relativ zum Dunstlicht, im Minimum ueber 5 mal 5 Zellen (sonst
         ' laesen die Luecken in Gras oder Laub als klar) und weichgezeichnet ueber ein Zehntel der
         ' kurzen Kante, ergibt die Karte des hinzugefuegten Dunstes. Danach geht jeder Bildpunkt
-        ' ein Stueck zum Schleier, der die Helligkeit des Dunstlichts hat, leicht kuehl getoent.
+        ' ein Stueck zum Schleier, der die Helligkeit des Dunstlichts hat. Seine Farbe haengt an der
+        ' Fassung des Rezepts (ImageAdjustments.HazeModel): in Fassung 0 leicht kuehl getoent, in
+        ' Fassung 1 die Farbe des Dunstlichts als Median der dunstigsten 0,17 Prozent; die Referenz
+        ' folgt mit ihrem Schleier dem Dunstlicht (Reglereichung/ergebnisse/dunstfarbe.txt: dE00
+        ' der Wirkung bei -100 im Median von 8,52 auf 7,45, an farbigem Dunstlicht von 9,98 auf 8,01).
         '
         ' GEMISCHT wird auf den Gammawerten hoch AddedHazePower: darin liegen dunkle Werte naeher am
         ' Schleier, und die Tiefen heben sich so wenig mehr als die Mitten, wie bei der Referenz
@@ -2138,7 +2143,9 @@ Namespace Services
         ' DNG-Konverter gesucht (Diagnostics/Reglereichung/dunst_modell.py): Abstand der Wirkung
         ' bei -100, -50, -25 von 15,9, 9,6, 5,5 auf rund 10,5, 5,1, 2,7.
         Private Const AddedHazeFloor As Double = 0.5
-        Private Const AddedHazeScale As Double = 4.0
+        ''' Ein Feld statt einer Konstanten, damit die Reglereichung die Skala verstellen kann
+        ''' (Messschalter REGLER_DUNST_SKALA); die Anwendung setzt sie nie.
+        Private Shared AddedHazeScale As Double = 4.0
         Private Const AddedHazeExponent As Double = 1.3
         Private Const AddedHazeLight As Double = 0.7
         Private Const AddedHazeCeiling As Double = 0.97
@@ -2147,10 +2154,27 @@ Namespace Services
         Private Const AddedHazePatch As Integer = 2
         Private Const AddedHazeBlurFraction As Double = 0.1
         Private Const AddedHazeGuideEpsilon As Double = 0.01
-        ' Der Schleier ist leicht kuehl, wie gestreutes Licht; je Kanal Rot, Gruen, Blau.
+        ' Fassung 0: der Schleier ist leicht kuehl, wie gestreutes Licht; je Kanal Rot, Gruen, Blau.
         Private Shared ReadOnly AddedHazeTint As Double() = {0.96, 1.0, 1.03}
+        ' Die Farbe des Schleiers: 0 die feste Toenung AddedHazeTint (Fassung 0); 1 die Farbe des
+        ' gemessenen Dunstlichts als Mittel der dunstigsten 0,1 Prozent (DehazeAtmosphere), nur fuer
+        ' die Reglereichung; 2 dieselbe als Median der dunstigsten 0,17 Prozent
+        ' (AddedHazeMedianAtmosphere, Fassung 1). Das Mittel bleibt als Messvariante: eine kleine
+        ' helle farbige Flaeche zieht es (Lichterkette, Bluete), den Median nicht.
+        Private Const AddedHazeVeilFixedTint As Integer = 0
+        Private Const AddedHazeVeilMean As Integer = 1
+        Private Const AddedHazeVeilMedian As Integer = 2
+        ''' Nur fuer die Reglereichung (Messschalter REGLER_DUNST_FARBE), in der Anwendung immer -1:
+        ''' -1 die Fassung des Rezepts entscheidet; 0, 1 oder 2 erzwingen die Farbe des Schleiers
+        ''' fuer jedes Rezept (siehe AddedHazeVeilFixedTint), damit sich beide Fassungen und das
+        ''' Mittel an denselben Stellungen messen lassen.
+        Private Shared AddedHazeVeilOverride As Integer = -1
+        ' Nur fuer den Median: Anteil der dunstigsten Zellen und Umgebung des dunkelsten
+        ' Kanals als Anteil der langen Kante.
+        Private Const AddedHazeMedianFraction As Double = 0.0017
+        Private Const AddedHazeMedianPatchFraction As Double = 0.005
 
-        Private Shared Function ApplyAddedHaze(source As SKBitmap, amount As Single) As SKBitmap
+        Private Shared Function ApplyAddedHaze(source As SKBitmap, amount As Single, hazeModel As Integer) As SKBitmap
             Dim strength = Math.Max(0.0, Math.Min(1.0, CDbl(amount)))
             If strength <= 0.001 Then Return source
             Dim width = source.Width, height = source.Height
@@ -2172,7 +2196,7 @@ Namespace Services
                 HazeCellMeans(srcBuf, stride, ri, gi, bi, ai, width, height, lw, lh, lowR, lowG, lowB, lowOwn)
                 Dim veil As Double() = Nothing
                 Dim lightFactor As Double
-                Dim map = AddedHazeMap(lowR, lowG, lowB, lowOwn, lw, lh, veil, lightFactor)
+                Dim map = AddedHazeMap(lowR, lowG, lowB, lowOwn, lw, lh, hazeModel, veil, lightFactor)
 
                 Dim powLut(255) As Double
                 For v = 0 To 255
@@ -2225,9 +2249,10 @@ Namespace Services
         ''' <summary>Die Karte des hinzugefuegten Dunstes auf der verkleinerten Kopie, dazu der Schleier
         ''' im Mischraum (je Kanal) und der Faktor aus der Helligkeit des Dunstlichts, mit dem die
         ''' Karte je Bildpunkt malgenommen wird. Eigene Funktion, weil der Weg ueber die Grafikkarte
-        ''' die Zellmittel dort bildet und hier weiterrechnet.</summary>
+        ''' die Zellmittel dort bildet und hier weiterrechnet. <paramref name="hazeModel"/> ist die
+        ''' Fassung des Rezepts (ImageAdjustments.HazeModel) und waehlt die Farbe des Schleiers.</summary>
         Friend Shared Function AddedHazeMap(lowR As Double(), lowG As Double(), lowB As Double(), lowOwn As Double(),
-                                            lw As Integer, lh As Integer, ByRef veil As Double(),
+                                            lw As Integer, lh As Integer, hazeModel As Integer, ByRef veil As Double(),
                                             ByRef lightFactor As Double) As Double()
             Dim count = lw * lh
             Dim atmR, atmG, atmB As Double
@@ -2252,6 +2277,24 @@ Namespace Services
             map = GuidedFilter(guide, map, lw, lh, 2, AddedHazeGuideEpsilon)
 
             Dim brightness = Math.Max(0.0001, (linR + linG + linB) / 3.0)
+            Dim veilColor = If(AddedHazeVeilOverride >= 0, AddedHazeVeilOverride,
+                               If(hazeModel >= 1, AddedHazeVeilMedian, AddedHazeVeilFixedTint))
+            If veilColor <> AddedHazeVeilFixedTint Then
+                ' Der Schleier in der Farbe des gemessenen Dunstlichts, auf die Helligkeit des
+                ' Dunstlichts (Mittel der dunstigsten 0,1 Prozent) gebracht.
+                Dim tone = If(veilColor = AddedHazeVeilMedian, AddedHazeMedianAtmosphere(lowR, lowG, lowB, lw, lh), New Double() {linR, linG, linB})
+                Dim toneScale = brightness / Math.Max(0.0001, (tone(0) + tone(1) + tone(2)) / 3.0)
+                Dim linearVeil(2) As Double
+                For c = 0 To 2
+                    linearVeil(c) = Math.Max(0.0001, tone(c)) * toneScale
+                Next
+                lightFactor = Math.Pow((linearVeil(0) + linearVeil(1) + linearVeil(2)) / 3.0, AddedHazeLight)
+                veil = New Double(2) {}
+                For c = 0 To 2
+                    veil(c) = Math.Pow(LinearToSrgb(Math.Min(1.0, linearVeil(c))), AddedHazePower)
+                Next
+                Return map
+            End If
             Dim tintMean = (AddedHazeTint(0) + AddedHazeTint(1) + AddedHazeTint(2)) / 3.0
             lightFactor = Math.Pow(brightness * tintMean, AddedHazeLight)
             veil = New Double(2) {}
@@ -2259,6 +2302,37 @@ Namespace Services
                 veil(c) = Math.Pow(LinearToSrgb(Math.Min(1.0, brightness * AddedHazeTint(c))), AddedHazePower)
             Next
             Return map
+        End Function
+
+        ''' <summary>Fuer den Schleier der Fassung 1 (AddedHazeVeilMedian): das Dunstlicht im Licht als
+        ''' Median je Kanal der dunstigsten Zellen (hoechster dunkelster Kanal, erodiert ueber
+        ''' AddedHazeMedianPatchFraction der langen Kante, Anteil AddedHazeMedianFraction).</summary>
+        Private Shared Function AddedHazeMedianAtmosphere(lowR As Double(), lowG As Double(), lowB As Double(),
+                                                          lw As Integer, lh As Integer) As Double()
+            Dim count = lw * lh
+            Dim linear(2)() As Double
+            For c = 0 To 2
+                linear(c) = New Double(count - 1) {}
+            Next
+            Dim minChannel(count - 1) As Double
+            For i = 0 To count - 1
+                linear(0)(i) = SrgbToLinear(lowR(i))
+                linear(1)(i) = SrgbToLinear(lowG(i))
+                linear(2)(i) = SrgbToLinear(lowB(i))
+                minChannel(i) = Math.Min(linear(0)(i), Math.Min(linear(1)(i), linear(2)(i)))
+            Next
+            Dim patch = Math.Max(1, CInt(Math.Round(Math.Max(lw, lh) * AddedHazeMedianPatchFraction)))
+            Dim dark = MinFilter(minChannel, lw, lh, patch)
+            Dim taken = Math.Max(1, CInt(Math.Ceiling(count * AddedHazeMedianFraction)))
+            Dim order = Enumerable.Range(0, count).OrderByDescending(Function(i) dark(i)).Take(taken).ToArray()
+            Dim result(2) As Double
+            For c = 0 To 2
+                Dim channel = linear(c)
+                Dim values = order.Select(Function(i) channel(i)).OrderBy(Function(v) v).ToArray()
+                Dim middle = values.Length \ 2
+                result(c) = If(values.Length Mod 2 = 1, values(middle), (values(middle - 1) + values(middle)) / 2.0)
+            Next
+            Return result
         End Function
 
         Private Shared Function SrgbToLinear(v As Double) As Double

@@ -2983,8 +2983,9 @@ half4 main(float2 p) {
 
         ''' <summary>ApplyAddedHaze: die Zellmittel entstehen auf der Karte, die Karte des
         ''' hinzugefuegten Dunstes rechnet AddedHazeMap wie fuer den Prozessor, gemischt wird auf der
-        ''' Karte.</summary>
-        Private Shared Function HazeOnGpu(amount As Single) As Func(Of GRContext, SKImage, SKSurface)
+        ''' Karte. Die Farbe des Schleiers je nach Fassung (<paramref name="hazeModel"/>) kommt aus
+        ''' AddedHazeMap und geht als Uniform "veil" an den Shader.</summary>
+        Private Shared Function HazeOnGpu(amount As Single, hazeModel As Integer) As Func(Of GRContext, SKImage, SKSurface)
             Dim strength = Math.Max(0.0, Math.Min(1.0, CDbl(Clamp(amount, -1, 1))))
             If strength <= 0.001 Then Return Nothing
             Return Function(gr, image)
@@ -2999,7 +3000,7 @@ half4 main(float2 p) {
                        If Not DehazeCellMeansOnGpu(gr, image, lw, lh, lowR, lowG, lowB, lowOwn) Then Return Nothing
                        Dim veil As Double() = Nothing
                        Dim lightFactor As Double
-                       Dim map = AddedHazeMap(lowR, lowG, lowB, lowOwn, lw, lh, veil, lightFactor)
+                       Dim map = AddedHazeMap(lowR, lowG, lowB, lowOwn, lw, lh, hazeModel, veil, lightFactor)
                        Dim m = New Single(count - 1) {}
                        For i = 0 To count - 1
                            m(i) = CSng(map(i))

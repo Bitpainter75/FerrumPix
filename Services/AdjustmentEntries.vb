@@ -129,7 +129,8 @@ Namespace Services
 
             list.Add(E("clarity", "details", "Klarheit", "Clarity"))
             list.Add(E("structure", "details", "Struktur", "Structure"))
-            list.Add(E("haze", "details", "Dunst", "Haze"))
+            ' Die Fassung des Dunstes geht mit dem Dunst: eingefuegt sieht er aus wie in der Quelle.
+            list.Add(E("haze", "details", "Dunst", "Haze", "HazeModel"))
             list.Add(E("glow", "details", "Glühen", "Glow"))
             list.Add(E("blur", "details", "Weichzeichnen", "Blur"))
 
@@ -319,6 +320,8 @@ Namespace Services
                 For Each field In entry.Fields
                     Dim p = PropertyOf(field)
                     If p Is Nothing Then Continue For
+                    ' Die Fassung des Dunstes allein macht den Eintrag nicht abweichend, der Dunst schon.
+                    If field = NameOf(ImageAdjustments.HazeModel) Then Continue For
                     If Not Object.Equals(p.GetValue(recipe), p.GetValue(neutral)) Then
                         result.Add(entry)
                         Exit For
