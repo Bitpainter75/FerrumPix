@@ -13762,4 +13762,40 @@
   <data name="Als_Textdatei_speichern_288a3137" xml:space="preserve">
     <value>Zapisz jako plik tekstowy</value>
   </data>
+  <data name="F_r_die_Anmeldung_im_Browser_h_chstens_64_Zeiche_8fc0dd73" xml:space="preserve">
+    <value>Do logowania w przeglądarce, najwyżej 64 znaki; wielkość liter nie ma znaczenia. Po zmianie nazwy obowiązuje tylko nowa nazwa, otwarte logowania pozostają.</value>
+  </data>
+  <data name="Gespeichert_Die_Authenticator_App_zeigt_weiter_d_b8d9e261" xml:space="preserve">
+    <value>Zapisano. Aplikacja uwierzytelniająca nadal pokazuje starą nazwę; jej kody nadal działają.</value>
+  </data>
+  <data name="Neuen_Benutzernamen_eingeben_Danach_gilt_bei_der_f38d4081" xml:space="preserve">
+    <value>Wpisz nową nazwę użytkownika. Od tej chwili przy logowaniu obowiązuje tylko ona.</value>
+  </data>
+  <data name="Es_gibt_ungespeicherte_nderungen_Zum_Schlie_en_b_6f752459" xml:space="preserve">
+    <value>Są niezapisane zmiany. Aby zamknąć, najpierw odblokuj.</value>
+  </data>
+  <data name="Ganzen_Tag_ausw_hlen_6822224a" xml:space="preserve">
+    <value>Zaznacz cały dzień</value>
+  </data>
+  <data name="H_chstens_0_Bilder_auf_einmal_6eba59aa" xml:space="preserve">
+    <value>Najwyżej {0} zdjęć naraz</value>
+  </data>
+  <data name="0_von_1_ohne_Recht_1b1a391b" xml:space="preserve">
+    <value>{0} z {1} bez uprawnień</value>
+  </data>
+  <data name="0_von_1_nicht_mehr_vorhanden_b9110c3d" xml:space="preserve">
+    <value>{0} z {1} już nie istnieje</value>
+  </data>
+  <data name="0_Bilder_ge_ndert_b36c0fd1" xml:space="preserve">
+    <value>Zmieniono zdjęcia: {0}</value>
+  </data>
+  <data name="0_Bilder_l_schen_e274f888" xml:space="preserve">
+    <value>Usunąć zdjęcia ({0})?</value>
+  </data>
+  <data name="0_Bilder_endg_ltig_l_schen_Der_Papierkorb_ist_ab_a07d17fc" xml:space="preserve">
+    <value>Usunąć zdjęcia ({0}) trwale? Kosz jest wyłączony, tego nie można cofnąć.</value>
+  </data>
+  <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
+    <value>Przygotowywanie zdjęć</value>
+  </data>
 </root>

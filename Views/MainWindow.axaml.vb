@@ -364,6 +364,9 @@ Namespace Views
                 ApplyWindowButtonsSide()
             ElseIf e.PropertyName = NameOf(MainWindowViewModel.IsFullscreen) Then
                 ApplyFullscreenState()
+                ' Gesperrt haengt die Fensterleiste daran, ob es sie gibt (MainWindowLock.vb).
+                Dim vm = TryCast(sender, MainWindowViewModel)
+                If vm IsNot Nothing AndAlso vm.IsAppLocked Then ApplyLockChrome(True)
             ElseIf e.PropertyName = NameOf(MainWindowViewModel.IsDialogOpen) Then
                 Dim vm = TryCast(sender, MainWindowViewModel)
                 If vm IsNot Nothing AndAlso vm.IsDialogOpen Then
@@ -569,6 +572,13 @@ Namespace Views
                     ' Dasselbe fuer die gesammelten Messungen des Diagnoseprotokolls: sie gehen nur
                     ' alle zwei Sekunden hinaus, der letzte Schritt vor dem Beenden fehlte sonst.
                     PerformanceTraceService.Flush()
+                    Return
+                End If
+
+                ' Gesperrt keine Rueckfrage: sie nennt das Bild. Das Schliessen unterbleibt, das
+                ' Anmeldefenster sagt warum (MainWindowLock.RefuseCloseWhileLocked).
+                If e.CloseReason = WindowCloseReason.WindowClosing AndAlso RefuseCloseWhileLocked(vm) Then
+                    e.Cancel = True
                     Return
                 End If
 
@@ -1024,6 +1034,8 @@ Namespace Views
                 ' Freigabe ausdrücklich VOR Close einholen. Abbrechen lässt _allowWindowClose
                 ' unverändert und beendet nur diesen Klick.
                 If Not _allowWindowClose AndAlso vm IsNot Nothing Then
+                    ' Gesperrt keine Rueckfrage, siehe RefuseCloseWhileLocked.
+                    If RefuseCloseWhileLocked(vm) Then Return
                     If vm.CurrentMode = AppMode.Editor AndAlso
                        vm.Editor IsNot Nothing AndAlso vm.Editor.HasUnsavedChanges Then
                         If Not Await vm.Editor.ConfirmSaveBeforeLeavingAsync("die Anwendung schließt") Then Return

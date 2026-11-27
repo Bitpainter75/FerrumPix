@@ -354,11 +354,9 @@ Namespace Services
                         Using guard = RecipeReferences.Restrict(canRead),
                               bitmap = ThumbnailCacheService.RenderTileWithoutCache(key)
                             If bitmap Is Nothing Then Return Nothing
-                            Using png As New MemoryStream()
-                                bitmap.Save(png, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default)
-                                Using decoded = SKBitmap.Decode(png.ToArray())
-                                    Return EncodeMobileJpeg(decoded, 960, 85)
-                                End Using
+                            ' Die Punkte direkt nach Skia, ohne Umweg ueber ein PNG.
+                            Using converted = ImageOrientationService.ToSkBitmap(bitmap)
+                                Return EncodeMobileJpeg(converted, 960, 85)
                             End Using
                         End Using
                     Catch ex As Exception When TypeOf ex IsNot OutOfMemoryException
@@ -579,15 +577,27 @@ Namespace Services
                     If bitmap Is Nothing Then Return Nothing
                     Return EncodeMobileJpeg(bitmap, edge, 85)
                 End If
-                If Not FpxService.IsFpx(path) AndAlso RawSidecarService.HasRecipeBeside(path) AndAlso RawSidecarService.IsEditedFile(path) Then
+                ' Jedes Rezept daneben geht durch die Kette in Vorschaugroesse, wie bei der Kachel der
+                ' Galerie (ThumbnailCacheService.RendersRecipeTile), auch eines ohne Vermerk
+                ' "bearbeitet": der volle Weg unten haette es ebenso angewandt, nur am ganzen Bild.
+                Dim hasRecipe = False
+                If Not FpxService.IsFpx(path) AndAlso RawSidecarService.HasRecipeBeside(path) Then
                     Dim adjustments = RawSidecarService.TryRead(path)
                     If adjustments IsNot Nothing Then
-                        Dim decodeMs, processMs, encodeMs As Long
-                        Using rendered = ImageProcessor.RenderPngStream(path, adjustments, edge, decodeMs, processMs, encodeMs,
-                                                                        preferReducedRawDecode:=True)
-                            If rendered IsNot Nothing Then bitmap = SKBitmap.Decode(rendered.ToArray())
-                        End Using
+                        hasRecipe = True
+                        ' Direkt als Bitmap: der Umweg ueber PNG-Kodieren und Skia-Lesen kostete
+                        ' bei einer Vorschau mehr als das Rechnen.
+                        bitmap = ImageProcessor.RenderPreviewBitmap(path, adjustments, edge)
                     End If
+                End If
+                ' Ohne Rezept gleich im Decoder verkleinert (JPEG, WebP), sonst Nothing und weiter
+                ' unten der volle Weg. Drehung und Farbprofil wie dort.
+                If bitmap Is Nothing AndAlso Not hasRecipe Then
+                    Try
+                        bitmap = ImageProcessor.DecodeOrientedReduced(path, edge)
+                    Catch ex As Exception When TypeOf ex IsNot OutOfMemoryException
+                        bitmap = Nothing
+                    End Try
                 End If
                 If bitmap Is Nothing Then
                     Try
@@ -633,14 +643,8 @@ Namespace Services
                 Dim adjustments = If(hasSidecar, RawSidecarService.TryRead(key), Nothing)
                 If adjustments Is Nothing Then adjustments = ImageAdjustments.ForUneditedRaw(path)
                 Try
-                    Dim decodeMs, processMs, encodeMs As Long
-                    Using rendered = ImageProcessor.RenderPngStream(path, adjustments, edge, decodeMs, processMs, encodeMs,
-                                                                    preferReducedRawDecode:=True)
-                        If rendered IsNot Nothing Then
-                            Dim developed = SKBitmap.Decode(rendered.ToArray())
-                            If developed IsNot Nothing Then Return developed
-                        End If
-                    End Using
+                    Dim developed = ImageProcessor.RenderPreviewBitmap(path, adjustments, edge, preferReducedRawDecode:=True)
+                    If developed IsNot Nothing Then Return developed
                 Catch ex As Exception When TypeOf ex IsNot OperationCanceledException
                     ' Wie der Betrachter: lieber die eingebettete Vorschau als eine leere Flaeche.
                     DiagnosticLogService.LogException("BrowserBridge.MobileRawPreview", ex)
@@ -654,7 +658,10 @@ Namespace Services
                     Using codec = SKCodec.Create(data)
                         If codec Is Nothing Then Return Nothing
                         Dim origin = ImageOrientationService.RawPreviewOrigin(path, codec.EncodedOrigin, codec.Info.Width, codec.Info.Height)
-                        Dim decoded = SKBitmap.Decode(codec)
+                        ' Die Vorschau der Kamera ist oft so gross wie das Foto (Canon R5 8192,
+                        ' Nikon Z 8 8256 Punkte): gleich im Decoder auf die Kante verkleinert, sonst
+                        ' wie bisher ganz. Drehung und Farbraum bleiben dieselben.
+                        Dim decoded = If(ImageProcessor.DecodeCodecReduced(codec, edge), SKBitmap.Decode(codec))
                         If decoded Is Nothing Then Return Nothing
                         Dim corrected = ImageOrientationService.ApplyOrientation(decoded, origin)
                         If Not Object.ReferenceEquals(corrected, decoded) Then decoded.Dispose()
@@ -752,9 +759,11 @@ Namespace Services
                         Dim crop = DecodeGate.Run(Function() FacePanelService.CropFromFile(cover.FilePath, cover.X, cover.Y, cover.Width, cover.Height, Nothing))
                         If crop Is Nothing Then Return Nothing
                         Using crop
-                            Using stream As New MemoryStream()
-                                crop.Save(stream, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default)
-                                Return stream.ToArray()
+                            ' Geradliniges Alpha, wie PNG es speichert; gepackt ueber den
+                            ' gemeinsamen Weg (PngEncoder), das Ergebnis bleibt im Speicher liegen.
+                            Using converted = ImageOrientationService.ToSkBitmap(crop, straightAlpha:=True)
+                                If converted Is Nothing Then Return Nothing
+                                Return PngEncoder.EncodeToBytes(converted, PngPurpose.Stored)
                             End Using
                         End Using
                     End Function)
@@ -1064,12 +1073,9 @@ Namespace Services
                                     ' Eine Variante mit ihrem eigenen Rezept, in voller Groesse.
                                     Dim adjustments = RawSidecarService.TryRead(key)
                                     If adjustments Is Nothing Then Return Nothing
-                                    Dim decodeMs, processMs, encodeMs As Long
-                                    Using rendered = ImageProcessor.RenderPngStream(path, adjustments, 0, decodeMs, processMs, encodeMs)
-                                        If rendered Is Nothing Then Return Nothing
-                                        Using developedVariant = SKBitmap.Decode(rendered.ToArray())
-                                            Return EncodeMobileJpeg(developedVariant, Integer.MaxValue, 92)
-                                        End Using
+                                    Using developedVariant = ImageProcessor.RenderPreviewBitmap(path, adjustments, 0)
+                                        If developedVariant Is Nothing Then Return Nothing
+                                        Return EncodeMobileJpeg(developedVariant, Integer.MaxValue, 92)
                                     End Using
                                 End If
                                 Using developed = ImageProcessor.DecodeDevelopedForOutput(path, developRaw:=True)

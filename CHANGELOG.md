@@ -29,7 +29,10 @@
   own tiles as in the gallery, and a tile whose file is gone or cannot be read shows a sign
   instead of staying grey. Rate, favourite, label, keep or reject there and the desktop sees it.
   Upload photos and videos from the phone into a folder, download the original, a JPEG with your
-  edits or several pictures as a ZIP, and share from the full screen view. Over HTTPS the page can
+  edits or several pictures as a ZIP, and share from the full screen view. Select several pictures
+  or whole days (long press, the select button, the circle at a day, or CTRL and SHIFT with the
+  mouse) and download, share, rate, favourite, label, keep, reject or delete them at once; keep
+  and reject use the thumbs of the gallery. Over HTTPS the page can
   be installed on the home screen. Live Photos and Motion Photos carry a mark on their tile and
   play their short video once, muted at first, from a large play button on the photo, the button
   at the top or a long press, and then the photo is back; share links show it only when they pass
@@ -44,7 +47,8 @@
   users for the browser and decides per folder what each may do: view and download, also rate,
   mark and upload, or also rename and delete. Other users only get the page for phones and see
   nothing beyond their folders; ratings and marks stay shared. Each user can pick a language for
-  that page.
+  that page. Every user name can be changed, the administrator's too: there by the administrator,
+  and on the phone page under More for your own account; signed in browsers stay signed in.
 
 - **Forgot your password?** With a mail server and the address of FerrumPix in the browser set up under
   Settings, User management, the sign-in page in the browser sends a link for a new password to the
@@ -84,10 +88,17 @@
 
 ### Fixes
 
+- While FerrumPix is locked, the window bar now stays at the top, so the window can still be
+  moved, resized, minimized, maximized and closed. It shows only the logo and the window buttons,
+  no file name. With unsaved changes, closing waits until you unlock.
+
 - In the browser, users without the administrator role can no longer upload sidecar files or
   projects, and pictures from folders they may not open no longer appear inside other pictures on
   the phone page or in shared links. The delete question on the phone page now says when the trash
   is switched off and deleting is permanent. Searches with many `*` stay fast.
+
+- In the full interface in the browser, dragging the handle of a scroll bar follows the mouse
+  again; before, it jumped from the top straight to the bottom unless the mouse moved very slowly.
 
 - In the browser, videos and the short videos of Live Photos and Motion Photos in the viewer now
   play with a picture; before, the area stayed black and the viewer went back to the photo.

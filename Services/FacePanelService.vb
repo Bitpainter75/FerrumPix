@@ -313,9 +313,14 @@ Namespace Services
         ''' Hochformat an einer voellig anderen Stelle.</summary>
         Private Shared Function DecodeForFace(path As String, faceSize As Double, ByRef scale As Double) As SkiaSharp.SKBitmap
             scale = 1
-            ' RAW, HEIF und Co.: dieselbe Quelle wie beim Suchen, in voller Groesse. Verkleinert
-            ' dekodieren kann nur der JPEG-Weg unten, und bei RAW ist die Vorschau ohnehin kleiner
-            ' als das Foto.
+            ' RAW: dieselbe Quelle wie beim Suchen, die eingebettete Vorschau, aber wie unten im
+            ' Decoder verkleinert. Sie ist bei neueren Kameras so gross wie das Foto (8192 Punkte),
+            ' und ganz dekodiert kostete ein Ausschnitt weit ueber eine Sekunde.
+            If RawPreviewService.IsSupportedRaw(path) Then
+                Return FaceScanRunner.DecodeRawUprightForFacesReduced(path, (CropEdge * 2.0) / Math.Max(1.0, faceSize), scale)
+            End If
+            ' HEIF und Co.: dieselbe Quelle wie beim Suchen, in voller Groesse; ihre Leser kennen
+            ' keine kleinere Stufe.
             If FaceScanRunner.UsesConvertedSource(path) Then Return FaceScanRunner.DecodeUprightForFaces(path)
             Dim decoded As SkiaSharp.SKBitmap = Nothing
             Dim origin As SkiaSharp.SKEncodedOrigin

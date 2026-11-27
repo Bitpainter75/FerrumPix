@@ -448,8 +448,12 @@ Namespace Services
             Return result
         End Function
 
-        ''' <summary>Ein Bild fuer die Seite: Kennung, Aufnahmezeit, Video ja oder nein, Stand.</summary>
-        Private Shared Function MobileItemJson(item As MobileItem) As Dictionary(Of String, Object)
+        ''' <summary>Ein Bild fuer die Seite: Kennung, Aufnahmezeit, Video ja oder nein, Stand.
+        ''' Fuer einen Benutzer ohne Administratorrolle dazu seine Stufe an der Datei ("r",
+        ''' FolderAccessLevel als Zahl): die Aktionsleiste der Auswahl blendet damit aus, wofuer die
+        ''' Stufe bei keinem gewaehlten Bild reicht. Ohne "r" gilt Verwalten (Administrator). Reine
+        ''' Zeichenkettenarbeit wie CanSee; geprueft wird jeder Weg trotzdem am Server.</summary>
+        Private Shared Function MobileItemJson(item As MobileItem, mobile As MobileContext) As Dictionary(Of String, Object)
             Dim result As New Dictionary(Of String, Object) From {
                 {"i", MobileIdFor(MobileFileKind, item.Path)},
                 {"t", IsoOf(item.Taken)},
@@ -462,11 +466,12 @@ Namespace Services
             ' Das Farbetikett fuer den Punkt auf der Kachel, in der Schreibweise der Galerie.
             Dim label = If(item.Label, "").Trim().ToUpperInvariant()
             If label.Length > 0 Then result("l") = label
+            If mobile IsNot Nothing AndAlso Not mobile.IsAdmin Then result("r") = CInt(mobile.LevelAt(VariantKey.FileOf(item.Path)))
             Return result
         End Function
 
-        Private Shared Function MobileListJson(items As IEnumerable(Of MobileItem)) As List(Of Dictionary(Of String, Object))
-            Return items.Take(MaxMobileList).Select(AddressOf MobileItemJson).ToList()
+        Private Shared Function MobileListJson(items As IEnumerable(Of MobileItem), mobile As MobileContext) As List(Of Dictionary(Of String, Object))
+            Return items.Take(MaxMobileList).Select(Function(item) MobileItemJson(item, mobile)).ToList()
         End Function
 
         ''' <summary>Bilder aus Pfaden des Katalogs (Suche, Person, Ort): gefiltert durch den
@@ -507,7 +512,7 @@ Namespace Services
             Dim timeline = Await MobileTimelineFor(mobile)
             Dim offset = Math.Max(0, CInt(Math.Clamp(ReadQueryInteger(context.Request, "offset", 0), 0, Integer.MaxValue)))
             Dim limit = CInt(Math.Clamp(ReadQueryInteger(context.Request, "limit", 200), 1, MaxMobilePage))
-            Dim page = timeline.Items.Skip(offset).Take(limit).Select(AddressOf MobileItemJson).ToList()
+            Dim page = timeline.Items.Skip(offset).Take(limit).Select(Function(item) MobileItemJson(item, mobile)).ToList()
             Dim result As New Dictionary(Of String, Object) From {
                 {"stamp", timeline.Stamp}, {"total", timeline.Items.Count}, {"offset", offset}, {"items", page}}
             If context.Request.QueryString("days") = "1" Then
@@ -630,7 +635,7 @@ Namespace Services
                 {"upload", mobile.CanUpload(folder)},
                 {"share", CanShareFolder(mobile, folder)},
                 {"folders", folders.Select(Function(f) FolderJson(f)).ToList()},
-                {"items", MobileListJson(items)}}
+                {"items", MobileListJson(items, mobile)}}
         End Function
 
         ' --- Suche, Personen, Orte ----------------------------------------------------------------
@@ -647,7 +652,7 @@ Namespace Services
                     If query.Length = 0 Then Return New List(Of MobileItem)()
                     Return MobileItemsFromPaths(mobile, MobileSearchPaths(mobile, query))
                 End Function)
-            Await WriteMobileJsonAsync(context, 200, New Dictionary(Of String, Object) From {{"items", MobileListJson(items)}})
+            Await WriteMobileJsonAsync(context, 200, New Dictionary(Of String, Object) From {{"items", MobileListJson(items, mobile)}})
         End Function
 
         ''' <summary>Die Treffer eines Suchtexts unter den Bildern, die dieser Benutzer sieht. Die
@@ -756,7 +761,7 @@ Namespace Services
                 Await WriteMobileJsonAsync(context, 404, MobileProblem("not found"))
                 Return
             End If
-            Await WriteMobileJsonAsync(context, 200, New Dictionary(Of String, Object) From {{"items", MobileListJson(items)}})
+            Await WriteMobileJsonAsync(context, 200, New Dictionary(Of String, Object) From {{"items", MobileListJson(items, mobile)}})
         End Function
 
         ''' <summary>GET /api/m/places: die Orte mit der Zahl ihrer sichtbaren Fotos, die haeufigsten
@@ -797,7 +802,7 @@ Namespace Services
                 Await WriteMobileJsonAsync(context, 404, MobileProblem("not found"))
                 Return
             End If
-            Await WriteMobileJsonAsync(context, 200, New Dictionary(Of String, Object) From {{"items", MobileListJson(items)}})
+            Await WriteMobileJsonAsync(context, 200, New Dictionary(Of String, Object) From {{"items", MobileListJson(items, mobile)}})
         End Function
 
         ' --- Infoblatt --------------------------------------------------------------------------

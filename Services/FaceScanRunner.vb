@@ -438,6 +438,38 @@ Namespace Services
             Return ApplyOrientationOwned(decoded, ImageOrientationService.ReadOrigin(filePath))
         End Function
 
+        ''' <summary>Wie <see cref="DecodeUprightForFaces"/> fuer eine RAW, aber gleich im Decoder
+        ''' verkleinert: hoechstens auf <paramref name="wantedScale"/> der eingebetteten Vorschau,
+        ''' nie darunter (ImageProcessor.DecodeCodecReduced). Fuer den Ausschnitt eines Gesichts, das
+        ''' nur 88 Punkte gross gezeigt wird. <paramref name="scale"/> meldet den wirklichen Massstab,
+        ''' denn die Kaesten liegen in Bildpunkten der ganzen Vorschau; 1, wenn keine kleinere Stufe
+        ''' reicht oder der Codec keine kennt.</summary>
+        Friend Shared Function DecodeRawUprightForFacesReduced(filePath As String, wantedScale As Double, ByRef scale As Double) As SKBitmap
+            scale = 1
+            If String.IsNullOrWhiteSpace(filePath) Then Return Nothing
+            Using stream = OpenRawFaceSource(filePath)
+                If stream Is Nothing Then Return Nothing
+                ' NICHT SKCodec.Create(Stream), siehe DecodeUprightForFaces.
+                Using data = SKData.CreateCopy(stream.ToArray())
+                    Using codec = SKCodec.Create(data)
+                        If codec Is Nothing Then Return Nothing
+                        Dim info = codec.Info
+                        Dim origin = ImageOrientationService.RawPreviewOrigin(filePath, codec.EncodedOrigin, info.Width, info.Height)
+                        Dim minLongEdge = CInt(Math.Ceiling(Math.Max(info.Width, info.Height) * Math.Min(1.0, Math.Max(0.0, wantedScale))))
+                        Dim decoded = ImageProcessor.DecodeCodecReduced(codec, minLongEdge)
+                        If decoded IsNot Nothing Then
+                            ' Gleich in beiden Richtungen bis auf die Rundung der Achtelstufe; die
+                            ' Drehung danach aendert ihn nicht.
+                            scale = decoded.Width / CDbl(info.Width)
+                        Else
+                            decoded = SKBitmap.Decode(codec)
+                        End If
+                        Return ApplyOrientationOwned(decoded, origin)
+                    End Using
+                End Using
+            End Using
+        End Function
+
         ''' <summary>Die gedrehte Groesse des Bildes aus <see cref="DecodeUprightForFaces"/>, ohne es
         ''' zu dekodieren - fuer Formate, die Skia nicht selbst oeffnet. (0, 0), wo das ohne Decode
         ''' nicht geht (TIFF, PSD, ICO): dort entstehen dann keine XMP-Regionen, wie bisher.

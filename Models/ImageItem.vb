@@ -1326,7 +1326,17 @@ Namespace Models
         Private Sub RaiseMotionChanged()
             RaisePropertyChanged(NameOf(HasMotionBadge))
             RaisePropertyChanged(NameOf(MotionBadgeTip))
+            RaisePropertyChanged(NameOf(ShowsMotionPlayBadge))
         End Sub
+
+        ''' <summary>Der grosse Abspielknopf mitten auf der Kachel eines Bewegtbilds, wie beim
+        ''' Video. Der Film eines Live Photos traegt als Video schon den Knopf des Videos; dort
+        ''' kein zweiter.</summary>
+        Public ReadOnly Property ShowsMotionPlayBadge As Boolean
+            Get
+                Return HasMotionBadge AndAlso Not IsVideoFile
+            End Get
+        End Property
 
         ''' <summary>Traegt die Kachel das Abzeichen fuer ein Bewegtbild? Ein Motion Photo immer
         ''' (der Film haengt an der Datei), Bild und Film eines Live Photos nur, wenn die andere

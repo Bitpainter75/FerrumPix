@@ -13722,4 +13722,40 @@
   <data name="Als_Textdatei_speichern_288a3137" xml:space="preserve">
     <value>Enregistrer comme fichier texte</value>
   </data>
+  <data name="F_r_die_Anmeldung_im_Browser_h_chstens_64_Zeiche_8fc0dd73" xml:space="preserve">
+    <value>Pour la connexion dans le navigateur, 64 caractères au plus ; majuscules et minuscules sont indifférentes. Après le renommage, seul le nouveau nom est valable, les sessions ouvertes restent.</value>
+  </data>
+  <data name="Gespeichert_Die_Authenticator_App_zeigt_weiter_d_b8d9e261" xml:space="preserve">
+    <value>Enregistré. L'application d'authentification affiche encore l'ancien nom ; ses codes restent valables.</value>
+  </data>
+  <data name="Neuen_Benutzernamen_eingeben_Danach_gilt_bei_der_f38d4081" xml:space="preserve">
+    <value>Saisissez un nouveau nom d'utilisateur. Ensuite, seul celui-ci est valable pour la connexion.</value>
+  </data>
+  <data name="Es_gibt_ungespeicherte_nderungen_Zum_Schlie_en_b_6f752459" xml:space="preserve">
+    <value>Des modifications ne sont pas enregistrées. Déverrouillez d'abord pour fermer.</value>
+  </data>
+  <data name="Ganzen_Tag_ausw_hlen_6822224a" xml:space="preserve">
+    <value>Sélectionner toute la journée</value>
+  </data>
+  <data name="H_chstens_0_Bilder_auf_einmal_6eba59aa" xml:space="preserve">
+    <value>Au maximum {0} images à la fois</value>
+  </data>
+  <data name="0_von_1_ohne_Recht_1b1a391b" xml:space="preserve">
+    <value>{0} sur {1} sans autorisation</value>
+  </data>
+  <data name="0_von_1_nicht_mehr_vorhanden_b9110c3d" xml:space="preserve">
+    <value>{0} sur {1} n'existent plus</value>
+  </data>
+  <data name="0_Bilder_ge_ndert_b36c0fd1" xml:space="preserve">
+    <value>{0} images modifiées</value>
+  </data>
+  <data name="0_Bilder_l_schen_e274f888" xml:space="preserve">
+    <value>Supprimer {0} images ?</value>
+  </data>
+  <data name="0_Bilder_endg_ltig_l_schen_Der_Papierkorb_ist_ab_a07d17fc" xml:space="preserve">
+    <value>Supprimer {0} images définitivement ? La corbeille est désactivée, cette action est irréversible.</value>
+  </data>
+  <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
+    <value>Préparation des images</value>
+  </data>
 </root>

@@ -148,6 +148,7 @@ Namespace ViewModels
         Private ReadOnly _userRuleRows As New ObservableCollection(Of UserFolderRuleRow)()
         Private _selectedUserRow As UserAccountRow
         Private _selectedUserEmail As String = ""
+        Private _selectedUserName As String = ""
         Private _selectedUserNewPassword As String = ""
         Private _selectedUserNewPasswordRepeat As String = ""
         Private _newUserName As String = ""
@@ -220,10 +221,11 @@ Namespace ViewModels
                 _selectedUserRow = value
                 Me.RaisePropertyChanged(NameOf(SelectedUserRow))
                 _selectedUserEmail = If(value?.Account.Email, "")
+                _selectedUserName = If(value?.Account.Name, "")
                 _selectedUserNewPassword = ""
                 _selectedUserNewPasswordRepeat = ""
                 ReloadRuleRows()
-                For Each name In {NameOf(HasSelectedUser), NameOf(SelectedUserIsOther), NameOf(SelectedUserEmail),
+                For Each name In {NameOf(HasSelectedUser), NameOf(SelectedUserIsOther), NameOf(SelectedUserEmail), NameOf(SelectedUserName),
                                   NameOf(SelectedUserIsAdmin), NameOf(SelectedUserIsDisabled), NameOf(SelectedUserNewPassword),
                                   NameOf(SelectedUserNewPasswordRepeat), NameOf(SelectedUserTitle), NameOf(UserRulesSummary),
                                   NameOf(SelectedUserNeedsRules), NameOf(SelectedUserLanguage),
@@ -266,6 +268,17 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_selectedUserEmail, If(value, ""))
+            End Set
+        End Property
+
+        ''' <summary>Der Benutzername des gewaehlten Benutzers zum Umbenennen, auch des Eigentuemers
+        ''' (<see cref="RenameUserCommand"/>).</summary>
+        Public Property SelectedUserName As String
+            Get
+                Return _selectedUserName
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_selectedUserName, If(value, ""))
             End Set
         End Property
 
@@ -491,6 +504,32 @@ Namespace ViewModels
                         End Sub)
                 End If
                 Return _saveUserEmailCommand
+            End Get
+        End Property
+
+        Private _renameUserCommand As ICommand
+
+        ''' <summary>Benennt den gewaehlten Benutzer um, den Eigentuemer eingeschlossen. Wirkt sofort;
+        ''' offene Anmeldungen bleiben. Mit zweitem Faktor nennt die Meldung, dass die App des
+        ''' Benutzers weiter den alten Namen zeigt.</summary>
+        Public ReadOnly Property RenameUserCommand As ICommand
+            Get
+                If _renameUserCommand Is Nothing Then
+                    _renameUserCommand = New DelegateCommand(
+                        Sub()
+                            If _selectedUserRow Is Nothing Then Return
+                            Dim id = _selectedUserRow.Account.Id
+                            Dim outcome = UserAccountService.RenameUser(id, _selectedUserName)
+                            If outcome = UserChangeOutcome.Done AndAlso TwoFactorService.IsEnabled(id) Then
+                                ReportUsers(LocalizationService.T("Gespeichert. Die Authenticator-App zeigt weiter den alten Namen; ihre Codes gelten trotzdem."), False)
+                            Else
+                                ReportUsers(UserOutcomeText(outcome))
+                            End If
+                            ' Abgewiesen bleibt der eingegebene Name im Feld stehen.
+                            If outcome = UserChangeOutcome.Done Then ReloadUserRows(id)
+                        End Sub)
+                End If
+                Return _renameUserCommand
             End Get
         End Property
 

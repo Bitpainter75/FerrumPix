@@ -218,6 +218,19 @@
                             <StackPanel Spacing="12">
                                 <TextBlock Classes="no-translate" Text="{Binding SelectedUserTitle}" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
 
+                                <!-- Umbenennen, fuer jeden Benutzer samt Eigentuemer (RenameUserCommand).
+                                     Alles andere haengt an der Kennung und bleibt. -->
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="560" Margin="0,0,24,0">
+                                        <TextBlock Text="Benutzername" FontSize="{DynamicResource FP.Font.Body}"/>
+                                        <TextBlock Text="Für die Anmeldung im Browser, höchstens 64 Zeichen; Groß- und Kleinschreibung zählen nicht. Nach dem Umbenennen gilt nur noch der neue Name, offene Anmeldungen bleiben." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <TextBox Classes="no-translate" Width="260" MaxLength="64" Text="{Binding SelectedUserName, Mode=TwoWay}"/>
+                                        <Button Classes="ghost" Padding="12,7" Command="{Binding RenameUserCommand}">Umbenennen</Button>
+                                    </StackPanel>
+                                </Grid>
+
                                 <Grid ColumnDefinitions="*,Auto">
                                     <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="560" Margin="0,0,24,0">
                                         <TextBlock Text="E-Mail-Adresse" FontSize="{DynamicResource FP.Font.Body}"/>

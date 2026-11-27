@@ -13766,4 +13766,40 @@
   <data name="Als_Textdatei_speichern_288a3137" xml:space="preserve">
     <value>Simpan sebagai file teks</value>
   </data>
+  <data name="F_r_die_Anmeldung_im_Browser_h_chstens_64_Zeiche_8fc0dd73" xml:space="preserve">
+    <value>Untuk masuk di peramban, paling banyak 64 karakter; huruf besar dan kecil tidak dibedakan. Setelah diganti, hanya nama baru yang berlaku, sesi masuk yang terbuka tetap berjalan.</value>
+  </data>
+  <data name="Gespeichert_Die_Authenticator_App_zeigt_weiter_d_b8d9e261" xml:space="preserve">
+    <value>Tersimpan. Aplikasi autentikator tetap menampilkan nama lama; kodenya tetap berlaku.</value>
+  </data>
+  <data name="Neuen_Benutzernamen_eingeben_Danach_gilt_bei_der_f38d4081" xml:space="preserve">
+    <value>Masukkan nama pengguna baru. Setelah itu hanya nama ini yang berlaku untuk masuk.</value>
+  </data>
+  <data name="Es_gibt_ungespeicherte_nderungen_Zum_Schlie_en_b_6f752459" xml:space="preserve">
+    <value>Ada perubahan yang belum disimpan. Buka kunci terlebih dahulu untuk menutup.</value>
+  </data>
+  <data name="Ganzen_Tag_ausw_hlen_6822224a" xml:space="preserve">
+    <value>Pilih sepanjang hari</value>
+  </data>
+  <data name="H_chstens_0_Bilder_auf_einmal_6eba59aa" xml:space="preserve">
+    <value>Paling banyak {0} gambar sekaligus</value>
+  </data>
+  <data name="0_von_1_ohne_Recht_1b1a391b" xml:space="preserve">
+    <value>{0} dari {1} tanpa izin</value>
+  </data>
+  <data name="0_von_1_nicht_mehr_vorhanden_b9110c3d" xml:space="preserve">
+    <value>{0} dari {1} sudah tidak ada</value>
+  </data>
+  <data name="0_Bilder_ge_ndert_b36c0fd1" xml:space="preserve">
+    <value>{0} gambar diubah</value>
+  </data>
+  <data name="0_Bilder_l_schen_e274f888" xml:space="preserve">
+    <value>Hapus {0} gambar?</value>
+  </data>
+  <data name="0_Bilder_endg_ltig_l_schen_Der_Papierkorb_ist_ab_a07d17fc" xml:space="preserve">
+    <value>Hapus {0} gambar secara permanen? Tempat sampah dinonaktifkan, ini tidak dapat dibatalkan.</value>
+  </data>
+  <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
+    <value>Menyiapkan gambar</value>
+  </data>
 </root>

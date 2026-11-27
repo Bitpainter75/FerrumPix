@@ -5,7 +5,9 @@
     <!-- DAS ANMELDEFENSTER ueber der gesperrten Anwendung (AppLockService). Der Grund ist DECKEND
          und nicht abgedunkelt: unter dem gesperrten Fenster soll nichts zu sehen sein, auch nicht
          in einer Vorschau der Taskleiste. Er faengt jeden Klick und jedes Ablegen ab; ein Druck
-         auf den freien Grund verschiebt das Fenster (die Kopfleiste liegt darunter). -->
+         auf den freien Grund verschiebt das Fenster. Am Rechner beginnt er unter der
+         Fensterleiste, die gesperrt sichtbar bleibt und nur die Fensterfunktionen anbietet
+         (MainWindow.ApplyLockChrome); im Vollbild deckt er das ganze Fenster. -->
     <Border x:Name="LockBackground"
             Background="{DynamicResource FP.Bg.Root}"
             IsHitTestVisible="True"

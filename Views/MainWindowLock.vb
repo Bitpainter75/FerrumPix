@@ -19,7 +19,9 @@ Namespace Views
     '''
     ''' <para>GESPERRT IST: jede Taste ausser denen im Anmeldefenster (der Tunnel des Fensters
     ''' laesst nur sie durch, <see cref="HandleLockedKey"/>), jede Maus und jedes Ablegen (der deckende
-    ''' Grund des Anmeldefensters liegt ueber allem und nimmt nichts an), Kontextmenue und offene
+    ''' Grund des Anmeldefensters liegt ueber allem ausser der Fensterleiste und nimmt nichts an;
+    ''' die Leiste bietet gesperrt nur Ziehen, Doppelklick und die Fensterknoepfe,
+    ''' <see cref="ApplyLockChrome"/>), Kontextmenue und offene
     ''' Aufklappfenster (beim Sperren geschlossen), Dialoge (sie liegen darunter und warten). Was im
     ''' Hintergrund laeuft, laeuft weiter.</para>
     '''
@@ -111,7 +113,11 @@ Namespace Views
             If lockScreen Is Nothing Then
                 host.IsVisible = False
                 host.Content = Nothing
+                ApplyLockChrome(False)
                 RestoreVideoAfterLock()
+                ' Ein Dialog, der waehrend der Sperre aufging, bekommt jetzt den Fokus, den ihm das
+                ' Kennwortfeld bis dahin genommen hat.
+                If vm IsNot Nothing AndAlso vm.IsDialogOpen Then FocusDialog()
                 Return
             End If
             If _lockScreenView Is Nothing Then
@@ -121,10 +127,68 @@ Namespace Views
             _lockScreenView.DataContext = lockScreen
             host.Content = _lockScreenView
             host.IsVisible = True
+            ApplyLockChrome(True)
             ClosePopupsForLock()
             HideVideoForLock()
             _lockScreenView.FocusPassword()
         End Sub
+
+        ''' <summary>Gesperrt liegt die Fensterleiste ueber den Dialogen und unter dem
+        ''' Anmeldefenster (das darunter beginnt), Fensterknoepfe und Raender ueber allem.</summary>
+        Friend Const LockedTitleBarZIndex As Integer = 899
+        Friend Const LockedWindowChromeZIndex As Integer = 901
+
+        Private Shared ReadOnly ResizeBorderNames As String() =
+            {"ResizeTop", "ResizeBottom", "ResizeLeft", "ResizeRight",
+             "ResizeTopLeft", "ResizeTopRight", "ResizeBottomLeft", "ResizeBottomRight"}
+
+        ''' <summary>Die Fensterleiste waehrend der Sperre. Ohne sie liess sich das gesperrte
+        ''' Fenster weder verschieben noch minimieren, maximieren oder schliessen.
+        '''
+        ''' GESPERRT: das Anmeldefenster beginnt unter der Leiste (oberer Rand in ihrer Hoehe). Die
+        ''' Leiste selbst (das Gitter TitleBar, das auch den Inhalt traegt) rueckt ueber die Dialoge
+        ''' und Anzeigen (496 bis 500), damit dort keine Rueckfrage, kein Fortschritt mit Dateinamen
+        ''' und kein Abdunkeln hineinragt; ihr Inhalt darunter bleibt vom Anmeldefenster verdeckt.
+        ''' Fensterknoepfe und die Raender zur Groessenaenderung ruecken ueber das Anmeldefenster,
+        ''' in derselben Reihenfolge untereinander wie ungesperrt. Was die Leiste sonst traegt,
+        ''' verbirgt das ViewModel gesperrt: Dateiname und Farbetikett, den Hinweis auf eine neue
+        ''' Fassung und "Sperren". Auf macOS gehoeren Knoepfe und Raender dem System; dort zaehlt
+        ''' nur, dass die Leiste (Rolle TitleBar) wieder erreichbar ist.
+        '''
+        ''' OHNE Leiste (Vollbild) und im Browser bleibt das Anmeldefenster ueber dem ganzen
+        ''' Fenster wie bisher: im Vollbild gibt es keine Leiste, im Browser gehoert das Fenster
+        ''' dem Tab und die Sperre zeigt dort ihre eigene Seite.</summary>
+        Private Sub ApplyLockChrome(locked As Boolean)
+            Dim host = Me.FindControl(Of ContentControl)("LockScreenHost")
+            Dim titleBar = Me.FindControl(Of Grid)("TitleBar")
+            Dim topArea = Me.FindControl(Of Border)("TopWindowDragArea")
+            Dim vm = TryCast(DataContext, MainWindowViewModel)
+            Dim keepBar = locked AndAlso Not BrowserBridge.IsActive AndAlso
+                          (vm Is Nothing OrElse vm.IsWindowChromeVisible) AndAlso topArea IsNot Nothing
+            Dim inset = 0.0
+            If keepBar Then inset = If(Double.IsNaN(topArea.Height), topArea.Bounds.Height, topArea.Height)
+            If host IsNot Nothing Then host.Margin = New Thickness(0, inset, 0, 0)
+            If titleBar IsNot Nothing Then titleBar.ZIndex = If(keepBar, LockedTitleBarZIndex, 0)
+            Dim chromeZ = If(keepBar, LockedWindowChromeZIndex, 0)
+            Dim controlsHost = Me.FindControl(Of Border)("CustomWindowControlsHost")
+            If controlsHost IsNot Nothing Then controlsHost.ZIndex = chromeZ
+            For Each borderName In ResizeBorderNames
+                Dim border = Me.FindControl(Of Border)(borderName)
+                If border IsNot Nothing Then border.ZIndex = chromeZ
+            Next
+        End Sub
+
+        ''' <summary>Das Fenster soll gesperrt schliessen, und dabei waere zurueckzufragen (Editor mit
+        ''' ungespeicherten Aenderungen, Betrachter mit ungespeicherter Drehung). Die Rueckfrage
+        ''' nennt den Dateinamen und laege ohnehin unter dem Anmeldefenster, das Schliessen wartete
+        ''' unsichtbar. Ohne Rueckfrage zu schliessen verwuerfe die Aenderungen still. Deshalb:
+        ''' NICHT schliessen, und das Anmeldefenster sagt, dass erst entsperrt werden muss. True,
+        ''' wenn das Schliessen damit abgelehnt ist.</summary>
+        Private Function RefuseCloseWhileLocked(vm As MainWindowViewModel) As Boolean
+            If vm Is Nothing OrElse Not vm.IsAppLocked OrElse Not vm.ClosingNeedsQuestion Then Return False
+            vm.LockScreen?.ShowCloseNeedsUnlock()
+            Return True
+        End Function
 
         ''' <summary>Gesperrt: Tasten erreichen nur das Anmeldefenster. True, wenn die Taste damit
         ''' erledigt ist und der Tunnel des Fensters aufhoeren soll.</summary>

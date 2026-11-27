@@ -1009,6 +1009,106 @@ Namespace Services
             End Using
         End Function
 
+        ''' <summary>Wie oft <see cref="DecodeCodecReduced"/> auf diesem Faden kleiner als die Datei
+        ''' dekodiert hat. Fuer den Pruefstand: ein Zuwachs belegt, dass eine Vorschau den schnellen
+        ''' Weg nahm. Je Faden, damit eine Pruefung nicht den Decode einer anderen mitzaehlt.</summary>
+        <ThreadStatic> Private Shared _reducedDecodeCount As Integer
+
+        Friend Shared ReadOnly Property ReducedDecodeCount As Integer
+            Get
+                Return _reducedDecodeCount
+            End Get
+        End Property
+
+        ''' <summary>Die kleinste Groesse, in der der Codec selbst dekodiert und deren lange Kante noch
+        ''' mindestens <paramref name="minLongEdge"/> misst; die volle Groesse, wenn keine kleinere
+        ''' Stufe reicht. JPEG rechnet dabei im Decoder in Achteln herunter (die DCT wird gleich
+        ''' kleiner ausgewertet), WebP ebenso; alle anderen Formate kennen keine kleinere Stufe und
+        ''' bleiben in voller Groesse.
+        '''
+        ''' NIE KLEINER ALS VERLANGT: ein Decode unter der Zielkante waere danach hochzurechnen und
+        ''' saehe weicher aus als der volle Weg. Darum aufsteigend die erste Stufe, die reicht.</summary>
+        Friend Shared Function ReducedDecodeSize(codec As SKCodec, minLongEdge As Integer) As SKSizeI
+            Dim info = codec.Info
+            Dim full = New SKSizeI(info.Width, info.Height)
+            If minLongEdge <= 0 OrElse Math.Max(info.Width, info.Height) <= minLongEdge Then Return full
+            For eighths = 1 To 7
+                Dim size = codec.GetScaledDimensions(eighths / 8.0F)
+                If size.Width <= 0 OrElse size.Height <= 0 Then Continue For
+                If Math.Max(size.Width, size.Height) < minLongEdge Then Continue For
+                If size.Width >= info.Width OrElse size.Height >= info.Height Then Return full
+                Return size
+            Next
+            Return full
+        End Function
+
+        ''' <summary>Dekodiert in der Groesse aus <see cref="ReducedDecodeSize"/>, sonst genau wie
+        ''' <c>SKBitmap.Decode(codec)</c>: Bildaufbau und Farbraum des Codecs, Durchsichtiges
+        ''' vormultipliziert. Mit <paramref name="plainBgra"/> statt dessen farbraumlos in Bgra8888,
+        ''' wie <see cref="DecodeOriented"/> eine gedrehte Datei liest. Nothing, wenn keine kleinere
+        ''' Stufe reicht (dann bleibt es beim gewohnten Weg) oder der Decode scheitert.</summary>
+        Friend Shared Function DecodeCodecReduced(codec As SKCodec, minLongEdge As Integer,
+                                                  Optional plainBgra As Boolean = False) As SKBitmap
+            If codec Is Nothing Then Return Nothing
+            Dim size = ReducedDecodeSize(codec, minLongEdge)
+            If size.Width >= codec.Info.Width AndAlso size.Height >= codec.Info.Height Then Return Nothing
+            Dim decodeInfo As SKImageInfo
+            If plainBgra Then
+                decodeInfo = New SKImageInfo(size.Width, size.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
+            Else
+                decodeInfo = codec.Info.WithSize(size.Width, size.Height)
+                If decodeInfo.AlphaType = SKAlphaType.Unpremul Then decodeInfo = decodeInfo.WithAlphaType(SKAlphaType.Premul)
+            End If
+            Dim decoded = SKBitmap.Decode(codec, decodeInfo)
+            If decoded IsNot Nothing Then _reducedDecodeCount += 1
+            Return decoded
+        End Function
+
+        ''' <summary>Das unbearbeitete Bild fuer eine Vorschau, gleich im Decoder verkleinert: lange
+        ''' Kante mindestens <paramref name="minLongEdge"/>. Dieselbe Quelle, Drehung und
+        ''' Farbbehandlung wie <see cref="DecodeOriented"/> ohne Entwicklung, nur ohne das ganze Bild
+        ''' in voller Aufloesung: ein Foto mit 40 Megapixeln fuer eine Vorschau mit 2048 Punkten
+        ''' ganz zu dekodieren kostete mehr als eine Sekunde und mehrere hundert MB.
+        '''
+        ''' Nur fuer Dateien, die DecodeOriented unmittelbar an Skia gibt und deren Codec kleiner
+        ''' dekodieren kann (JPEG, WebP). RAW, die Formate mit eigenem Leser (HEIF, JPEG XL, TIFF,
+        ''' PSD, ICO, JPEG 2000), .fpx und alles, was keine kleinere Stufe kennt, liefern Nothing: der
+        ''' Aufrufer nimmt dann den vollen Weg.</summary>
+        Friend Shared Function DecodeOrientedReduced(path As String, minLongEdge As Integer) As SKBitmap
+            If minLongEdge <= 0 OrElse String.IsNullOrWhiteSpace(path) Then Return Nothing
+            If RawPreviewService.IsSupportedRaw(path) OrElse FpxService.IsFpx(path) OrElse
+               ForeignImageDecoder.CanDecode(path) OrElse IcoPreviewService.IsSupportedIco(path) OrElse
+               PsdPreviewService.IsSupportedPsd(path) OrElse HeifDecodeService.IsSupportedHeif(path) OrElse
+               JxlDecodeService.IsSupportedJxl(path) OrElse TiffPreviewService.IsSupportedTiff(path) OrElse
+               Jpeg2000DecodeService.IsSupportedJpeg2000(path) Then Return Nothing
+            ' Gepuffert wie in DecodeOriented: SKCodec.Create(Stream) schliesst den Strom bei manchen
+            ' Formaten, und das EXIF fuer das Farbprofil wird danach noch einmal gelesen.
+            Dim data As SKData
+            Using stream = File.OpenRead(path)
+                data = SKData.Create(stream)
+            End Using
+            If data Is Nothing Then Return Nothing
+            Using data
+                Using codec = SKCodec.Create(data)
+                    If codec Is Nothing OrElse IsImplausibleJpegFrame(codec, data.Size) Then Return Nothing
+                    If codec.EncodedFormat <> SKEncodedImageFormat.Jpeg AndAlso codec.EncodedFormat <> SKEncodedImageFormat.Webp Then Return Nothing
+                    If codec.EncodedOrigin = SKEncodedOrigin.TopLeft Then
+                        ' Wie SKBitmap.Decode(data) dort: das Profil der Datei bleibt an der Bitmap.
+                        Dim plain = DecodeCodecReduced(codec, minLongEdge)
+                        If plain Is Nothing Then Return Nothing
+                        Return ToManagedSrgb(plain, ColorManagementService.EffectiveProfile(plain.ColorSpace, data))
+                    End If
+                    ' Gedreht: farbraumlos dekodiert, gewandelt mit dem Profil aus dem Dateikopf.
+                    Dim sourceProfile = ColorManagementService.EffectiveProfile(codec.Info.ColorSpace, data)
+                    Dim original = DecodeCodecReduced(codec, minLongEdge, plainBgra:=True)
+                    If original Is Nothing Then Return Nothing
+                    Dim corrected = ImageOrientationService.ApplyOrientation(original, codec.EncodedOrigin)
+                    If Not Object.ReferenceEquals(corrected, original) Then original.Dispose()
+                    Return ToManagedSrgb(corrected, sourceProfile)
+                End Using
+            End Using
+        End Function
+
         ''' <summary>Hoechstens so viele Bildpunkte darf ein JPEG je Byte seiner Datei versprechen.
         ''' Jeder 8x8-Block braucht in jedem Verfahren (auch progressiv, wo die AC-Durchgaenge ganze
         ''' Bloecke ueberspringen) mindestens einen Code fuer seinen Gleichanteil, also ein bis zwei
@@ -1335,6 +1435,67 @@ Namespace Services
                     If Not Object.ReferenceEquals(workingSource, original) Then workingSource.Dispose()
                 End Try
             End Using
+        End Function
+
+        ''' <summary>Derselbe Weg wie <see cref="RenderPngStream(String, ImageAdjustments, Integer, ByRef Long, ByRef Long, ByRef Long, Boolean)"/>,
+        ''' aber das fertige Bild als Bitmap statt als PNG. Fuer Abnehmer, die ohnehin neu kodieren
+        ''' (die JPEG-Vorschau des Browsers): ohne Umweg ueber PNG-Kodieren und Skia-Lesen, der
+        ''' bei einer Vorschau in Bildschirmgroesse mehr kostete als das Rechnen selbst. Besitz
+        ''' beim Aufrufer; Nothing, wenn die Quelle nicht lesbar ist.</summary>
+        Public Shared Function RenderPreviewBitmap(sourcePath As String, adj As ImageAdjustments, maxDimension As Integer,
+                                                   Optional preferReducedRawDecode As Boolean = False) As SKBitmap
+            Dim renderAdj = adj
+            Using original = DecodeForPreviewRender(sourcePath, adj, maxDimension, preferReducedRawDecode, renderAdj)
+                If original Is Nothing Then Return Nothing
+                Dim workingSource = CreatePreviewWorkingBitmap(original, maxDimension)
+                If workingSource Is Nothing Then Return Nothing
+                Try
+                    Dim processed = ProcessBitmap(workingSource, renderAdj)
+                    If processed Is Nothing Then Return Nothing
+                    ' Gibt die Kette ihre Eingabe unveraendert zurueck, gehoert diese noch dem Using
+                    ' bzw. dem Finally: dann eine eigene Kopie.
+                    If Object.ReferenceEquals(processed, original) OrElse Object.ReferenceEquals(processed, workingSource) Then
+                        Return CopyBitmap(processed)
+                    End If
+                    Return processed
+                Finally
+                    If Not Object.ReferenceEquals(workingSource, original) Then workingSource.Dispose()
+                End Try
+            End Using
+        End Function
+
+        ''' <summary>Der Decode fuer <see cref="RenderPreviewBitmap"/>.
+        '''
+        ''' Eine RAW mit <paramref name="preferReducedRawDecode"/> halb aufgeloest
+        ''' (<see cref="DecodeReducedForRender"/>), und nur dort: scheitert er, Nothing wie bisher,
+        ''' der Aufrufer zeigt dann die eingebettete Vorschau statt voll zu entwickeln. Vorher lief
+        ''' auch ein JPEG mit Rezept in diesen RAW-Weg, LibRaw lehnte ab, und der Aufrufer rechnete
+        ''' die Kette ersatzweise am ganzen Bild.
+        '''
+        ''' Alles andere, das Skia selbst kleiner dekodieren kann (JPEG, WebP), kommt gleich in
+        ''' Vorschaugroesse aus dem Decoder (<see cref="DecodeOrientedReduced"/>), mindestens so
+        ''' gross wie die Arbeitsfassung (<see cref="CreatePreviewWorkingBitmap"/>). Die Kette sieht
+        ''' danach dasselbe Bild in derselben Groesse wie auf dem vollen Weg, nur anders verkleinert:
+        ''' sie kennt die Groesse der Datei nicht, ihre Radien haengen am Arbeitsbild. Fuer diese
+        ''' Formate ist DecodeForRender dasselbe wie DecodeOriented (keine Belichtung in der Quelle,
+        ''' keine Protokollebene), das Rezept fuer die Kette also das ohne Belichtung im Bild.
+        ''' Sonst der volle Decode.</summary>
+        Private Shared Function DecodeForPreviewRender(sourcePath As String, adj As ImageAdjustments, maxDimension As Integer,
+                                                       preferReducedRawDecode As Boolean,
+                                                       ByRef renderAdj As ImageAdjustments) As SKBitmap
+            renderAdj = adj
+            If RawPreviewService.IsSupportedRaw(sourcePath) Then
+                If preferReducedRawDecode Then Return DecodeReducedForRender(sourcePath, adj, renderAdj)
+                Return DecodeForRender(sourcePath, adj, renderAdj)
+            End If
+            If maxDimension > 0 Then
+                Dim reduced = DecodeOrientedReduced(sourcePath, Math.Max(256, maxDimension))
+                If reduced IsNot Nothing Then
+                    renderAdj = WithExposureInSource(adj, 0.0, False)
+                    Return reduced
+                End If
+            End If
+            Return DecodeForRender(sourcePath, adj, renderAdj)
         End Function
 
         Public Shared Function RenderPngStream(source As SKBitmap, adj As ImageAdjustments,

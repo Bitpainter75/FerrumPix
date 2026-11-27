@@ -195,6 +195,7 @@ Namespace Services
             Dim clock = Diagnostics.Stopwatch.StartNew()
             Dim index = 0
             While index < batch.Count
+                If index > 0 Then SettleLayout()
                 HandleMessage(batch(index).Message)
                 index += 1
                 ' Ein Zug, der die Anwendung zu lange beschaeftigt. Was noch wartet, wird
@@ -208,6 +209,7 @@ Namespace Services
                     Dim affordable = Math.Max(2, CInt(Math.Floor(DragOverrunMilliseconds / Math.Max(costPerPoint, 0.01))))
                     Dim rest = ThinOut(batch.GetRange(index, batch.Count - index), affordable)
                     For Each item In rest
+                        SettleLayout()
                         HandleMessage(item.Message)
                     Next
                     Exit While
@@ -216,6 +218,32 @@ Namespace Services
             KickInput()
             ' Nicht auf den naechsten Takt warten: was die Eingabe bewirkt hat, soll gleich zu sehen sein.
             If batch(0).Kind <> InputKind.Other Then RequestFrameNow()
+        End Sub
+
+        ''' <summary>Ordnet die Fenster neu an, bevor der naechste Punkt eines Zugs oder die naechste
+        ''' Raddrehung hineingeht.
+        '''
+        ''' <para>BEFUND (Griff der Scrollleiste sprang von ganz oben nach ganz unten): der Griff
+        ''' (Thumb.OnPointerMoved) meldet je Bewegung den Abstand zur Stelle des Drueckens in SEINEN
+        ''' Koordinaten, und die Spur zaehlt ihn auf den Wert. Das stimmt nur, wenn der Griff seit
+        ''' der vorigen Bewegung an seine neue Stelle gerueckt ist. Auf einer echten Plattform ist
+        ''' das so: jede Eingabe ist ein eigener Auftrag mit der Prioritaet Input, und die Anordnung
+        ''' kommt mit dem Zeichnen (MediaContext.BeginInvokeOnRender, Prioritaet Render) dazwischen.
+        ''' Hier gehen die gesammelten Punkte in EINEM Auftrag hinein; ohne Anordnung dazwischen
+        ''' zaehlte jeder Punkt den ganzen Weg seit dem Druecken noch einmal drauf, und zwanzig
+        ''' Punkte von je einem Punkt Weg schoben den Inhalt ans Ende. Dasselbe gilt fuer alles, was
+        ''' eine Bewegung gegen die eigene Lage rechnet (GridSplitter, eigene Ziehgriffe).</para>
+        '''
+        ''' <para>Nur die Anordnung, gezeichnet wird weiter erst nach dem Zug. Ist nichts
+        ''' ungueltig, kostet sie nichts.</para></summary>
+        Private Shared Sub SettleLayout()
+            Try
+                For Each win In VisibleWindows()
+                    win.UpdateLayout()
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("BrowserBridge.Input", ex)
+            End Try
         End Sub
 
         ''' <summary>Duennt eine Folge gleichmaessig auf <paramref name="count"/> Eintraege aus. Der

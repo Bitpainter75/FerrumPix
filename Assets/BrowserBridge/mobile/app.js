@@ -66,8 +66,6 @@
     share: '<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/>',
     upload: '<path d="M12 21V9M7 14l5-5 5 5M5 3h14"/>',
     check: '<path d="M20 6L9 17l-5-5"/>',
-    keep: '<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>',
-    reject: '<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>',
     play: '<path d="M8 5v14l11-7z"/>',
     desktop: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
     signout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
@@ -86,6 +84,13 @@
     sound: '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>',
     muted: '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/>'
   };
+  // Behalten und Verwerfen mit denselben Symbolen wie die Galerie der Anwendung: die Daumen aus
+  // Assets/Icons/phosphor/bold (thumbs-up-bold.svg, thumbs-down-bold.svg), gefuellt im Raster 256.
+  // Die Farbe (gruen bzw. rot wie in der Galerie) setzt app.css.
+  const FILLED_ICONS = {
+    keep: '<path d="M237,77.47A28,28,0,0,0,216,68H164V56a44.05,44.05,0,0,0-44-44,12,12,0,0,0-10.73,6.63L72.58,92H32a20,20,0,0,0-20,20v88a20,20,0,0,0,20,20H204a28,28,0,0,0,27.78-24.53l12-96A28,28,0,0,0,237,77.47ZM36,116H68v80H36ZM220,96.5l-12,96a4,4,0,0,1-4,3.5H92V106.83L126.82,37.2A20,20,0,0,1,140,56V80a12,12,0,0,0,12,12h64a4,4,0,0,1,4,4.5Z"/>',
+    reject: '<path d="M243.78,156.53l-12-96A28,28,0,0,0,204,36H32A20,20,0,0,0,12,56v88a20,20,0,0,0,20,20H72.58l36.69,73.37A12,12,0,0,0,120,244a44.05,44.05,0,0,0,44-44V188h52a28,28,0,0,0,27.78-31.47ZM68,140H36V60H68Zm151,22.65a4,4,0,0,1-3,1.35H152a12,12,0,0,0-12,12v24a20,20,0,0,1-13.18,18.8L92,149.17V60H204a4,4,0,0,1,4,3.5l12,96A4,4,0,0,1,219,162.65Z"/>'
+  };
 
   // Ein langer Dateiname, in der Mitte gekuerzt: Anfang und Endung bleiben lesbar.
   function middleEllipsis(text, max) {
@@ -101,8 +106,14 @@
   }
   function icon(name) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 24 24');
     svg.setAttribute('aria-hidden', 'true');
+    if (FILLED_ICONS[name]) {
+      svg.setAttribute('viewBox', '0 0 256 256');
+      svg.setAttribute('class', 'filled');
+      svg.innerHTML = FILLED_ICONS[name];
+      return svg;
+    }
+    svg.setAttribute('viewBox', '0 0 24 24');
     svg.innerHTML = ICONS[name] || '';
     return svg;
   }
@@ -375,6 +386,9 @@
   // Fenstertechnik: das Raster rechnet die Lage jeder Zeile aus Abschnitten und Spalten und haelt
   // nur die Kacheln im Dokument, die in der Naehe des sichtbaren Bereichs liegen.
   const HEAD = 44, GAP = 2;
+  // So viele Bilder fasst eine Auswahl hoechstens, dieselbe Grenze wie der Server fuer Markieren,
+  // Loeschen und eine Freigabe (BrowserBridge.MaxMobileSelection).
+  const MAX_SELECTION = Number(T.maxSelection) || 2000;
   // Spalten nach Breite: eine Kachel soll auf dem Telefon etwa 105 Punkte breit sein (3 bis 4
   // Spalten), sonst etwa 190 (160 bis 220). zoom ist der Faktor aus STRG+Rad.
   function columnsFor(width, zoom) {
@@ -394,7 +408,12 @@
       host.appendChild(this.root);
       this.tiles = new Map();
       this.heads = new Map();
-      this.selected = new Set();
+      // Die Auswahl: Kennung zu Bild (das Bild traegt Etikett und Stufe "r" fuer die
+      // Aktionsleiste). selecting ist der Auswahlmodus, auch mit null Bildern (Knopf in der
+      // Kopfleiste); anchorIndex die Stelle fuer SHIFT+Klick.
+      this.selected = new Map();
+      this.selecting = false;
+      this.anchorIndex = -1;
       this.source = null;
       this.raf = 0;
       this.zoom = storedZoom();
@@ -421,14 +440,25 @@
         scroller.classList.add('railed');
         this.scrubber = new Scrubber(this);
       }
+      // ESC beendet die Auswahl, wenn kein Vollbild und kein Blatt offen ist.
+      document.addEventListener('keydown', event => {
+        if (event.key !== 'Escape' || !this.selecting || !this.host.offsetParent) return;
+        if (!$('viewer').hidden || !$('action-sheet').hidden) return;
+        this.clearSelection();
+      });
     }
     // keep: dieselbe Liste neu geladen (Zeitleiste nach einer Aenderung im Katalog); die Lage
-    // bleibt, statt nach oben zu springen.
+    // bleibt, statt nach oben zu springen, und die Auswahl bleibt (die Kennungen gelten im selben
+    // Lauf weiter).
     setSource(source, keep) {
       const anchor = keep ? this.anchor() : -1;
       this.clear();
       this.source = source;
-      this.selected.clear();
+      if (!keep) {
+        this.selected.clear();
+        this.selecting = false;
+        this.anchorIndex = -1;
+      }
       this.updateSelection();
       this.layout(anchor);
       this.schedule();
@@ -465,7 +495,7 @@
       let y = 0, index = 0;
       const titled = this.options.titles !== false;
       for (const section of (this.source ? this.source.sections : [])) {
-        if (titled) { heads.push({ y, day: section.day, index }); y += HEAD; }
+        if (titled) { heads.push({ y, day: section.day, index, count: section.count }); y += HEAD; }
         const count = section.count;
         for (let r = 0; r * cols < count; r++) {
           rows.push({ y, start: index + r * cols, count: Math.min(cols, count - r * cols), section: heads.length - 1, day: section.day });
@@ -541,12 +571,27 @@
         const head = this.headList[h];
         if (head.y + HEAD < from || head.y > to) continue;
         wantedHeads.add(h);
-        if (!this.heads.has(h)) {
-          const node = el('div', 'grid-head', dayTitle(head.day));
+        let node = this.heads.get(h);
+        if (!node) {
+          // Vorn der Kreis mit Haken: waehlt den ganzen Tag aus oder ab, auch Bilder, die noch
+          // nicht geladen sind (selectRange holt sie). Zu sehen im Auswahlmodus und mit der Maus
+          // beim Zeigen auf die Kopfzeile (app.css).
+          node = el('div', 'grid-head');
+          const check = el('button', 'day-check');
+          check.type = 'button';
+          check.appendChild(icon('check'));
+          check.setAttribute('aria-label', T.selectDay || '');
+          check.title = T.selectDay || '';
+          check.addEventListener('click', event => { event.stopPropagation(); this.toggleDay(h); });
+          node.appendChild(check);
+          node.appendChild(el('span', null, dayTitle(head.day)));
           node.style.transform = `translateY(${head.y}px)`;
           this.root.appendChild(node);
           this.heads.set(h, node);
         }
+        const state = this.dayState(head);
+        node.classList.toggle('all', state === 'all');
+        node.classList.toggle('some', state === 'some');
       }
       for (const [h, node] of this.heads) {
         if (!wantedHeads.has(h)) { node.remove(); this.heads.delete(h); }
@@ -635,7 +680,9 @@
       tile.url = null;
       tile.node.remove();
     }
-    // Tippen oeffnet, langer Druck waehlt aus; in der Auswahl schaltet Tippen um.
+    // Tippen oeffnet, langer Druck waehlt aus; in der Auswahl schaltet Tippen um. Mit der Maus
+    // schaltet STRG+Klick (auf dem Mac CMD) um und beginnt die Auswahl, SHIFT+Klick waehlt den
+    // Bereich von der zuletzt umgeschalteten Kachel bis hierher (auch nicht geladene Bilder).
     attachPress(tile) {
       let timer = 0, startX = 0, startY = 0, long = false;
       tile.node.addEventListener('pointerdown', event => {
@@ -658,26 +705,92 @@
       tile.node.addEventListener('click', event => {
         event.preventDefault();
         if (long) { long = false; return; }
-        if (this.selected.size > 0) this.toggle(tile.index);
+        if (event.shiftKey && this.anchorIndex >= 0 && this.anchorIndex !== tile.index) {
+          this.selectRange(Math.min(this.anchorIndex, tile.index), Math.max(this.anchorIndex, tile.index));
+        } else if (this.selecting || event.ctrlKey || event.metaKey || event.shiftKey) this.toggle(tile.index);
         else if (this.options.onOpen) this.options.onOpen(this.source, tile.index);
       });
     }
+    // only: nur auswaehlen, nie abwaehlen (langer Druck). Faellt die letzte Kachel heraus,
+    // endet der Auswahlmodus wie in Galerien von Telefonen.
     toggle(index, only) {
       const item = this.source.item(index);
       if (!item) return;
       if (this.selected.has(item.i)) { if (!only) this.selected.delete(item.i); }
-      else this.selected.add(item.i);
+      else if (this.selected.size >= MAX_SELECTION) toast(fmt(T.selectionLimit, MAX_SELECTION));
+      else this.selected.set(item.i, item);
+      this.anchorIndex = index;
+      this.selecting = this.selected.size > 0;
       this.updateSelection();
       this.schedule();
     }
-    clearSelection() {
+    // Bilder first bis last (Stellen in der Liste) dazu; fehlende Seiten der Zeitleiste holt die
+    // Quelle vorher. Hoechstens bis zur Grenze, mit Meldung.
+    async selectRange(first, last) {
+      const source = this.source;
+      if (!source || first < 0 || last < first) return;
+      last = Math.min(last, source.total - 1, first + MAX_SELECTION + this.selected.size);
+      try { await source.ensure(first, last); } catch (ignored) { }
+      if (this.source !== source) return;
+      let limited = false;
+      for (let i = first; i <= last; i++) {
+        const item = source.item(i);
+        if (!item || this.selected.has(item.i)) continue;
+        if (this.selected.size >= MAX_SELECTION) { limited = true; break; }
+        this.selected.set(item.i, item);
+      }
+      if (limited) toast(fmt(T.selectionLimit, MAX_SELECTION));
+      this.selecting = true;
+      this.updateSelection();
+      this.schedule();
+    }
+    // Wie viele Bilder eines Tages ausgewaehlt sind: '' keines, 'some' ein Teil, 'all' alle.
+    dayState(head) {
+      if (!head || this.selected.size === 0 || !this.source) return '';
+      let count = 0;
+      for (let i = head.index; i < head.index + head.count; i++) {
+        const item = this.source.item(i);
+        if (item && this.selected.has(item.i)) count++;
+      }
+      return count === 0 ? '' : count === head.count ? 'all' : 'some';
+    }
+    // Der Kreis an der Kopfzeile: ein ganz gewaehlter Tag faellt heraus, sonst kommt er ganz dazu.
+    toggleDay(h) {
+      const head = this.headList && this.headList[h];
+      if (!head) return;
+      this.anchorIndex = head.index;
+      if (this.dayState(head) !== 'all') { this.selectRange(head.index, head.index + head.count - 1); return; }
+      for (let i = head.index; i < head.index + head.count; i++) {
+        const item = this.source.item(i);
+        if (item) this.selected.delete(item.i);
+      }
+      this.updateSelection();
+      this.schedule();
+    }
+    // Der Knopf in der Kopfleiste: Auswahlmodus ohne Bild.
+    startSelecting() {
+      this.selecting = true;
+      this.updateSelection();
+      this.schedule();
+    }
+    // "Alle abwaehlen": leer, der Auswahlmodus bleibt.
+    deselectAll() {
       this.selected.clear();
       this.updateSelection();
       this.schedule();
     }
+    // "Auswahl aufheben": leer und der Auswahlmodus endet.
+    clearSelection() {
+      this.selected.clear();
+      this.selecting = false;
+      this.anchorIndex = -1;
+      this.updateSelection();
+      this.schedule();
+    }
+    selectedIds() { return Array.from(this.selected.keys()); }
     updateSelection() {
-      this.host.classList.toggle('selecting', this.selected.size > 0);
-      if (this.options.onSelection) this.options.onSelection(this.selected);
+      this.host.classList.toggle('selecting', this.selecting);
+      if (this.options.onSelection) this.options.onSelection(this);
     }
     // Lage eines Bildes im Raster, damit das Vollbild nach dem Schliessen dorthin scrollen kann.
     reveal(index) {
@@ -826,36 +939,225 @@
     }
   }
 
-  // --- Auswahl in der Kopfleiste ---------------------------------------------------------------
-  // Waehrend eine Auswahl besteht, zeigt die Kopfleiste der Ansicht ihre Anzahl, das ZIP und
-  // das Aufheben; danach wieder, was vorher dort stand.
-  function selectionHeader(view, grid) {
+  // --- Auswahl: Kopfleiste und Aktionsleiste ---------------------------------------------------
+  // Was /api/m/me ueber das Konto sagt und die Auswahl braucht (ohne Papierkorb fragt das Loeschen
+  // "endgueltig").
+  const account = { deleteForever: false };
+  // So viele Bilder schickt "An App senden" einer Auswahl hoechstens (Vorschauen, je eine Anfrage).
+  const MAX_SEND = 30;
+
+  // Jede Ansicht mit Raster bekommt einen Knopf "Auswaehlen" in der Kopfleiste. Im Auswahlmodus
+  // steht dort statt Titel und Knoepfen die Anzahl mit "Auswahl aufheben" und "Alle abwaehlen",
+  // unten ueber den Reitern die Aktionsleiste: Herunterladen (ZIP), Teilen, Sterne, Favorit,
+  // Etikett, Behalten, Verwerfen und Loeschen. Ein Knopf, fuer den die Stufe bei keinem
+  // gewaehlten Bild reicht (Feld "r" der Listen), fehlt; Teilen als Link nur, wenn jedes Bild es
+  // erlaubt (der Server lehnt sonst die ganze Freigabe ab). Der Server prueft jedes Bild selbst
+  // und meldet, was er nicht aendern durfte. Liefert die Rueckmeldung fuer grid.options.onSelection.
+  function selectionUi(view, grid) {
     const bar = view.querySelector('.bar');
-    const title = bar.querySelector('.title');
-    const actions = bar.querySelector('.actions');
-    let saved = null;
-    return selected => {
-      if (selected.size > 0) {
-        if (!saved) saved = { title: title.textContent, actions: Array.from(actions.childNodes) };
-        title.textContent = fmt(T.selected, selected.size);
-        actions.replaceChildren(
-          // Link zum Teilen der Auswahl (shares.js); im Suchergebnis als feste Liste.
-          iconButton('share', T.share, () => window.FerrumPixShares &&
-            window.FerrumPixShares.fromIds(Array.from(grid.selected), view.id === 'view-search' ? 'search' : 'selection')),
-          iconButton('download', T.zip, async () => {
-            try {
-              const answer = await postJson('/api/m/zip', { ids: Array.from(grid.selected) });
-              download(answer.url);
-              grid.clearSelection();
-            } catch (error) { toast(error.message || T.loadFailed); }
-          }),
-          iconButton('close', T.clearSelection, () => grid.clearSelection()));
-      } else if (saved) {
-        title.textContent = saved.title;
-        actions.replaceChildren(...saved.actions);
-        saved = null;
+    const start = iconButton('select', T.select, () => grid.startSelecting());
+    start.classList.add('select-start');
+    bar.appendChild(start);
+    const head = el('div', 'select-head');
+    const count = el('div', 'count');
+    const none = el('button', 'text-button', T.deselectAll);
+    none.type = 'button';
+    none.addEventListener('click', () => grid.deselectAll());
+    for (const part of [iconButton('close', T.clearSelection, () => grid.clearSelection()), count, none]) head.appendChild(part);
+    bar.appendChild(head);
+
+    const actions = el('div', 'select-actions');
+    actions.setAttribute('role', 'toolbar');
+    view.appendChild(actions);
+    // Was zuletzt auf DIESE Auswahl angewandt wurde: ein zweiter Druck auf Favorit, Behalten oder
+    // Verwerfen nimmt es zurueck, wie im Vollbild. Eine geaenderte Auswahl beginnt von vorn.
+    const applied = { favorite: null, pick: null };
+    const level = item => (item && typeof item.r === 'number' ? item.r : 3);
+    const items = () => Array.from(grid.selected.values());
+    const kind = () => (view.id === 'view-search' ? 'search' : 'selection');
+
+    async function markSelection(change) {
+      const ids = grid.selectedIds();
+      if (!ids.length) return false;
+      try {
+        const answer = await postJson('/api/m/mark', Object.assign({ ids }, change));
+        // Das Etikett steht auf der Kachel: an den Bildern der Liste nachtragen.
+        if (typeof change.label === 'string') {
+          for (const id of answer.done || []) {
+            const item = grid.selected.get(id);
+            if (item) item.l = change.label;
+          }
+          grid.schedule();
+        }
+        toast(answer.message ? answer.message : answer.changed === 1 ? T.saved : fmt(T.changedMany, answer.changed));
+        return true;
+      } catch (error) {
+        toast(error.message || T.saveFailed);
+        return false;
+      }
+    }
+
+    const zip = iconButton('download', T.zip, async () => {
+      try {
+        const answer = await postJson('/api/m/zip', { ids: grid.selectedIds() });
+        download(answer.url);
+      } catch (error) { toast(error.message || T.loadFailed); }
+    });
+    const share = iconButton('share', T.share, () => {
+      const chosen = items();
+      const ids = chosen.map(item => item.i);
+      const canLink = !!window.FerrumPixShares && chosen.every(item => level(item) >= 2);
+      const send = canSendSelection(chosen) ? () => sendSelectionToApp(chosen) : null;
+      if (window.FerrumPixShares && window.FerrumPixShares.fromSelection) window.FerrumPixShares.fromSelection(ids, kind(), canLink, send);
+      else if (send) send();
+    });
+    const stars = iconButton('star', T.rating, () => {
+      showSheet((body, close) => {
+        body.appendChild(el('div', 'sheet-title', T.rating));
+        const row = el('div', 'stars sheet-stars');
+        for (let n = 1; n <= 5; n++) {
+          const star = iconButton('star', T.rating + ' ' + n, () => { close(); markSelection({ rating: n }); });
+          star.className = '';
+          // Ein Stern n zeigt n gefuellte Sterne an: die Knoepfe davor leuchten beim Zeigen mit.
+          star.dataset.n = n;
+          star.addEventListener('pointerenter', () => { for (const s of row.children) s.classList.toggle('on', +s.dataset.n <= n); });
+          row.appendChild(star);
+        }
+        row.addEventListener('pointerleave', () => { for (const s of row.children) s.classList.remove('on'); });
+        body.appendChild(row);
+        body.appendChild(sheetAction('close', T.noRating, () => { close(); markSelection({ rating: 0 }); }));
+      });
+    });
+    const favorite = iconButton('heart', T.favorite, async () => {
+      const value = applied.favorite !== true;
+      if (await markSelection({ favorite: value })) { applied.favorite = value; paint(); }
+    });
+    const label = el('button', 'label-dot');
+    label.type = 'button';
+    label.setAttribute('aria-label', T.label);
+    label.title = T.label;
+    label.addEventListener('click', () => {
+      showSheet((body, close) => {
+        body.appendChild(el('div', 'sheet-title', T.label));
+        const row = el('div', 'swatches');
+        for (const value of LABELS) {
+          const swatch = el('button', 'swatch' + (value ? '' : ' none'));
+          paintLabel(swatch, value);
+          swatch.type = 'button';
+          swatch.setAttribute('aria-label', LABEL_NAMES[value]);
+          swatch.title = LABEL_NAMES[value];
+          swatch.addEventListener('click', async () => {
+            close();
+            if (await markSelection({ label: value })) paintLabel(label, value);
+          });
+          row.appendChild(swatch);
+        }
+        body.appendChild(row);
+      });
+    });
+    const pickButton = (name, value, text) => {
+      const button = iconButton(name, text, async () => {
+        const target = applied.pick === value ? 0 : value;
+        if (await markSelection({ pick: target })) { applied.pick = target; paint(); }
+      });
+      button.classList.add('pick-' + name);
+      return button;
+    };
+    const keep = pickButton('keep', 1, T.keep);
+    const reject = pickButton('reject', -1, T.reject);
+    const remove = iconButton('trash', T.delete, async () => {
+      const chosen = items();
+      if (!chosen.length) return;
+      const question = chosen.length === 1
+        ? fmt(account.deleteForever ? T.deleteForeverConfirm : T.deleteConfirm, chosen[0].n || '')
+        : fmt(account.deleteForever ? T.deleteManyForeverConfirm : T.deleteManyConfirm, chosen.length);
+      if (!window.confirm(question)) return;
+      try {
+        const answer = await postJson('/api/m/delete', { ids: chosen.map(item => item.i) });
+        if (answer.message) toast(answer.message);
+      } catch (error) { toast(error.message || T.saveFailed); }
+      grid.clearSelection();
+      afterFileChange();
+    });
+    remove.classList.add('danger');
+    for (const button of [zip, share, stars, favorite, label, keep, reject, remove]) actions.appendChild(button);
+
+    function paint() {
+      favorite.classList.toggle('on', applied.favorite === true);
+      keep.classList.toggle('on', applied.pick === 1);
+      reject.classList.toggle('on', applied.pick === -1);
+    }
+
+    return () => {
+      const chosen = items();
+      const selecting = grid.selecting;
+      bar.classList.toggle('selecting', selecting);
+      view.classList.toggle('with-select-actions', selecting);
+      actions.hidden = !selecting;
+      start.hidden = selecting || !grid.source || !grid.source.total;
+      count.textContent = fmt(T.selected, chosen.length);
+      none.hidden = chosen.length === 0;
+      applied.favorite = null;
+      applied.pick = null;
+      paintLabel(label, '');
+      paint();
+      // Ohne Bild stehen alle Knoepfe da, aber ohne Wirkung; mit Bildern nur die, fuer die die
+      // Stufe bei mindestens einem reicht.
+      const empty = chosen.length === 0;
+      const canRate = empty || chosen.some(item => level(item) >= 2);
+      const canManage = !empty && chosen.some(item => level(item) >= 3);
+      const canLink = !!window.FerrumPixShares && chosen.every(item => level(item) >= 2);
+      for (const button of [stars, favorite, label, keep, reject]) button.hidden = !canRate;
+      share.hidden = !empty && !canLink && !canSendSelection(chosen);
+      remove.hidden = !canManage;
+      for (const button of actions.children) {
+        button.disabled = empty;
+        button.classList.toggle('disabled', empty);
       }
     };
+  }
+
+  // Ob der Browser mehrere Dateien an eine App geben kann (Teilen-Menue des Geraets), und ob die
+  // Auswahl dafuer taugt: nur Bilder, hoechstens MAX_SEND.
+  function canShareManyFiles() {
+    try {
+      const file = () => new File([new Blob()], 'x.jpg', { type: 'image/jpeg' });
+      return !!(navigator.canShare && navigator.share && navigator.canShare({ files: [file(), file()] }));
+    } catch (ignored) { return false; }
+  }
+  function canSendSelection(chosen) {
+    return chosen.length > 0 && chosen.length <= MAX_SEND && chosen.every(item => !item.v) &&
+      (chosen.length === 1 ? canShareFiles() : canShareManyFiles());
+  }
+  // An App senden fuer eine Auswahl: die Vorschauen mit Bearbeitung holen (wie das Teilen im
+  // Vollbild) und erst danach einen eigenen Knopf zeigen. Das Teilen verlangt eine frische Geste
+  // des Nutzers, die das Warten auf die Bilder verbraucht haette.
+  function sendSelectionToApp(chosen) {
+    showSheet((body, close) => {
+      body.appendChild(el('div', 'sheet-title', T.sendToApp));
+      const state = el('div', 'upload-item', T.preparing);
+      body.appendChild(state);
+      (async () => {
+        const files = [];
+        for (const item of chosen) {
+          if ($('action-sheet').hidden) return;
+          state.textContent = T.preparing + ' ' + (files.length + 1) + ' / ' + chosen.length;
+          try {
+            const response = await api(previewUrl(item));
+            if (!response.ok) continue;
+            const name = (item.n || 'FerrumPix').replace(/\.[^.]+$/, '') + '.jpg';
+            files.push(new File([await response.blob()], name, { type: 'image/jpeg' }));
+          } catch (ignored) { }
+        }
+        if ($('action-sheet').hidden) return;
+        if (!files.length) { close(); toast(T.loadFailed); return; }
+        state.textContent = fmt(T.selected, files.length);
+        body.appendChild(sheetAction('share', T.share, async () => {
+          close();
+          try { await navigator.share({ files }); } catch (ignored) { }
+        }));
+      })();
+    });
   }
 
   // --- Vollbild --------------------------------------------------------------------------------
@@ -1679,7 +1981,7 @@
         const again = !!grid;
         if (!grid) {
           grid = new Grid(host, scroller, { scrubber: true, onOpen: (s, i) => openViewer(s, i, grid) });
-          grid.options.onSelection = selectionHeader(view, grid);
+          grid.options.onSelection = selectionUi(view, grid);
         }
         grid.setSource(source, again);
         diag.grid = grid;
@@ -1755,7 +2057,7 @@
       }
       if (!grid) {
         grid = new Grid(host, scroller, { onOpen: (s, i) => openViewer(s, i, grid) });
-        grid.options.onSelection = selectionHeader(view, grid);
+        grid.options.onSelection = selectionUi(view, grid);
       }
       grid.setSource(new ListSource(answer.items || []));
       if (note) { note.remove(); note = null; }
@@ -1803,7 +2105,7 @@
       try { answer = await getJson(url); } catch (error) { toast(T.loadFailed); }
       if (!grid) {
         grid = new Grid(host, scroller, { onOpen: (s, i) => openViewer(s, i, grid) });
-        grid.options.onSelection = selectionHeader(view, grid);
+        grid.options.onSelection = selectionUi(view, grid);
       }
       grid.setSource(new ListSource(answer.items || []));
       if (note) { note.remove(); note = null; }
@@ -2078,6 +2380,8 @@
     getJson('/api/m/me').then(me => {
       desktop.hidden = !me.desktop;
       lock.hidden = !me.lock;
+      // Fuer die Rueckfrage beim Loeschen einer Auswahl (ohne Papierkorb: endgueltig).
+      account.deleteForever = !!me.deleteForever;
       // Ohne die volle Oberflaeche merkt sich der Browser die mobile Seite.
       if (!me.desktop) { try { localStorage.setItem(variantKey, 'mobile'); } catch (ignored) { } }
       // Die eigene Sprache: gespeichert sofort am Server, dann laedt die Seite in ihr neu.
@@ -2099,6 +2403,21 @@
         });
         menu.insertBefore(button, menu.firstChild);
       }
+      // Der eigene Benutzername (POST /api/m/username): gleiche Regeln wie in der Verwaltung,
+      // die Sitzung bleibt. Die Anmeldeseite merkt sich den neuen Namen fuer das naechste Mal.
+      let ownName = me.name || '';
+      const nameButton = sheetAction('person', T.userName + (ownName ? ': ' + ownName : ''), async () => {
+        const wanted = window.prompt(T.newUserName, ownName);
+        if (wanted === null || wanted.trim() === '' || wanted.trim() === ownName) return;
+        try {
+          const answer = await postJson('/api/m/username', { name: wanted.trim() });
+          ownName = answer.name || wanted.trim();
+          nameButton.lastChild.textContent = T.userName + ': ' + ownName;
+          try { localStorage.setItem('ferrumpix.user', ownName); } catch (ignored) { }
+          toast(T.saved);
+        } catch (error) { toast(error.message || T.saveFailed); }
+      });
+      menu.insertBefore(nameButton, menu.firstChild);
     }).catch(() => { });
     return { shown() { } };
   })();

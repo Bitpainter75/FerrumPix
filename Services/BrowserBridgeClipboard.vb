@@ -237,9 +237,11 @@ Namespace Services
         End Function
 
         Private Shared Function EncodeClipboardPng(bitmap As Bitmap) As Byte()
-            Using stream As New MemoryStream()
-                bitmap.Save(stream, PngBitmapEncoderOptions.Default)
-                Return stream.ToArray()
+            ' Geradliniges Alpha, wie PNG es speichert; gepackt ueber den gemeinsamen Weg.
+            Using converted = ImageOrientationService.ToSkBitmap(bitmap, straightAlpha:=True)
+                ' Wie frueher das Speichern der Bitmap: nicht lesbar heisst werfen (Antwort 410).
+                If converted Is Nothing Then Throw New InvalidOperationException("Bitmap der Zwischenablage nicht lesbar")
+                Return PngEncoder.EncodeToBytes(converted, PngPurpose.Stored)
             End Using
         End Function
 

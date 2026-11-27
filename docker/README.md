@@ -129,6 +129,12 @@ A rule applies to the folder and everything below it. Other users only get the p
 see nothing outside their folders, and each picks a language for it; ratings and marks are shared.
 A user without the administrator role sees nothing until they get a rule.
 
+Every user name can be changed, the administrator's too: by the administrator in User management,
+and by each user for their own account on the page for phones under More, User name. From then on
+only the new name signs in, also for tools with `Authorization: Basic`; open sessions, rules,
+shares and the second factor stay. An authenticator app keeps showing the old name, its codes
+still work.
+
 ### Second factor
 
 Every user can protect their sign-in with a code from an authenticator app (6 digits, changing
@@ -302,7 +308,8 @@ wrong password), the brake against guessing (`throttled`), sign-out, locking and
 (`setup.done`), the user name set at the first sign-in (`user.claimed`), the administrator reset at
 start (`admin.reset`), Forgot your password (`password.reset.requested` with the sender only,
 `password.reset.mailed` without the recipient, `password.reset.done`), changed passwords
-(`password.changed`), users created, changed, locked, deleted or made administrator (`user.*`),
+(`password.changed`), users created, changed, renamed (`user.renamed` with `old` and `new`),
+locked, deleted or made administrator (`user.*`),
 folder rules (`rule.changed`), share links created, changed, renewed, revoked, paused and resumed
 (`share.*`, `shares.paused`, `shares.resumed`), an opened share (once an hour per share and
 address), a wrong share password (`share.password.failed`), ZIP downloads (`download.zip` with the

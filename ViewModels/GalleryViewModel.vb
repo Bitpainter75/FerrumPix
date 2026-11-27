@@ -2813,6 +2813,12 @@ Namespace ViewModels
             RaiseSelectionMetadataChanged()
         End Sub
 
+        ''' <summary>Der Abspielknopf auf der Kachel eines Bewegtbilds: der Betrachter soll den Film
+        ''' dieses Bildes gleich nach dem Oeffnen abspielen.</summary>
+        Public Sub RequestMotionOnOpen(path As String)
+            _mainVm?.Viewer?.RequestMotionOnOpen(path)
+        End Sub
+
         Public Sub SelectOnly(item As ImageItem)
             If item Is Nothing Then Return
             If item.IsParentFolderEntry Then
@@ -18006,9 +18012,6 @@ Namespace ViewModels
             Next
         End Sub
 
-        ''' <summary>Eine neue Wahl kann Zeilen dazunehmen oder wegnehmen, und damit aendert sich
-        ''' die Hoehe jeder Kachel. Deshalb auch alles, was an der Hoehe haengt, wie beim
-        ''' Kachelabstand.</summary>
         ''' <summary>Kommt auf einem Hintergrundfaden (SearchVocabulary.Reloaded). Nur mit einem
         ''' Suchtext, der als Filter der Liste wirkt; eine Katalogsuche hat schon gesiebt.</summary>
         Private Sub OnSearchVocabularyReloaded(sender As Object, e As EventArgs)
@@ -18019,6 +18022,9 @@ Namespace ViewModels
                 End Sub)
         End Sub
 
+        ''' <summary>Eine neue Wahl kann Zeilen dazunehmen oder wegnehmen, und damit aendert sich
+        ''' die Hoehe jeder Kachel. Deshalb auch alles, was an der Hoehe haengt, wie beim
+        ''' Kachelabstand.</summary>
         Private Sub OnTileCaptionSettingsChanged()
             Me.RaisePropertyChanged(NameOf(IsTileCaptionRow1Visible))
             Me.RaisePropertyChanged(NameOf(IsTileCaptionRow2Visible))

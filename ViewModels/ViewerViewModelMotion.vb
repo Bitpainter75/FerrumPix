@@ -37,6 +37,9 @@ Namespace ViewModels
         Private _motionKind As MotionKind = MotionKind.None
         ''' Live Photo: der Film neben dem Bild. Bei einem Motion Photo Nothing.
         Private _motionVideoPath As String
+        ''' Der Knopf auf der Galeriekachel: dieses Bild soll seinen Film gleich nach dem Oeffnen
+        ''' abspielen. Gilt genau einmal und nur fuer diesen Pfad (siehe RequestMotionOnOpen).
+        Private _motionPlayOnOpenPath As String
         Private _motionProbeToken As Integer
         Private _isMotionPlaying As Boolean
         ''' Zaehlt die Abspielvorgaenge: was nach einem Warten noch zu einem alten gehoert, verfaellt.
@@ -165,6 +168,9 @@ Namespace ViewModels
             EnsureMotionWiring()
             EndMotionPlayback(stopPlayer:=False)
             ClearMotionClip()
+            ' Der Wunsch vom Knopf der Kachel gilt nur fuer das Bild, fuer das er gestellt wurde.
+            If _motionPlayOnOpenPath IsNot Nothing AndAlso
+               Not String.Equals(_motionPlayOnOpenPath, _currentImagePath, PathIdentity.Comparison) Then _motionPlayOnOpenPath = Nothing
             ProbeMotionForCurrentImage()
         End Sub
 
@@ -173,6 +179,43 @@ Namespace ViewModels
             _motionKind = kind
             _motionVideoPath = videoPath
             Me.RaisePropertyChanged(NameOf(HasMotionClip))
+            If kind <> MotionKind.None Then PlayRequestedMotionOnOpen()
+        End Sub
+
+        ''' <summary>Der Abspielknopf auf der Galeriekachel eines Bewegtbilds: das Bild wird geoeffnet
+        ''' und sein Film laeuft gleich, ohne zweiten Klick auf den Knopf im Betrachter. Vor dem
+        ''' Oeffnen zu rufen; abgespielt wird, sobald das Nachsehen den Film zu genau diesem Bild
+        ''' gefunden hat. Ein anderes Bild verwirft den Wunsch.</summary>
+        Public Sub RequestMotionOnOpen(path As String)
+            _motionPlayOnOpenPath = path
+            ' Zeigt der Betrachter das Bild schon (derselbe Pfad erneut geoeffnet), ist das
+            ' Nachsehen vielleicht schon durch.
+            If HasMotionClip Then PlayRequestedMotionOnOpen()
+        End Sub
+
+        Private Sub PlayRequestedMotionOnOpen()
+            Dim wanted = _motionPlayOnOpenPath
+            If String.IsNullOrEmpty(wanted) Then Return
+            ' Ein anderes Bild steht noch (der Wunsch kommt VOR dem Oeffnen): warten. Verworfen
+            ' wird er erst, wenn ein anderes Bild geoeffnet wird (OnMotionImageChanged).
+            If Not String.Equals(wanted, _currentImagePath, PathIdentity.Comparison) Then Return
+            If _isMotionPlaying Then
+                _motionPlayOnOpenPath = Nothing
+                Return
+            End If
+            If Not HasMotionClip Then Return
+            ' Nach dem Aufbau der Ansicht: die Videoflaeche muss stehen, bevor der Spieler startet.
+            ' Der Wunsch bleibt bis dahin stehen: oeffnet der Betrachter dasselbe Bild neu (es hat
+            ' sich geaendert), sieht er erneut nach, und erst das Ergebnis darf abspielen. Verbraucht
+            ' wird er erst, wenn der Film wirklich angestossen wird.
+            Dispatcher.UIThread.Post(Sub()
+                                         If Not String.Equals(_motionPlayOnOpenPath, wanted, PathIdentity.Comparison) Then Return
+                                         If Not String.Equals(wanted, _currentImagePath, PathIdentity.Comparison) Then Return
+                                         If Not HasMotionClip Then Return
+                                         _motionPlayOnOpenPath = Nothing
+                                         If _isMotionPlaying Then Return
+                                         ToggleMotionPlayback()
+                                     End Sub, DispatcherPriority.Background)
         End Sub
 
         ''' <summary>Fragt im Hintergrund, ob das gezeigte Bild ein Motion Photo ist oder das Bild

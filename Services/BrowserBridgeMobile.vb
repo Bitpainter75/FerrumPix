@@ -83,17 +83,22 @@ Namespace Services
                 Return UserAccountService.StartFolders(_rules, Function(folder) DirectoryExists(folder) AndAlso CanSeeFolder(folder))
             End If
             If FolderRoots.IsActive Then Return FolderRoots.Roots.Where(AddressOf DirectoryExists).ToList()
+            ' Fuer den Administrator ohne feste Fotoordner: ZUERST die ueberwachten Ordner des
+            ' Katalogs, als eigene Eintraege, auch wenn sie unter dem Home-Ordner liegen (dort
+            ' liegen die Fotos meist, und tief unter Home waeren sie sonst nur ueber mehrere
+            ' Ebenen erreichbar), danach Home fuer alles Uebrige.
             Dim result As New List(Of String)()
-            Dim home = FolderRoots.HomeFolder()
-            If DirectoryExists(home) Then result.Add(home)
             Try
                 For Each watched In CatalogIndexRunner.ConfiguredFolders()
+                    If String.IsNullOrWhiteSpace(watched) OrElse Not DirectoryExists(watched) Then Continue For
                     If result.Any(Function(r) PathIdentity.IsAncestorOrSelf(r, watched)) Then Continue For
                     result.Add(watched)
                 Next
             Catch ex As Exception
                 DiagnosticLogService.LogException("BrowserBridge.Mobile.Roots", ex)
             End Try
+            Dim home = FolderRoots.HomeFolder()
+            If DirectoryExists(home) AndAlso Not result.Any(Function(r) PathIdentity.AreSame(r, home)) Then result.Add(home)
             Return result
         End Function
 
@@ -413,7 +418,7 @@ Namespace Services
             Dim isGet = String.Equals(request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) OrElse
                         String.Equals(request.HttpMethod, "HEAD", StringComparison.OrdinalIgnoreCase)
             Dim writes = route = "mark" OrElse route = "cancel" OrElse route = "upload" OrElse route = "lock" OrElse
-                         route = "delete" OrElse route = "rename" OrElse route = "language" OrElse (route = "zip" AndAlso isPost) OrElse
+                         route = "delete" OrElse route = "rename" OrElse route = "language" OrElse route = "username" OrElse (route = "zip" AndAlso isPost) OrElse
                          IsMobileShareWrite(route) OrElse IsMobileTwoFactorWrite(route)
             If writes Then
                 If Not isPost Then
@@ -459,6 +464,7 @@ Namespace Services
                 Case "delete" : Await HandleMobileDeleteAsync(context, mobile)
                 Case "rename" : Await HandleMobileRenameAsync(context, mobile)
                 Case "language" : Await HandleMobileLanguageAsync(context, mobile)
+                Case "username" : Await HandleMobileUserNameAsync(context, mobile)
                 Case Else
                     ' Die Freigaben per Link (BrowserBridgeShares.vb).
                     If Await HandleMobileShareApiAsync(context, route, mobile) Then Return
@@ -682,6 +688,16 @@ Namespace Services
                 {"select", LocalizationService.T("Auswählen")},
                 {"selected", LocalizationService.T("{0} ausgewählt")},
                 {"clearSelection", LocalizationService.T("Auswahl aufheben")},
+                {"deselectAll", LocalizationService.T("Alle abwählen")},
+                {"selectDay", LocalizationService.T("Ganzen Tag auswählen")},
+                {"selectionLimit", MobileSelectionLimitText()},
+                {"maxSelection", MaxMobileSelection.ToString(CultureInfo.InvariantCulture)},
+                {"changedMany", LocalizationService.T("{0} Bilder geändert")},
+                {"deleteManyConfirm", LocalizationService.T("{0} Bilder löschen?")},
+                {"deleteManyForeverConfirm", LocalizationService.T("{0} Bilder endgültig löschen? Der Papierkorb ist abgeschaltet, das lässt sich nicht rückgängig machen.")},
+                {"preparing", LocalizationService.T("Bilder werden vorbereitet")},
+                {"sendToApp", LocalizationService.T("An App senden")},
+                {"noRating", LocalizationService.T("Keine Bewertung")},
                 {"info", LocalizationService.T("Informationen")},
                 {"date", LocalizationService.T("Aufnahmedatum")},
                 {"camera", LocalizationService.T("Kamera")},
@@ -725,6 +741,9 @@ Namespace Services
                 {"offline", LocalizationService.T("Keine Verbindung zu FerrumPix")},
                 {"manage", LocalizationService.T("Verwalten")},
                 {"language", LocalizationService.T("Sprache")},
+                {"userName", LocalizationService.T("Benutzername")},
+                {"saved", LocalizationService.T("Gespeichert.")},
+                {"newUserName", LocalizationService.T("Neuen Benutzernamen eingeben. Danach gilt bei der Anmeldung nur noch er.")},
                 {"rename", LocalizationService.T("Umbenennen")},
                 {"newName", LocalizationService.T("Neuen Namen eingeben")},
                 {"delete", LocalizationService.T("Löschen")},
@@ -795,7 +814,8 @@ Namespace Services
         ''' dieselben Wege wie in der Galerie: Katalog, .fpxmp und, wie dort, mit dem Abgleich in die
         ''' XMP-Beistelldatei. Die Galerie hoert auf LibraryService.AttributesChanged und zeigt die
         ''' Aenderung an ihren Kacheln. Eine RAW nimmt ihr JPEG daneben mit, wie die Galerie ihre
-        ''' verborgenen Partner (siehe <see cref="MobilePartnersOf"/>).</summary>
+        ''' verborgenen Partner (siehe <see cref="MobilePartnersOf"/>). Mit "ids" statt "id" gilt
+        ''' die Aenderung fuer eine Auswahl (<see cref="HandleMobileMarkManyAsync"/>).</summary>
         Private Shared Async Function HandleMobileMarkAsync(context As HttpListenerContext, mobile As MobileContext) As Task
             Dim body = Await ReadMobileJsonAsync(context.Request)
             If Not body.HasValue Then
@@ -803,6 +823,11 @@ Namespace Services
                 Return
             End If
             Dim message = body.Value
+            Dim list As JsonElement
+            If message.TryGetProperty("ids", list) Then
+                Await HandleMobileMarkManyAsync(context, mobile, list, ReadMobileMarkChange(message))
+                Return
+            End If
             ' Datei oder Variante: eine Variante traegt eigene Katalogdaten (unter ihrem Schluessel),
             ' wie ihre Kachel in der Galerie, und hat keine Partner.
             Dim path = mobile.ResolveImage(ReadString(message, "id"))
@@ -818,23 +843,8 @@ Namespace Services
                 Return
             End If
 
-            Dim value As JsonElement
-            Dim rating As Integer? = Nothing
-            Dim favorite As Boolean? = Nothing
-            Dim label As String = Nothing
-            Dim pick As Integer? = Nothing
-            Dim number As Integer
-            If message.TryGetProperty("rating", value) AndAlso value.ValueKind = JsonValueKind.Number AndAlso
-               value.TryGetInt32(number) AndAlso number >= 0 AndAlso number <= 5 Then rating = number
-            If message.TryGetProperty("favorite", value) AndAlso
-               (value.ValueKind = JsonValueKind.True OrElse value.ValueKind = JsonValueKind.False) Then favorite = value.GetBoolean()
-            If message.TryGetProperty("label", value) AndAlso value.ValueKind = JsonValueKind.String Then
-                Dim given = value.GetString().Trim().ToUpperInvariant()
-                If MobileLabels.Contains(given) Then label = given
-            End If
-            If message.TryGetProperty("pick", value) AndAlso value.ValueKind = JsonValueKind.Number AndAlso
-               value.TryGetInt32(number) AndAlso number >= -1 AndAlso number <= 1 Then pick = number
-            If Not rating.HasValue AndAlso Not favorite.HasValue AndAlso label Is Nothing AndAlso Not pick.HasValue Then
+            Dim change = ReadMobileMarkChange(message)
+            If change.IsEmpty Then
                 Await WriteMobileJsonAsync(context, 400, MobileProblem("bad request"))
                 Return
             End If
@@ -845,15 +855,7 @@ Namespace Services
                     Sub()
                         Dim targets = New List(Of String) From {path}
                         targets.AddRange(partners)
-                        Dim library = LibraryService.Instance
-                        If rating.HasValue Then library.SetRatingForMany(targets, rating.Value, syncToXmp:=True)
-                        If favorite.HasValue Then
-                            For Each target In targets
-                                library.SetFavorite(target, favorite.Value)
-                            Next
-                        End If
-                        If label IsNot Nothing Then library.SetColorLabelForMany(targets, label, syncToXmp:=True)
-                        If pick.HasValue Then library.SetPickStateForMany(targets, pick.Value, syncToXmp:=True)
+                        ApplyMobileMarkChange(targets, change)
                     End Sub)
             Catch ex As Exception
                 DiagnosticLogService.LogException("BrowserBridge.Mobile.Mark", ex)
@@ -864,6 +866,169 @@ Namespace Services
                 Return
             End If
             Await WriteMobileJsonAsync(context, 200, MobileMarksOf(path))
+        End Function
+
+        ''' <summary>So viele Bilder nimmt ein Aufruf fuer eine Auswahl der mobilen Seite hoechstens
+        ''' (Markieren, Loeschen); dieselbe Grenze wie fuer eine Freigabe, damit eine Auswahl, die
+        ''' sich bewerten laesst, auch teilen laesst. Die Seite haelt ihre Auswahl darunter.</summary>
+        Friend Const MaxMobileSelection As Integer = ShareStore.MaxPathsPerShare
+
+        ''' <summary>Was eine Markierung aendern soll; was fehlt oder nicht taugt, bleibt leer.</summary>
+        Private NotInheritable Class MobileMarkChange
+            Public Rating As Integer?
+            Public Favorite As Boolean?
+            Public Label As String
+            Public Pick As Integer?
+
+            Public ReadOnly Property IsEmpty As Boolean
+                Get
+                    Return Not Rating.HasValue AndAlso Not Favorite.HasValue AndAlso Label Is Nothing AndAlso Not Pick.HasValue
+                End Get
+            End Property
+        End Class
+
+        ''' <summary>Liest "rating" (0 bis 5), "favorite", "label" (eines der neun Etiketten der
+        ''' Galerie oder leer) und "pick" (-1, 0, 1) aus einer Anfrage.</summary>
+        Private Shared Function ReadMobileMarkChange(message As JsonElement) As MobileMarkChange
+            Dim change As New MobileMarkChange()
+            Dim value As JsonElement
+            Dim number As Integer
+            If message.TryGetProperty("rating", value) AndAlso value.ValueKind = JsonValueKind.Number AndAlso
+               value.TryGetInt32(number) AndAlso number >= 0 AndAlso number <= 5 Then change.Rating = number
+            If message.TryGetProperty("favorite", value) AndAlso
+               (value.ValueKind = JsonValueKind.True OrElse value.ValueKind = JsonValueKind.False) Then change.Favorite = value.GetBoolean()
+            If message.TryGetProperty("label", value) AndAlso value.ValueKind = JsonValueKind.String Then
+                Dim given = value.GetString().Trim().ToUpperInvariant()
+                If MobileLabels.Contains(given) Then change.Label = given
+            End If
+            If message.TryGetProperty("pick", value) AndAlso value.ValueKind = JsonValueKind.Number AndAlso
+               value.TryGetInt32(number) AndAlso number >= -1 AndAlso number <= 1 Then change.Pick = number
+            Return change
+        End Function
+
+        ''' <summary>Schreibt eine Markierung ueber die Wege der Galerie fuer viele Bilder: je Art EIN
+        ''' Durchgang ueber alle Ziele, mit dem Abgleich in .fpxmp und XMP-Beistelldatei.</summary>
+        Private Shared Sub ApplyMobileMarkChange(targets As List(Of String), change As MobileMarkChange)
+            Dim library = LibraryService.Instance
+            If change.Rating.HasValue Then library.SetRatingForMany(targets, change.Rating.Value, syncToXmp:=True)
+            If change.Favorite.HasValue Then
+                For Each target In targets
+                    library.SetFavorite(target, change.Favorite.Value)
+                Next
+            End If
+            If change.Label IsNot Nothing Then library.SetColorLabelForMany(targets, change.Label, syncToXmp:=True)
+            If change.Pick.HasValue Then library.SetPickStateForMany(targets, change.Pick.Value, syncToXmp:=True)
+        End Sub
+
+        ''' <summary>POST /api/m/mark mit {"ids": [...], und den Feldern wie fuer ein Bild}: dieselbe
+        ''' Aenderung fuer eine Auswahl der mobilen Seite, hoechstens <see cref="MaxMobileSelection"/>
+        ''' Kennungen (mehr: 413). Jedes Bild geht fuer sich durch den Kontext, samt den Partnern
+        ''' seines RAW-Paars und als Variante wie im Vollbild; geaendert wird, was der Benutzer darf,
+        ''' die uebrigen zaehlt die Antwort ("3 von 10 ohne Recht"), statt die ganze Auswahl
+        ''' abzulehnen. Geschrieben wird in einem Durchgang ueber die Wege der Galerie fuer viele
+        ''' Bilder. Antwort: changed, refused (ohne Recht), missing (nicht mehr vorhanden), total, die
+        ''' Kennungen der geaenderten Bilder (done) und der Satz dazu (message). Durfte keines geaendert
+        ''' werden: 403 bzw. 404, wenn keines mehr da war.</summary>
+        Private Shared Async Function HandleMobileMarkManyAsync(context As HttpListenerContext, mobile As MobileContext,
+                                                                list As JsonElement, change As MobileMarkChange) As Task
+            If list.ValueKind <> JsonValueKind.Array OrElse change.IsEmpty Then
+                Await WriteMobileJsonAsync(context, 400, MobileProblem("bad request"))
+                Return
+            End If
+            Dim ids = list.EnumerateArray().Where(Function(e) e.ValueKind = JsonValueKind.String).
+                           Select(Function(e) e.GetString()).Distinct(StringComparer.Ordinal).ToList()
+            If ids.Count = 0 Then
+                Await WriteMobileJsonAsync(context, 400, MobileProblem("bad request"))
+                Return
+            End If
+            If ids.Count > MaxMobileSelection Then
+                Await WriteMobileJsonAsync(context, 413, MobileProblem(MobileSelectionLimitText()))
+                Return
+            End If
+            Dim outcome = Await Task.Run(Function() SortMobileSelection(mobile, ids, True, AddressOf mobile.CanRate))
+            If outcome.Done.Count = 0 Then
+                Dim status = If(outcome.Refused > 0, 403, 404)
+                Await WriteMobileJsonAsync(context, status, MobileProblem(MobileSelectionProblemText(outcome.Refused, outcome.Missing, ids.Count)))
+                Return
+            End If
+            Dim written = True
+            Try
+                Await Task.Run(Sub() ApplyMobileMarkChange(outcome.Files, change))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("BrowserBridge.Mobile.MarkMany", ex)
+                written = False
+            End Try
+            If Not written Then
+                Await WriteMobileJsonAsync(context, 500, MobileProblem(LocalizationService.T("Die Änderung konnte nicht gespeichert werden")))
+                Return
+            End If
+            Await WriteMobileJsonAsync(context, 200, MobileSelectionAnswer(outcome, ids.Count))
+        End Function
+
+        ''' <summary>Eine Auswahl der Seite, nach Bildern sortiert: welche Kennungen der Benutzer mit
+        ''' allen ihren Dateien aendern darf (Done, dazu ihre Dateien samt Partnern in Files), wie viele
+        ''' er nicht darf (Refused) und wie viele es nicht mehr gibt (Missing).</summary>
+        Private NotInheritable Class MobileSelectionOutcome
+            Public ReadOnly Done As New List(Of String)()
+            Public ReadOnly Files As New List(Of String)()
+            Public Refused As Integer
+            Public Missing As Integer
+        End Class
+
+        ''' <summary>Geht jede Kennung einzeln durch den Kontext: eine unbekannte, fremde oder
+        ''' verschwundene zaehlt als nicht mehr vorhanden; ein Bild, bei dem <paramref name="allowed"/>
+        ''' fuer die Datei oder einen sichtbaren Partner ihres RAW-Paars nein sagt, als ohne Recht.
+        ''' Eine Variante nur mit <paramref name="allowVariants"/> (Markieren), dann ohne Partner und
+        ''' mit dem Recht an ihrer Datei; sonst (Loeschen) zaehlt sie als ohne Recht, wie
+        ''' ResolveFile sie fuer jeden Weg ablehnt, der eine Datei veraendert.</summary>
+        Private Shared Function SortMobileSelection(mobile As MobileContext, ids As List(Of String), allowVariants As Boolean,
+                                                    allowed As Func(Of String, Boolean)) As MobileSelectionOutcome
+            Dim outcome As New MobileSelectionOutcome()
+            Dim seen As New HashSet(Of String)(PathIdentity.Comparer)
+            For Each id In ids
+                Dim key = mobile.ResolveImage(id)
+                If key Is Nothing OrElse Not MobileContext.ImageExists(key) Then
+                    outcome.Missing += 1
+                    Continue For
+                End If
+                Dim isVariant = VariantKey.IsVariant(key)
+                If isVariant AndAlso Not allowVariants Then
+                    outcome.Refused += 1
+                    Continue For
+                End If
+                Dim partners = If(isVariant, New List(Of String)(), MobilePartnersOf(key).Where(Function(p) mobile.CanSee(p)).ToList())
+                If Not allowed(VariantKey.FileOf(key)) OrElse partners.Any(Function(p) Not allowed(p)) Then
+                    outcome.Refused += 1
+                    Continue For
+                End If
+                outcome.Done.Add(id)
+                If seen.Add(key) Then outcome.Files.Add(key)
+                For Each partner In partners
+                    If seen.Add(partner) Then outcome.Files.Add(partner)
+                Next
+            Next
+            Return outcome
+        End Function
+
+        ''' <summary>Die Antwort auf eine Aenderung an einer Auswahl, mit dem Satz ueber das, was
+        ''' nicht geaendert wurde (leer, wenn alles ging).</summary>
+        Private Shared Function MobileSelectionAnswer(outcome As MobileSelectionOutcome, total As Integer) As Dictionary(Of String, Object)
+            Return New Dictionary(Of String, Object) From {
+                {"ok", True}, {"changed", outcome.Done.Count}, {"refused", outcome.Refused}, {"missing", outcome.Missing},
+                {"total", total}, {"done", outcome.Done}, {"message", MobileSelectionProblemText(outcome.Refused, outcome.Missing, total)}}
+        End Function
+
+        ''' <summary>"3 von 10 ohne Recht", "1 von 10 nicht mehr vorhanden" oder beides; leer ohne beides.</summary>
+        Friend Shared Function MobileSelectionProblemText(refused As Integer, missing As Integer, total As Integer) As String
+            Dim parts As New List(Of String)()
+            If refused > 0 Then parts.Add(String.Format(CultureInfo.CurrentCulture, LocalizationService.T("{0} von {1} ohne Recht"), refused, total))
+            If missing > 0 Then parts.Add(String.Format(CultureInfo.CurrentCulture, LocalizationService.T("{0} von {1} nicht mehr vorhanden"), missing, total))
+            Return String.Join(", ", parts)
+        End Function
+
+        ''' <summary>Der Satz zur Grenze einer Auswahl, fuer die Seite und fuer die Antwort 413.</summary>
+        Friend Shared Function MobileSelectionLimitText() As String
+            Return String.Format(CultureInfo.CurrentCulture, LocalizationService.T("Höchstens {0} Bilder auf einmal"), MaxMobileSelection)
         End Function
 
         ''' <summary>Bewertung, Favorit, Etikett und Markierung einer Datei, wie sie im Katalog stehen.</summary>
@@ -911,6 +1076,31 @@ Namespace Services
                 {"deleteForever", AppSettingsService.Load().DeleteSkipTrash}})
         End Function
 
+        ''' <summary>POST /api/m/username mit {"name"}: der Benutzer benennt sein eigenes Konto um,
+        ''' mit denselben Regeln wie in der Verwaltung (UserAccountService.RenameUser). Die Sitzung
+        ''' bleibt; die Anmeldung gilt danach nur mit dem neuen Namen. 400 mit Grund fuer einen
+        ''' ungueltigen, 409 fuer einen vergebenen Namen.</summary>
+        Private Shared Async Function HandleMobileUserNameAsync(context As HttpListenerContext, mobile As MobileContext) As Task
+            Dim body = Await ReadMobileJsonAsync(context.Request)
+            Dim wanted = If(body.HasValue, ReadString(body.Value, "name"), Nothing)
+            If wanted Is Nothing Then
+                Await WriteMobileJsonAsync(context, 400, MobileProblem("bad request"))
+                Return
+            End If
+            Dim outcome = UserAccountService.RenameUser(mobile.UserKey, wanted, mobile.UserKey, LogAddress(context.Request))
+            Select Case outcome
+                Case UserChangeOutcome.Done
+                    Await WriteMobileJsonAsync(context, 200, New Dictionary(Of String, Object) From {
+                        {"ok", True}, {"name", If(UserAccountService.Find(mobile.UserKey)?.Name, "")}})
+                Case UserChangeOutcome.InvalidName
+                    Await WriteMobileJsonAsync(context, 400, MobileProblem(ViewModels.SettingsViewModel.UserOutcomeText(outcome)))
+                Case UserChangeOutcome.NameTaken
+                    Await WriteMobileJsonAsync(context, 409, MobileProblem(ViewModels.SettingsViewModel.UserOutcomeText(outcome)))
+                Case Else
+                    Await WriteMobileJsonAsync(context, 404, MobileProblem("not found"))
+            End Select
+        End Function
+
         ''' <summary>POST /api/m/language mit {"language": Schluessel aus LocalizationService.Languages
         ''' oder "System"}: der Benutzer stellt seine Sprache selbst ein. Gespeichert sofort; die
         ''' Seite laedt danach neu und erscheint in ihr. Die Anwendung selbst bleibt in ihrer Sprache.</summary>
@@ -952,11 +1142,17 @@ Namespace Services
         ''' <summary>POST /api/m/delete mit {"id"}: loescht das Bild (samt dem Partner eines RAW-Paars
         ''' und den Begleitdateien) wie die Galerie, ab Werk in den Papierkorb. Verlangt "Verwalten".
         ''' Nimmt der Papierkorb es nicht, wird NICHT still endgueltig geloescht: die Antwort nennt
-        ''' den Grund. Die Seite fragt vorher nach.</summary>
+        ''' den Grund. Die Seite fragt vorher nach. Mit "ids" statt "id" eine Auswahl
+        ''' (<see cref="HandleMobileDeleteManyAsync"/>).</summary>
         Private Shared Async Function HandleMobileDeleteAsync(context As HttpListenerContext, mobile As MobileContext) As Task
             Dim body = Await ReadMobileJsonAsync(context.Request)
             If Not body.HasValue Then
                 Await WriteMobileJsonAsync(context, 400, MobileProblem("bad request"))
+                Return
+            End If
+            Dim list As JsonElement
+            If body.Value.TryGetProperty("ids", list) Then
+                Await HandleMobileDeleteManyAsync(context, mobile, list)
                 Return
             End If
             Dim files = Await ResolveForChangeAsync(context, mobile, body.Value, AddressOf mobile.CanDelete)
@@ -996,6 +1192,76 @@ Namespace Services
                 Return
             End If
             Await WriteMobileJsonAsync(context, 200, New Dictionary(Of String, Object) From {{"ok", True}})
+        End Function
+
+        ''' <summary>POST /api/m/delete mit {"ids": [...]}: loescht eine Auswahl wie ein einzelnes Bild
+        ''' (Papierkorb ab Werk, Partner des RAW-Paars und Begleitdateien mit), hoechstens
+        ''' <see cref="MaxMobileSelection"/> Kennungen. Jedes Bild geht fuer sich durch den Kontext
+        ''' ("Verwalten"); was der Benutzer nicht loeschen darf oder was es nicht mehr gibt, zaehlt die
+        ''' Antwort wie beim Markieren. Eine Variante wird nie geloescht (ihre Datei traegt alle
+        ''' Varianten). Nimmt der Papierkorb eine Datei nicht, hoert das Loeschen dort auf, NICHT
+        ''' still endgueltig: 409 mit dem Namen. Das Protokoll bekommt EINE Zeile mit allen Dateien,
+        ''' die wirklich weg sind.</summary>
+        Private Shared Async Function HandleMobileDeleteManyAsync(context As HttpListenerContext, mobile As MobileContext, list As JsonElement) As Task
+            If list.ValueKind <> JsonValueKind.Array Then
+                Await WriteMobileJsonAsync(context, 400, MobileProblem("bad request"))
+                Return
+            End If
+            Dim ids = list.EnumerateArray().Where(Function(e) e.ValueKind = JsonValueKind.String).
+                           Select(Function(e) e.GetString()).Distinct(StringComparer.Ordinal).ToList()
+            If ids.Count = 0 Then
+                Await WriteMobileJsonAsync(context, 400, MobileProblem("bad request"))
+                Return
+            End If
+            If ids.Count > MaxMobileSelection Then
+                Await WriteMobileJsonAsync(context, 413, MobileProblem(MobileSelectionLimitText()))
+                Return
+            End If
+            Dim outcome = Await Task.Run(Function() SortMobileSelection(mobile, ids, False, AddressOf mobile.CanDelete))
+            If outcome.Done.Count = 0 Then
+                Dim status = If(outcome.Refused > 0, 403, 404)
+                Await WriteMobileJsonAsync(context, status, MobileProblem(MobileSelectionProblemText(outcome.Refused, outcome.Missing, ids.Count)))
+                Return
+            End If
+            Dim useTrash = Not AppSettingsService.Load().DeleteSkipTrash
+            Dim deleted As New List(Of String)()
+            Dim refused = Await Task.Run(
+                Function() As String
+                    Using batch = RawSidecarService.BatchScope()
+                        For Each doomed In outcome.Files
+                            Try
+                                If useTrash Then
+                                    Dim reason As String = Nothing
+                                    If Not TrashService.MoveToTrash(doomed, reason) Then Return IO.Path.GetFileName(doomed)
+                                Else
+                                    IO.File.Delete(doomed)
+                                End If
+                                deleted.Add(doomed)
+                                RawSidecarService.AccompanyDelete(doomed, useTrash)
+                            Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is UnauthorizedAccessException
+                                DiagnosticLogService.LogException("BrowserBridge.Mobile.DeleteMany", ex)
+                                Return IO.Path.GetFileName(doomed)
+                            End Try
+                        Next
+                        batch.Finish()
+                    End Using
+                    Return Nothing
+                End Function)
+            ForgetMobileTimelines()
+            Dim stored = UploadStored
+            If stored IsNot Nothing AndAlso deleted.Count > 0 Then
+                Dim first = deleted(0)
+                PostToApp(Sub() stored(first))
+            End If
+            If deleted.Count > 0 Then
+                SecurityLog.FilesDeleted(SecurityLog.UserNameOf(mobile.UserKey), LogAddress(context.Request), deleted, mobile.BrowseRoots(), useTrash)
+            End If
+            If refused IsNot Nothing Then
+                Await WriteMobileJsonAsync(context, 409, MobileProblem(
+                    String.Format(LocalizationService.T("{0} ließ sich nicht in den Papierkorb verschieben."), refused)))
+                Return
+            End If
+            Await WriteMobileJsonAsync(context, 200, MobileSelectionAnswer(outcome, ids.Count))
         End Function
 
         ''' <summary>POST /api/m/rename mit {"id", "name"}: ein neuer Name ohne Endung; die Endung

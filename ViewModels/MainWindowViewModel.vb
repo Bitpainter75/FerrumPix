@@ -527,7 +527,9 @@ Namespace ViewModels
         Public ReadOnly Property WindowTitleFileName As String
             Get
                 ' Hinter dem Namen steht in Klammern, welche Variante der Datei zu sehen ist, sobald
-                ' sie mehr als eine hat (GalleryViewModel.VariantTitle).
+                ' sie mehr als eine hat (GalleryViewModel.VariantTitle). Gesperrt leer: die
+                ' Fensterleiste bleibt dann sichtbar und darf kein Bild nennen.
+                If IsAppLocked Then Return ""
                 Select Case CurrentMode
                     Case AppMode.Viewer
                         Return Models.ImageItem.VariantFileName(If(Viewer?.CurrentFileName, ""),
@@ -542,6 +544,7 @@ Namespace ViewModels
 
         Public ReadOnly Property HasWindowTitleColorLabel As Boolean
             Get
+                If IsAppLocked Then Return False
                 Select Case CurrentMode
                     Case AppMode.Viewer : Return Viewer IsNot Nothing AndAlso Viewer.HasColorLabel
                     Case AppMode.Editor : Return Editor IsNot Nothing AndAlso Editor.HasColorLabel
@@ -566,6 +569,7 @@ Namespace ViewModels
         ''' Vorschau.</summary>
         Public ReadOnly Property IsWindowTitleRawDeveloped As Boolean
             Get
+                If IsAppLocked Then Return False
                 Select Case CurrentMode
                     Case AppMode.Viewer : Return Viewer IsNot Nothing AndAlso Viewer.IsRawDeveloped
                     Case AppMode.Editor : Return Editor IsNot Nothing AndAlso Editor.IsRawDeveloped
@@ -674,6 +678,14 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Der Hinweis in der Fensterleiste: gesperrt verborgen, weil er dort ein Knopf
+        ''' ist und die Fensterleiste waehrend der Sperre nur die Fensterfunktionen anbietet.</summary>
+        Public ReadOnly Property IsUpdateNoticeVisible As Boolean
+            Get
+                Return IsUpdateAvailable AndAlso Not IsAppLocked
+            End Get
+        End Property
+
         Public ReadOnly Property AvailableVersion As String
             Get
                 Return If(Settings?.AvailableVersion, "")
@@ -756,6 +768,7 @@ Namespace ViewModels
                 Sub(s, e)
                     If e.PropertyName = NameOf(SettingsViewModel.IsReleaseUpdateAvailable) Then
                         Me.RaisePropertyChanged(NameOf(IsUpdateAvailable))
+                        Me.RaisePropertyChanged(NameOf(IsUpdateNoticeVisible))
                     ElseIf e.PropertyName = NameOf(SettingsViewModel.AvailableVersion) Then
                         Me.RaisePropertyChanged(NameOf(AvailableVersion))
                     End If
@@ -3621,9 +3634,14 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Ob Fensterleiste, Inhalt und Fensterknoepfe die Maus bekommen: nicht, solange ein
+        ''' Dialog offen ist. GESPERRT aber immer, auch mit einem Dialog darunter: dann liegt das
+        ''' Anmeldefenster ueber allem ausser der Fensterleiste, und deren Fensterfunktionen
+        ''' (Ziehen, Doppelklick, Fensterknoepfe) muessen bedienbar bleiben
+        ''' (MainWindow.ApplyLockChrome).</summary>
         Public ReadOnly Property IsAppContentHitTestVisible As Boolean
             Get
-                Return Not IsDialogOpen
+                Return Not IsDialogOpen OrElse IsAppLocked
             End Get
         End Property
 

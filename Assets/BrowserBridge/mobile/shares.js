@@ -293,6 +293,19 @@
       if (!ids || !ids.length) return;
       openForm({ kind: kind === 'search' ? 'search' : 'selection', ids, title: title || '' });
     },
+    // Die Aktionsleiste einer Auswahl: Link erstellen (canLink: jedes Bild erlaubt es) und, wo der
+    // Browser mehrere Dateien teilen kann, An App senden (send, sonst null).
+    fromSelection(ids, kind, canLink, send) {
+      if (!ids || !ids.length) return;
+      if (!canLink) { if (send) send(); return; }
+      const target = { kind: kind === 'search' ? 'search' : 'selection', ids, title: '' };
+      if (!send) { openForm(target); return; }
+      showSheet((body, close) => {
+        body.appendChild(el('div', 'sheet-title', S.share || ''));
+        body.appendChild(sheetAction('share', S.create, () => { close(); openForm(target); }));
+        body.appendChild(sheetAction('upload', S.sendToApp, () => { close(); send(); }));
+      });
+    },
     // Ein Ordner, auf Wunsch mit Unterordnern.
     fromFolder(id, name) {
       openForm({ kind: 'folder', folder: id, title: name || '' });

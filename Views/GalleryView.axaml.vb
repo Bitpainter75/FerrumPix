@@ -2291,6 +2291,21 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ''' <summary>Der Abspielknopf auf der Kachel eines Bewegtbilds: das Bild geht in den
+        ''' Betrachter (nicht in den Editor, auch wenn das die Einstellung fuer Doppelklick ist) und
+        ''' spielt dort gleich seinen Film.</summary>
+        Public Sub OnMotionPlayBadgeClick(sender As Object, e As RoutedEventArgs)
+            Dim button = TryCast(sender, Button)
+            Dim item = TryCast(button?.DataContext, ImageItem)
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse item Is Nothing Then Return
+            vm.SelectOnly(item)
+            _selectionAnchor = item
+            vm.RequestMotionOnOpen(item.FilePath)
+            OpenGalleryItemInViewer(item)
+            e.Handled = True
+        End Sub
+
         Public Sub OnHoverOpenViewerClick(sender As Object, e As RoutedEventArgs)
             Dim button = TryCast(sender, Button)
             Dim item = TryCast(button?.DataContext, ImageItem)

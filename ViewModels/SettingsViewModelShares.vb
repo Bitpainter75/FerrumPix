@@ -184,16 +184,22 @@ Namespace ViewModels
         End Sub
 
         Private Async Sub RevokeShareRow(row As ShareAdminRow)
-            If row Is Nothing Then Return
-            If _mainVm IsNot Nothing Then
-                Dim confirmed = Await _mainVm.ShowConfirmAsync(row.Title,
-                    LocalizationService.T("Diese Freigabe widerrufen? Der Link funktioniert danach nicht mehr."), "Widerrufen", "Abbrechen")
-                If Not confirmed Then Return
-            End If
-            ShareStore.Revoke(row.Record.Id)
-            Dim actor = SecurityLog.DesktopActor()
-            SecurityLog.ShareEvent("share.revoked", actor.User, actor.From, row.Record.Id)
-            ReloadShareRows()
+            Try
+                If row Is Nothing Then Return
+                If _mainVm IsNot Nothing Then
+                    Dim confirmed = Await _mainVm.ShowConfirmAsync(row.Title,
+                        LocalizationService.T("Diese Freigabe widerrufen? Der Link funktioniert danach nicht mehr."), "Widerrufen", "Abbrechen")
+                    If Not confirmed Then Return
+                End If
+                ShareStore.Revoke(row.Record.Id)
+                Dim actor = SecurityLog.DesktopActor()
+                SecurityLog.ShareEvent("share.revoked", actor.User, actor.From, row.Record.Id)
+                ReloadShareRows()
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess.
+                DiagnosticLogService.LogException("Settings.Shares.Revoke", ex)
+            End Try
         End Sub
 
     End Class

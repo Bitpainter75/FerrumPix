@@ -13766,4 +13766,40 @@
   <data name="Als_Textdatei_speichern_288a3137" xml:space="preserve">
     <value>टेक्स्ट फ़ाइल के रूप में सहेजें</value>
   </data>
+  <data name="F_r_die_Anmeldung_im_Browser_h_chstens_64_Zeiche_8fc0dd73" xml:space="preserve">
+    <value>ब्राउज़र में साइन इन के लिए, अधिकतम 64 वर्ण; बड़े और छोटे अक्षरों से फ़र्क नहीं पड़ता। नाम बदलने के बाद केवल नया नाम मान्य है, खुले साइन इन बने रहते हैं।</value>
+  </data>
+  <data name="Gespeichert_Die_Authenticator_App_zeigt_weiter_d_b8d9e261" xml:space="preserve">
+    <value>सहेजा गया। ऑथेंटिकेटर ऐप अब भी पुराना नाम दिखाता है; उसके कोड फिर भी मान्य हैं।</value>
+  </data>
+  <data name="Neuen_Benutzernamen_eingeben_Danach_gilt_bei_der_f38d4081" xml:space="preserve">
+    <value>नया उपयोगकर्ता नाम दर्ज करें। उसके बाद साइन इन के लिए केवल यही मान्य है।</value>
+  </data>
+  <data name="Es_gibt_ungespeicherte_nderungen_Zum_Schlie_en_b_6f752459" xml:space="preserve">
+    <value>कुछ बदलाव सहेजे नहीं गए हैं। बंद करने के लिए पहले अनलॉक करें।</value>
+  </data>
+  <data name="Ganzen_Tag_ausw_hlen_6822224a" xml:space="preserve">
+    <value>पूरा दिन चुनें</value>
+  </data>
+  <data name="H_chstens_0_Bilder_auf_einmal_6eba59aa" xml:space="preserve">
+    <value>एक बार में अधिकतम {0} चित्र</value>
+  </data>
+  <data name="0_von_1_ohne_Recht_1b1a391b" xml:space="preserve">
+    <value>{1} में से {0} बिना अनुमति</value>
+  </data>
+  <data name="0_von_1_nicht_mehr_vorhanden_b9110c3d" xml:space="preserve">
+    <value>{1} में से {0} अब मौजूद नहीं</value>
+  </data>
+  <data name="0_Bilder_ge_ndert_b36c0fd1" xml:space="preserve">
+    <value>{0} चित्र बदले गए</value>
+  </data>
+  <data name="0_Bilder_l_schen_e274f888" xml:space="preserve">
+    <value>{0} चित्र हटाएँ?</value>
+  </data>
+  <data name="0_Bilder_endg_ltig_l_schen_Der_Papierkorb_ist_ab_a07d17fc" xml:space="preserve">
+    <value>{0} चित्र स्थायी रूप से हटाएँ? रीसायकल बिन बंद है, इसे पूर्ववत नहीं किया जा सकता।</value>
+  </data>
+  <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
+    <value>चित्र तैयार किए जा रहे हैं</value>
+  </data>
 </root>

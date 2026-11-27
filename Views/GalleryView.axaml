@@ -2634,22 +2634,6 @@
                                                                            VerticalAlignment="Center"/>
                                                         </Panel>
                                                     </Border>
-                                                    <!-- BEWEGTBILD (ImageItem.HasMotionBadge): ein Motion
-                                                         Photo, oder Bild und Film eines Live Photos, wenn
-                                                         die andere Haelfte daneben liegt. Kein Knopf und
-                                                         unabhaengig von Stapeln und Einstellungen; der
-                                                         Hinweis kommt uebersetzt aus dem Element. -->
-                                                    <icons:DeferredPart Load="{Binding HasMotionBadge}"><Template>
-                                                    <Border Classes="motion-badge"
-                                                            IsVisible="{Binding HasMotionBadge}"
-                                                            ToolTip.Tip="{Binding MotionBadgeTip}">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/play-circle.svg"
-                                                                       Width="16" Height="16"
-                                                                       IconBrush="{DynamicResource FP.Accent}"
-                                                                       HorizontalAlignment="Center"
-                                                                       VerticalAlignment="Center"/>
-                                                    </Border>
-                                                    </Template></icons:DeferredPart>
                                                 </StackPanel>
                                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder.svg"
                                                                IsVisible="{Binding IsFolder}"
@@ -2684,6 +2668,30 @@
                                                         </MultiBinding>
                                                     </TextBlock.IsVisible>
                                                 </TextBlock>
+                                                <!-- BEWEGTBILD (ImageItem.ShowsMotionPlayBadge): ein Motion
+                                                     Photo, oder das Bild eines Live Photos, dessen Film
+                                                     daneben liegt. Derselbe Knopf wie beim Video, mitten
+                                                     auf der Kachel; ein Klick oeffnet das Bild, und der
+                                                     Betrachter spielt den Film gleich ab
+                                                     (ViewerViewModel.RequestMotionOnOpen). -->
+                                                <icons:DeferredPart Load="{Binding ShowsMotionPlayBadge}"><Template>
+                                                <Button IsVisible="{Binding ShowsMotionPlayBadge}"
+                                                        Classes="video-play-badge"
+                                                        Width="46" Height="46"
+                                                        CornerRadius="23"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Click="OnMotionPlayBadgeClick"
+                                                        ToolTip.Tip="{Binding MotionBadgeTip}">
+                                                    <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/play.svg"
+                                                                   Shadow="Rim"
+                                                                   ShadowOnlyWhenLight="True"
+                                                                   Width="22" Height="22"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   IconBrush="{DynamicResource FP.OnAccent}"/>
+                                                </Button>
+                                                </Template></icons:DeferredPart>
                                                 <icons:DeferredPart Load="{Binding IsVideoFile}"><Template>
                                                 <Button IsVisible="{Binding IsVideoFile}"
                                                         Classes="video-play-badge"

@@ -41,6 +41,29 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Der Knopf "Sperren" der Fensterleiste: nur mit Kennwort, und gesperrt nicht.
+        ''' Die Fensterleiste bleibt waehrend der Sperre sichtbar, bietet dann aber nur die
+        ''' Fensterfunktionen an.</summary>
+        Public ReadOnly Property IsWindowLockButtonVisible As Boolean
+            Get
+                Return CanLockApp AndAlso Not IsAppLocked
+            End Get
+        End Property
+
+        ''' <summary>Wuerde das Schliessen des Fensters jetzt zurueckfragen? Im Editor bei
+        ''' ungespeicherten Aenderungen, im Betrachter bei einer noch nicht gespeicherten Drehung.
+        ''' Beide Rueckfragen nennen den Dateinamen; gesperrt wird deshalb nicht gefragt, sondern
+        ''' das Schliessen abgelehnt (MainWindow.RefuseCloseWhileLocked).</summary>
+        Friend ReadOnly Property ClosingNeedsQuestion As Boolean
+            Get
+                Select Case CurrentMode
+                    Case AppMode.Editor : Return Editor IsNot Nothing AndAlso Editor.HasUnsavedChanges
+                    Case AppMode.Viewer : Return Viewer IsNot Nothing AndAlso Viewer.HasPendingRotationQuestion
+                    Case Else : Return False
+                End Select
+            End Get
+        End Property
+
         Private _lockAppCommand As ICommand
         Public ReadOnly Property LockAppCommand As ICommand
             Get
@@ -65,6 +88,7 @@ Namespace ViewModels
         ''' <summary>Der Schutz wurde in den Einstellungen ein- oder ausgeschaltet.</summary>
         Friend Sub OnAppLockProtectionChanged()
             Me.RaisePropertyChanged(NameOf(CanLockApp))
+            Me.RaisePropertyChanged(NameOf(IsWindowLockButtonVisible))
         End Sub
 
         Private Sub OnAppLockStateChanged(sender As Object, e As EventArgs)
@@ -103,6 +127,12 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsAppLocked))
             Me.RaisePropertyChanged(NameOf(CanLockApp))
             Me.RaisePropertyChanged(NameOf(WindowTitle))
+            ' Die Fensterleiste bleibt gesperrt sichtbar: ihr Titel, der Hinweis und "Sperren"
+            ' folgen dem Zustand, die Maus erreicht sie auch mit einem Dialog darunter.
+            Me.RaisePropertyChanged(NameOf(IsWindowLockButtonVisible))
+            Me.RaisePropertyChanged(NameOf(IsUpdateNoticeVisible))
+            Me.RaisePropertyChanged(NameOf(IsAppContentHitTestVisible))
+            RefreshWindowTitle()
         End Sub
 
     End Class

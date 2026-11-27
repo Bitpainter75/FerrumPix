@@ -465,10 +465,11 @@ Namespace Services
         ''' Namen; der alte antwortet wie ein unbekannter. Der eine Minute gemerkte Kopf eines
         ''' Werkzeugs (Basic) verfaellt mit <see cref="Version"/>.</para>
         '''
-        ''' <para><paramref name="actorUser"/> und <paramref name="actorFrom"/> fuer das Protokoll,
-        ''' wenn nicht die volle Oberflaeche handelt (die mobile Seite fuer das eigene Konto).</para></summary>
+        ''' <para><paramref name="actorUserId"/> und <paramref name="actorFrom"/> fuer das Protokoll,
+        ''' wenn nicht die volle Oberflaeche handelt (die mobile Seite fuer das eigene Konto). Der
+        ''' Handelnde steht dort wie an der vollen Oberflaeche mit dem Namen nach der Aenderung.</para></summary>
         Public Shared Function RenameUser(userId As String, newName As String,
-                                          Optional actorUser As String = Nothing, Optional actorFrom As String = Nothing) As UserChangeOutcome
+                                          Optional actorUserId As String = Nothing, Optional actorFrom As String = Nothing) As UserChangeOutcome
             Dim clean = If(newName, "").Trim()
             If Not AppLockService.IsValidUserName(clean) Then Return UserChangeOutcome.InvalidName
             Dim oldName As String
@@ -491,7 +492,7 @@ Namespace Services
                     Return UserChangeOutcome.NotFound
                 End If
             End SyncLock
-            SecurityLog.UserRenamed(oldName, clean, actorUser, actorFrom)
+            SecurityLog.UserRenamed(oldName, clean, If(actorUserId Is Nothing, Nothing, SecurityLog.UserNameOf(actorUserId)), actorFrom)
             NoteChange()
             Return UserChangeOutcome.Done
         End Function

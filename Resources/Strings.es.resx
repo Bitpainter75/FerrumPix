@@ -13722,4 +13722,40 @@
   <data name="Als_Textdatei_speichern_288a3137" xml:space="preserve">
     <value>Guardar como archivo de texto</value>
   </data>
+  <data name="F_r_die_Anmeldung_im_Browser_h_chstens_64_Zeiche_8fc0dd73" xml:space="preserve">
+    <value>Para iniciar sesión en el navegador, como máximo 64 caracteres; mayúsculas y minúsculas no importan. Tras cambiar el nombre solo vale el nuevo, las sesiones abiertas se mantienen.</value>
+  </data>
+  <data name="Gespeichert_Die_Authenticator_App_zeigt_weiter_d_b8d9e261" xml:space="preserve">
+    <value>Guardado. La app de autenticación sigue mostrando el nombre anterior; sus códigos siguen valiendo.</value>
+  </data>
+  <data name="Neuen_Benutzernamen_eingeben_Danach_gilt_bei_der_f38d4081" xml:space="preserve">
+    <value>Introduce un nuevo nombre de usuario. A partir de entonces solo vale este para iniciar sesión.</value>
+  </data>
+  <data name="Es_gibt_ungespeicherte_nderungen_Zum_Schlie_en_b_6f752459" xml:space="preserve">
+    <value>Hay cambios sin guardar. Desbloquea primero para cerrar.</value>
+  </data>
+  <data name="Ganzen_Tag_ausw_hlen_6822224a" xml:space="preserve">
+    <value>Seleccionar todo el día</value>
+  </data>
+  <data name="H_chstens_0_Bilder_auf_einmal_6eba59aa" xml:space="preserve">
+    <value>Como máximo {0} imágenes a la vez</value>
+  </data>
+  <data name="0_von_1_ohne_Recht_1b1a391b" xml:space="preserve">
+    <value>{0} de {1} sin permiso</value>
+  </data>
+  <data name="0_von_1_nicht_mehr_vorhanden_b9110c3d" xml:space="preserve">
+    <value>{0} de {1} ya no existen</value>
+  </data>
+  <data name="0_Bilder_ge_ndert_b36c0fd1" xml:space="preserve">
+    <value>{0} imágenes modificadas</value>
+  </data>
+  <data name="0_Bilder_l_schen_e274f888" xml:space="preserve">
+    <value>¿Eliminar {0} imágenes?</value>
+  </data>
+  <data name="0_Bilder_endg_ltig_l_schen_Der_Papierkorb_ist_ab_a07d17fc" xml:space="preserve">
+    <value>¿Eliminar {0} imágenes definitivamente? La papelera está desactivada, no se puede deshacer.</value>
+  </data>
+  <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
+    <value>Preparando imágenes</value>
+  </data>
 </root>

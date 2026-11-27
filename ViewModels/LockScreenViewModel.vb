@@ -100,6 +100,14 @@ Namespace ViewModels
                                  seconds.ToString(CultureInfo.CurrentCulture))
         End Function
 
+        ''' <summary>Das Fenster sollte gesperrt geschlossen werden, aber dabei waere nach
+        ''' ungespeicherten Aenderungen zu fragen. Die Frage nennt das Bild und kommt deshalb nicht
+        ''' ueber die Sperre; das Schliessen unterbleibt, und die Meldungszeile sagt warum.</summary>
+        Public Sub ShowCloseNeedsUnlock()
+            ErrorText = LocalizationService.T("Es gibt ungespeicherte Änderungen. Zum Schließen bitte erst entsperren.")
+            RaiseEvent PasswordCleared(Me, EventArgs.Empty)
+        End Sub
+
         ''' <summary>Leert Feld und Meldung, wenn das Fenster erneut erscheint.</summary>
         Public Sub Reset()
             Password = ""

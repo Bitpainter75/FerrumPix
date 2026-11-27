@@ -459,11 +459,7 @@ Namespace Services
                         Next
                     End Using
                 End Using
-                Using image = SKImage.FromBitmap(bitmap)
-                    Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                        Return data.ToArray()
-                    End Using
-                End Using
+                Return PngEncoder.EncodeToBytes(bitmap, PngPurpose.Stored)
             End Using
         End Function
 

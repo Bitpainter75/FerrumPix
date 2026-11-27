@@ -66,8 +66,8 @@ Namespace Views
             e.Handled = True
         End Sub
 
-        ''' <summary>Ein Druck auf den freien Grund verschiebt das Fenster, wie die Kopfleiste
-        ''' darunter. Im Browser gehoert das Fenster dem Tab und bleibt stehen.</summary>
+        ''' <summary>Ein Druck auf den freien Grund verschiebt das Fenster, wie die Fensterleiste
+        ''' darueber. Im Browser gehoert das Fenster dem Tab und bleibt stehen.</summary>
         Private Sub OnBackgroundPointerPressed(sender As Object, e As PointerPressedEventArgs)
             e.Handled = True
             If BrowserBridge.IsActive Then Return

@@ -68,7 +68,7 @@
                                     Padding="8,2"
                                     MinHeight="0"
                                     VerticalAlignment="Center"
-                                    IsVisible="{Binding IsUpdateAvailable}"
+                                    IsVisible="{Binding IsUpdateNoticeVisible}"
                                     Click="OnUpdateNoticeClick"
                                     ToolTip.Tip="Veröffentlichte Version herunterladen">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
@@ -119,14 +119,15 @@
                         <!-- SPERREN: oben rechts, links neben den Fensterknoepfen bzw. dem Logo, wenn
                              das rechts steht; den Abstand setzt MainWindow.PlaceWindowLockButton nach
                              deren Massen. Nur mit Kennwort da (CanLockApp), wie die Taste und der
-                             Knopf der Galerie, und in jeder Ansicht. -->
+                             Knopf der Galerie, und in jeder Ansicht; gesperrt verborgen
+                             (IsWindowLockButtonVisible), weil die Leiste dann sichtbar bleibt. -->
                         <Button x:Name="WindowLockButton"
                                 Grid.Column="2"
                                 Classes="icon-btn"
                                 Width="26" Height="26" Padding="0"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
-                                IsVisible="{Binding CanLockApp}"
+                                IsVisible="{Binding IsWindowLockButtonVisible}"
                                 Command="{Binding LockAppCommand}"
                                 ToolTip.Tip="Sperren (STRG+L)">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/lock-simple.svg"
@@ -211,8 +212,12 @@
             <ContentControl x:Name="PrintDialogOverlayHost" ZIndex="499"/>
 
             <!-- Das Anmeldefenster (LockScreenView, AppLockService). UEBER allem, auch ueber den
-                 Dialogen und den Fensterknoepfen: gesperrt ist nichts von der Anwendung zu sehen
-                 und zu bedienen. Ein Dialog, der waehrenddessen aufgeht, wartet darunter. -->
+                 Dialogen: gesperrt ist nichts von der Anwendung zu sehen und zu bedienen. Ein
+                 Dialog, der waehrenddessen aufgeht, wartet darunter. AUSGENOMMEN die
+                 Fensterleiste: das Anmeldefenster beginnt darunter, die Leiste rueckt ueber die
+                 Dialoge, Fensterknoepfe und Raender zur Groessenaenderung ruecken ueber das
+                 Anmeldefenster (MainWindow.ApplyLockChrome). Die Leiste zeigt dann nur Logo und
+                 Fensterfunktionen, keinen Dateinamen, keinen Hinweis und kein "Sperren". -->
             <ContentControl x:Name="LockScreenHost" ZIndex="900" IsVisible="False"/>
 
             <!-- Die Knoepfe liegen NICHT in der Leiste, sondern darueber im Fenstergitter - der

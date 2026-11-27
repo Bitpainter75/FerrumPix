@@ -9,6 +9,9 @@
   --muted: #8B98A5;
   --accent: #F08A1A;
   --danger: #FF6B6B;
+  /* Behalten und Verwerfen in den Farben der Galerie (GalleryView.axaml). */
+  --keep: #22C55E;
+  --reject: #E74C3C;
   --bar: 52px;
   --tabs: 58px;
   --safe-top: env(safe-area-inset-top, 0px);
@@ -22,6 +25,8 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
   font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, Cantarell, sans-serif; overscroll-behavior: none; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
+/* Gefuellte Symbole aus Phosphor (Behalten, Verwerfen): Flaeche statt Linie. */
+svg.filled { fill: currentColor; stroke: none; }
 
 #app { position: fixed; inset: 0; }
 .view { position: absolute; inset: 0; bottom: calc(var(--tabs) + var(--safe-bottom)); display: flex; flex-direction: column; }
@@ -30,6 +35,29 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
   border-bottom: 1px solid var(--line); z-index: 2; }
 .bar .title { flex: 1; margin: 0; font-size: 18px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bar .actions { display: flex; gap: 2px; }
+/* Auswahlmodus: statt Titel und Knoepfen die Anzahl, "Auswahl aufheben" und "Alle abwaehlen";
+   unten ueber den Reitern die Aktionsleiste. Der Scrollbereich endet ueber ihr. */
+.bar .select-head { display: none; flex: 1; align-items: center; gap: 4px; min-width: 0; }
+.bar.selecting > :not(.select-head) { display: none !important; }
+.bar.selecting .select-head { display: flex; }
+.select-head .count { flex: 1; min-width: 0; font-size: 18px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.select-actions { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; height: 56px; display: flex; align-items: center;
+  justify-content: space-around; gap: 2px; padding: 0 calc(4px + var(--safe-right)) 0 calc(4px + var(--safe-left));
+  background: rgba(15, 19, 23, 0.97); border-top: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.select-actions::-webkit-scrollbar { display: none; }
+.view.with-select-actions .scroller { margin-bottom: 56px; }
+.select-actions button:disabled { opacity: 0.4; cursor: default; }
+.select-actions .icon.pick-keep { color: var(--keep); }
+.select-actions .icon.pick-reject { color: var(--reject); }
+.select-actions .icon.pick-keep.on, .select-actions .icon.pick-reject.on { background: var(--raised); }
+.select-actions .icon.on svg:not(.filled) { fill: currentColor; }
+.select-actions .icon.danger { color: var(--danger); }
+.sheet-stars { justify-content: center; padding: 6px 0 10px; }
+.sheet-stars button { width: 48px; color: var(--text); }
+.sheet-stars button:hover, .sheet-stars button.on { color: var(--accent); }
+.sheet-stars button.on svg { fill: currentColor; }
+/* Die Meldung steht ueber der Aktionsleiste, nicht auf ihren Knoepfen. */
+#app:has(.view.with-select-actions:not([hidden])) ~ .toast { bottom: calc(var(--tabs) + var(--safe-bottom) + 72px); }
 .icon { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 22px; flex: none; }
 .icon:active { background: var(--raised); }
 .icon.on { color: var(--accent); }
@@ -47,9 +75,18 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .tabs button.active { color: var(--accent); }
 
 /* Raster */
-.grid { position: relative; width: 100%; }
+.grid { position: relative; width: 100%; user-select: none; -webkit-user-select: none; }
 .grid-head { position: absolute; left: 0; right: 0; padding: 14px 12px 6px; font-weight: 650; font-size: 14px; color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  white-space: nowrap; overflow: hidden; display: flex; align-items: center; gap: 8px; height: 44px; }
+.grid-head > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* Der Kreis an der Kopfzeile eines Tages: waehlt den ganzen Tag aus oder ab. Im Auswahlmodus
+   immer, mit der Maus beim Zeigen auf die Kopfzeile. Die Tippflaeche ist groesser als der Kreis. */
+.day-check { display: none; flex: none; width: 36px; height: 36px; margin: -8px -6px -8px -8px; align-items: center; justify-content: center; }
+.day-check svg { width: 22px; height: 22px; padding: 2px; border-radius: 11px; border: 2px solid var(--muted); stroke: transparent; stroke-width: 3; box-sizing: border-box; }
+.selecting .day-check { display: inline-flex; }
+@media (hover: hover) and (pointer: fine) { .grid-head:hover .day-check { display: inline-flex; } }
+.grid-head.some .day-check svg { border-color: var(--accent); }
+.grid-head.all .day-check svg { background: var(--accent); border-color: var(--accent); stroke: #fff; }
 .tile { position: absolute; overflow: hidden; background: var(--elevated); }
 .tile img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity 0.15s; }
 .tile img.loaded { opacity: 1; }
@@ -64,7 +101,8 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
   background: rgba(0, 0, 0, 0.25); display: none; }
 .selecting .tile .check { display: block; }
 .tile.selected .check { background: var(--accent); border-color: var(--accent); }
-.tile.selected .check svg { width: 20px; height: 20px; stroke: #fff; stroke-width: 3; }
+.tile .check svg { width: 20px; height: 20px; stroke: #fff; stroke-width: 3; opacity: 0; }
+.tile.selected .check svg { opacity: 1; }
 .tile.selected img { transform: scale(0.88); border-radius: 6px; }
 /* Die Zeitleiste am rechten Rand, immer sichtbar: Jahreszahlen und bei genug Hoehe je Monat ein
    Punkt, an der Stelle, an der das Jahr oder der Monat im Raster beginnt. Das Raster laesst ihr
@@ -170,8 +208,8 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .stars button.on svg { fill: currentColor; }
 .marks { display: flex; align-items: center; }
 #mark-favorite.on svg { fill: currentColor; }
-#mark-keep.on { color: #22C55E; }
-#mark-reject.on { color: var(--danger); }
+#mark-keep.on { color: var(--keep); }
+#mark-reject.on { color: var(--reject); }
 .label-dot { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
 .label-dot::after { content: ""; width: 22px; height: 22px; border-radius: 11px; border: 2px solid #fff; background: var(--label, transparent); }
 /* Die Farbe eines Etiketts setzt das Skript als --label (paintLabel); die Liste der Farben

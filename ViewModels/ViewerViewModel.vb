@@ -5448,6 +5448,16 @@ Namespace ViewModels
             Return ImageProcessor.CanReplaceOriginal(path) OrElse RawSidecarService.WritesRecipe(path)
         End Function
 
+        ''' <summary>Steht eine Drehung an, nach der <see cref="ConfirmPendingRotationAsync"/> fragen
+        ''' koennte? Eher zu oft als zu selten: fuer ein Format, das die Drehung nicht behalten
+        ''' kann, faellt die Frage dort spaeter still weg.</summary>
+        Public ReadOnly Property HasPendingRotationQuestion As Boolean
+            Get
+                Return _hasPendingRotationSave AndAlso NormalizeRotationAngle(_rotationAngle) <> 0 AndAlso
+                       Not String.IsNullOrEmpty(_currentImagePath)
+            End Get
+        End Property
+
         Public Async Function ConfirmPendingRotationAsync(actionDescription As String) As Task(Of Boolean)
             If Not _hasPendingRotationSave OrElse NormalizeRotationAngle(_rotationAngle) = 0 Then Return True
             If String.IsNullOrEmpty(_currentImagePath) OrElse Not EntryExists(_currentImagePath) Then
