@@ -86,6 +86,9 @@
   with `FerrumPix security:`, with time, user and address, easy to filter with `grep`. Passwords,
   links and mail addresses never appear.
 
+- **Faster thumbnails of edited pictures.** Thumbnails of edited JPEG and WebP pictures are now
+  created several times faster and with far less memory, and look a little cleaner in fine detail.
+
 ### Fixes
 
 - While FerrumPix is locked, the window bar now stays at the top, so the window can still be

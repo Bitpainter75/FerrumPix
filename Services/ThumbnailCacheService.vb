@@ -276,16 +276,24 @@ Namespace Services
             Return Not RawPreviewService.IsSupportedRaw(filePath) AndAlso RawSidecarService.HasRecipeBeside(filePath)
         End Function
 
-        ''' <summary>Die Kachel einer Nicht-RAW mit Rezept als PNG-Strom: die Quelle dekodiert, auf
-        ''' Kachelbreite verkleinert und dann durch die Kette (RenderPngStream). Voll orientiert und
-        ''' mit der Geometrie des Rezepts, also wie die entwickelte RAW-Kachel ohne erneute Drehung zu
-        ''' schreiben. Nothing, wenn das Rezept nicht lesbar ist: dann gilt der gewoehnliche Weg.</summary>
-        Private Shared Function TryRenderRecipeSource(filePath As String, width As Integer) As MemoryStream
+        ''' <summary>Die Kachel einer Nicht-RAW mit Rezept als fertiges Bild: die Quelle in
+        ''' Kachelgroesse, dann durch die Kette (ImageProcessor.RenderPreviewBitmap). Voll orientiert
+        ''' und mit der Geometrie des Rezepts, also wie die entwickelte RAW-Kachel ohne erneute Drehung
+        ''' zu schreiben. Besitz beim Aufrufer. Nothing, wenn das Rezept nicht lesbar ist: dann gilt
+        ''' der gewoehnliche Weg.
+        '''
+        ''' DERSELBE WEG WIE DIE VORSCHAU DER MOBILEN SEITE: JPEG und WebP kommen gleich im Decoder
+        ''' verkleinert (DecodeOrientedReduced, mindestens auf die Arbeitsgroesse), das Ergebnis geht
+        ''' als Bitmap weiter. Vorher wurde die Datei ganz dekodiert, das Ergebnis als PNG kodiert und
+        ''' sofort wieder gelesen; bei einem Foto mit 40 Megapixeln war das ein Vielfaches der Zeit
+        ''' und des Speichers. Der Kachelname blieb dabei gleich: so entstandene Kacheln gelten
+        ''' weiter, neue weichen von ihnen nur im feinen Detail ab, weil der Decoder anders
+        ''' verkleinert als der volle Weg.</summary>
+        Private Shared Function TryRenderRecipeSource(filePath As String, width As Integer) As SKBitmap
             Dim adj = RawSidecarService.TryRead(filePath)
             If adj Is Nothing Then Return Nothing
             Try
-                Dim d, p, e As Long
-                Return ImageProcessor.RenderPngStream(filePath, adj, width, d, p, e)
+                Return ImageProcessor.RenderPreviewBitmap(filePath, adj, width)
             Catch
                 Return Nothing
             End Try
@@ -320,25 +328,61 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Entwickelte RAW-Vorschau als PNG-Strom (LibRaw-Decode + .fpxmp-Rezept, auf Kachelbreite
-        ''' herunterskaliert). Nothing, wenn die Option aus ist, keine .fpxmp existiert oder die Datei nicht
-        ''' entwickelt werden kann (RawDecodeService.CanDevelop: LibRaw fehlt, bei linearem Licht dessen
-        ''' Leser) - dann gilt der eingebettete-JPG-Weg. Das Ergebnis ist bereits voll orientiert und trägt die
-        ''' Rezept-Geometrie; es darf NICHT über DecodeCorrectedAndResize erneut gedreht werden.</summary>
-        Private Shared Function TryRenderDevelopedRawSource(filePath As String, width As Integer) As MemoryStream
+        ''' <summary>Entwickelte RAW-Vorschau als fertiges Bild (halb aufgeloester LibRaw-Decode +
+        ''' .fpxmp-Rezept, auf Kachelbreite herunterskaliert). Besitz beim Aufrufer. Nothing, wenn die
+        ''' Option aus ist, keine .fpxmp existiert oder die Datei nicht entwickelt werden kann
+        ''' (RawDecodeService.CanDevelop: LibRaw fehlt, bei linearem Licht dessen Leser) - dann gilt
+        ''' der eingebettete-JPG-Weg. Das Ergebnis ist bereits voll orientiert und trägt die
+        ''' Rezept-Geometrie; es darf NICHT über DecodeCorrectedAndResize erneut gedreht werden.
+        '''
+        ''' Dieselben Bildpunkte wie der fruehere Weg ueber einen PNG-Strom (RenderPngStream, danach
+        ''' gelesen), nur ohne ihn: siehe <see cref="AsAfterPngRoundTrip"/>.</summary>
+        Private Shared Function TryRenderDevelopedRawSource(filePath As String, width As Integer) As SKBitmap
             If RendersRecipeTile(filePath) Then Return TryRenderRecipeSource(filePath, width)
             If Not RawPreviewService.IsSupportedRaw(filePath) OrElse Not RawDecodeService.CanDevelop(filePath) Then Return Nothing
             If Not DevelopsThumbnail(filePath) Then Return Nothing
             Dim adj = RawSidecarService.TryRead(VariantKey.Make(filePath, AmbientVariantId))
             If adj Is Nothing Then Return Nothing
             Try
-                Dim d, p, e As Long
-                Dim developed = ImageProcessor.RenderPngStream(filePath, adj, width, d, p, e,
-                                                               preferReducedRawDecode:=True)
+                Dim developed = AsAfterPngRoundTrip(
+                    ImageProcessor.RenderPreviewBitmap(filePath, adj, width, preferReducedRawDecode:=True))
                 If developed IsNot Nothing Then NoteRawSource(RawSourceDevelopedWithRecipe)
                 Return developed
             Catch
                 Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Das Bild so, wie es aus einem PNG-Rundweg (kodieren mit PngPurpose.Stored, mit
+        ''' Skia wieder lesen) zurueckkaeme. Uebernimmt den Besitz von <paramref name="bitmap"/>.
+        '''
+        ''' DER RUNDWEG LAEUFT NUR, WO ER ETWAS AENDERT. Ein deckendes Bild in 8 Bit kommt aus ihm mit
+        ''' denselben Werten zurueck und geht deshalb direkt weiter; das ist der Normalfall einer
+        ''' entwickelten RAW. Mit Durchsichtigem wandelt PNG vormultipliziert nach gerade und zurueck,
+        ''' einzelne Werte koennen dabei um eine Stufe wandern, und eine andere Tiefe kaeme in einem
+        ''' anderen Farbtyp zurueck: dort laeuft er wie bisher. Wie RenderForLayeredExport im
+        ''' Ebenen-Export, nur dass hier die Deckung gezaehlt wird statt der Alpha-Art: die Kette
+        ''' liefert auch ein deckendes Bild meist als vormultipliziert.</summary>
+        Private Shared Function AsAfterPngRoundTrip(bitmap As SKBitmap) As SKBitmap
+            If bitmap Is Nothing Then Return Nothing
+            If bitmap.ColorType = SKColorType.Bgra8888 OrElse bitmap.ColorType = SKColorType.Rgba8888 Then
+                Dim transparent = True
+                If bitmap.AlphaType = SKAlphaType.Opaque Then
+                    transparent = False
+                Else
+                    Using pixmap = bitmap.PeekPixels()
+                        If pixmap IsNot Nothing Then transparent = StripEncoding.HasTransparency(pixmap, deep:=False)
+                    End Using
+                End If
+                If Not transparent Then Return bitmap
+            End If
+            Try
+                Using stream = PngEncoder.EncodeToStream(bitmap, PngPurpose.Stored)
+                    If stream Is Nothing Then Return Nothing
+                    Return SKBitmap.Decode(stream)
+                End Using
+            Finally
+                bitmap.Dispose()
             End Try
         End Function
 
@@ -377,15 +421,12 @@ Namespace Services
             Return source
         End Function
 
-        ''' <summary>Schreibt einen bereits entwickelten+orientierten PNG-Strom als JPEG-Kachel - OHNE
-        ''' weitere Orientierung/Sidecar-Drehung (die steckt schon im Rezept).</summary>
-        Private Shared Function WriteDevelopedCacheFile(pngStream As MemoryStream, cachePath As String, quality As Integer, width As Integer, isStillWanted As Func(Of Boolean)) As Boolean
-            pngStream.Position = 0
-            Using bmp = SKBitmap.Decode(pngStream)
-                If bmp Is Nothing Then Return False
-                If isStillWanted IsNot Nothing AndAlso Not isStillWanted() Then Return False
-                Return WriteCacheBitmap(bmp, Nothing, cachePath, quality, width)
-            End Using
+        ''' <summary>Schreibt ein bereits entwickeltes und orientiertes Bild als JPEG-Kachel - OHNE
+        ''' weitere Orientierung/Sidecar-Drehung (die steckt schon im Rezept). Das Bild ist schon sRGB.
+        ''' Besitz bleibt beim Aufrufer.</summary>
+        Private Shared Function WriteDevelopedCacheFile(developed As SKBitmap, cachePath As String, quality As Integer, width As Integer, isStillWanted As Func(Of Boolean)) As Boolean
+            If isStillWanted IsNot Nothing AndAlso Not isStillWanted() Then Return False
+            Return WriteCacheBitmap(developed, Nothing, cachePath, quality, width)
         End Function
 
         ''' <summary>Verkleinert ein schon aufrechtes Bild auf Kachelbreite und legt es als JPEG ab.
@@ -1662,8 +1703,7 @@ Namespace Services
                     If rendered IsNot Nothing Then
                         Using rendered
                             cancellationToken.ThrowIfCancellationRequested()
-                            rendered.Position = 0
-                            Return New Bitmap(rendered)
+                            Return ImageProcessor.ToAvaloniaBitmap(rendered)
                         End Using
                     End If
                 End If
@@ -1673,8 +1713,7 @@ Namespace Services
                     If developed IsNot Nothing Then
                         Using developed
                             cancellationToken.ThrowIfCancellationRequested()
-                            developed.Position = 0
-                            Return New Bitmap(developed)
+                            Return ImageProcessor.ToAvaloniaBitmap(developed)
                         End Using
                     End If
                     Using preview = OpenRawThumbnailSource(filePath, width)
