@@ -267,7 +267,9 @@ In the folder of the template:
     docker compose up -d
 
 For the local template add `-f docker-compose.local.yml` to both; on a Synology run them over SSH
-with `sudo` in `/volume1/docker/ferrumpix`. The folder `data` stays as it is. The templates follow
+with `sudo` in `/volume1/docker/ferrumpix`. The folder `data` stays as it is, and the new container
+opens the catalog of the old one right away. Two containers on the same `data` folder at the same
+time are not possible: the second one works without the catalog. The templates follow
 `:latest`; to stay on one version, put for example
 `FERRUMPIX_IMAGE=ghcr.io/bitpainter75/ferrumpix:0.9.92` into `.env`.
 

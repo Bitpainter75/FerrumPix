@@ -34,6 +34,10 @@
   a picture always stays in the language of the app, also when a browser user with another
   language adds it.
 
+- **Catalog kept after updating the container.** A container that was recreated, for example
+  after an update, no longer takes its own catalog for one of another computer: it opens it right
+  away, without asking to take over the lock and without reading every picture again.
+
 - **No more empty tiles in large folders.** In folders with more pictures than the thumbnail
   memory holds, for example a large folder shown with its subfolders, tiles that came into view
   could stay empty until the tile size changed, and after a while not even that helped. Every

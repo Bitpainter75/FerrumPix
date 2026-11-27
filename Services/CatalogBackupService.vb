@@ -194,7 +194,7 @@ Namespace Services
             Try
                 Dim manifest As New BackupManifest With {
                     .FormatVersion = CurrentFormatVersion, .AppVersion = AppVersion(),
-                    .CreatedUtc = DateTime.UtcNow, .MachineName = Environment.MachineName}
+                    .CreatedUtc = DateTime.UtcNow, .MachineName = AppFolders.ThisMachineName}
                 Dim prepared As New List(Of (Name As String, File As String))()
                 For Each known In KnownFiles()
                     If (parts And known.Part) = 0 OrElse Not File.Exists(known.Target) Then Continue For

@@ -66,6 +66,14 @@ Namespace Services
     ''' (<see cref="CatalogLockHolder.MachineId"/>). Nur dort darf eine Datei als liegengeblieben
     ''' gelten.
     '''
+    ''' IM ABBILD (AppFolders.RunsInContainer) ist der Rechner die EINRICHTUNG: fester Name
+    ''' "container" und eine Kennung, die einmal erzeugt im Ordner der Einstellungen unter /data
+    ''' liegt. Ein neu erstellter oder neu gestarteter Behaelter mit demselben /data ist damit
+    ''' derselbe Rechner und raeumt die Datei seines Vorgaengers nach deren Dateisperre weg, ohne
+    ''' Rueckfrage. Anders als auf dem Desktop haelt dort aber ein LEBENDER zweiter Lauf derselben
+    ''' Einrichtung den Katalog (<see cref="BlocksThisRun"/>): zwei Behaelter an einem /data teilen
+    ''' ihn nicht.
+    '''
     ''' OB EIN LAUF DIESES RECHNERS NOCH LEBT, sagt eine Dateisperre und nicht die Prozessnummer:
     ''' neben jeder Datei "&lt;name&gt;.json" liegt "&lt;name&gt;.alive", die der Lauf mit
     ''' FileShare.None offen haelt, solange er lebt (wie <see cref="BackgroundRunLock"/>). Das
@@ -97,6 +105,9 @@ Namespace Services
         Friend Shared MachineIdOverride As String
 
         Private Shared _machineId As String
+        ''' <summary>Die abgeleitete Kennung im Abbild und der Ordner, aus dem sie stammt.</summary>
+        Private Shared _containerId As String
+        Private Shared _containerIdFolder As String
 
         Private Shared ReadOnly _gate As New Object()
         Private Shared _decided As Boolean
@@ -208,7 +219,7 @@ Namespace Services
                 Directory.CreateDirectory(folder)
                 RemoveDeadOwnMachineEntries(folder)
                 own = New CatalogLockHolder With {
-                    .Machine = If(AppFolders.MachineNameOverride, Environment.MachineName),
+                    .Machine = AppFolders.ThisMachineName,
                     .MachineId = OwnMachineId,
                     .ProcessId = OwnProcessId,
                     .InstanceId = Guid.NewGuid().ToString("N"),
@@ -230,7 +241,7 @@ Namespace Services
                 ' Rechner beschreibbar sein, und der schreibt dann in denselben Katalog. Steht dort
                 ' keiner, bleibt der Katalog benutzbar.
                 Dim foreignOnFailure = ReadEntries(folder).
-                    Where(Function(e) Not IsOwnMachine(e.Holder)).
+                    Where(Function(e) BlocksThisRun(e, Nothing)).
                     OrderBy(Function(e) e.Holder.StartedUtc).ToList()
                 If foreignOnFailure.Count = 0 Then Return True
                 holder = foreignOnFailure(0).Holder
@@ -239,8 +250,9 @@ Namespace Services
             ' Erst geschrieben, jetzt nachgesehen: jede Datei eines anderen Rechners heisst belegt,
             ' gleich welche Startzeit sie traegt (siehe oben, keine Entscheidung nach der Uhr). Die
             ' Zeit ordnet nur, wer in der Rueckfrage genannt wird.
+            Dim ownPath = ownEntry
             Dim foreign = ReadEntries(folder).
-                Where(Function(e) Not IsOwnMachine(e.Holder)).
+                Where(Function(e) BlocksThisRun(e, ownPath)).
                 OrderBy(Function(e) e.Holder.StartedUtc).ToList()
             If foreign.Count = 0 Then Return True
             holder = foreign(0).Holder
@@ -260,6 +272,41 @@ Namespace Services
                 If IsEntryAlive(entry) Then Return entry.Holder
             Next
             Return Nothing
+        End Function
+
+        ''' <summary>Haelt diese Datei den Katalog gegen den Lauf, der gerade die Sperre holt? Eine
+        ''' Datei eines anderen Rechners immer. Im Abbild dazu ein LEBENDER anderer Lauf derselben
+        ''' Einrichtung: ein Behaelter ist eine Instanz, und zwei Behaelter mit demselben /data
+        ''' koennen auf zwei Rechnern laufen, auf denen sich SQLite nicht verlaesslich sperrt. Auf
+        ''' dem Desktop teilen sich Fenster desselben Rechners den Katalog dagegen gewollt.</summary>
+        ''' <param name="ownPath">Die eben geschriebene Datei dieses Laufs, Nothing ohne.</param>
+        Private Shared Function BlocksThisRun(entry As LockEntry, ownPath As String) As Boolean
+            If Not IsOwnMachine(entry.Holder) Then Return True
+            If Not AppFolders.RunsInContainer Then Return False
+            If ownPath IsNot Nothing AndAlso String.Equals(ownPath, entry.FilePath, StringComparison.Ordinal) Then Return False
+            If IsThisProcess(entry) Then Return False
+            Return IsEntryAlive(entry)
+        End Function
+
+        ''' <summary>Im Abbild: eine Datei, die ein Behaelter einer frueheren Fassung hinterliess,
+        ''' als der Rechnername noch der von Docker vergebene war (zwoelf Hexziffern, die Kennung
+        ''' des Behaelters) und /etc/machine-id leer. Sie zaehlt als liegengeblieben, wenn ihre
+        ''' Sperre niemand mehr haelt; eine Datei ohne ".alive" oder mit gehaltener bleibt fremd.</summary>
+        Private Shared Function IsLeftoverOfEarlierContainer(entry As LockEntry) As Boolean
+            If Not AppFolders.RunsInContainer Then Return False
+            If Not String.IsNullOrEmpty(entry.Holder.MachineId) Then Return False
+            If Not IsDockerHostName(entry.Holder.Machine) Then Return False
+            Dim alive = AlivePath(entry.FilePath)
+            Return File.Exists(alive) AndAlso Not IsAliveFileHeld(alive)
+        End Function
+
+        ''' <summary>Der Rechnername, den Docker und Podman einem Behaelter ohne eigenen geben.</summary>
+        Friend Shared Function IsDockerHostName(name As String) As Boolean
+            If name Is Nothing OrElse name.Length <> 12 Then Return False
+            For Each c In name
+                If Not (Char.IsDigit(c) OrElse (c >= "a"c AndAlso c <= "f"c)) Then Return False
+            Next
+            Return True
         End Function
 
         ''' <summary>Die Datei dieses Laufs: die beim Start geschriebene. Eine Datei einer
@@ -364,7 +411,9 @@ Namespace Services
             Dim folder = Path.Combine(dataRoot, FolderName)
             Try
                 For Each entry In ReadEntries(folder)
-                    If IsOwnMachine(entry.Holder) Then Continue For
+                    ' Im Abbild haelt auch ein anderer Lauf derselben Einrichtung den Katalog
+                    ' (BlocksThisRun); uebernommen wird dann auch seine Sperre.
+                    If IsOwnMachine(entry.Holder) AndAlso (Not AppFolders.RunsInContainer OrElse IsThisProcess(entry)) Then Continue For
                     File.Delete(entry.FilePath)
                     Dim alive = AlivePath(entry.FilePath)
                     If File.Exists(alive) Then File.Delete(alive)
@@ -409,6 +458,7 @@ Namespace Services
                 _state = CatalogLockState.Owned
                 _decided = False
                 _machineId = Nothing
+                _containerId = Nothing
             End SyncLock
         End Sub
 
@@ -435,10 +485,23 @@ Namespace Services
         End Function
 
         ''' <summary>Die Kennung dieses Rechners: unter Linux /etc/machine-id (auch im Flatpak
-        ''' sichtbar), ersatzweise die von D-Bus; sonst leer.</summary>
+        ''' sichtbar), ersatzweise die von D-Bus; sonst leer. Im Abbild die Kennung der
+        ''' Einrichtung aus dem Ordner der Einstellungen (AppFolders.ReadOrCreateContainerId), die
+        ''' ein neu erstellter Behaelter mit demselben /data wiederfindet.</summary>
         Private Shared ReadOnly Property OwnMachineId As String
             Get
                 If MachineIdOverride IsNot Nothing Then Return MachineIdOverride
+                If AppFolders.RunsInContainer Then
+                    Dim folder = AppFolders.ContainerIdFolder
+                    SyncLock _gate
+                        If _containerId Is Nothing OrElse Not String.Equals(_containerIdFolder, folder, StringComparison.Ordinal) Then
+                            Dim content = AppFolders.ReadOrCreateContainerId(folder)
+                            _containerId = If(content.Length = 0, "", DeriveId("FerrumPix catalog lock container " & content))
+                            _containerIdFolder = folder
+                        End If
+                        Return _containerId
+                    End SyncLock
+                End If
                 Dim known = _machineId
                 If known IsNot Nothing Then Return known
                 Dim found = ""
@@ -450,8 +513,7 @@ Namespace Services
                             If content.Length > 0 Then
                                 ' Nicht die Kennung selbst auf die Freigabe legen (machine-id(5)
                                 ' raet davon ab), sondern einen davon abgeleiteten Wert.
-                                Dim digest = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes("FerrumPix catalog lock " & content))
-                                found = Convert.ToHexString(digest, 0, 16)
+                                found = DeriveId("FerrumPix catalog lock " & content)
                                 Exit For
                             End If
                         Catch
@@ -462,6 +524,12 @@ Namespace Services
                 Return found
             End Get
         End Property
+
+        ''' <summary>Der Wert, der statt einer Kennung auf die Freigabe kommt.</summary>
+        Private Shared Function DeriveId(text As String) As String
+            Dim digest = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(text))
+            Return Convert.ToHexString(digest, 0, 16)
+        End Function
 
         ''' <summary>Nur fuer Dateien ohne ".alive" (fruehere Fassungen): laeuft ein Prozess mit
         ''' dieser Nummer, und ist er nicht spaeter gestartet als die Datei entstand? Nach einem
@@ -488,8 +556,12 @@ Namespace Services
         ''' eine Sperrdatei ohne ihre ".json", wenn der Absturz genau dazwischen kam.</summary>
         Private Shared Sub RemoveDeadOwnMachineEntries(folder As String)
             For Each entry In ReadEntries(folder)
-                If Not IsOwnMachine(entry.Holder) Then Continue For
-                If IsThisProcess(entry) OrElse IsEntryAlive(entry) Then Continue For
+                If IsLeftoverOfEarlierContainer(entry) Then
+                    DiagnosticLogService.LogAlways("CatalogLock", $"removed the lock left by the earlier container {entry.Holder.Machine}")
+                Else
+                    If Not IsOwnMachine(entry.Holder) Then Continue For
+                    If IsThisProcess(entry) OrElse IsEntryAlive(entry) Then Continue For
+                End If
                 Try
                     File.Delete(entry.FilePath)
                     Dim alive = AlivePath(entry.FilePath)

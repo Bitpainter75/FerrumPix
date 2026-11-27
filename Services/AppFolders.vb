@@ -108,6 +108,78 @@ Namespace Services
 
         ''' <summary>Ersetzt den Rechnernamen, etwa um zwei Rechner an einem Ordner nachzustellen.</summary>
         Friend Shared MachineNameOverride As String = Nothing
+        ''' <summary>Ob FerrumPix im Abbild laeuft. Nothing liest <see cref="ContainerVariable"/>.</summary>
+        Friend Shared ContainerOverride As Boolean? = Nothing
+        ''' <summary>Der Ordner der Kennung im Abbild. Nothing nimmt den Ordner der Einstellungen.</summary>
+        Friend Shared ContainerIdFolderOverride As String = Nothing
+
+        ' --- FerrumPix im Abbild ------------------------------------------------------------
+
+        ''' <summary>Die Umgebungsvariable, die das Dockerfile setzt ("1").</summary>
+        Friend Const ContainerVariable As String = "FERRUMPIX_CONTAINER"
+        ''' <summary>Der Rechnername im Abbild, gleich in jedem Behaelter.</summary>
+        Friend Const ContainerMachineName As String = "container"
+        ''' <summary>Die Datei mit der Kennung dieser Einrichtung im Abbild.</summary>
+        Friend Const ContainerIdFileName As String = "container-id"
+
+        ''' <summary>Laeuft FerrumPix im Abbild fuer den Browser (Dockerfile:
+        ''' FERRUMPIX_CONTAINER=1)? Dort taugt der Rechnername nicht als Kennung: Docker gibt jedem
+        ''' neu erstellten Behaelter einen neuen (die Kennung des Behaelters), und /etc/machine-id
+        ''' ist im Abbild leer. Ein neu erstellter Behaelter mit demselben /data waere sonst ein
+        ''' fremder Rechner und faende den eigenen Katalog belegt.</summary>
+        Public Shared ReadOnly Property RunsInContainer As Boolean
+            Get
+                If ContainerOverride.HasValue Then Return ContainerOverride.Value
+                Return Environment.GetEnvironmentVariable(ContainerVariable) = "1"
+            End Get
+        End Property
+
+        ''' <summary>Der Name dieses Rechners: im Abbild <see cref="ContainerMachineName"/>, sonst
+        ''' der des Systems. Daran haengen <see cref="MachineTag"/> und die Katalogsperre.</summary>
+        Public Shared ReadOnly Property ThisMachineName As String
+            Get
+                If MachineNameOverride IsNot Nothing Then Return MachineNameOverride
+                Return If(RunsInContainer, ContainerMachineName, Environment.MachineName)
+            End Get
+        End Property
+
+        ''' <summary>Die Kennung dieser Einrichtung im Abbild: einmal zufaellig erzeugt und im
+        ''' Ordner der Einstellungen abgelegt, also unter /data und damit ueber jedes Neuerstellen
+        ''' des Behaelters hinweg dieselbe. Bewusst nicht im Datenordner: der kann ein gewaehlter
+        ''' auf einer Freigabe sein, und zwei Einrichtungen daran sollen sich unterscheiden. Leer,
+        ''' wenn sie sich weder lesen noch anlegen laesst.</summary>
+        Friend Shared Function ReadOrCreateContainerId(folder As String) As String
+            Dim file = Path.Combine(folder, ContainerIdFileName)
+            Try
+                Dim known = If(IO.File.Exists(file), IO.File.ReadAllText(file).Trim(), "")
+                If known.Length > 0 Then Return known
+                Directory.CreateDirectory(folder)
+                Dim temp = file & "." & Guid.NewGuid().ToString("N") & ".tmp"
+                IO.File.WriteAllText(temp, Guid.NewGuid().ToString("N"))
+                Try
+                    IO.File.Move(temp, file, overwrite:=False)
+                Catch ex As IOException
+                    ' Ein zweiter Lauf war schneller (oder eine leere Datei liegt dort): erst
+                    ' ersetzen, wenn die vorhandene leer ist, sonst gilt sie.
+                    If IO.File.Exists(file) AndAlso IO.File.ReadAllText(file).Trim().Length = 0 Then
+                        IO.File.Move(temp, file, overwrite:=True)
+                    Else
+                        IO.File.Delete(temp)
+                    End If
+                End Try
+                Return IO.File.ReadAllText(file).Trim()
+            Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is UnauthorizedAccessException
+                DiagnosticLogService.LogException("AppFolders.ContainerId", ex)
+                Return ""
+            End Try
+        End Function
+
+        ''' <summary>Der Ordner, in dem die Kennung im Abbild liegt.</summary>
+        Friend Shared ReadOnly Property ContainerIdFolder As String
+            Get
+                Return If(ContainerIdFolderOverride, ConfigRoot)
+            End Get
+        End Property
 
         ' --- Die festen Orte --------------------------------------------------------------
 
@@ -482,10 +554,12 @@ Namespace Services
             Return baseName & "." & MachineTag & extension
         End Function
 
-        ''' <summary>Der Rechnername in einer Form, die in jedem Dateinamen stehen darf.</summary>
+        ''' <summary>Der Rechnername in einer Form, die in jedem Dateinamen stehen darf. Im Abbild
+        ''' fest (<see cref="ThisMachineName"/>), damit Protokolle und Sperren in einem gewaehlten
+        ''' Datenordner nach dem Neuerstellen des Behaelters dieselben bleiben.</summary>
         Public Shared ReadOnly Property MachineTag As String
             Get
-                Return SafeMachineName(If(MachineNameOverride, Environment.MachineName))
+                Return SafeMachineName(ThisMachineName)
             End Get
         End Property
 
