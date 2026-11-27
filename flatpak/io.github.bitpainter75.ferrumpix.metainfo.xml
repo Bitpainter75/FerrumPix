@@ -129,6 +129,12 @@
           <li xml:lang="de">Suchfeld, gespeicherte Suchen und die Seite für Telefone finden jetzt dieselben Bilder, auch über Orte und die Namen der Personen im Bild, mit denselben Regeln für Pflichtwörter, ausgeschlossene Wörter und Ausdrücke in Anführungszeichen.</li>
           <li>In the browser, copy and paste reach the clipboard of your device, and whole folders can be downloaded as a ZIP.</li>
           <li xml:lang="de">Im Browser erreichen Kopieren und Einfügen die Zwischenablage deines Geräts, und ganze Ordner lassen sich als ZIP herunterladen.</li>
+          <li>Each user can add a second factor with an authenticator app. On the page for phones, many pictures or whole days can be selected to rate, label, download or share them at once.</li>
+          <li xml:lang="de">Jeder Benutzer kann einen zweiten Faktor mit einer Authenticator-App einrichten. Auf der Seite für Telefone lassen sich viele Bilder oder ganze Tage auswählen, um sie auf einmal zu bewerten, zu markieren, herunterzuladen oder zu teilen.</li>
+          <li>Through share links and on the page for phones, pictures with edits and every format other than JPEG, PNG and WebP arrive as a JPEG with the edits; raw files never leave this way.</li>
+          <li xml:lang="de">Über Links zum Teilen und auf der Seite für Telefone kommen bearbeitete Bilder und alle Formate außer JPEG, PNG und WebP als JPEG mit der Bearbeitung an; RAW-Dateien gehen so nie hinaus.</li>
+          <li>Thumbnails of edited JPEG pictures are created several times faster. Motion and live photos show a play button on their tile and play right away.</li>
+          <li xml:lang="de">Vorschaubilder bearbeiteter JPEG-Bilder entstehen um ein Vielfaches schneller. Bewegtbilder zeigen auf ihrer Kachel einen Abspielknopf und spielen gleich ab.</li>
           <li>The search field in the gallery keeps the keyboard while a search over the whole catalog is running. Importing into a folder the Flatpak cannot see now warns instead of putting pictures where they vanish.</li>
           <li xml:lang="de">Das Suchfeld der Galerie behält die Tastatur, während eine Suche über den ganzen Katalog läuft. Ein Import in einen Ordner, den das Flatpak nicht sieht, warnt jetzt, statt Bilder dort abzulegen, wo sie wieder verschwinden.</li>
         </ul>
