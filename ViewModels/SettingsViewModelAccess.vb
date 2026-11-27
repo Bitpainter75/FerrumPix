@@ -27,7 +27,8 @@ Namespace ViewModels
     ''' Sperre nach Inaktivitaet.
     '''
     ''' <para>NICHTS WIRKT SOFORT. Anders als die uebrigen Einstellungen gilt eine Aenderung erst mit
-    ''' "Anwenden", und ist ein Kennwort gesetzt, nur mit diesem: wer an einem entsperrten Rechner
+    ''' "Anwenden" oder mit "Speichern" unten (<see cref="SaveSettingsAsync"/>, derselbe Weg
+    ''' <see cref="ApplyAccessAsync"/>), und ist ein Kennwort gesetzt, nur mit diesem: wer an einem entsperrten Rechner
     ''' vorbeikommt, soll den Schutz nicht abschalten oder das Kennwort tauschen koennen. Deshalb
     ''' nimmt auch "Auf Standard zuruecksetzen" diesen Teil nicht mit.</para>
     '''
@@ -98,6 +99,28 @@ Namespace ViewModels
                 Return _accessProtectionWanted <> AccessIsProtected
             End Get
         End Property
+
+        ''' <summary>Liegt am Zugang etwas vor, das "Speichern" mit uebernehmen muss: ein umgelegter
+        ''' Schalter, ein eingetipptes neues Kennwort oder eine andere Sperrzeit. Kennwort und
+        ''' Sperrzeit zaehlen nur bei eingeschaltetem Schalter, sonst sind ihre Felder gar nicht
+        ''' zu sehen.
+        '''
+        ''' <para>BEFUND: Schalter aus, dann "Speichern" und Beenden, und beim naechsten Start kam
+        ''' das Anmeldefenster wieder. "Speichern" liess den Zugang liegen, und das naechste Oeffnen
+        ''' verwarf den Entwurf (<see cref="DiscardAccessDraft"/>).</para></summary>
+        Public ReadOnly Property AccessHasDraft As Boolean
+            Get
+                If AccessHasPendingChange Then Return True
+                If Not _accessProtectionWanted Then Return False
+                Return _accessNewPassword.Length > 0 OrElse _accessNewPasswordRepeat.Length > 0 OrElse
+                       AppLockService.NormalizeIdleMinutes(_accessIdleMinutes) <> AppLockService.IdleMinutes
+            End Get
+        End Property
+
+        ''' <summary>"Speichern" konnte den Zugang nicht uebernehmen (Kennwort fehlt oder ist
+        ''' falsch, neues Kennwort ungueltig). Die Seite rollt dann zur Benutzerverwaltung, wo die
+        ''' Meldung am Zugang steht.</summary>
+        Public Event AccessNeedsAttention As EventHandler
 
         ''' <summary>Was dem neuen Kennwort noch fehlt, eine Regel je Zeile, waehrend getippt wird.
         ''' Leer, solange nichts eingegeben ist oder alles stimmt.</summary>
@@ -383,6 +406,29 @@ Namespace ViewModels
                 ReportAccess(LocalizationService.T("Die Änderung ließ sich nicht speichern."), True)
                 Return False
             End Try
+        End Function
+
+        ''' <summary>Der Teil von "Speichern", der den Zugang betrifft: liegt ein Entwurf vor
+        ''' (<see cref="AccessHasDraft"/>), uebernimmt ihn <see cref="ApplyAccessAsync"/>, wie es
+        ''' "Anwenden" tut. Gibt False zurueck, wenn das scheitert; dann steht die Meldung am Zugang,
+        ''' die Seite wird dorthin gerollt, und "Speichern" bleibt stehen, statt die uebrigen
+        ''' Einstellungen ohne den Zugang zu uebernehmen.</summary>
+        Private Async Function ApplyAccessDraftForSaveAsync() As Task(Of Boolean)
+            If Not AccessHasDraft Then Return True
+            ' "Anwenden" laeuft gerade: ein zweiter Durchgang wuerde das Kennwort ein zweites Mal
+            ' pruefen, nachdem das Feld schon geleert ist.
+            If _applyingAccess Then Return False
+            _applyingAccess = True
+            RaiseCanApplyAccess()
+            Dim applied As Boolean
+            Try
+                applied = Await ApplyAccessAsync()
+            Finally
+                _applyingAccess = False
+                RaiseCanApplyAccess()
+            End Try
+            If Not applied Then RaiseEvent AccessNeedsAttention(Me, EventArgs.Empty)
+            Return applied
         End Function
 
         Private Sub ClearAccessFields()

@@ -13795,8 +13795,8 @@
   <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
     <value>Afbeeldingen worden voorbereid</value>
   </data>
-  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__b617486a" xml:space="preserve">
-    <value>Nog niet toegepast. De beveiliging verandert pas met Toepassen.</value>
+  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__8b18c3e2" xml:space="preserve">
+    <value>Nog niet toegepast. De beveiliging verandert pas met Toepassen of Opslaan.</value>
   </data>
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>Op de computer verschijnt met een wachtwoord bij het starten, na de ingestelde tijd zonder invoer en met CTRL+L een aanmeldvenster. In de browser geldt hier het wachtwoord van de beheerder, een eigen wachtwoord. Het wachtwoord beschermt de draaiende toepassing, niet de foto's: de bestanden blijven leesbaar op de schijf.</value>

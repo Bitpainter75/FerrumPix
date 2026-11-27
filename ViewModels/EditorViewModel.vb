@@ -35345,6 +35345,9 @@ Namespace ViewModels
             Dim files As New List(Of String)
             Try
                 For Each file In Directory.EnumerateFiles(folderPath, pattern, CaseInsensitiveFileSearch)
+                    ' Nichts aus den Systemordnern UNTER dem gewaehlten Ordner ("@eaDir" eines NAS
+                    ' traegt Kopien und Vorschauen); der gewaehlte selbst zaehlt nicht mit.
+                    If FileOperationPolicy.IsInSystemFolder(IO.Path.GetRelativePath(folderPath, IO.Path.GetDirectoryName(file))) Then Continue For
                     files.Add(file)
                 Next
             Catch

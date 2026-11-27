@@ -13753,8 +13753,8 @@
   <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
     <value>正在准备图像</value>
   </data>
-  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__b617486a" xml:space="preserve">
-    <value>尚未应用。保护只有点击应用后才会改变。</value>
+  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__8b18c3e2" xml:space="preserve">
+    <value>尚未应用。保护只有点击应用或保存后才会改变。</value>
   </data>
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>在电脑上，设置密码后，登录窗口会在启动时、在设定的无操作时间之后以及按 CTRL+L 时出现。在浏览器中这里是管理员的密码，是单独的密码。密码保护的是正在运行的应用程序，而不是照片：文件在磁盘上仍然可读。</value>

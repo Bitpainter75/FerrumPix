@@ -13755,8 +13755,8 @@
   <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
     <value>Préparation des images</value>
   </data>
-  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__b617486a" xml:space="preserve">
-    <value>Pas encore appliqué. La protection ne change qu'avec Appliquer.</value>
+  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__8b18c3e2" xml:space="preserve">
+    <value>Pas encore appliqué. La protection ne change qu'avec Appliquer ou Enregistrer.</value>
   </data>
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>Sur l'ordinateur, avec un mot de passe, une fenêtre de connexion apparaît au démarrage, après la durée réglée sans saisie et avec CTRL+L. Dans le navigateur, c'est ici le mot de passe de l'administrateur, un mot de passe à part. Le mot de passe protège l'application en cours, pas les photos : les fichiers restent lisibles sur le disque.</value>

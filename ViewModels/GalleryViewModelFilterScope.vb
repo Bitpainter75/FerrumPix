@@ -249,7 +249,10 @@ Namespace ViewModels
                         Continue For
                     End Try
                     For Each file In files
-                        If IsTrashedLocalPath(file) Then Continue For
+                        ' Nur der Papierkorb: Systemordner ("@eaDir") kommen schon nicht in die
+                        ' Liste der Unterordner (FolderListing), und ein von Hand geoeffneter
+                        ' Systemordner zaehlt, was er zeigt.
+                        If FileOperationPolicy.IsTrashFolder(file) Then Continue For
                         If Not _imageExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()) Then Continue For
                         listed.Add(file)
                     Next

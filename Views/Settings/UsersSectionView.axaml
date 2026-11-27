@@ -40,8 +40,9 @@
 
                         <!-- Der Schalter ist nur vorgemerkt: steht er anders, als der Schutz gilt,
                              sagt es dieser Satz (AccessHasPendingChange). Ohne ihn hielt man einen
-                             Schalter auf aus fuer einen abgeschalteten Schutz. -->
-                        <TextBlock Text="Noch nicht übernommen. Der Schutz ändert sich erst mit Anwenden."
+                             Schalter auf aus fuer einen abgeschalteten Schutz. "Speichern" unten
+                             uebernimmt ihn mit (SaveSettingsAsync), mit demselben Kennwort. -->
+                        <TextBlock Text="Noch nicht übernommen. Der Schutz ändert sich erst mit Anwenden oder Speichern."
                                    IsVisible="{Binding AccessHasPendingChange}"
                                    Foreground="{DynamicResource FP.Text.Accent}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
 

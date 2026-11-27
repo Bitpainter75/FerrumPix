@@ -655,10 +655,15 @@ Namespace Services
         ''' Personengruppe (Nutzerbefund).
         '''
         ''' Eine Stelle fuer die Regel, nicht acht: die naechste Spalte bekommt ihren eigenen
-        ''' Schreibweg, und der soll nicht daran haengen, dass jemand an den Riegel denkt.</summary>
+        ''' Schreibweg, und der soll nicht daran haengen, dass jemand an den Riegel denkt.
+        '''
+        ''' Dasselbe fuer die Systemordner von NAS und Betriebssystem ("@eaDir", "#snapshot", siehe
+        ''' FileOperationPolicy.IsSystemFolderName): wer einen davon von Hand oeffnet, sieht seinen
+        ''' Inhalt, aber der Blick hinein legt keine Zeilen an, die danach in Suche, Ortsfilter und
+        ''' Personen auftauchten.</summary>
         Private Shared Function IsCatalogWritable(filePath As String) As Boolean
             If String.IsNullOrWhiteSpace(filePath) Then Return False
-            Return Not FileOperationPolicy.IsTrashFolder(filePath)
+            Return Not FileOperationPolicy.IsTrashOrSystemFolder(filePath)
         End Function
 
         Public Sub SetFavorite(filePath As String, isFavorite As Boolean)
@@ -2773,9 +2778,9 @@ Namespace Services
                                 ' laesst sich so ein Ordner nicht, und "Aufraeumen" haette die
                                 ' Bewertungen und Stichwoerter der Serverbilder mitgenommen.
                                 If IsServerPseudoPath(pfad) Then Continue While
-                                ' Und was im Papierkorb liegt, ebenso wenig - dieselbe Regel wie
-                                ' beim Schreiben (siehe SetExifData).
-                                If FileOperationPolicy.IsTrashFolder(pfad) Then Continue While
+                                ' Und was im Papierkorb oder einem Systemordner liegt, ebenso
+                                ' wenig - dieselbe Regel wie beim Schreiben (IsCatalogWritable).
+                                If FileOperationPolicy.IsTrashOrSystemFolder(pfad) Then Continue While
                                 Dim ordner = Path.GetDirectoryName(pfad)
                                 If String.IsNullOrEmpty(ordner) Then Continue While
                                 Dim anzahl = 0
@@ -3148,8 +3153,10 @@ Namespace Services
                     ' mehr herein - aus der Zeit davor stehen aber noch Zeilen da, und die
                     ' Datei EXISTIERT ja, faellt also nicht unter "verwaist". Hier ist der
                     ' benannte Ort zum Aufraeumen: der Nutzer hat ihn angeklickt, es
-                    ' geschieht nichts still nebenbei.
-                    If FileOperationPolicy.IsTrashFolder(p) Then
+                    ' geschieht nichts still nebenbei. Dasselbe fuer Zeilen aus einem
+                    ' Systemordner ("@eaDir", "#snapshot"), die ein Lauf vor dem Riegel dort
+                    ' aufgenommen hat.
+                    If FileOperationPolicy.IsTrashOrSystemFolder(p) Then
                         orphans.Add(p)
                         progress?.Invoke(checkedCount, allPaths.Count)
                         Continue For
@@ -3185,49 +3192,114 @@ Namespace Services
                 Next
                 If token.IsCancellationRequested Then Return 0
 
-                If orphans.Count > 0 Then
-                    Using transaction = conn.BeginTransaction()
-                        ' ALLE Tabellen, die auf den Pfad zeigen - dieselbe Reihenfolge wie in
-                        ' DeleteFolderCatalogDataLocked. Frueher stand hier nur ImageMeta: die
-                        ' Gesichter eines geloeschten Bildes blieben stehen, und weil
-                        ' GetPersonImageCount ueber die Face-Tabelle zaehlt, zeigte die Personenwand
-                        ' weiter Bilder mit, die es nicht mehr gab. Das Aufraeumen namenloser
-                        ' Personen unten griff aus demselben Grund nicht: ihre Gesichter existierten
-                        ' ja noch.
-                        Using cmd = conn.CreateCommand()
-                            cmd.Transaction = transaction
-                            cmd.CommandText = "DELETE FROM Face WHERE FilePath=$p;" &
-                                              "DELETE FROM ScannedImage WHERE FilePath=$p;" &
-                                              "DELETE FROM AiImageTag WHERE FilePath=$p;" &
-                                              "DELETE FROM AiTagScan WHERE FilePath=$p;" &
-                                              "DELETE FROM ImageMeta WHERE FilePath=$p"
-                            Dim pParam = cmd.Parameters.Add("$p", SqliteType.Text)
-                            For Each p In orphans
-                                pParam.Value = p
-                                cmd.ExecuteNonQuery()
-                            Next
-                        End Using
-                        transaction.Commit()
-                    End Using
-                    InvalidateAiTagPresence()
-                End If
-
-                ' Gruppen ohne ein einziges Gesicht. Sie entstehen im Betrieb: beim Verschmelzen
-                ' zweier Namen, beim Verschieben eines Gesichts, bei einem erneuten Durchlauf ueber
-                ' ein geaendertes Bild. Zurueck bleibt eine Person, die auf nichts mehr zeigt - in
-                ' der Personenwand eine Kachel ohne Bild und mit "0 Bilder".
-                '
-                ' Ein NAME bleibt trotzdem verschont: er ist Handarbeit, und wer gerade alle Bilder
-                ' einer benannten Person geloescht hat, will den Namen vielleicht behalten. Dieser
-                ' Fall wird in der Wand ausgeblendet, nicht geloescht.
-                Using cmd = conn.CreateCommand()
-                    cmd.CommandText =
-                        "DELETE FROM Person WHERE Name='' AND IsUnknownBin=0 " &
-                        "AND NOT EXISTS(SELECT 1 FROM Face WHERE Face.PersonId = Person.Id)"
-                    orphans.AddRange(Enumerable.Repeat("", cmd.ExecuteNonQuery()))
-                End Using
+                DeleteRowsForPaths(conn, orphans)
+                orphans.AddRange(Enumerable.Repeat("", DeleteEmptyUnnamedPeople(conn)))
             End Using
             Return orphans.Count
+        End Function
+
+        ''' <summary>Entfernt die Zeilen der uebergebenen Pfade aus ALLEN Tabellen, die auf einen
+        ''' Pfad zeigen. Der eine Loeschweg fuer "Datenbank bereinigen" und fuer die Zeilen aus
+        ''' Systemordnern, die der Katalogindex selbst wegraeumt
+        ''' (<see cref="RemoveSystemFolderRecordsUnder"/>).
+        '''
+        ''' Dieselbe Reihenfolge wie in DeleteFolderCatalogDataLocked. Frueher stand hier nur
+        ''' ImageMeta: die Gesichter eines geloeschten Bildes blieben stehen, und weil
+        ''' GetPersonImageCount ueber die Face-Tabelle zaehlt, zeigte die Personenwand weiter Bilder
+        ''' mit, die es nicht mehr gab. Das Aufraeumen namenloser Personen
+        ''' (<see cref="DeleteEmptyUnnamedPeople"/>) griff aus demselben Grund nicht: ihre Gesichter
+        ''' existierten ja noch.</summary>
+        Private Sub DeleteRowsForPaths(conn As SqliteConnection, paths As IReadOnlyCollection(Of String))
+            If paths Is Nothing OrElse paths.Count = 0 Then Return
+            Using transaction = conn.BeginTransaction()
+                Using cmd = conn.CreateCommand()
+                    cmd.Transaction = transaction
+                    cmd.CommandText = "DELETE FROM Face WHERE FilePath=$p;" &
+                                      "DELETE FROM ScannedImage WHERE FilePath=$p;" &
+                                      "DELETE FROM AiImageTag WHERE FilePath=$p;" &
+                                      "DELETE FROM AiTagScan WHERE FilePath=$p;" &
+                                      "DELETE FROM ImageMeta WHERE FilePath=$p"
+                    Dim pParam = cmd.Parameters.Add("$p", SqliteType.Text)
+                    For Each p In paths
+                        pParam.Value = p
+                        cmd.ExecuteNonQuery()
+                    Next
+                End Using
+                transaction.Commit()
+            End Using
+            InvalidateAiTagPresence()
+        End Sub
+
+        ''' <summary>Gruppen ohne ein einziges Gesicht. Sie entstehen im Betrieb: beim Verschmelzen
+        ''' zweier Namen, beim Verschieben eines Gesichts, bei einem erneuten Durchlauf ueber ein
+        ''' geaendertes Bild, beim Wegraeumen von Zeilen. Zurueck bleibt eine Person, die auf nichts
+        ''' mehr zeigt - in der Personenwand eine Kachel ohne Bild und mit "0 Bilder".
+        '''
+        ''' Ein NAME bleibt trotzdem verschont: er ist Handarbeit, und wer gerade alle Bilder einer
+        ''' benannten Person geloescht hat, will den Namen vielleicht behalten. Dieser Fall wird in
+        ''' der Wand ausgeblendet, nicht geloescht.</summary>
+        ''' <returns>Wie viele Personen entfernt wurden.</returns>
+        Private Shared Function DeleteEmptyUnnamedPeople(conn As SqliteConnection) As Integer
+            Using cmd = conn.CreateCommand()
+                cmd.CommandText =
+                    "DELETE FROM Person WHERE Name='' AND IsUnknownBin=0 " &
+                    "AND NOT EXISTS(SELECT 1 FROM Face WHERE Face.PersonId = Person.Id)"
+                Return cmd.ExecuteNonQuery()
+            End Using
+        End Function
+
+        ''' <summary>Entfernt die Katalogzeilen unter den angegebenen Ordnern, deren Pfad durch einen
+        ''' Systemordner von NAS oder Betriebssystem fuehrt (FileOperationPolicy.IsInSystemFolder:
+        ''' "@eaDir", "#snapshot", "#recycle" ...), samt Gesichtern, Bilderkennung und namenlos leer
+        ''' gewordenen Personen. Ueber denselben Loeschweg wie "Datenbank bereinigen"
+        ''' (<see cref="DeleteRowsForPaths"/>). Die Dateien bleiben unberuehrt.
+        '''
+        ''' Gerufen vom Katalogindex nach einem vollstaendigen Lauf, OHNE Rueckfrage und ohne die
+        ''' Klammer von TryBeginCleanup: der Lauf ist selbst der Schreiber, die Klammer hielte ihn
+        ''' an. BEWUSSTE AUSNAHME von der Regel "geloescht wird nur auf Ansage", die fuer Eintraege
+        ''' ohne Datei und fuer den Papierkorb weiter gilt: in einem Systemordner liegen nie echte
+        ''' Fotos, sondern Vorschauen und Schnappschuesse des Systems, und eine nicht eingehaengte
+        ''' Platte sieht nicht wie ein Systemordner aus. Papierkoerbe (FileOperationPolicy.
+        ''' IsTrashFolder, auch "#recycle" und "@Recycle" der NAS) bleiben davon ausgenommen.
+        '''
+        ''' Auf die Ordner eingegrenzt wie <see cref="CountOrphanedRecordsUnder"/>: der Lauf hat nur
+        ''' sie angesehen.</summary>
+        ''' <returns>Wie viele Bildpfade entfernt wurden.</returns>
+        Public Function RemoveSystemFolderRecordsUnder(folders As IReadOnlyList(Of String)) As Integer
+            If folders Is Nothing OrElse folders.Count = 0 Then Return 0
+            Dim doomed As New List(Of String)()
+            Dim seen As New HashSet(Of String)(StringComparer.Ordinal)
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                For Each folder In folders
+                    If String.IsNullOrWhiteSpace(folder) Then Continue For
+                    ' Maskiert und mit Trennzeichen, wie beim Zaehlen der Eintraege ohne Datei.
+                    Dim prefix = EscapeLikeValue(PathKey(folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) &
+                                                 Path.DirectorySeparatorChar) & "%"
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT FilePath FROM ImageMeta WHERE FilePath LIKE $p" & LikeEscapeClause &
+                                          " UNION SELECT FilePath FROM Face WHERE FilePath LIKE $p" & LikeEscapeClause &
+                                          " UNION SELECT FilePath FROM ScannedImage WHERE FilePath LIKE $p" & LikeEscapeClause &
+                                          " UNION SELECT FilePath FROM AiImageTag WHERE FilePath LIKE $p" & LikeEscapeClause &
+                                          " UNION SELECT FilePath FROM AiTagScan WHERE FilePath LIKE $p" & LikeEscapeClause
+                        cmd.Parameters.AddWithValue("$p", prefix)
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                Dim p = reader.GetString(0)
+                                If IsServerPseudoPath(p) Then Continue While
+                                ' Ein Papierkorb ("#recycle", ".Trash-1000") ist auch ein Systemordner,
+                                ' bleibt aber bei der Ansage-Regel: dort liegen echte, weggeworfene Fotos.
+                                If FileOperationPolicy.IsTrashFolder(p) Then Continue While
+                                If FileOperationPolicy.IsInSystemFolder(p) AndAlso seen.Add(p) Then doomed.Add(p)
+                            End While
+                        End Using
+                    End Using
+                Next
+                If doomed.Count = 0 Then Return 0
+                DeleteRowsForPaths(conn, doomed)
+                DeleteEmptyUnnamedPeople(conn)
+            End Using
+            Return doomed.Count
         End Function
 
     End Class

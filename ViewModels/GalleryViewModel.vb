@@ -7889,7 +7889,7 @@ Namespace ViewModels
                                            Dim valid = pathBatch.
                                                Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
                                                Where(Function(p) seenSaved.Add(p)).
-                                               Where(Function(p) Not IsTrashedLocalPath(p)).
+                                               Where(Function(p) Not IsTrashOrSystemLocalPath(p)).
                                                Where(Function(p) _imageExtensions.Contains(IO.Path.GetExtension(p).ToLowerInvariant())).
                                                Where(Function(p) IsPathInSearchRoot(p, rootFolder, node.IncludeSubfolders)).
                                                ToList()
@@ -8351,6 +8351,12 @@ Namespace ViewModels
                 ' nicht in der Trefferliste erscheint.
                 If FileOperationPolicy.IsTrashFolder(meta.FilePath) Then
                     dropLog?.Record(SearchDropLog.ReasonTrash, meta)
+                    Continue For
+                End If
+                ' Ebenso eine Zeile aus einem Systemordner ("@eaDir", "#snapshot"), die ein
+                ' frueherer Indexlauf aufgenommen hat.
+                If FileOperationPolicy.IsInSystemFolder(meta.FilePath) Then
+                    dropLog?.Record(SearchDropLog.ReasonSystemFolder, meta)
                     Continue For
                 End If
                 If Not showHidden AndAlso FileOperationPolicy.IsInHiddenFolder(meta.FilePath) Then
@@ -9252,8 +9258,9 @@ Namespace ViewModels
                         ' loeschen: die Regel weist versteckte Pfade ab, und es passierte wortlos
                         ' nichts (Nutzerbefund).
                         ' DER PAPIERKORB IMMER NICHT - auch mit eingeschalteten versteckten
-                        ' Ordnern. Was dort liegt, ist weggeworfen.
-                        If FileOperationPolicy.IsTrashFolder(child) Then Continue For
+                        ' Ordnern. Was dort liegt, ist weggeworfen. Die Systemordner von NAS und
+                        ' Betriebssystem ("@eaDir", "#snapshot") ebenso.
+                        If FileOperationPolicy.IsTrashOrSystemFolder(child) Then Continue For
                         If Not FolderNode.ShowHiddenFolders AndAlso
                            IO.Path.GetFileName(child).StartsWith(".", StringComparison.Ordinal) Then Continue For
                         ' Ein Einhaengeort ohne Laufwerk: auf der Platte ist dort nichts, und eine
@@ -9594,11 +9601,16 @@ Namespace ViewModels
         ''' Suchliste nicht, und weggeworfene Bilder standen beim Oeffnen wieder da (Nutzerbefund).
         '''
         ''' SERVERBILDER BLEIBEN AUSSEN VOR: ihr Pseudo-Pfad ist kein Ordnerpfad, und die Ansichten
-        ''' "Papierkorb" von Immich und Nextcloud sollen ihren Inhalt gerade zeigen.</summary>
-        Private Shared Function IsTrashedLocalPath(filePath As String) As Boolean
+        ''' "Papierkorb" von Immich und Nextcloud sollen ihren Inhalt gerade zeigen.
+        '''
+        ''' DIE SYSTEMORDNER von NAS und Betriebssystem ebenso ("@eaDir", "#snapshot", siehe
+        ''' FileOperationPolicy.IsSystemFolderName): Zeilen, die ein frueherer Indexlauf von dort
+        ''' aufgenommen hat, stehen bis zum naechsten vollstaendigen Indexlauf ueber ihren Ordner
+        ''' (oder bis "Datenbank bereinigen") im Katalog.</summary>
+        Private Shared Function IsTrashOrSystemLocalPath(filePath As String) As Boolean
             If String.IsNullOrWhiteSpace(filePath) Then Return False
             If LibraryService.IsServerPseudoPath(filePath) Then Return False
-            Return FileOperationPolicy.IsTrashFolder(filePath)
+            Return FileOperationPolicy.IsTrashOrSystemFolder(filePath)
         End Function
 
         Private Sub AddMetasToVirtualFolder(metas As IEnumerable(Of LibraryImageMeta),
@@ -9613,7 +9625,7 @@ Namespace ViewModels
                 If meta Is Nothing OrElse String.IsNullOrWhiteSpace(meta.FilePath) Then Continue For
                 ' KEIN File.Exists hier: das waere je Treffer ein Plattenzugriff auf dem Anzeigefaden,
                 ' auf einer Freigabe ein Gang ueber die Leitung. Die Aufrufer pruefen im Hintergrund.
-                If IsTrashedLocalPath(meta.FilePath) Then Continue For
+                If IsTrashOrSystemLocalPath(meta.FilePath) Then Continue For
                 If Not _imageExtensions.Contains(IO.Path.GetExtension(meta.FilePath).ToLowerInvariant()) Then Continue For
                 ' Auf einem nicht erreichbaren Laufwerk ohne Dateidaten bauen: der gewoehnliche
                 ' Konstruktor fragte FileInfo, und das haengt auf einer getrennten Freigabe. Ist
@@ -9671,7 +9683,7 @@ Namespace ViewModels
             Dim added = False
             For Each item In If(items, New List(Of ImageItem)())
                 If item Is Nothing Then Continue For
-                If IsTrashedLocalPath(item.FilePath) Then Continue For
+                If IsTrashOrSystemLocalPath(item.FilePath) Then Continue For
                 ' Liegt die Datei auf einem nicht erreichbaren Laufwerk, gilt dasselbe wie in der
                 ' Galerie offline (GalleryViewModelOffline). Vor dem Einfuegen, also bevor eine
                 ' Kachel daran bindet. Serverbilder tragen den Vermerk nie (ImageItem.IsOffline).
@@ -9751,7 +9763,7 @@ Namespace ViewModels
             ' Bild ist ja noch da.
             Dim cleaned = source.
                 Where(Function(p) Not String.IsNullOrWhiteSpace(p) AndAlso
-                                  Not IsTrashedLocalPath(p) AndAlso
+                                  Not IsTrashOrSystemLocalPath(p) AndAlso
                                   If(existing IsNot Nothing, existing.Contains(p), File.Exists(p))).
                 Distinct(PathIdentity.Comparer).
                 ToList()

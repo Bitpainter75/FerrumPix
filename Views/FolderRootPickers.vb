@@ -123,10 +123,39 @@ Namespace Views
         End Sub
 
         Friend Shared Sub GuardChooser(chooser As ManagedFileChooser)
-            If Not FolderRoots.IsActive Then Return
             Dim model = TryCast(chooser?.DataContext, ManagedFileChooserViewModel)
             If model Is Nothing Then Return
+            HideSystemFolders(model)
+            If Not FolderRoots.IsActive Then Return
             GuardModel(model)
+        End Sub
+
+        ''' <summary>Nimmt die Systemordner von NAS und Betriebssystem ("@eaDir", "#snapshot", siehe
+        ''' FileOperationPolicy.IsSystemFolderName) aus der Liste des Waehlers, auch ohne feste
+        ''' Fotoordner. Der Waehler liest den Ordner selbst (Navigate) und kennt nur versteckte;
+        ''' deshalb wird nach jedem Fuellen nachgefegt. Ein eingetippter Pfad in so einen Ordner
+        ''' fuehrt weiter hinein, nur aufgefuehrt wird er nicht.
+        '''
+        ''' <para>Sofort im Ereignis und nicht nachgereicht: die Liste wird in EINEM Schritt gefuellt
+        ''' (AddRange), und die Anzeige hat ihn vor diesem Handler schon gesehen; das Entfernen
+        ''' folgt ihr als eigenes Ereignis.</para></summary>
+        Friend Shared Sub HideSystemFolders(model As ManagedFileChooserViewModel)
+            If model Is Nothing Then Return
+            Dim sweep =
+                Sub()
+                    For index = model.Items.Count - 1 To 0 Step -1
+                        Dim item = model.Items(index)
+                        If item IsNot Nothing AndAlso item.ItemType = ManagedFileChooserItemType.Folder AndAlso
+                           FileOperationPolicy.IsSystemFolderName(item.DisplayName) Then
+                            model.Items.RemoveAt(index)
+                        End If
+                    Next
+                End Sub
+            sweep()
+            AddHandler model.Items.CollectionChanged,
+                Sub(s As Object, e As NotifyCollectionChangedEventArgs)
+                    If e.Action = NotifyCollectionChangedAction.Add OrElse e.Action = NotifyCollectionChangedAction.Reset Then sweep()
+                End Sub
         End Sub
 
         ''' <summary>Der Waechter am Modell selbst, ohne Fenster; so misst ihn auch der Pruefstand.</summary>

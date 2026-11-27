@@ -293,7 +293,8 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Alle Medien unter <paramref name="root"/>, ohne versteckte Ordner; mit
+        ''' <summary>Alle Medien unter <paramref name="root"/>, ohne versteckte Ordner und ohne die
+        ''' Systemordner von NAS und Betriebssystem (FileOperationPolicy.IsSystemFolderName); mit
         ''' <paramref name="includeSubfolders"/> auch in allen Unterordnern (ab Werk, eine Karte legt ihre
         ''' Bilder in DCIM/100XXXXX ab). Liest je Datei nur die Aufnahmedaten, und mit
         ''' <paramref name="readCaptureData"/> = False nicht einmal die: dann steht die Aenderungszeit
@@ -311,7 +312,10 @@ Namespace Services
                 Try
                     If includeSubfolders Then
                         For Each subfolder In Directory.EnumerateDirectories(folder)
-                            If Path.GetFileName(subfolder).StartsWith("."c) Then Continue For
+                            Dim subfolderName = Path.GetFileName(subfolder)
+                            ' Versteckte und die Systemordner von NAS und Betriebssystem ("@eaDir"
+                            ' mit den Vorschauen des NAS, "#snapshot") gehen nicht mit.
+                            If subfolderName.StartsWith("."c) OrElse FileOperationPolicy.IsSystemFolderName(subfolderName) Then Continue For
                             pending.Push(subfolder)
                         Next
                     End If
@@ -365,7 +369,7 @@ Namespace Services
                         If entry.Name.StartsWith("."c) Then Continue For
                         Dim entryPath = folder.TrimEnd("/"c) & "/" & entry.Name
                         If entry.IsFolder Then
-                            If includeSubfolders Then pending.Push(entryPath)
+                            If includeSubfolders AndAlso Not FileOperationPolicy.IsSystemFolderName(entry.Name) Then pending.Push(entryPath)
                             Continue For
                         End If
                         If Not MediaFileTypes.IsDisplayable(entry.Name) Then Continue For

@@ -13799,8 +13799,8 @@
   <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
     <value>Menyiapkan gambar</value>
   </data>
-  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__b617486a" xml:space="preserve">
-    <value>Belum diterapkan. Perlindungan baru berubah dengan Terapkan.</value>
+  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__8b18c3e2" xml:space="preserve">
+    <value>Belum diterapkan. Perlindungan baru berubah dengan Terapkan atau Simpan.</value>
   </data>
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>Di komputer, dengan kata sandi jendela masuk muncul saat mulai, setelah waktu yang diatur tanpa masukan, dan dengan CTRL+L. Di peramban, di sini berlaku kata sandi administrator, yang tersendiri. Kata sandi melindungi aplikasi yang berjalan, bukan foto: berkas tetap dapat dibaca di disk.</value>

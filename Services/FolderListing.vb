@@ -172,8 +172,13 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Versteckte nur mit <paramref name="showHidden"/>, Systemordner von NAS und
+        ''' Betriebssystem ("@eaDir", "#snapshot", "lost+found", siehe
+        ''' FileOperationPolicy.IsSystemFolderName) nie, auch nicht mit eingeschalteten versteckten.</summary>
         Private Shared Function IsShown(folderPath As String, showHidden As Boolean) As Boolean
-            Return showHidden OrElse Not Path.GetFileName(folderPath).StartsWith("."c)
+            Dim name = Path.GetFileName(folderPath)
+            If FileOperationPolicy.IsSystemFolderName(name) Then Return False
+            Return showHidden OrElse Not name.StartsWith("."c)
         End Function
 
     End Class

@@ -26,6 +26,7 @@ Namespace Services
 
         Public Const ReasonMissing As String = "file missing"
         Public Const ReasonTrash As String = "trash"
+        Public Const ReasonSystemFolder As String = "system folder"
         Public Const ReasonHidden As String = "hidden folder"
         Public Const ReasonExtension As String = "file type not shown"
 
@@ -69,7 +70,7 @@ Namespace Services
 
             ' Reihenfolge der Gruende fest, damit zwei Protokolle sich Zeile fuer Zeile vergleichen
             ' lassen.
-            Dim order = {ReasonMissing, ReasonTrash, ReasonHidden, ReasonExtension}
+            Dim order = {ReasonMissing, ReasonTrash, ReasonSystemFolder, ReasonHidden, ReasonExtension}
             Dim counts As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
             Dim samples As New Dictionary(Of String, List(Of String))(StringComparer.Ordinal)
             For Each entry In snapshot

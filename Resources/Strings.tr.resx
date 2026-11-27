@@ -13799,8 +13799,8 @@
   <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
     <value>Görüntüler hazırlanıyor</value>
   </data>
-  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__b617486a" xml:space="preserve">
-    <value>Henüz uygulanmadı. Koruma ancak Uygula ile değişir.</value>
+  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__8b18c3e2" xml:space="preserve">
+    <value>Henüz uygulanmadı. Koruma ancak Uygula veya Kaydet ile değişir.</value>
   </data>
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>Bilgisayarda parola varsa oturum açma penceresi başlangıçta, ayarlanan süre boyunca giriş yapılmadığında ve CTRL+L ile görünür. Tarayıcıda burada yöneticinin parolası geçerlidir, ayrı bir paroladır. Parola fotoğrafları değil, çalışan uygulamayı korur: dosyalar diskte okunabilir kalır.</value>

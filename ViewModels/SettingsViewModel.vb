@@ -5171,8 +5171,9 @@ Namespace ViewModels
                 If info Is Nothing Then Continue For
                 ' Der Papierkorb gehoert nicht in diese Liste. Neu kommt seit dem Riegel in
                 ' SetExifData nichts mehr hinein; was aus der Zeit davor noch im Katalog steht,
-                ' raeumt "Datenbank bereinigen" weg (siehe PurgeOrphanedRecords).
-                If FileOperationPolicy.IsTrashFolder(info.FolderPath) Then Continue For
+                ' raeumt "Datenbank bereinigen" weg (siehe PurgeOrphanedRecords). Die
+                ' Systemordner von NAS und Betriebssystem ("@eaDir", "#snapshot") ebenso.
+                If FileOperationPolicy.IsTrashOrSystemFolder(info.FolderPath) Then Continue For
                 Dim root = roots.FirstOrDefault(Function(r) PathIdentity.IsAncestorOrSelf(r, info.FolderPath))
                 If root Is Nothing Then others.Add(info) Else byRoot(root).Add(info)
             Next
@@ -5741,7 +5742,13 @@ Namespace ViewModels
             ' OHNE laufenden Download wirken beide SOFORT, wie immer: ein Befehl, der erst nach einer
             ' Rueckfrage zurueckkommt, liess "Abbrechen" die Einstellungen spaeter zuruecknehmen als
             ' im Moment des Klicks. Nur waehrend eines Downloads wird erst gefragt.
-            ApplyCommand = ReactiveCommand.Create(Sub() LeaveSettings(keepChanges:=True))
+            '
+            ' "Speichern" mit einem Entwurf am Zugang wartet erst auf dessen Uebernahme
+            ' (SaveSettingsAsync); ohne Entwurf laeuft es ohne ein Await durch und wirkt ebenso sofort.
+            ApplyCommand = ReactiveCommand.Create(
+                Sub()
+                    Dim ignored = SaveSettingsAsync()
+                End Sub)
             StartSetupAssistantCommand = ReactiveCommand.CreateFromTask(AddressOf StartSetupAssistantAsync)
             CancelCommand = ReactiveCommand.Create(Sub() LeaveSettings(keepChanges:=False))
             SetThemeModeCommand = ReactiveCommand.Create(Of String)(Sub(m) ThemeMode = m)
@@ -5967,8 +5974,8 @@ Namespace ViewModels
         ''' verstellt wurde (Info-Leiste in Viewer/Editor, Ansichtsmodus der Galerie usw.).
         Public Sub BeginEditSession()
             SnapshotSettings()
-            ' Der Zugang hat keinen Schnappschuss, er wirkt nur mit "Anwenden": was davon beim
-            ' letzten Mal vorgemerkt und nicht angewendet wurde, faellt hier weg.
+            ' Der Zugang hat keinen Schnappschuss, er wirkt nur mit "Anwenden" oder "Speichern": was
+            ' davon beim letzten Mal vorgemerkt und nicht uebernommen wurde (Abbrechen), faellt hier weg.
             DiscardAccessDraft()
         End Sub
 
@@ -6132,6 +6139,22 @@ Namespace ViewModels
             End If
             FinishLeavingSettings(keepChanges)
         End Sub
+
+        ''' <summary>Was "Speichern" tut: erst eine vorgemerkte Aenderung am Zugang uebernehmen
+        ''' (<see cref="ApplyAccessDraftForSaveAsync"/>), dann die Einstellungen wie bisher
+        ''' verlassen. Scheitert der Zugang, bleibt alles offen: kein neuer Schnappschuss, kein
+        ''' Schliessen, ein spaeteres "Abbrechen" nimmt weiter alles zurueck. Gibt True zurueck,
+        ''' wenn das Verlassen angestossen wurde (mit laufendem Download fragt es danach noch).</summary>
+        Public Async Function SaveSettingsAsync() As Task(Of Boolean)
+            Try
+                If Not Await ApplyAccessDraftForSaveAsync() Then Return False
+                LeaveSettings(keepChanges:=True)
+                Return True
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.Save", ex)
+                Return False
+            End Try
+        End Function
 
         Private Async Function LeaveSettingsAfterConfirmAsync(keepChanges As Boolean) As Task
             Try

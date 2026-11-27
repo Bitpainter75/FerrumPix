@@ -13795,8 +13795,8 @@
   <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
     <value>Изображения подготавливаются</value>
   </data>
-  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__b617486a" xml:space="preserve">
-    <value>Ещё не применено. Защита изменится только после кнопки Применить.</value>
+  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__8b18c3e2" xml:space="preserve">
+    <value>Ещё не применено. Защита изменится только после кнопки Применить или Сохранить.</value>
   </data>
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>На компьютере с паролем окно входа появляется при запуске, после заданного времени без ввода и по CTRL+L. В браузере здесь действует пароль администратора, отдельный. Пароль защищает запущенное приложение, а не фотографии: файлы по-прежнему доступны на диске.</value>

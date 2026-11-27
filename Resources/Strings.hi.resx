@@ -13799,8 +13799,8 @@
   <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
     <value>चित्र तैयार किए जा रहे हैं</value>
   </data>
-  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__b617486a" xml:space="preserve">
-    <value>अभी लागू नहीं हुआ। सुरक्षा लागू करें दबाने पर ही बदलती है।</value>
+  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__8b18c3e2" xml:space="preserve">
+    <value>अभी लागू नहीं हुआ। सुरक्षा लागू करें या सहेजें दबाने पर ही बदलती है।</value>
   </data>
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>कंप्यूटर पर पासवर्ड होने पर साइन-इन विंडो शुरू होने पर, तय समय तक कोई इनपुट न होने पर और CTRL+L दबाने पर दिखाई देती है। ब्राउज़र में यहाँ एडमिनिस्ट्रेटर का पासवर्ड लागू होता है, जो अपना अलग है। पासवर्ड चल रहे ऐप्लिकेशन की रक्षा करता है, फ़ोटो की नहीं: फ़ाइलें डिस्क पर पढ़ने योग्य रहती हैं।</value>

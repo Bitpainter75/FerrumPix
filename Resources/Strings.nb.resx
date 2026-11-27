@@ -13795,8 +13795,8 @@
   <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
     <value>Bildene klargjøres</value>
   </data>
-  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__b617486a" xml:space="preserve">
-    <value>Ikke tatt i bruk ennå. Beskyttelsen endres først med Bruk.</value>
+  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__8b18c3e2" xml:space="preserve">
+    <value>Ikke tatt i bruk ennå. Beskyttelsen endres først med Bruk eller Lagre.</value>
   </data>
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>På datamaskinen vises med passord et påloggingsvindu ved oppstart, etter den innstilte tiden uten inndata og med CTRL+L. I nettleseren gjelder her administratorens passord, et eget. Passordet beskytter programmet som kjører, ikke bildene: filene ligger fortsatt lesbare på disken.</value>

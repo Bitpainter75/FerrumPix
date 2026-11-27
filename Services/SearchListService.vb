@@ -241,11 +241,12 @@ Namespace Services
         ''' findet es laengst nicht mehr, und die Datei EXISTIERT ja, faellt also durch keine
         ''' Pruefung auf verwaiste Eintraege. Hier und nicht erst beim Anzeigen: Normalize ist der
         ''' Weg, den Laden UND Speichern nehmen, also raeumt ein einziges Speichern die Altlast
-        ''' dauerhaft weg.</summary>
+        ''' dauerhaft weg. Dasselbe fuer die Systemordner von NAS und Betriebssystem ("@eaDir",
+        ''' "#snapshot", siehe FileOperationPolicy.IsSystemFolderName).</summary>
         Private Shared Function NormalizeResults(value As List(Of String)) As List(Of String)
             Return If(value, New List(Of String)()).
                 Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
-                Where(Function(p) Not FileOperationPolicy.IsTrashFolder(p)).
+                Where(Function(p) Not FileOperationPolicy.IsTrashOrSystemFolder(p)).
                 Distinct(StringComparer.OrdinalIgnoreCase).
                 ToList()
         End Function

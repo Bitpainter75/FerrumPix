@@ -32,6 +32,11 @@ Namespace Services
         ''' tausend geloeschte Fotos.</summary>
         Public Property Orphaned As Integer
 
+        ''' <summary>Wie viele Bildpfade aus Systemordnern ("@eaDir", "#snapshot") der Lauf aus dem
+        ''' Katalog entfernt hat, samt Gesichtern (LibraryService.RemoveSystemFolderRecordsUnder).
+        ''' Anders als <see cref="Orphaned"/> ohne Ansage: dort liegen nie echte Fotos.</summary>
+        Public Property SystemFolderRemoved As Integer
+
         Public Property Cancelled As Boolean
 
         ''' <summary>Der Lauf hat gar nicht erst begonnen, weil schon einer laeuft.
@@ -258,6 +263,14 @@ Namespace Services
                         ' ist, waere schlimmer als keine.
                         result.Orphaned = Await Task.Run(Function() LibraryService.Instance.CountOrphanedRecordsUnder(roots, filesSeen, orphanPaths),
                                                          runToken).ConfigureAwait(False)
+
+                        ' Zeilen aus Systemordnern ("@eaDir", "#snapshot") raeumt der Lauf SELBST
+                        ' weg, ueber denselben Loeschweg wie "Datenbank bereinigen". Bewusste
+                        ' Ausnahme von der Ansage-Regel oben: dort liegen nie echte Fotos, nur
+                        ' Vorschauen und Schnappschuesse des Systems. Der Papierkorb bleibt beim
+                        ' Bereinigen. Nur unter den Wurzeln dieses Laufs, die Dateien bleiben.
+                        result.SystemFolderRemoved = Await Task.Run(Function() LibraryService.Instance.RemoveSystemFolderRecordsUnder(roots),
+                                                                    runToken).ConfigureAwait(False)
                     End If
                 End Using
             Catch ex As OperationCanceledException
@@ -277,6 +290,7 @@ Namespace Services
                 $"{result.Indexed} indexed, {result.Unchanged} unchanged, " &
                 $"{result.ThumbnailsCreated} thumbnails, {result.Failed} failed, " &
                 $"{result.PlacesResolved} places, {result.Orphaned} without file, " &
+                $"{result.SystemFolderRemoved} removed from system folders, " &
                 $"{result.AiTagged} image recognition" &
                 If(timings IsNot Nothing, ", duration " & CatalogIndexTimings.Duration(timings.Elapsed), "") &
                 If(result.Cancelled, ", cancelled", ""))
@@ -630,6 +644,11 @@ Namespace Services
         ''' damit schon unter die versteckten, der des Benutzers liegt aber unter
         ''' "~/.local/share/Trash" - ein Ordner OHNE Punkt, der sonst mitgelaufen waere.
         '''
+        ''' Die SYSTEMORDNER von NAS und Betriebssystem ebenso (FileOperationPolicy.
+        ''' IsSystemFolderName): "@eaDir" eines Synology traegt in jedem Ordner die Vorschauen des
+        ''' NAS als JPEG, und ohne den Riegel stuende jedes Foto mehrfach im Katalog, in der Suche
+        ''' und in der Gesichtssuche.
+        '''
         ''' VERWEISE werden verfolgt, aber jedes Ziel nur EINMAL. Ein Verweis auf einen Ordner ist
         ''' eine gaengige Art, einen Fotobestand einzuhaengen, und ihn zu ueberspringen naehme dem
         ''' Lauf genau diese Bestaende. Ein Verweis auf einen Ordner WEITER OBEN ist dagegen ein
@@ -639,7 +658,7 @@ Namespace Services
         Private Shared Sub CollectFiles(folder As String, target As List(Of String), token As CancellationToken,
                                         visited As HashSet(Of String), depth As Integer)
             If token.IsCancellationRequested Then Return
-            If FileOperationPolicy.IsTrashFolder(folder) Then Return
+            If FileOperationPolicy.IsTrashOrSystemFolder(folder) Then Return
             If depth > MaxFolderDepth Then
                 DiagnosticLogService.LogAlways("CatalogIndex.Folder",
                                                $"Stopped descending at {MaxFolderDepth} levels: {folder}")

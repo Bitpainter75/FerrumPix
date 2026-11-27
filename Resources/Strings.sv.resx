@@ -13795,8 +13795,8 @@
   <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
     <value>Bilderna förbereds</value>
   </data>
-  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__b617486a" xml:space="preserve">
-    <value>Inte tillämpat än. Skyddet ändras först med Använd.</value>
+  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__8b18c3e2" xml:space="preserve">
+    <value>Inte tillämpat än. Skyddet ändras först med Använd eller Spara.</value>
   </data>
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>På datorn visas med lösenord ett inloggningsfönster vid start, efter den inställda tiden utan inmatning och med CTRL+L. I webbläsaren gäller här administratörens lösenord, ett eget. Lösenordet skyddar det körande programmet, inte fotona: filerna ligger fortfarande läsbara på disken.</value>

@@ -13799,8 +13799,8 @@
   <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
     <value>กำลังเตรียมภาพ</value>
   </data>
-  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__b617486a" xml:space="preserve">
-    <value>ยังไม่ได้ใช้ การป้องกันจะเปลี่ยนเมื่อกดใช้เท่านั้น</value>
+  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__8b18c3e2" xml:space="preserve">
+    <value>ยังไม่ได้ใช้ การป้องกันจะเปลี่ยนเมื่อกดใช้หรือบันทึกเท่านั้น</value>
   </data>
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>บนคอมพิวเตอร์ เมื่อมีรหัสผ่าน หน้าต่างเข้าสู่ระบบจะปรากฏเมื่อเริ่มโปรแกรม หลังจากไม่มีการป้อนข้อมูลตามเวลาที่ตั้งไว้ และเมื่อกด CTRL+L ในเบราว์เซอร์ที่นี่คือรหัสผ่านของผู้ดูแลระบบ ซึ่งเป็นรหัสผ่านแยกต่างหาก รหัสผ่านปกป้องแอปพลิเคชันที่กำลังทำงาน ไม่ใช่รูปภาพ: ไฟล์ยังคงอ่านได้บนดิสก์</value>

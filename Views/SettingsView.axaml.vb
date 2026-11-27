@@ -262,6 +262,34 @@ Namespace Views
                 End Sub
             AddHandler DisplayProfileService.Changed,
                 Sub(s, e) TryCast(DataContext, SettingsViewModel)?.RefreshDisplayProfiles()
+            AddHandler DataContextChanged, AddressOf OnDataContextChangedAccess
+        End Sub
+
+        Private _accessVm As SettingsViewModel
+
+        ''' <summary>Haengt sich an "Speichern ist am Zugang gescheitert" des jeweiligen
+        ''' ViewModels.</summary>
+        Private Sub OnDataContextChangedAccess(sender As Object, e As EventArgs)
+            If _accessVm IsNot Nothing Then RemoveHandler _accessVm.AccessNeedsAttention, AddressOf OnAccessNeedsAttention
+            _accessVm = TryCast(DataContext, SettingsViewModel)
+            If _accessVm IsNot Nothing Then AddHandler _accessVm.AccessNeedsAttention, AddressOf OnAccessNeedsAttention
+        End Sub
+
+        ''' <summary>"Speichern" konnte den Zugang nicht uebernehmen: zur Benutzerverwaltung rollen,
+        ''' wo die Meldung steht. Wie ein Klick links, also erst bis dorthin bauen. Eine laufende
+        ''' Suche koennte den Abschnitt verbergen; sie wird geleert, und weil die Suche ueber den
+        ''' Dispatcher filtert, rollt der zweite Schritt erst danach.</summary>
+        Private Sub OnAccessNeedsAttention(sender As Object, e As EventArgs)
+            Dim box = Me.FindControl(Of TextBox)("SettingsSearchBox")
+            If box IsNot Nothing AndAlso Not String.IsNullOrEmpty(box.Text) Then box.Text = ""
+            Dim scrollToUsers As Action =
+                Sub()
+                    EnsureSectionsBuiltThrough("UsersSection")
+                    Me.FindControl(Of ScrollViewer)("SettingsScrollViewer")?.UpdateLayout()
+                    ScrollSectionToTop("UsersSection")
+                End Sub
+            scrollToUsers()
+            Avalonia.Threading.Dispatcher.UIThread.Post(scrollToUsers, Avalonia.Threading.DispatcherPriority.Loaded)
         End Sub
 
         ''' <summary>Eine Erweiterungsdatei waehlen und aufnehmen. Der Auswahldialog haengt am

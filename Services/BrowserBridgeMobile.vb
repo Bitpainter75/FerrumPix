@@ -176,7 +176,9 @@ Namespace Services
             If VariantKey.IsVariant(path) Then Return False
             If Not IO.Path.IsPathRooted(path) Then Return False
             If FolderRoots.IsActive AndAlso Not FolderRoots.Roots.Any(Function(r) PathIdentity.IsAncestorOrSelf(r, path)) Then Return False
-            If FileOperationPolicy.IsInHiddenFolder(path) OrElse FileOperationPolicy.IsTrashFolder(path) Then Return False
+            ' Papierkorb und die Systemordner von NAS und Betriebssystem ("@eaDir", "#snapshot")
+            ' nie, auch nicht aus alten Katalogzeilen in der Zeitleiste.
+            If FileOperationPolicy.IsInHiddenFolder(path) OrElse FileOperationPolicy.IsTrashOrSystemFolder(path) Then Return False
             Return NamedLevel(path) >= FolderAccessLevel.View
         End Function
 
@@ -190,7 +192,9 @@ Namespace Services
 
         ''' <summary>Darf dieser Benutzer in den Ordner sehen? Ein Administrator, wenn er unter einer
         ''' Wurzel liegt (<see cref="BrowseRoots"/>); jeder andere, wenn seine Regeln dort mindestens
-        ''' "Ansehen" ergeben. Dazu mit aufgeloesten Verweisen in den Fotoordnern und nicht versteckt.</summary>
+        ''' "Ansehen" ergeben. Dazu mit aufgeloesten Verweisen in den Fotoordnern, nicht versteckt,
+        ''' nicht im Papierkorb und in keinem Systemordner ("@eaDir", "#snapshot"). Ordnerliste und
+        ''' Freigaben mit Unterordnern fragen hier.</summary>
         Public Function CanSeeFolder(folder As String) As Boolean
             If String.IsNullOrWhiteSpace(folder) OrElse Not IO.Path.IsPathRooted(folder) Then Return False
             If IsAdmin Then
@@ -199,7 +203,7 @@ Namespace Services
                 Return False
             End If
             If FolderRoots.IsActive AndAlso Not FolderRoots.Allows(folder) Then Return False
-            Return Not FileOperationPolicy.IsHiddenPath(folder) AndAlso Not FileOperationPolicy.IsTrashFolder(folder)
+            Return Not FileOperationPolicy.IsHiddenPath(folder) AndAlso Not FileOperationPolicy.IsTrashOrSystemFolder(folder)
         End Function
 
         ''' <summary>Darf die Datei selbst (Vorschau, Original, ZIP) ausgeliefert werden? Dieselbe

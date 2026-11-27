@@ -13795,8 +13795,8 @@
   <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
     <value>Obrázky se připravují</value>
   </data>
-  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__b617486a" xml:space="preserve">
-    <value>Zatím nepoužito. Ochrana se změní až tlačítkem Použít.</value>
+  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__8b18c3e2" xml:space="preserve">
+    <value>Zatím nepoužito. Ochrana se změní až tlačítkem Použít nebo Uložit.</value>
   </data>
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>Na počítači se s heslem zobrazí přihlašovací okno při spuštění, po nastavené době bez vstupu a po stisku CTRL+L. V prohlížeči zde platí heslo administrátora, samostatné. Heslo chrání běžící aplikaci, ne fotografie: soubory zůstávají na disku čitelné.</value>

@@ -13795,8 +13795,8 @@
   <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
     <value>画像を準備しています</value>
   </data>
-  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__b617486a" xml:space="preserve">
-    <value>まだ適用されていません。保護は適用を押すまで変わりません。</value>
+  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__8b18c3e2" xml:space="preserve">
+    <value>まだ適用されていません。保護は適用または保存を押すまで変わりません。</value>
   </data>
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>コンピューターでは、パスワードを設定すると、起動時、設定した時間操作がなかった後、CTRL+L を押したときにサインイン画面が表示されます。ブラウザーではここは管理者のパスワードで、独自のものです。パスワードが守るのは実行中のアプリケーションで、写真ではありません。ファイルはディスク上で引き続き読み取れます。</value>

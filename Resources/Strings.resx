@@ -13774,8 +13774,8 @@
   <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
     <value>Preparing pictures</value>
   </data>
-  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__b617486a" xml:space="preserve">
-    <value>Not applied yet. The protection only changes with Apply.</value>
+  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__8b18c3e2" xml:space="preserve">
+    <value>Not applied yet. The protection only changes with Apply or Save.</value>
   </data>
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>On the computer, a password brings up a sign-in window at start, after the set time without input and with CTRL+L. In the browser this is the administrator password, one of its own. The password protects the running application, not the photos: the files stay readable on the disk.</value>

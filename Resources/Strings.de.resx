@@ -13773,8 +13773,8 @@
   <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
     <value>Bilder werden vorbereitet</value>
   </data>
-  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__b617486a" xml:space="preserve">
-    <value>Noch nicht übernommen. Der Schutz ändert sich erst mit Anwenden.</value>
+  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__8b18c3e2" xml:space="preserve">
+    <value>Noch nicht übernommen. Der Schutz ändert sich erst mit Anwenden oder Speichern.</value>
   </data>
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>Am Rechner erscheint mit Kennwort beim Start, nach der eingestellten Zeit ohne Eingabe und mit STRG+L ein Anmeldefenster. Im Browser gilt hier das Kennwort des Administrators, ein eigenes. Das Kennwort schützt die laufende Anwendung, nicht die Fotos: die Dateien liegen weiter offen auf der Platte.</value>

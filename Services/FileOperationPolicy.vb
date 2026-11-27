@@ -408,6 +408,54 @@ Namespace Services
             Return folders.Where(Function(p) Not String.IsNullOrEmpty(p)).Distinct(StringComparer.OrdinalIgnoreCase)
         End Function
 
+        ''' <summary>Die Ordner, die ein NAS oder ein Betriebssystem fuer sich selbst anlegt, genau
+        ''' mit Namen, ohne Ruecksicht auf Gross und Klein. Synology legt "@eaDir" (Vorschauen und
+        ''' Metadaten seiner Fotodienste) in JEDEN Ordner, dazu "#recycle" und "#snapshot" in jede
+        ''' Freigabe; QNAP ".@__thumb", "@Recycle" und "@Recently-Snapshot"; Windows "$RECYCLE.BIN",
+        ''' "RECYCLER" und "System Volume Information"; macOS auf fremden Laufwerken ".Trashes",
+        ''' ".Spotlight-V100", ".fseventsd" und ".TemporaryItems"; Linux "lost+found".
+        '''
+        ''' NUR DIE BEKANNTEN NAMEN, nicht alles mit "#" oder "@" vorn: beide Zeichen sind in
+        ''' Ordnernamen von Benutzern ueblich ("#1 Urlaub", "@Familie"), und Synology selbst legt mit
+        ''' "#" nur Papierkorb und Schnappschuesse an.</summary>
+        Private Shared ReadOnly SystemFolderNames As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {
+            "@eaDir", "#recycle", "#snapshot",
+            ".@__thumb", "@__thumb", "@Recycle", "@Recently-Snapshot",
+            "$RECYCLE.BIN", "RECYCLER", "System Volume Information",
+            ".Trashes", ".Spotlight-V100", ".fseventsd", ".TemporaryItems",
+            "lost+found"
+        }
+
+        ''' <summary>True fuer den NAMEN eines Systemordners (siehe <see cref="SystemFolderNames"/>),
+        ''' dazu der Papierkorb je Datentraeger unter Linux (".Trash", ".Trash-1000"). Die EINE Regel
+        ''' fuer jede Aufzaehlung von Ordnern: Ordnerbaum, Ordnerkacheln, Katalogindex, Suche, mobile
+        ''' Seite, ZIP, Freigaben, Import und der Waehler im Browser. Ein Pfad, der selbst in so
+        ''' einen Ordner zeigt (eingetippt), bleibt offen; nur aufgezaehlt wird er nicht.</summary>
+        Public Shared Function IsSystemFolderName(name As String) As Boolean
+            If String.IsNullOrEmpty(name) Then Return False
+            If SystemFolderNames.Contains(name) Then Return True
+            Return String.Equals(name, ".Trash", StringComparison.OrdinalIgnoreCase) OrElse
+                   name.StartsWith(".Trash-", StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <summary>True, wenn irgendein Stueck des Pfads ein Systemordner ist
+        ''' (<see cref="IsSystemFolderName"/>). Reine Zeichenkettenarbeit, fuer Katalogzeilen und
+        ''' gemerkte Treffer, die nicht aus einem Ordnerlauf kommen.</summary>
+        Public Shared Function IsInSystemFolder(path As String) As Boolean
+            If String.IsNullOrEmpty(path) Then Return False
+            For Each segment In path.Split(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
+                If IsSystemFolderName(segment) Then Return True
+            Next
+            Return False
+        End Function
+
+        ''' <summary>Papierkorb (<see cref="IsTrashFolder"/>) oder Systemordner
+        ''' (<see cref="IsInSystemFolder"/>): was in keine Trefferliste, keinen Katalog und keine
+        ''' Ordnerliste gehoert.</summary>
+        Public Shared Function IsTrashOrSystemFolder(path As String) As Boolean
+            Return IsTrashFolder(path) OrElse IsInSystemFolder(path)
+        End Function
+
         ''' <summary>True fuer einen Papierkorb des Systems - den je Datentraeger (".Trash-1000",
         ''' ".Trash") ebenso wie den des Benutzers (~/.local/share/Trash).
         '''
@@ -424,6 +472,12 @@ Namespace Services
                     ' Der Papierkorb von Windows, damit die Regel auf jedem System dasselbe meint.
                     If String.Equals(segment, "$RECYCLE.BIN", StringComparison.OrdinalIgnoreCase) Then Return True
                     If String.Equals(segment, "RECYCLER", StringComparison.OrdinalIgnoreCase) Then Return True
+                    ' Die Papierkoerbe der NAS (Synology "#recycle", QNAP "@Recycle") und von macOS
+                    ' auf fremden Laufwerken (".Trashes"). Sie sind zugleich Systemordner
+                    ' (IsSystemFolderName); als Papierkorb behalten ihre Katalogzeilen aber die
+                    ' Regel "geloescht wird nur ueber Datenbank bereinigen".
+                    If String.Equals(segment, "#recycle", StringComparison.OrdinalIgnoreCase) Then Return True
+                    If String.Equals(segment, "@Recycle", StringComparison.OrdinalIgnoreCase) Then Return True
                 Next
             Catch
             End Try

@@ -13799,8 +13799,8 @@
   <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
     <value>이미지를 준비하는 중</value>
   </data>
-  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__b617486a" xml:space="preserve">
-    <value>아직 적용되지 않았습니다. 보호는 적용을 눌러야 바뀝니다.</value>
+  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__8b18c3e2" xml:space="preserve">
+    <value>아직 적용되지 않았습니다. 보호는 적용 또는 저장을 눌러야 바뀝니다.</value>
   </data>
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>컴퓨터에서는 암호가 있으면 시작할 때, 설정한 시간 동안 입력이 없을 때, CTRL+L을 누를 때 로그인 창이 나타납니다. 브라우저에서는 여기서 관리자 암호가 적용되며, 별도의 암호입니다. 암호는 실행 중인 애플리케이션을 보호할 뿐 사진을 보호하지 않습니다. 파일은 디스크에서 계속 읽을 수 있습니다.</value>

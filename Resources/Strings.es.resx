@@ -13755,8 +13755,8 @@
   <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
     <value>Preparando imágenes</value>
   </data>
-  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__b617486a" xml:space="preserve">
-    <value>Aún no aplicado. La protección solo cambia con Aplicar.</value>
+  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__8b18c3e2" xml:space="preserve">
+    <value>Aún no aplicado. La protección solo cambia con Aplicar o Guardar.</value>
   </data>
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>En el ordenador, con contraseña aparece una ventana de inicio de sesión al iniciar, tras el tiempo configurado sin actividad y con CTRL+L. En el navegador aquí vale la contraseña del administrador, una propia. La contraseña protege la aplicación en ejecución, no las fotos: los archivos siguen siendo legibles en el disco.</value>

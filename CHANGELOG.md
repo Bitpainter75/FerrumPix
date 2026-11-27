@@ -12,9 +12,16 @@
   as the administrator password and stays on the desktop as well, so nothing changes after the
   update; if you only set up the browser and don't want the desktop window locked, turn the lock
   off in the settings, the browser stays protected. Turning "Protect
-  with a password" on or off now says that it only takes effect with Apply, an unapplied change is
-  dropped the next time the settings open, and the Lock buttons show up only while the lock is
-  on, without a restart.
+  with a password" on or off now also takes effect with Save at the bottom of the settings; without
+  the current password the settings stay open and show what is missing. The Lock buttons show up
+  only while the lock is on, without a restart.
+
+- **System folders of a NAS stay hidden.** The folders a NAS or an operating system keeps for
+  itself, such as the hidden preview folders in every folder, snapshots, recycle bins and
+  "lost+found", no longer show up in the folder tree, as folder tiles, in the folder chooser, on
+  the phone page or in a folder ZIP, and the catalog, search, import and shares skip them.
+  Entries the catalog took from there earlier, faces included, go away with the next catalog
+  scan of those folders; the files on the disk are left alone.
 
 ## 0.9.93
 

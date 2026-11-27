@@ -13795,8 +13795,8 @@
   <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
     <value>Przygotowywanie zdjęć</value>
   </data>
-  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__b617486a" xml:space="preserve">
-    <value>Jeszcze nie zastosowano. Ochrona zmieni się dopiero po Zastosuj.</value>
+  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__8b18c3e2" xml:space="preserve">
+    <value>Jeszcze nie zastosowano. Ochrona zmieni się dopiero po Zastosuj lub Zapisz.</value>
   </data>
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>Na komputerze z hasłem okno logowania pojawia się przy starcie, po ustawionym czasie bez aktywności i po naciśnięciu CTRL+L. W przeglądarce obowiązuje tu hasło administratora, osobne. Hasło chroni działającą aplikację, nie zdjęcia: pliki nadal są czytelne na dysku.</value>

@@ -139,9 +139,13 @@ Namespace Services
         End Function
 
         ''' <summary>Geht der Eintrag mit? Nicht, wenn sein Name mit einem Punkt beginnt, er als
-        ''' versteckt oder Systemdatei markiert ist oder ein symbolischer Verweis ist.</summary>
+        ''' versteckt oder Systemdatei markiert ist, ein symbolischer Verweis ist oder ein
+        ''' Systemordner von NAS und Betriebssystem ("@eaDir", "#snapshot", siehe
+        ''' FileOperationPolicy.IsSystemFolderName). Der Ordner, der heruntergeladen wird, selbst
+        ''' kommt nicht hier durch.</summary>
         Private Shared Function IsDownloadableEntry(entry As FileSystemInfo) As Boolean
             If entry Is Nothing OrElse entry.Name.StartsWith(".", StringComparison.Ordinal) Then Return False
+            If TypeOf entry Is DirectoryInfo AndAlso FileOperationPolicy.IsSystemFolderName(entry.Name) Then Return False
             Try
                 Dim attributes = entry.Attributes
                 If (attributes And (FileAttributes.Hidden Or FileAttributes.System Or FileAttributes.ReparsePoint)) <> 0 Then Return False
