@@ -86,6 +86,7 @@ Namespace ViewModels
         ''' <summary>Meint das Abzeichen dieser Kachel mehr als ein Bild? Dann heisst sein Hinweis
         ''' "Auswahl herunterladen".</summary>
         Public Function TileDownloadsSelection(item As ImageItem) As Boolean
+            If item Is Nothing OrElse item.IsFolder Then Return False
             Return TileDownloadItems(item).Count > 1
         End Function
 
@@ -95,11 +96,74 @@ Namespace ViewModels
         ''' Ausserhalb des Browsers und an einem Element ohne Datei geschieht nichts. Liefert, ob
         ''' der Weg angestossen wurde.</summary>
         Public Function DownloadFromTile(item As ImageItem) As Boolean
-            If item Is Nothing OrElse Not item.IsDownloadable Then Return False
+            If item Is Nothing Then Return False
+            If item.IsFolder Then
+                ' Eine Ordnerkachel meint immer nur ihren Ordner, auch in einer Auswahl.
+                If Not BrowserBridge.IsActive OrElse Not item.IsFolderDownloadable Then Return False
+                Dim ignored = DownloadFolderAsync(item.FilePath)
+                Return True
+            End If
+            If Not item.IsDownloadable Then Return False
             Dim command = MenuCommands.BrowserDownload(Function() GetPathsForTransfer(TileDownloadItems(item)))
             If command Is Nothing Then Return False
             command.Execute(Nothing)
             Return True
+        End Function
+
+        ''' <summary>Ab so vielen Dateien fragt "Herunterladen" an einem Ordner vorher nach. Im
+        ''' Pruefstand herabsetzbar.</summary>
+        Friend Shared Property FolderDownloadConfirmFiles As Integer = 5000
+
+        ''' <summary>Ab so vielen Bytes fragt "Herunterladen" an einem Ordner vorher nach.</summary>
+        Friend Shared Property FolderDownloadConfirmBytes As Long = 2L * 1024 * 1024 * 1024
+
+        ''' <summary>"Herunterladen" im Kontextmenue an GENAU EINER Ordnerkachel: der Ordner als
+        ''' ZIP (<see cref="DownloadFolderAsync"/>). Liefert, ob das Menue damit erledigt ist; bei
+        ''' jeder anderen Auswahl gehen die Dateien den gewohnten Weg.</summary>
+        Public Function DownloadContextFolder() As Boolean
+            Dim items = ContextItems
+            If items Is Nothing OrElse items.Count <> 1 Then Return False
+            Dim item = items(0)
+            If item Is Nothing OrElse Not item.IsFolder OrElse Not item.IsFolderDownloadable Then Return False
+            Dim ignored = DownloadFolderAsync(item.FilePath)
+            Return True
+        End Function
+
+        ''' <summary>Laedt einen Ordner samt Unterordnern als EIN ZIP mit seinem Namen herunter
+        ''' (BrowserBridge.OfferFolderDownload, sofortiger Start). Vorher wird im Hintergrund
+        ''' gezaehlt, aber nur bis zu einer Grenze: liegt nichts darin, kommt eine Meldung statt
+        ''' eines leeren ZIP; sind es mehr als <see cref="FolderDownloadConfirmFiles"/> Dateien oder
+        ''' mehr als <see cref="FolderDownloadConfirmBytes"/>, fragt eine Rueckfrage mit dem, was
+        ''' bis dahin gezaehlt ist. Liefert die Kennung des Angebots oder Nothing.</summary>
+        Public Async Function DownloadFolderAsync(folder As String) As Task(Of String)
+            Try
+                If Not BrowserBridge.IsActive OrElse Not BrowserBridge.CanDownloadFolder(folder) Then Return Nothing
+                Dim maxFiles = FolderDownloadConfirmFiles
+                Dim maxBytes = FolderDownloadConfirmBytes
+                Dim survey = Await Task.Run(Function() BrowserBridge.SurveyDownloadFolder(folder, maxFiles, maxBytes))
+                Dim name = BrowserBridge.FolderDisplayName(folder)
+                If survey.Files = 0 Then
+                    If _mainVm IsNot Nothing Then
+                        Await _mainVm.ShowMessageAsync(LocalizationService.T("Herunterladen"),
+                            String.Format(LocalizationService.T("In diesem Ordner liegen keine Dateien zum Herunterladen: {0}"), name))
+                    End If
+                    Return Nothing
+                End If
+                If survey.Exceeded Then
+                    ' Ohne Dialog keine Rueckfrage, und ohne Antwort kein grosser Download.
+                    If _mainVm Is Nothing Then Return Nothing
+                    Dim confirmed = Await _mainVm.ShowConfirmAsync(LocalizationService.T("Ordner herunterladen?"),
+                        String.Format(LocalizationService.T("Der Ordner {0} enthält mindestens {1} Dateien mit zusammen {2}. Er wird als ein ZIP heruntergeladen, das kann lange dauern."),
+                                      name, survey.Files, CardImportService.FormatBytes(survey.Bytes)),
+                        "Herunterladen", "Abbrechen")
+                    If Not confirmed Then Return Nothing
+                End If
+                Return BrowserBridge.OfferFolderDownload(folder, startNow:=True)
+            Catch ex As Exception
+                ' Absicherung: der Aufruf kommt aus Klick und Menue ohne Await.
+                DiagnosticLogService.LogException("Gallery.DownloadFolder", ex)
+                Return Nothing
+            End Try
         End Function
     End Class
 End Namespace

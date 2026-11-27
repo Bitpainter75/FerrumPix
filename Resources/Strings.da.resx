@@ -13087,6 +13087,15 @@
   <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
     <value>Klar til download: {0}</value>
   </data>
+  <data name="Ordner_herunterladen_570e5004" xml:space="preserve">
+    <value>Hent mappen?</value>
+  </data>
+  <data name="In_diesem_Ordner_liegen_keine_Dateien_zum_Herunt_d6ca04dd" xml:space="preserve">
+    <value>Der er ingen filer at hente i denne mappe: {0}</value>
+  </data>
+  <data name="Der_Ordner_0_enth_lt_mindestens_1_Dateien_mit_zu_a02dc3c0" xml:space="preserve">
+    <value>Mappen {0} indeholder mindst {1} filer på i alt {2}. Den hentes som én ZIP-fil, hvilket kan tage lang tid.</value>
+  </data>
   <data name="Auswahl_herunterladen_26b74c13" xml:space="preserve">
     <value>Hent valgte</value>
   </data>
@@ -13098,5 +13107,29 @@
   </data>
   <data name="Alle_Orte_des_Katalogs_zeigen_c19f79e6" xml:space="preserve">
     <value>Vis alle steder i kataloget</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_der_freigegebenen_08eca675" xml:space="preserve">
+    <value>Disse filer ligger uden for de delte fotomapper. FerrumPix sletter ikke noget der.</value>
+  </data>
+  <data name="Dieser_Ort_liegt_au_erhalb_der_freigegebenen_Fot_c80bd514" xml:space="preserve">
+    <value>Dette sted ligger uden for de delte fotomapper.</value>
+  </data>
+  <data name="0_Bild_er_bersprungen_ihr_Ziel_liegt_au_erhalb_d_d7f45e81" xml:space="preserve">
+    <value>{0} billede(r) sprunget over: målet ligger uden for de delte fotomapper.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Der__80328781" xml:space="preserve">
+    <value>Faste fotomapper blev angivet ved start. Datamappen bliver derfor, hvor den er.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Date_ad688b7f" xml:space="preserve">
+    <value>Faste fotomapper blev angivet ved start. Filhandlinger er tilladt netop der; denne kontakt har ingen virkning.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_42180b80" xml:space="preserve">
+    <value>Mappen {0} er ikke delt med FerrumPix som Flatpak. Det, der ligger der, ville gå tabt, når FerrumPix lukkes. Vælg en mappe under Billeder eller på et monteret drev, eller del mappen permanent med Flatseal eller i en terminal med {1}, og genstart derefter FerrumPix.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_5a107e88" xml:space="preserve">
+    <value>Mappen {0} er ikke delt med FerrumPix som Flatpak. Det, der oprettes der, findes kun i sandkassen og går tabt, når FerrumPix lukkes, derfor skriver FerrumPix intet der. Løsning: vælg mappen via mappevælgeren, brug en mappe under Billeder, eller del mappen permanent med Flatseal eller i en terminal med {1}, og genstart derefter FerrumPix.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nur_z_a9f4527b" xml:space="preserve">
+    <value>Mappen {0} er kun delt med FerrumPix som Flatpak til læsning, der kan ikke skrives der. Løsning: vælg en anden mappe, eller udvid tilladelsen med Flatseal eller i en terminal med {1}, og genstart derefter FerrumPix.</value>
   </data>
 </root>

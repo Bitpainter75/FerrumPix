@@ -13066,6 +13066,15 @@
   <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
     <value>Ready to download: {0}</value>
   </data>
+  <data name="Ordner_herunterladen_570e5004" xml:space="preserve">
+    <value>Download folder?</value>
+  </data>
+  <data name="In_diesem_Ordner_liegen_keine_Dateien_zum_Herunt_d6ca04dd" xml:space="preserve">
+    <value>There are no files to download in this folder: {0}</value>
+  </data>
+  <data name="Der_Ordner_0_enth_lt_mindestens_1_Dateien_mit_zu_a02dc3c0" xml:space="preserve">
+    <value>The folder {0} contains at least {1} files totalling {2}. It will be downloaded as one ZIP, which can take a long time.</value>
+  </data>
   <data name="Auswahl_herunterladen_26b74c13" xml:space="preserve">
     <value>Download selection</value>
   </data>
@@ -13077,5 +13086,29 @@
   </data>
   <data name="Alle_Orte_des_Katalogs_zeigen_c19f79e6" xml:space="preserve">
     <value>Show all places of the catalog</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_der_freigegebenen_08eca675" xml:space="preserve">
+    <value>These files are outside the shared photo folders. FerrumPix does not delete anything there.</value>
+  </data>
+  <data name="Dieser_Ort_liegt_au_erhalb_der_freigegebenen_Fot_c80bd514" xml:space="preserve">
+    <value>This place is outside the shared photo folders.</value>
+  </data>
+  <data name="0_Bild_er_bersprungen_ihr_Ziel_liegt_au_erhalb_d_d7f45e81" xml:space="preserve">
+    <value>{0} picture(s) skipped: their destination is outside the shared photo folders.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Der__80328781" xml:space="preserve">
+    <value>Fixed photo folders were set at start. The data folder therefore stays where it is.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Date_ad688b7f" xml:space="preserve">
+    <value>Fixed photo folders were set at start. File operations are allowed exactly there; this switch has no effect.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_42180b80" xml:space="preserve">
+    <value>The folder {0} is not shared with FerrumPix as a Flatpak. Anything stored there would be lost when FerrumPix closes. Please choose a folder inside Pictures or on a mounted drive, or share the folder permanently with Flatseal or in a terminal with {1}, then restart FerrumPix.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_5a107e88" xml:space="preserve">
+    <value>The folder {0} is not shared with FerrumPix as a Flatpak. Anything created there only exists inside the sandbox and is lost when FerrumPix closes, so FerrumPix writes nothing there. To fix this, choose the folder through the folder picker, use a folder inside Pictures, or share the folder permanently with Flatseal or in a terminal with {1}, then restart FerrumPix.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nur_z_a9f4527b" xml:space="preserve">
+    <value>The folder {0} is shared with FerrumPix as a Flatpak for reading only, so nothing can be written there. To fix this, choose another folder or extend the permission with Flatseal or in a terminal with {1}, then restart FerrumPix.</value>
   </data>
 </root>

@@ -13087,6 +13087,15 @@
   <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
     <value>Valmis ladattavaksi: {0}</value>
   </data>
+  <data name="Ordner_herunterladen_570e5004" xml:space="preserve">
+    <value>Ladataanko kansio?</value>
+  </data>
+  <data name="In_diesem_Ordner_liegen_keine_Dateien_zum_Herunt_d6ca04dd" xml:space="preserve">
+    <value>Tässä kansiossa ei ole ladattavia tiedostoja: {0}</value>
+  </data>
+  <data name="Der_Ordner_0_enth_lt_mindestens_1_Dateien_mit_zu_a02dc3c0" xml:space="preserve">
+    <value>Kansiossa {0} on vähintään {1} tiedostoa, yhteensä {2}. Se ladataan yhtenä ZIP-tiedostona, mikä voi kestää kauan.</value>
+  </data>
   <data name="Auswahl_herunterladen_26b74c13" xml:space="preserve">
     <value>Lataa valitut</value>
   </data>
@@ -13098,5 +13107,29 @@
   </data>
   <data name="Alle_Orte_des_Katalogs_zeigen_c19f79e6" xml:space="preserve">
     <value>Näytä kaikki luettelon paikat</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_der_freigegebenen_08eca675" xml:space="preserve">
+    <value>Nämä tiedostot ovat jaettujen kuvakansioiden ulkopuolella. FerrumPix ei poista sieltä mitään.</value>
+  </data>
+  <data name="Dieser_Ort_liegt_au_erhalb_der_freigegebenen_Fot_c80bd514" xml:space="preserve">
+    <value>Tämä sijainti on jaettujen kuvakansioiden ulkopuolella.</value>
+  </data>
+  <data name="0_Bild_er_bersprungen_ihr_Ziel_liegt_au_erhalb_d_d7f45e81" xml:space="preserve">
+    <value>{0} kuva(a) ohitettiin: kohde on jaettujen kuvakansioiden ulkopuolella.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Der__80328781" xml:space="preserve">
+    <value>Käynnistyksessä on määritetty kiinteät kuvakansiot. Datakansio pysyy siksi paikallaan.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Date_ad688b7f" xml:space="preserve">
+    <value>Käynnistyksessä on määritetty kiinteät kuvakansiot. Tiedostotoiminnot ovat sallittuja juuri niissä; tällä kytkimellä ei ole vaikutusta.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_42180b80" xml:space="preserve">
+    <value>Kansiota {0} ei ole jaettu FerrumPixille Flatpakina. Sinne tallennettu katoaisi, kun FerrumPix suljetaan. Valitse kansio Kuvat-kansion alta tai liitetyltä asemalta tai jaa kansio pysyvästi Flatsealilla tai päätteessä komennolla {1} ja käynnistä FerrumPix sitten uudelleen.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_5a107e88" xml:space="preserve">
+    <value>Kansiota {0} ei ole jaettu FerrumPixille Flatpakina. Sinne luotu on olemassa vain hiekkalaatikossa ja katoaa, kun FerrumPix suljetaan, joten FerrumPix ei kirjoita sinne mitään. Ratkaisu: valitse kansio kansionvalitsimella, käytä kansiota Kuvat-kansion alla tai jaa kansio pysyvästi Flatsealilla tai päätteessä komennolla {1} ja käynnistä FerrumPix sitten uudelleen.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nur_z_a9f4527b" xml:space="preserve">
+    <value>Kansio {0} on jaettu FerrumPixille Flatpakina vain luettavaksi, joten sinne ei voi kirjoittaa. Ratkaisu: valitse toinen kansio tai laajenna oikeutta Flatsealilla tai päätteessä komennolla {1} ja käynnistä FerrumPix sitten uudelleen.</value>
   </data>
 </root>

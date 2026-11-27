@@ -297,6 +297,8 @@ Namespace ViewModels
         ''' sonst traegt auch er <see cref="ImageItem.IsOffline"/> und wird nicht auf der Platte
         ''' nachgesehen. Gibt es ihn weder auf der Platte noch im Katalog, fehlt der Eintrag.</summary>
         Private Shared Sub AddOfflineParentEntry(items As List(Of ImageItem), parentPath As String)
+            ' Kein ".." ueber einen festen Fotoordner hinaus (FolderRoots).
+            If Not FolderRoots.Allows(parentPath) Then Return
             Dim parentState = FolderListing.StateOf(parentPath)
             If parentState = FolderState.Absent Then Return
             items.Add(ImageItem.CreateParentFolderEntry(parentPath, parentState <> FolderState.Present,

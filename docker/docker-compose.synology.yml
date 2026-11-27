@@ -18,10 +18,12 @@
 # 3. Container Manager > Project > Create > choose /volume1/docker/ferrumpix, use this file.
 # 4. Control Panel > Login Portal > Advanced > Reverse Proxy > Create:
 #      Source:      HTTPS, hostname photos.example.org (or your DSM name), port 443
+#                   (must be HTTPS: with HTTP as the source FerrumPix refuses the request or
+#                   the sign-in does not stick)
 #      Destination: HTTP, localhost, port 14500
-#    Custom Header > Create > WebSocket (adds Upgrade and Connection), then add
-#      X-Forwarded-Proto   https
-#      X-Forwarded-Host    $host
+#    Custom Header > Create > WebSocket (adds Upgrade and Connection). DSM passes on
+#    X-Forwarded-Proto and the host by itself. Only if FerrumPix answers 403 and its log shows
+#    "X-Forwarded-Proto none", add X-Forwarded-Proto with the value https by hand.
 #    Pick the certificate for that hostname under Control Panel > Security > Certificate.
 #    With split DNS on your router or DNS server, point photos.example.org at the NAS inside your
 #    network; the certificate and the proxy entry stay the same.

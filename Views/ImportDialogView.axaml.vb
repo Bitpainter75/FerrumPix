@@ -79,7 +79,7 @@ Namespace Views
             Try
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return Nothing
-                Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
+                Dim folders = Await FolderRootPickers.OpenFolderPickerAsync(topLevel,New FolderPickerOpenOptions With {
                     .Title = title,
                     .AllowMultiple = False,
                     .SuggestedStartLocation = Await FolderPickerStart.ForPathAsync(topLevel, startPath)

@@ -1866,7 +1866,7 @@ Namespace Views
                         "*.jpg", "*.jpeg", "*.jpe", "*.jfif", "*.png", "*.gif", "*.bmp", "*.tif", "*.tiff", "*.webp",
                         "*.heic", "*.heif", "*.hif", "*.avif", "*.jxl", "*.mp4", "*.mov", "*.mkv", "*.avi", "*.webm"}
                 }
-                Dim files = Await storageProvider.OpenFilePickerAsync(New Avalonia.Platform.Storage.FilePickerOpenOptions With {
+                Dim files = Await FolderRootPickers.OpenFilePickerAsync(TopLevel.GetTopLevel(Me), New Avalonia.Platform.Storage.FilePickerOpenOptions With {
                     .Title = LocalizationService.T("Bilder/Videos zum Hochladen wählen"),
                     .AllowMultiple = True,
                     .FileTypeFilter = New List(Of Avalonia.Platform.Storage.FilePickerFileType) From {mediaType}
@@ -1919,7 +1919,7 @@ Namespace Views
                         "*.jpg", "*.jpeg", "*.jpe", "*.jfif", "*.png", "*.gif", "*.bmp", "*.tif", "*.tiff", "*.webp",
                         "*.heic", "*.heif", "*.hif", "*.avif", "*.jxl", "*.mp4", "*.mov", "*.mkv", "*.avi", "*.webm"}
                 }
-                Dim files = Await storageProvider.OpenFilePickerAsync(New Avalonia.Platform.Storage.FilePickerOpenOptions With {
+                Dim files = Await FolderRootPickers.OpenFilePickerAsync(TopLevel.GetTopLevel(Me), New Avalonia.Platform.Storage.FilePickerOpenOptions With {
                     .Title = LocalizationService.T("Bilder/Videos zum Hochladen wählen"),
                     .AllowMultiple = True,
                     .FileTypeFilter = New List(Of Avalonia.Platform.Storage.FilePickerFileType) From {mediaType}
@@ -2147,7 +2147,8 @@ Namespace Views
 
         ''' <summary>Das Abzeichen "Herunterladen" auf der Kachel, nur im Browser gebaut. Es laedt
         ''' wie "Herunterladen" im Kontextmenue (GalleryViewModel.DownloadFromTile): in einer
-        ''' Auswahl mehrerer Bilder die ganze Auswahl als ZIP, sonst diese Datei. Die Auswahl bleibt,
+        ''' Auswahl mehrerer Bilder die ganze Auswahl als ZIP, sonst diese Datei, an einer
+        ''' Ordnerkachel immer nur diesen Ordner als ZIP. Die Auswahl bleibt,
         ''' wie sie ist: als Knopf faengt es den Druck selbst ab, die Kachel sieht ihn nicht, auch
         ''' nicht im Zeichentablett-Modus, wo der Klick schon beim Druecken kommt. Der Download
         ''' laeuft ueber einen Verweis der Seite und oeffnet keinen Dialog, das Loslassen kommt also
@@ -2208,12 +2209,13 @@ Namespace Views
         End Function
 
         ''' <summary>Zeigt das Abzeichen "Herunterladen", wenn das Element sich herunterladen laesst
-        ''' (ImageItem.IsDownloadable, also nie an Ordner oder Serverbild) und die Reihe dann nicht in
-        ''' Stapel oder Auswahlkreis hineinlaeuft (<see cref="BrowserDownloadBadgeFits"/>). Bei
-        ''' kleinen Kacheln mit allen drei Knoepfen davor faellt es weg; das Kontextmenue bleibt.</summary>
+        ''' (ImageItem.IsDownloadable an einer Datei, ImageItem.IsFolderDownloadable an einem Ordner,
+        ''' der dann als ZIP geht; nie an einem Serverbild) und die Reihe dann nicht in Stapel oder
+        ''' Auswahlkreis hineinlaeuft (<see cref="BrowserDownloadBadgeFits"/>). Bei kleinen Kacheln
+        ''' mit allen drei Knoepfen davor faellt es weg; das Kontextmenue bleibt.</summary>
         Private Shared Sub UpdateBrowserDownloadBadge(badge As Button)
             Dim item = TryCast(badge.DataContext, ImageItem)
-            If item Is Nothing OrElse Not item.IsDownloadable Then
+            If item Is Nothing OrElse Not (item.IsDownloadable OrElse item.IsFolderDownloadable) Then
                 badge.IsVisible = False
                 Return
             End If
@@ -3034,6 +3036,7 @@ Namespace Views
             SetMenuItemVisible("FolderTreeCreateFolderMenuItem", Not catalogOnly AndAlso vm.CanPasteIntoFolder(path))
             SetMenuItemVisible("FolderTreeRenameMenuItem", Not catalogOnly AndAlso vm.CanRenamePath(path))
             SetMenuItemVisible("FolderTreeCopyMenuItem", Not catalogOnly AndAlso vm.CanCopyPath(path))
+            SetMenuItemVisible("FolderTreeDownloadMenuItem", Not catalogOnly AndAlso BrowserBridge.IsActive AndAlso BrowserBridge.CanDownloadFolder(path))
             SetMenuItemVisible("FolderTreeCutMenuItem", Not catalogOnly AndAlso vm.CanCutPath(path))
             SetMenuItemVisible("FolderTreePasteMenuItem", Not catalogOnly AndAlso vm.CanPasteIntoFolder(path))
             SetMenuItemVisible("FolderTreeDeleteMenuItem", Not catalogOnly AndAlso vm.CanDeletePath(path))
@@ -3206,7 +3209,7 @@ Namespace Views
                 .CompareMetadata = vm.CompareMetadataCommand,
                 .CopyPath = New DelegateCommand(Sub() OnContextCopyPath(Nothing, Nothing)),
                 .ShowInFileManager = vm.OpenFileManagerCommand,
-                .Download = MenuCommands.BrowserDownload(Function() vm.GetPathsForTransfer(vm.ContextItems)),
+                .Download = MenuCommands.BrowserDownload(Function() vm.GetPathsForTransfer(vm.ContextItems), AddressOf vm.DownloadContextFolder),
                 .OpenWith = vm.OpenWithCommand,
                 .OpenWithPrograms = Services.OpenWithService.ConfiguredPrograms(),
                 .Delete = vm.DeleteSelectedCommand,
@@ -3413,6 +3416,15 @@ Namespace Views
             If vm Is Nothing OrElse node Is Nothing Then Return
             vm.StoreClipboardPaths({node.FullPath}, False)
             CopyPathsToClipboard(New List(Of String) From {node.FullPath}, False)
+        End Sub
+
+        ''' <summary>"Herunterladen" im Ordnerbaum, nur im Browser: der Ordner samt Unterordnern
+        ''' als ZIP (GalleryViewModel.DownloadFolderAsync), wie das Abzeichen der Ordnerkachel.</summary>
+        Public Sub OnContextDownloadFolder(sender As Object, e As RoutedEventArgs)
+            Dim vm = GetVm()
+            Dim node = GetFolderTreeContextNode()
+            If vm Is Nothing OrElse node Is Nothing Then Return
+            Dim ignored = vm.DownloadFolderAsync(node.FullPath)
         End Sub
 
         Public Sub OnContextCutFolder(sender As Object, e As RoutedEventArgs)

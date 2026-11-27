@@ -28,12 +28,14 @@ Namespace Services
         Public Shared Async Function PickOpenFileAsync(title As String, typeLabel As String,
                                                        patterns As IEnumerable(Of String)) As Task(Of String)
             Try
-                Dim storageProvider = TryCast(FindTopLevel(), TopLevel)?.StorageProvider
-                If storageProvider Is Nothing Then Return ""
+                Dim topLevel = TryCast(FindTopLevel(), TopLevel)
+                If topLevel?.StorageProvider Is Nothing Then Return ""
 
                 Dim fileType As New FilePickerFileType(typeLabel) With {
                     .Patterns = patterns.ToList()}
-                Dim files = Await storageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
+                ' Ueber FolderRootPickers: mit festen Fotoordnern beginnt der Waehler dort und nimmt
+                ' nichts von ausserhalb an.
+                Dim files = Await FerrumPix.Views.FolderRootPickers.OpenFilePickerAsync(topLevel, New FilePickerOpenOptions With {
                     .Title = title,
                     .AllowMultiple = False,
                     .FileTypeFilter = New List(Of FilePickerFileType) From {fileType}})

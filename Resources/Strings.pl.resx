@@ -13087,6 +13087,15 @@
   <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
     <value>Gotowe do pobrania: {0}</value>
   </data>
+  <data name="Ordner_herunterladen_570e5004" xml:space="preserve">
+    <value>Pobrać folder?</value>
+  </data>
+  <data name="In_diesem_Ordner_liegen_keine_Dateien_zum_Herunt_d6ca04dd" xml:space="preserve">
+    <value>W tym folderze nie ma plików do pobrania: {0}</value>
+  </data>
+  <data name="Der_Ordner_0_enth_lt_mindestens_1_Dateien_mit_zu_a02dc3c0" xml:space="preserve">
+    <value>Folder {0} zawiera co najmniej {1} plików o łącznym rozmiarze {2}. Zostanie pobrany jako jeden plik ZIP, co może potrwać długo.</value>
+  </data>
   <data name="Auswahl_herunterladen_26b74c13" xml:space="preserve">
     <value>Pobierz zaznaczone</value>
   </data>
@@ -13098,5 +13107,29 @@
   </data>
   <data name="Alle_Orte_des_Katalogs_zeigen_c19f79e6" xml:space="preserve">
     <value>Pokaż wszystkie miejsca z katalogu</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_der_freigegebenen_08eca675" xml:space="preserve">
+    <value>Te pliki znajdują się poza udostępnionymi folderami zdjęć. FerrumPix niczego tam nie usuwa.</value>
+  </data>
+  <data name="Dieser_Ort_liegt_au_erhalb_der_freigegebenen_Fot_c80bd514" xml:space="preserve">
+    <value>To miejsce znajduje się poza udostępnionymi folderami zdjęć.</value>
+  </data>
+  <data name="0_Bild_er_bersprungen_ihr_Ziel_liegt_au_erhalb_d_d7f45e81" xml:space="preserve">
+    <value>Pominięte zdjęcia: {0}. Cel znajduje się poza udostępnionymi folderami zdjęć.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Der__80328781" xml:space="preserve">
+    <value>Przy uruchomieniu ustalono stałe foldery zdjęć. Dlatego folder danych pozostaje na swoim miejscu.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Date_ad688b7f" xml:space="preserve">
+    <value>Przy uruchomieniu ustalono stałe foldery zdjęć. Operacje na plikach są dozwolone dokładnie tam; ten przełącznik nie działa.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_42180b80" xml:space="preserve">
+    <value>Folder {0} nie jest udostępniony dla FerrumPix jako Flatpak. To, co by się tam znalazło, przepadłoby po zamknięciu FerrumPix. Wybierz folder w Obrazach lub na zamontowanym dysku albo udostępnij folder na stałe za pomocą Flatseal lub w terminalu poleceniem {1}, a potem uruchom FerrumPix ponownie.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_5a107e88" xml:space="preserve">
+    <value>Folder {0} nie jest udostępniony dla FerrumPix jako Flatpak. To, co zostanie tam utworzone, istnieje tylko w piaskownicy i przepada po zamknięciu FerrumPix, dlatego FerrumPix niczego tam nie zapisuje. Rozwiązanie: wybierz folder w oknie wyboru folderu, użyj folderu w Obrazach albo udostępnij folder na stałe za pomocą Flatseal lub w terminalu poleceniem {1}, a potem uruchom FerrumPix ponownie.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nur_z_a9f4527b" xml:space="preserve">
+    <value>Folder {0} jest udostępniony dla FerrumPix jako Flatpak tylko do odczytu, nie można w nim zapisywać. Rozwiązanie: wybierz inny folder albo rozszerz uprawnienie za pomocą Flatseal lub w terminalu poleceniem {1}, a potem uruchom FerrumPix ponownie.</value>
   </data>
 </root>

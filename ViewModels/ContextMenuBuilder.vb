@@ -186,8 +186,10 @@ Namespace ViewModels
             End If
             ' Herunterladen gibt es nur im Browser (sonst ist das Kommando nicht gesetzt), und nur
             ' fuer lokale Dateien, die sich kopieren liessen: es ist eine Kopie auf den Rechner des
-            ' Browsers. Ein Serverbild hat hier keine Datei, ein Ordner ist keine.
-            If Not isParentEntry AndAlso entries.Any(AddressOf IsDownloadable) Then
+            ' Browsers. Ein Serverbild hat hier keine Datei. Ein Ordner geht nur allein, dann als
+            ' ZIP mit seinem ganzen Inhalt (GalleryViewModel.DownloadContextFolder).
+            If Not isParentEntry AndAlso (entries.Any(AddressOf IsDownloadable) OrElse
+                                          (entries.Count = 1 AndAlso entries(0) IsNot Nothing AndAlso entries(0).IsFolderDownloadable)) Then
                 AddIfOffered(list, commands.Download, FooterMenuCatalog.Download(commands.Download))
             End If
             Divider(list)

@@ -111,8 +111,9 @@ Namespace Services
         End Sub
 
         ''' <summary>Liegt der Ordner unter <see cref="DownloadRoot"/>, ist aber nicht er selbst?
-        ''' Geloescht wird nur, was diese Frage besteht.</summary>
-        Private Shared Function IsOwnDownloadFolder(folder As String) As Boolean
+        ''' Geloescht wird nur, was diese Frage besteht. Die Stapelwege fragen sie auch, um das Ziel
+        ''' "Herunterladen" von der Grenze der festen Fotoordner auszunehmen.</summary>
+        Friend Shared Function IsOwnDownloadFolder(folder As String) As Boolean
             If String.IsNullOrWhiteSpace(folder) Then Return False
             Dim root = DownloadRoot
             Return PathIdentity.IsAncestorOrSelf(root, folder) AndAlso Not PathIdentity.AreSame(root, folder)

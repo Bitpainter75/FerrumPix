@@ -13087,6 +13087,15 @@
   <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
     <value>ダウンロードの準備ができました: {0}</value>
   </data>
+  <data name="Ordner_herunterladen_570e5004" xml:space="preserve">
+    <value>フォルダーをダウンロードしますか?</value>
+  </data>
+  <data name="In_diesem_Ordner_liegen_keine_Dateien_zum_Herunt_d6ca04dd" xml:space="preserve">
+    <value>このフォルダーにはダウンロードできるファイルがありません: {0}</value>
+  </data>
+  <data name="Der_Ordner_0_enth_lt_mindestens_1_Dateien_mit_zu_a02dc3c0" xml:space="preserve">
+    <value>フォルダー {0} には少なくとも {1} 個のファイル (合計 {2}) があります。1 つの ZIP としてダウンロードされるため、時間がかかる場合があります。</value>
+  </data>
   <data name="Auswahl_herunterladen_26b74c13" xml:space="preserve">
     <value>選択した項目をダウンロード</value>
   </data>
@@ -13098,5 +13107,29 @@
   </data>
   <data name="Alle_Orte_des_Katalogs_zeigen_c19f79e6" xml:space="preserve">
     <value>カタログのすべての場所を表示</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_der_freigegebenen_08eca675" xml:space="preserve">
+    <value>これらのファイルは共有された写真フォルダーの外にあります。FerrumPix はそこでは何も削除しません。</value>
+  </data>
+  <data name="Dieser_Ort_liegt_au_erhalb_der_freigegebenen_Fot_c80bd514" xml:space="preserve">
+    <value>この場所は共有された写真フォルダーの外にあります。</value>
+  </data>
+  <data name="0_Bild_er_bersprungen_ihr_Ziel_liegt_au_erhalb_d_d7f45e81" xml:space="preserve">
+    <value>{0} 枚の画像をスキップしました：保存先が共有された写真フォルダーの外にあります。</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Der__80328781" xml:space="preserve">
+    <value>起動時に固定の写真フォルダーが指定されています。そのため、データフォルダーは現在の場所のままです。</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Date_ad688b7f" xml:space="preserve">
+    <value>起動時に固定の写真フォルダーが指定されています。ファイル操作はそこでのみ許可され、このスイッチは効果がありません。</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_42180b80" xml:space="preserve">
+    <value>フォルダー {0} は Flatpak 版 FerrumPix に共有されていません。そこに置いたものは FerrumPix を終了すると失われます。ピクチャ内またはマウントされたドライブ上のフォルダーを選ぶか、Flatseal または端末で {1} を実行してフォルダーを恒久的に共有し、その後 FerrumPix を再起動してください。</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_5a107e88" xml:space="preserve">
+    <value>フォルダー {0} は Flatpak 版 FerrumPix に共有されていません。そこに作成したものはサンドボックス内にしか存在せず、FerrumPix を終了すると失われるため、FerrumPix はそこに何も書き込みません。対処方法: フォルダー選択ダイアログでフォルダーを選ぶか、ピクチャ内のフォルダーを使うか、Flatseal または端末で {1} を実行してフォルダーを恒久的に共有し、その後 FerrumPix を再起動してください。</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nur_z_a9f4527b" xml:space="preserve">
+    <value>フォルダー {0} は Flatpak 版 FerrumPix に読み取り専用で共有されているため、書き込めません。対処方法: 別のフォルダーを選ぶか、Flatseal または端末で {1} を実行して権限を広げ、その後 FerrumPix を再起動してください。</value>
   </data>
 </root>

@@ -13087,6 +13087,15 @@
   <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
     <value>Klaar om te downloaden: {0}</value>
   </data>
+  <data name="Ordner_herunterladen_570e5004" xml:space="preserve">
+    <value>Map downloaden?</value>
+  </data>
+  <data name="In_diesem_Ordner_liegen_keine_Dateien_zum_Herunt_d6ca04dd" xml:space="preserve">
+    <value>In deze map staan geen bestanden om te downloaden: {0}</value>
+  </data>
+  <data name="Der_Ordner_0_enth_lt_mindestens_1_Dateien_mit_zu_a02dc3c0" xml:space="preserve">
+    <value>De map {0} bevat minstens {1} bestanden met samen {2}. Hij wordt als één ZIP gedownload, dat kan lang duren.</value>
+  </data>
   <data name="Auswahl_herunterladen_26b74c13" xml:space="preserve">
     <value>Selectie downloaden</value>
   </data>
@@ -13098,5 +13107,29 @@
   </data>
   <data name="Alle_Orte_des_Katalogs_zeigen_c19f79e6" xml:space="preserve">
     <value>Alle plaatsen van de catalogus tonen</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_der_freigegebenen_08eca675" xml:space="preserve">
+    <value>Deze bestanden staan buiten de vrijgegeven fotomappen. FerrumPix verwijdert daar niets.</value>
+  </data>
+  <data name="Dieser_Ort_liegt_au_erhalb_der_freigegebenen_Fot_c80bd514" xml:space="preserve">
+    <value>Deze locatie ligt buiten de vrijgegeven fotomappen.</value>
+  </data>
+  <data name="0_Bild_er_bersprungen_ihr_Ziel_liegt_au_erhalb_d_d7f45e81" xml:space="preserve">
+    <value>{0} foto('s) overgeslagen: het doel ligt buiten de vrijgegeven fotomappen.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Der__80328781" xml:space="preserve">
+    <value>Bij het starten zijn vaste fotomappen ingesteld. De gegevensmap blijft daarom waar hij is.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Date_ad688b7f" xml:space="preserve">
+    <value>Bij het starten zijn vaste fotomappen ingesteld. Bestandsbewerkingen zijn precies daar toegestaan; deze schakelaar heeft geen effect.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_42180b80" xml:space="preserve">
+    <value>De map {0} is niet gedeeld met FerrumPix als Flatpak. Wat daar staat, zou verloren gaan zodra FerrumPix sluit. Kies een map onder Afbeeldingen of op een gekoppelde schijf, of deel de map blijvend met Flatseal of in een terminal met {1} en start FerrumPix daarna opnieuw.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_5a107e88" xml:space="preserve">
+    <value>De map {0} is niet gedeeld met FerrumPix als Flatpak. Wat daar wordt aangemaakt, bestaat alleen in de sandbox en gaat verloren zodra FerrumPix sluit, daarom schrijft FerrumPix daar niets. Oplossing: kies de map via de mapkiezer, gebruik een map onder Afbeeldingen of deel de map blijvend met Flatseal of in een terminal met {1} en start FerrumPix daarna opnieuw.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nur_z_a9f4527b" xml:space="preserve">
+    <value>De map {0} is met FerrumPix als Flatpak alleen-lezen gedeeld, schrijven is daar niet mogelijk. Oplossing: kies een andere map of breid de toegang uit met Flatseal of in een terminal met {1} en start FerrumPix daarna opnieuw.</value>
   </data>
 </root>

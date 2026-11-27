@@ -267,6 +267,10 @@ Namespace ViewModels
         ''' steht "Ziel wird geprüft…" dabei.</summary>
         Public ReadOnly Property DialogImportSummary As String
             Get
+                ' Ein Ziel, das das Flatpak nicht dauerhaft sieht, meldet sich sofort, auch noch ohne
+                ' Quelle: dort Angelegtes waere nach dem Beenden weg (GitHub #166).
+                Dim sandboxDenial = DialogImportSandboxDenial()
+                If sandboxDenial.Length > 0 Then Return sandboxDenial
                 If String.IsNullOrEmpty(_dialogImportSourceFolder) Then Return ""
                 If _dialogImportScanning Then Return LocalizationService.T("Quelle wird gelesen…")
                 If _dialogImportCandidates.Count = 0 Then Return LocalizationService.T("Keine Bilder oder Videos gefunden")
@@ -345,8 +349,22 @@ Namespace ViewModels
             ' Die Sicherung ist ein Ziel wie das erste und unterliegt derselben Regel.
             If _dialogImportUseBackup AndAlso
                Not FileOperationPolicy.IsInAllowedArea(CardImportService.FixedRootOf(_dialogImportBackupFolder)) Then Return False
+            If DialogImportSandboxDenial().Length > 0 Then Return False
             If DialogImportSelectionWaitsForCaptureData() Then Return False
             Return DialogImportChosen().Count > 0
+        End Function
+
+        ''' <summary>Die Meldung, wenn das Ziel oder die Sicherung im Flatpak nicht dauerhaft
+        ''' beschreibbar ist (<see cref="FlatpakSandbox"/>), sonst leer. Geprueft wird der feste
+        ''' Anfang einer Vorlage, also ~/2026 fuer ~/2026/{datetaken:yyyy-MM-dd}; die Ordner je
+        ''' Aufnahme prueft der Lauf selbst. Ausserhalb des Flatpak immer leer.</summary>
+        Private Function DialogImportSandboxDenial() As String
+            For Each target In {_dialogImportTargetFolder, If(_dialogImportUseBackup, _dialogImportBackupFolder, "")}
+                If String.IsNullOrWhiteSpace(target) Then Continue For
+                Dim denial = FlatpakSandbox.WriteDenial(CardImportService.FixedRootOf(target))
+                If denial.Length > 0 Then Return denial
+            Next
+            Return ""
         End Function
 
         ''' <summary>Haengt die Auswahl noch an vorlaeufigen Tagen? Solange die EXIF-Daten nachkommen,
@@ -436,10 +454,11 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>Die Zusammenfassung erscheint erst mit einer Quelle; davor gaebe es nichts
-        ''' zusammenzufassen.</summary>
+        ''' zusammenzufassen. Ausnahme ist ein Ziel, das das Flatpak nicht dauerhaft sieht: die
+        ''' Warnung steht sofort da.</summary>
         Public ReadOnly Property HasDialogImportSummary As Boolean
             Get
-                Return Not String.IsNullOrEmpty(_dialogImportSourceFolder)
+                Return Not String.IsNullOrEmpty(_dialogImportSourceFolder) OrElse DialogImportSandboxDenial().Length > 0
             End Get
         End Property
 
@@ -621,7 +640,9 @@ Namespace ViewModels
         Public Async Function ShowImportDialogAsync(suggestedTarget As String) As Task(Of ImportDialogResult)
             Dim settings = AppSettingsService.Load()
             Dim target = suggestedTarget
-            If String.IsNullOrWhiteSpace(target) OrElse Not Directory.Exists(target) Then target = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
+            If String.IsNullOrWhiteSpace(target) OrElse Not Directory.Exists(target) Then target = FolderRoots.PicturesFolder()
+            ' Feste Fotoordner: ein Vorschlag ausserhalb weicht der ersten Wurzel.
+            If FolderRoots.IsLocalFolderPath(target) Then target = FolderRoots.ClampToRoots(target)
             _dialogImportTargetFolder = If(target, "")
             DialogImportTargetChoices.Clear()
             Dim current = New ImportTargetChoice With {
@@ -741,6 +762,12 @@ Namespace ViewModels
                 If Not FileOperationPolicy.IsInAllowedArea(CardImportService.FixedRootOf(root)) Then
                     Await ShowMessageAsync(LocalizationService.T("Ziel nicht erlaubt"),
                                            String.Format(LocalizationService.T("{0} liegt außerhalb der Ordner, in die FerrumPix schreiben darf. Es wurde nichts kopiert."), root))
+                    Return Nothing
+                End If
+                ' Im Flatpak: ein Ziel, das nach dem Beenden verschwaende (GitHub #166).
+                Dim sandboxDenial = FlatpakSandbox.WriteDenial(CardImportService.FixedRootOf(root))
+                If sandboxDenial.Length > 0 Then
+                    Await ShowMessageAsync(LocalizationService.T("Ziel nicht erlaubt"), sandboxDenial)
                     Return Nothing
                 End If
                 Dim free = CardImportService.FreeSpace(root)

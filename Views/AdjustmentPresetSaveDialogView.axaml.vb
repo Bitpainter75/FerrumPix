@@ -35,7 +35,7 @@ Namespace Views
                 Dim fileType As New Avalonia.Platform.Storage.FilePickerFileType(
                     If(isLut, FerrumPix.Services.LocalizationService.T("LUT (.cube)"),
                               FerrumPix.Services.LocalizationService.T("XMP-Preset (.xmp)"))) With {.Patterns = {"*." & extension}}
-                Dim file = Await topLevel.StorageProvider.SaveFilePickerAsync(New Avalonia.Platform.Storage.FilePickerSaveOptions With {
+                Dim file = Await FolderRootPickers.SaveFilePickerAsync(topLevel,New Avalonia.Platform.Storage.FilePickerSaveOptions With {
                     .Title = FerrumPix.Services.LocalizationService.T("Anpassung speichern als"),
                     .SuggestedFileName = IO.Path.GetFileName(vm.TargetFilePath),
                     .DefaultExtension = extension,

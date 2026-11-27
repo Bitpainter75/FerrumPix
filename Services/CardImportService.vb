@@ -504,8 +504,8 @@ Namespace Services
         Public Shared Function ExpandTargetTemplate(template As String, candidate As ImportCandidate,
                                                     Optional job As String = "") As String
             Dim text = If(template, "").Trim()
-            text = text.Replace("{pictures}", Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)).
-                        Replace("{home}", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))
+            text = text.Replace("{pictures}", FolderRoots.PicturesFolder()).
+                        Replace("{home}", FolderRoots.HomeFolder())
             text = ExpandCommon(text, candidate, job)
             ' Ein leerer Auftrag kann eine Ordnerebene leer lassen ("2026//"); sie faellt weg.
             Return System.Text.RegularExpressions.Regex.Replace(text, "(?<=.)/{2,}", "/")
@@ -557,8 +557,8 @@ Namespace Services
         ''' {pictures} und {home} aufgeloest. An ihm werden Platz und Dateiregel geprueft.</summary>
         Public Shared Function FixedRootOf(target As String) As String
             Dim text = If(target, "").Trim().
-                Replace("{pictures}", Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)).
-                Replace("{home}", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))
+                Replace("{pictures}", FolderRoots.PicturesFolder()).
+                Replace("{home}", FolderRoots.HomeFolder())
             Dim brace = text.IndexOf("{"c)
             If brace < 0 Then Return text
             Dim prefix = text.Substring(0, brace)
@@ -643,6 +643,17 @@ Namespace Services
             ' Nummer einer Datei davon ab, welche vor ihr fehlschlug.
             Dim numbers = NumbersByStem(candidates)
             Dim roots = {targetRoot, backupRoot}.Where(Function(r) Not String.IsNullOrWhiteSpace(r)).ToList()
+            ' Im Flatpak ein Ziel, das die Sandbox nicht dauerhaft beschreiben kann: nichts anlegen,
+            ' nichts kopieren, jede Datei zaehlt als fehlgeschlagen. Der Dialog sagt das vorher,
+            ' der Lauf prueft es trotzdem selbst (GitHub #166).
+            Dim notShared = roots.FirstOrDefault(Function(r) Not FlatpakSandbox.IsPersistentWriteTarget(FixedRootOf(r)))
+            If notShared IsNot Nothing Then
+                DiagnosticLogService.LogAlways("Import.TargetNotShared", notShared)
+                For Each candidate In candidates
+                    result.Failed.Add(Path.GetFileName(candidate.SourcePath))
+                Next
+                Return result
+            End If
             Dim cleaned As New HashSet(Of String)(PathIdentity.Comparer)
             Dim mtp As MtpSession = Nothing
             Try
@@ -680,6 +691,13 @@ Namespace Services
                             Dim folder = TargetFolderFor(roots(rootIndex), pattern, candidate, job)
                             If IsWithin(folder, sourceRoot) Then
                                 DiagnosticLogService.LogAlways("Import.TargetInSource", folder)
+                                ok = False
+                                Continue For
+                            End If
+                            ' Je Ordner noch einmal: ein Verweis unter dem festen Anfang kann aus der
+                            ' Freigabe hinaus in den leeren persoenlichen Ordner der Sandbox fuehren.
+                            If Not FlatpakSandbox.IsPersistentWriteTarget(folder) Then
+                                DiagnosticLogService.LogAlways("Import.TargetNotShared", folder)
                                 ok = False
                                 Continue For
                             End If

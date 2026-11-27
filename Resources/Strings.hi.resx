@@ -13091,6 +13091,15 @@
   <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
     <value>डाउनलोड के लिए तैयार: {0}</value>
   </data>
+  <data name="Ordner_herunterladen_570e5004" xml:space="preserve">
+    <value>फ़ोल्डर डाउनलोड करें?</value>
+  </data>
+  <data name="In_diesem_Ordner_liegen_keine_Dateien_zum_Herunt_d6ca04dd" xml:space="preserve">
+    <value>इस फ़ोल्डर में डाउनलोड करने के लिए कोई फ़ाइल नहीं है: {0}</value>
+  </data>
+  <data name="Der_Ordner_0_enth_lt_mindestens_1_Dateien_mit_zu_a02dc3c0" xml:space="preserve">
+    <value>फ़ोल्डर {0} में कम से कम {1} फ़ाइलें हैं, कुल {2}. यह एक ZIP के रूप में डाउनलोड होगा, इसमें काफ़ी समय लग सकता है।</value>
+  </data>
   <data name="Auswahl_herunterladen_26b74c13" xml:space="preserve">
     <value>चयन डाउनलोड करें</value>
   </data>
@@ -13102,5 +13111,29 @@
   </data>
   <data name="Alle_Orte_des_Katalogs_zeigen_c19f79e6" xml:space="preserve">
     <value>कैटलॉग के सभी स्थान दिखाएँ</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_der_freigegebenen_08eca675" xml:space="preserve">
+    <value>ये फ़ाइलें साझा फ़ोटो फ़ोल्डरों के बाहर हैं। FerrumPix वहाँ कुछ भी नहीं हटाता।</value>
+  </data>
+  <data name="Dieser_Ort_liegt_au_erhalb_der_freigegebenen_Fot_c80bd514" xml:space="preserve">
+    <value>यह स्थान साझा फ़ोटो फ़ोल्डरों के बाहर है।</value>
+  </data>
+  <data name="0_Bild_er_bersprungen_ihr_Ziel_liegt_au_erhalb_d_d7f45e81" xml:space="preserve">
+    <value>{0} चित्र छोड़े गए: लक्ष्य साझा फ़ोटो फ़ोल्डरों के बाहर है।</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Der__80328781" xml:space="preserve">
+    <value>शुरुआत में स्थायी फ़ोटो फ़ोल्डर तय किए गए हैं। इसलिए डेटा फ़ोल्डर अपनी जगह पर रहता है।</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Date_ad688b7f" xml:space="preserve">
+    <value>शुरुआत में स्थायी फ़ोटो फ़ोल्डर तय किए गए हैं। फ़ाइल संचालन ठीक वहीं की अनुमति है; इस स्विच का कोई प्रभाव नहीं है।</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_42180b80" xml:space="preserve">
+    <value>फ़ोल्डर {0} Flatpak के रूप में FerrumPix के साथ साझा नहीं है। वहाँ रखी चीज़ें FerrumPix बंद होने पर खो जाएँगी। कृपया चित्र के अंदर या माउंट की गई ड्राइव पर कोई फ़ोल्डर चुनें, या Flatseal से या टर्मिनल में {1} चलाकर फ़ोल्डर को स्थायी रूप से साझा करें, फिर FerrumPix को फिर से शुरू करें।</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_5a107e88" xml:space="preserve">
+    <value>फ़ोल्डर {0} Flatpak के रूप में FerrumPix के साथ साझा नहीं है। वहाँ बनाई गई चीज़ें केवल सैंडबॉक्स में रहती हैं और FerrumPix बंद होने पर खो जाती हैं, इसलिए FerrumPix वहाँ कुछ नहीं लिखता। उपाय: फ़ोल्डर चयनकर्ता से फ़ोल्डर चुनें, चित्र के अंदर कोई फ़ोल्डर लें, या Flatseal से या टर्मिनल में {1} चलाकर फ़ोल्डर को स्थायी रूप से साझा करें, फिर FerrumPix को फिर से शुरू करें।</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nur_z_a9f4527b" xml:space="preserve">
+    <value>फ़ोल्डर {0} Flatpak के रूप में FerrumPix के साथ केवल पढ़ने के लिए साझा है, इसलिए वहाँ लिखा नहीं जा सकता। उपाय: कोई दूसरा फ़ोल्डर चुनें या Flatseal से या टर्मिनल में {1} चलाकर अनुमति बढ़ाएँ, फिर FerrumPix को फिर से शुरू करें।</value>
   </data>
 </root>

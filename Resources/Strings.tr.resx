@@ -13091,6 +13091,15 @@
   <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
     <value>İndirmeye hazır: {0}</value>
   </data>
+  <data name="Ordner_herunterladen_570e5004" xml:space="preserve">
+    <value>Klasör indirilsin mi?</value>
+  </data>
+  <data name="In_diesem_Ordner_liegen_keine_Dateien_zum_Herunt_d6ca04dd" xml:space="preserve">
+    <value>Bu klasörde indirilecek dosya yok: {0}</value>
+  </data>
+  <data name="Der_Ordner_0_enth_lt_mindestens_1_Dateien_mit_zu_a02dc3c0" xml:space="preserve">
+    <value>{0} klasöründe toplam {2} boyutunda en az {1} dosya var. Tek bir ZIP olarak indirilecek, bu uzun sürebilir.</value>
+  </data>
   <data name="Auswahl_herunterladen_26b74c13" xml:space="preserve">
     <value>Seçimi indir</value>
   </data>
@@ -13102,5 +13111,29 @@
   </data>
   <data name="Alle_Orte_des_Katalogs_zeigen_c19f79e6" xml:space="preserve">
     <value>Katalogdaki tüm yerleri göster</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_der_freigegebenen_08eca675" xml:space="preserve">
+    <value>Bu dosyalar paylaşılan fotoğraf klasörlerinin dışında. FerrumPix orada hiçbir şey silmez.</value>
+  </data>
+  <data name="Dieser_Ort_liegt_au_erhalb_der_freigegebenen_Fot_c80bd514" xml:space="preserve">
+    <value>Bu konum paylaşılan fotoğraf klasörlerinin dışında.</value>
+  </data>
+  <data name="0_Bild_er_bersprungen_ihr_Ziel_liegt_au_erhalb_d_d7f45e81" xml:space="preserve">
+    <value>{0} resim atlandı: hedef paylaşılan fotoğraf klasörlerinin dışında.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Der__80328781" xml:space="preserve">
+    <value>Başlangıçta sabit fotoğraf klasörleri belirlendi. Bu nedenle veri klasörü yerinde kalır.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Date_ad688b7f" xml:space="preserve">
+    <value>Başlangıçta sabit fotoğraf klasörleri belirlendi. Dosya işlemlerine yalnızca orada izin verilir; bu anahtarın etkisi yoktur.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_42180b80" xml:space="preserve">
+    <value>{0} klasörü Flatpak olarak FerrumPix ile paylaşılmamış. Orada duranlar FerrumPix kapanınca kaybolur. Resimler içinde veya bağlı bir sürücüde bir klasör seçin ya da klasörü Flatseal ile veya terminalde {1} komutuyla kalıcı olarak paylaşın, ardından FerrumPix'i yeniden başlatın.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_5a107e88" xml:space="preserve">
+    <value>{0} klasörü Flatpak olarak FerrumPix ile paylaşılmamış. Orada oluşturulanlar yalnızca korumalı alanda bulunur ve FerrumPix kapanınca kaybolur, bu yüzden FerrumPix oraya hiçbir şey yazmaz. Çözüm: klasörü klasör seçiciyle seçin, Resimler içinde bir klasör kullanın ya da klasörü Flatseal ile veya terminalde {1} komutuyla kalıcı olarak paylaşın, ardından FerrumPix'i yeniden başlatın.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nur_z_a9f4527b" xml:space="preserve">
+    <value>{0} klasörü Flatpak olarak FerrumPix ile yalnızca okuma için paylaşılmış, oraya yazılamaz. Çözüm: başka bir klasör seçin ya da izni Flatseal ile veya terminalde {1} komutuyla genişletin, ardından FerrumPix'i yeniden başlatın.</value>
   </data>
 </root>

@@ -5418,6 +5418,15 @@ Namespace ViewModels
         ''' eingetragenen liegen, fallen dabei weg - der Lauf geht ohnehin rekursiv, ein enthaltener
         ''' Ordner waere schlicht die doppelte Laufzeit (siehe NormalizeCatalogWatchFolders).</summary>
         Public Sub AddCatalogWatchFolder(folderPath As String)
+            ' Im Flatpak ein Ordner, den die Sandbox nicht dauerhaft sieht: dort laege nur, was in
+            ' diesem Lauf entstanden ist, und auch Beistelldateien dort waeren nach dem Beenden weg
+            ' (GitHub #166). Was die Ordnerauswahl liefert, ist immer sichtbar.
+            If FlatpakSandbox.GetAccess(folderPath) = SandboxAccess.NotShared Then
+                If _mainVm IsNot Nothing Then
+                    Dim ignored = _mainVm.ShowMessageAsync(LocalizationService.T("Ort nicht verwendbar"), FlatpakSandbox.WriteDenial(folderPath))
+                End If
+                Return
+            End If
             Dim wanted = AppSettingsService.NormalizeCatalogWatchFolders(
                 CatalogWatchFolders.Concat({folderPath}).ToList())
             ReplaceCatalogWatchFolders(wanted)

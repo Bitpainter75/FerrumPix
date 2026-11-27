@@ -70,15 +70,16 @@ Namespace Services
             {".xmp", ".fpxmp", ".bmp", ".tif", ".tiff", ".psd", ".psb"}, StringComparer.OrdinalIgnoreCase)
 
         ''' <summary>Plant einen Eintrag aus einer Datei. Kleine Dateien ungepackter Formate werden
-        ''' dabei gepackt.</summary>
-        Friend Shared Function PlanFile(sourcePath As String, entryName As String) As ZipEntryPlan
+        ''' dabei gepackt, ausser <paramref name="allowPacking"/> ist False (der Ordner-Download,
+        ''' sobald sein Speicherrahmen fuer gepackte Eintraege aufgebraucht ist).</summary>
+        Friend Shared Function PlanFile(sourcePath As String, entryName As String, Optional allowPacking As Boolean = True) As ZipEntryPlan
             Dim info As New FileInfo(sourcePath)
             Dim plan As New ZipEntryPlan With {
                 .SourcePath = sourcePath,
                 .EntryName = entryName,
                 .Size = info.Length,
                 .Modified = info.LastWriteTime}
-            If info.Length <= InMemoryLimit AndAlso PackableExtensions.Contains(info.Extension) Then
+            If allowPacking AndAlso info.Length <= InMemoryLimit AndAlso PackableExtensions.Contains(info.Extension) Then
                 Dim raw = File.ReadAllBytes(sourcePath)
                 plan.Size = raw.Length
                 Dim checksum As New Crc32Accumulator()

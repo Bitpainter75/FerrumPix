@@ -13047,6 +13047,15 @@
   <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
     <value>Listo para descargar: {0}</value>
   </data>
+  <data name="Ordner_herunterladen_570e5004" xml:space="preserve">
+    <value>¿Descargar la carpeta?</value>
+  </data>
+  <data name="In_diesem_Ordner_liegen_keine_Dateien_zum_Herunt_d6ca04dd" xml:space="preserve">
+    <value>En esta carpeta no hay archivos para descargar: {0}</value>
+  </data>
+  <data name="Der_Ordner_0_enth_lt_mindestens_1_Dateien_mit_zu_a02dc3c0" xml:space="preserve">
+    <value>La carpeta {0} contiene al menos {1} archivos con un total de {2}. Se descargará como un único ZIP, lo que puede tardar mucho.</value>
+  </data>
   <data name="Auswahl_herunterladen_26b74c13" xml:space="preserve">
     <value>Descargar selección</value>
   </data>
@@ -13058,5 +13067,29 @@
   </data>
   <data name="Alle_Orte_des_Katalogs_zeigen_c19f79e6" xml:space="preserve">
     <value>Mostrar todos los lugares del catálogo</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_der_freigegebenen_08eca675" xml:space="preserve">
+    <value>Estos archivos están fuera de las carpetas de fotos compartidas. FerrumPix no elimina nada allí.</value>
+  </data>
+  <data name="Dieser_Ort_liegt_au_erhalb_der_freigegebenen_Fot_c80bd514" xml:space="preserve">
+    <value>Esta ubicación está fuera de las carpetas de fotos compartidas.</value>
+  </data>
+  <data name="0_Bild_er_bersprungen_ihr_Ziel_liegt_au_erhalb_d_d7f45e81" xml:space="preserve">
+    <value>{0} imagen(es) omitida(s): su destino está fuera de las carpetas de fotos compartidas.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Der__80328781" xml:space="preserve">
+    <value>Al iniciar se fijaron carpetas de fotos. Por eso la carpeta de datos se queda donde está.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Date_ad688b7f" xml:space="preserve">
+    <value>Al iniciar se fijaron carpetas de fotos. Las operaciones con archivos se permiten justo allí; este interruptor no tiene efecto.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_42180b80" xml:space="preserve">
+    <value>La carpeta {0} no está compartida con FerrumPix como Flatpak. Lo que se guarde allí se perdería al cerrar FerrumPix. Elija una carpeta dentro de Imágenes o en una unidad montada, o comparta la carpeta de forma permanente con Flatseal o en una terminal con {1} y después reinicie FerrumPix.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_5a107e88" xml:space="preserve">
+    <value>La carpeta {0} no está compartida con FerrumPix como Flatpak. Lo que se crea allí solo existe dentro del entorno aislado y se pierde al cerrar FerrumPix, por eso FerrumPix no escribe nada allí. Solución: elija la carpeta con el selector de carpetas, use una carpeta dentro de Imágenes o comparta la carpeta de forma permanente con Flatseal o en una terminal con {1} y después reinicie FerrumPix.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nur_z_a9f4527b" xml:space="preserve">
+    <value>La carpeta {0} está compartida con FerrumPix como Flatpak solo para lectura, así que no se puede escribir en ella. Solución: elija otra carpeta o amplíe el permiso con Flatseal o en una terminal con {1} y después reinicie FerrumPix.</value>
   </data>
 </root>

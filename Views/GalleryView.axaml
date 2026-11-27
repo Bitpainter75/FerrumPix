@@ -221,114 +221,119 @@
                 </StackPanel>
 
                 <Grid Grid.Column="2" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto,Auto" HorizontalAlignment="Stretch" VerticalAlignment="Center">
-                    <!-- LAUFENDE VORGÄNGE STATT SUCHFELD. Katalogindex, beide Gesichtssuchen und
-                         eine laufende Suchliste melden sich hier, und zwar an der Stelle des
-                         Suchfelds statt in der Fußzeile: dort standen Balken, Text und Abbrechen
+                    <!-- SUCHFELD UND LAUFENDE VORGÄNGE TEILEN SICH DIE FLÄCHE. Katalogindex, beide
+                         Gesichtssuchen und eine laufende Suchliste melden sich hier, neben dem
+                         Suchfeld statt in der Fußzeile: dort standen Balken, Text und Abbrechen
                          neben Statuszeile, Sternen und Farbkreisen und drängten den Rest aus dem
                          Bild. Das Suchfeld ist die einzige Fläche der Leiste, die von sich aus
                          mitwächst (Spalte "*"), und der Text wird lang - "Indiziere 12345 von
                          67890".
 
-                         Das Feld ist solange WEG und nicht nur überlagert: ein Eingabefeld, das
-                         zwar da ist, aber unter etwas anderem liegt, nimmt trotzdem den Fokus und
-                         die Tastatur an. Der Lauf lässt sich hier direkt anhalten, wer also
-                         zwischendurch suchen will, kommt in einem Klick an sein Feld.
+                         DAS SUCHFELD BLEIBT IMMER STEHEN. Ein Lauf blendete es früher aus, und im
+                         Umfang Katalog startet das Tippen selbst eine Suchliste: schon der erste
+                         Buchstabe nahm dem Feld damit den Fokus, und jedes weitere Zeichen
+                         verlangte einen neuen Klick. Ein Eingabefeld darf weder verdeckt noch
+                         ausgeblendet noch gesperrt werden, solange es Eingaben annimmt (Avalonia
+                         räumt den Fokus eines ausgeblendeten Elements ab). Deshalb steht es NEBEN
+                         den Läufen, nie darunter.
 
-                         MEHRERE LÄUFE TEILEN SICH DIE BREITE. Das UniformGrid mit einer Zeile gibt
-                         jedem Lauf denselben Anteil - ein zweiter Lauf verdeckt den ersten nicht,
-                         und jeder behält seinen eigenen Abbrechen-Knopf. Der Text wird dabei
+                         Das äußere UniformGrid mit einer Zeile zählt nur sichtbare Kinder: ohne
+                         Lauf hat das Feld die ganze Breite, mit Lauf die linke Hälfte, und das Feld
+                         behält dabei seine linke Kante. MEHRERE LÄUFE TEILEN SICH die rechte
+                         Hälfte über das innere UniformGrid - ein zweiter Lauf verdeckt den ersten
+                         nicht, und jeder behält seinen eigenen Abbrechen-Knopf. Der Text wird dabei
                          beschnitten statt zu drängeln, deshalb hat die Kachel keine Mindestbreite:
                          die käme bei einem schmalen Fenster über die Spalte hinaus. -->
-                    <ItemsControl Grid.Column="0"
-                                  IsVisible="{Binding HasBackgroundRuns}"
-                                  ItemsSource="{Binding BackgroundRuns}"
-                                  Margin="0,0,8,0">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <UniformGrid Rows="1"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="{DynamicResource FP.Bg.Input}"
-                                        BorderBrush="{DynamicResource FP.Border.Normal}"
-                                        BorderThickness="1"
-                                        CornerRadius="8"
-                                        Padding="12,0"
-                                        Height="34"
-                                        Margin="0,0,6,0"
-                                        AttachedToVisualTree="OnGalleryItemAttachedToVisualTree">
-                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-                                        <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
-                                            <TextBlock Classes="no-translate"
-                                                       Text="{Binding Text}"
-                                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                                       FontSize="{DynamicResource FP.Font.Label}"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       VerticalAlignment="Center"/>
-                                            <ProgressBar Height="3" Minimum="0" Maximum="100"
-                                                         Value="{Binding Percent}"
-                                                         IsIndeterminate="{Binding !HasProgress}"/>
-                                        </StackPanel>
-                                        <Button Grid.Column="1"
-                                                Classes="ghost"
-                                                Width="22" Height="22" Padding="0"
-                                                Margin="8,0,0,0"
-                                                VerticalAlignment="Center"
-                                                Command="{Binding StopCommand}"
-                                                ToolTip.Tip="Lauf anhalten, das Gefundene bleibt gespeichert">
-                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/x.svg"
-                                                           Width="12" Height="12"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                           Opacity="0.75"/>
-                                        </Button>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <UniformGrid Grid.Column="0" Rows="1">
+                        <Border Background="{DynamicResource FP.Bg.Input}"
+                                BorderBrush="{DynamicResource FP.Border.Normal}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="12,8"
+                                MinWidth="120"
+                                Height="34"
+                                Margin="0,0,8,0">
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/magnifying-glass.svg"
+                                       Width="18" Height="18" VerticalAlignment="Center" Opacity="0.65"/>
+                                <TextBox Grid.Column="1"
+                                         Name="GallerySearchBox"
+                                         Classes="search-input"
+                                         BorderThickness="0"
+                                         Padding="0"
+                                         Height="20"
+                                         Margin="10,0,0,2"
+                                         Text="{Binding SearchText}"
+                                         VerticalContentAlignment="Center"
+                                         ToolTip.Tip="Mehrere Wörter: eines davon genügt. +Wort muss vorkommen, -Wort darf nicht vorkommen."
+                                         KeyDown="OnSearchBoxKeyDown"/>
+                                <Button Grid.Column="2"
+                                        Classes="ghost"
+                                        Width="22"
+                                        Height="22"
+                                        Padding="0"
+                                        Margin="4,0,4,0"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding ClearSearchCommand}"
+                                        IsVisible="{Binding SearchText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
+                                        ToolTip.Tip="Suche zurücksetzen">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/x.svg"
+                                                   Width="12" Height="12"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Opacity="0.75"/>
+                                </Button>
+                            </Grid>
+                        </Border>
 
-                    <Border Grid.Column="0"
-                            IsVisible="{Binding !HasBackgroundRuns}"
-                            Background="{DynamicResource FP.Bg.Input}"
-                            BorderBrush="{DynamicResource FP.Border.Normal}"
-                            BorderThickness="1"
-                            CornerRadius="8"
-                            Padding="12,8"
-                            MinWidth="120"
-                            Height="34"
-                            Margin="0,0,8,0">
-                        <Grid ColumnDefinitions="Auto,*,Auto">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/magnifying-glass.svg"
-                                   Width="18" Height="18" VerticalAlignment="Center" Opacity="0.65"/>
-                            <TextBox Grid.Column="1"
-                                     Name="GallerySearchBox"
-                                     Classes="search-input"
-                                     BorderThickness="0"
-                                     Padding="0"
-                                     Height="20"
-                                     Margin="10,0,0,2"
-                                     Text="{Binding SearchText}"
-                                     VerticalContentAlignment="Center"
-                                     ToolTip.Tip="Mehrere Wörter: eines davon genügt. +Wort muss vorkommen, -Wort darf nicht vorkommen."
-                                     KeyDown="OnSearchBoxKeyDown"/>
-                            <Button Grid.Column="2"
-                                    Classes="ghost"
-                                    Width="22"
-                                    Height="22"
-                                    Padding="0"
-                                    Margin="4,0,4,0"
-                                    VerticalAlignment="Center"
-                                    Command="{Binding ClearSearchCommand}"
-                                    IsVisible="{Binding SearchText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
-                                    ToolTip.Tip="Suche zurücksetzen">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/x.svg"
-                                               Width="12" Height="12"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                                               Opacity="0.75"/>
-                            </Button>
-                        </Grid>
-                    </Border>
+                        <ItemsControl Name="GalleryBackgroundRuns"
+                                      IsVisible="{Binding HasBackgroundRuns}"
+                                      ItemsSource="{Binding BackgroundRuns}"
+                                      Margin="0,0,8,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Rows="1"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource FP.Bg.Input}"
+                                            BorderBrush="{DynamicResource FP.Border.Normal}"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="12,0"
+                                            Height="34"
+                                            Margin="0,0,6,0"
+                                            AttachedToVisualTree="OnGalleryItemAttachedToVisualTree">
+                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                            <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
+                                                <TextBlock Classes="no-translate"
+                                                           Text="{Binding Text}"
+                                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                                           FontSize="{DynamicResource FP.Font.Label}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           VerticalAlignment="Center"/>
+                                                <ProgressBar Height="3" Minimum="0" Maximum="100"
+                                                             Value="{Binding Percent}"
+                                                             IsIndeterminate="{Binding !HasProgress}"/>
+                                            </StackPanel>
+                                            <Button Grid.Column="1"
+                                                    Classes="ghost"
+                                                    Width="22" Height="22" Padding="0"
+                                                    Margin="8,0,0,0"
+                                                    VerticalAlignment="Center"
+                                                    Command="{Binding StopCommand}"
+                                                    ToolTip.Tip="Lauf anhalten, das Gefundene bleibt gespeichert">
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/x.svg"
+                                                               Width="12" Height="12"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                               Opacity="0.75"/>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </UniformGrid>
 
                     <!-- UMFANG VON SUCHE UND FILTER: dieser Ordner oder der ganze Katalog. Gilt für
                          alles rechts davon und für das Suchfeld links, deshalb steht er zwischen
@@ -1703,6 +1708,8 @@
                                           <Separator/>
                                           <MenuItem Name="FolderTreeRenameMenuItem" Header="Umbenennen" Click="OnContextRenameFolder"/>
                                           <MenuItem Name="FolderTreeCopyMenuItem" Header="Kopieren" Click="OnContextCopyFolder"/>
+                                          <!-- Nur im Browser: der Ordner als ZIP auf das Geraet des Browsers. -->
+                                          <MenuItem Name="FolderTreeDownloadMenuItem" Header="Herunterladen" Click="OnContextDownloadFolder" IsVisible="False"/>
                                           <MenuItem Name="FolderTreeCutMenuItem" Header="Ausschneiden" Click="OnContextCutFolder"/>
                                           <MenuItem Name="FolderTreePasteMenuItem" Header="Einfügen" Click="OnContextPasteFolder"/>
                                           <MenuItem Name="FolderTreeCopyPathMenuItem" Header="Pfad kopieren" Click="OnContextCopyFolderPath"/>

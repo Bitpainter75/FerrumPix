@@ -46,9 +46,19 @@ environment).
 2. Put the template and an `.env` with your user id, group id and photo folder into
    `/volume1/docker/ferrumpix`.
 3. Create a project from that folder in Container Manager.
-4. Add a reverse proxy entry in DSM from HTTPS port 443 to `http://localhost:14500`, with the
-   WebSocket headers and `X-Forwarded-Proto` and `X-Forwarded-Host`, as the template describes.
+4. In DSM, Control Panel, Login Portal, Advanced, Reverse Proxy, create an entry:
+   - Source: **HTTPS**, your hostname, port 443
+   - Destination: HTTP, `localhost`, port 14500
+   - Custom Header: *Create*, *WebSocket* (DSM passes on the remaining forwarding headers by
+     itself)
+   - the certificate for that hostname under Control Panel, Security, Certificate
 5. Open `https://photos.example.org` and sign in.
+
+The source of the proxy entry has to be HTTPS. FerrumPix in this template only accepts requests
+that the proxy marks as encrypted, and it signs the browser in with a cookie that browsers only
+keep over HTTPS. With HTTP as the source, FerrumPix either refuses the request or the sign-in does
+not stick, so the password never travels unencrypted. Opening `http://<NAS>:14500` directly does not work either: the port
+is only open on the NAS itself, for the proxy.
 
 ## Synology in the home network, without HTTPS
 
@@ -104,3 +114,11 @@ FerrumPix runs as user 1000 in the container (on a Synology as the DSM user set 
 photo folders must be readable for that user, and writable if FerrumPix should save sidecar files
 or exports there. Models are not part of the image; FerrumPix downloads them into `/data` when you
 ask for them.
+
+FerrumPix only shows `/photos` in the container: the folder tree starts there, every folder and
+file chooser stays inside it, and saving, exporting, copying and moving only go there. `/photos` is
+also its home and start folder. Deleting, renaming, moving and downloading work for everything
+below it without any further switch; `/photos` itself cannot be renamed or deleted. To use other
+folders, set `FERRUMPIX_FOLDER_ROOTS` in the `environment` of the template, several separated by
+`:`, for example `FERRUMPIX_FOLDER_ROOTS=/photos:/archive`. Set it to an empty value to see the
+whole container again.

@@ -65,6 +65,34 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Laesst sich ein anderer Datenordner waehlen? Nicht mit festen Fotoordnern
+        ''' (FolderRoots, im Behaelter /photos). Entschieden: dort ist der Datenordner ein eigenes
+        ''' Laufwerk (/data), das der Behaelter vorgibt, und der Waehler liesse ohnehin nur Orte in
+        ''' den Fotoordnern zu; Katalog und Vorschaubilder zwischen den Fotos waeren der einzige
+        ''' moegliche Wechsel und keiner, den jemand will. Zurueck an den Standardort bleibt
+        ''' moeglich, falls frueher ein anderer gewaehlt war.</summary>
+        Public ReadOnly Property CanChooseDataFolder As Boolean
+            Get
+                Return Not FolderRoots.IsActive
+            End Get
+        End Property
+
+        ''' <summary>Wirkt der Schalter "Dateioperationen ausserhalb des persoenlichen Ordners"? Mit
+        ''' festen Fotoordnern nicht: dann gelten genau sie (FileOperationPolicy.IsInAllowedArea).</summary>
+        Public ReadOnly Property CanChangeFileOperationArea As Boolean
+            Get
+                Return Not FolderRoots.IsActive
+            End Get
+        End Property
+
+        ''' <summary>Gelten feste Fotoordner? Dann zeigen die Einstellungen, warum Datenordner und
+        ''' der Schalter fuer Dateiarbeit ausserhalb des persoenlichen Ordners nicht wirken.</summary>
+        Public ReadOnly Property HasFolderRoots As Boolean
+            Get
+                Return FolderRoots.IsActive
+            End Get
+        End Property
+
         Friend Sub RaiseDataFolderChanged()
             Me.RaisePropertyChanged(NameOf(DataFolderText))
             Me.RaisePropertyChanged(NameOf(HasCustomDataFolder))
@@ -89,6 +117,8 @@ Namespace ViewModels
                 RaiseDataFolderChanged()
                 Return
             End If
+            ' Mit festen Fotoordnern nur zurueck an den Standardort (siehe CanChooseDataFolder).
+            If FolderRoots.IsActive AndAlso Not PathIdentity.AreSame(If(chosen, ""), AppFolders.DefaultDataRoot) Then Return
             Dim target As String = Nothing
             Dim reason As String = Nothing
             Dim choice = Await Task.Run(Function() AppFolders.ValidateNewDataFolder(chosen, target, reason))

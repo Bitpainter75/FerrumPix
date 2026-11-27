@@ -264,6 +264,11 @@ Namespace ViewModels
         Public Async Function ShowBackupDialogAsync() As Task
             Dim folder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
             If String.IsNullOrEmpty(folder) Then folder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+            ' Mit festen Fotoordnern laesst der Waehler nur sie zu; der Vorschlag liegt deshalb dort.
+            If FolderRoots.IsActive Then folder = FolderRoots.HomeFolder()
+            ' Im Flatpak sind Dokumente und der persoenliche Ordner ab Werk nicht freigegeben; eine
+            ' Sicherung dort laege nur in der Sandbox. Vorgeschlagen werden dann die Bilder.
+            If Not FlatpakSandbox.IsPersistentWriteTarget(folder) Then folder = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
             ResetBackupDialog(Path.Combine(folder, CatalogBackupService.SuggestedFileName()))
             Dim answer = Await ShowDialogAsync(AppDialogKind.Backup,
                                                "Sichern",
@@ -273,6 +278,11 @@ Namespace ViewModels
             If answer Is Nothing Then Return
             Dim target = _dialogBackupPath
             If Not target.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) Then target &= ".zip"
+            Dim sandboxDenial = FlatpakSandbox.WriteDenial(Path.GetDirectoryName(target))
+            If sandboxDenial.Length > 0 Then
+                Await ShowMessageAsync(LocalizationService.T("Sichern fehlgeschlagen"), sandboxDenial)
+                Return
+            End If
             Dim parts = ChosenBackupParts()
             Dim errorText As String = Nothing
             Dim manifest As BackupManifest = Nothing

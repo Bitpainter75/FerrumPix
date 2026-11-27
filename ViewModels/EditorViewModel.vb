@@ -25489,7 +25489,7 @@ Namespace ViewModels
                 ' Externe Quellen (Immich-Temp-Kopie) liegen im Temp-Verzeichnis - als Ziel taugt das nicht,
                 ' daher den Bilder-Ordner vorschlagen statt den Temp-Pfad.
                 Dim dir = If(fromFpx, IO.Path.GetDirectoryName(_currentFpxPath),
-                             If(_forceSaveAsOnly, Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), IO.Path.GetDirectoryName(_currentImagePath)))
+                             If(_forceSaveAsOnly, FolderRoots.PicturesFolder(), IO.Path.GetDirectoryName(_currentImagePath)))
                 ' Der Vorschlag kommt aus dem Namen, den der Nutzer kennt: bei einer Arbeitskopie vom
                 ' Server ist das der Name auf dem Server, nicht der der Temp-Datei (Asset-Kennung
                 ' bzw. vorangestellte Dateikennung) - unter dem hätte er sein Bild sonst exportiert.
@@ -25594,6 +25594,19 @@ Namespace ViewModels
                     If Not String.IsNullOrWhiteSpace(saveAsResult.TargetFolder) Then
                         dir = MainWindowViewModel.AnchorTargetFolder(
                                   _mainVm.ExpandTargetFolderTemplate(saveAsResult.TargetFolder, templateSource, sourceFolder:=dir), dir)
+                    End If
+                    ' Feste Fotoordner: ausserhalb wird nichts gespeichert und kein Ordner angelegt.
+                    If Not FolderRoots.Allows(dir) Then
+                        Await _mainVm.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"),
+                                                       LocalizationService.T("Dieser Ort liegt außerhalb der freigegebenen Fotoordner."))
+                        Return False
+                    End If
+                    ' Im Flatpak ein Ordner, den die Sandbox nicht dauerhaft beschreiben kann: die Datei
+                    ' laege nach dem Beenden nicht mehr da (GitHub #166).
+                    Dim sandboxDenial = FlatpakSandbox.WriteDenial(dir)
+                    If sandboxDenial.Length > 0 Then
+                        Await _mainVm.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"), sandboxDenial)
+                        Return False
                     End If
                     If Not IO.Directory.Exists(dir) Then IO.Directory.CreateDirectory(dir)
                     ' Der Zaehler nimmt die erste Nummer, unter der es im Zielordner noch keine Datei

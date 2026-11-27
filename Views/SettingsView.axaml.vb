@@ -271,7 +271,7 @@ Namespace Views
             Try
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
-                Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
+                Dim files = Await FolderRootPickers.OpenFilePickerAsync(topLevel,New FilePickerOpenOptions With {
                     .Title = LocalizationService.T("Erweiterung laden"),
                     .AllowMultiple = True,
                     .FileTypeFilter = {New FilePickerFileType(LocalizationService.T("Erweiterungen")) With {.Patterns = {"*.json", "*.JSON"}}}
@@ -296,7 +296,7 @@ Namespace Views
             Try
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
-                Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
+                Dim files = Await FolderRootPickers.OpenFilePickerAsync(topLevel,New FilePickerOpenOptions With {
                     .Title = LocalizationService.T("ICC-Profil des Bildschirms wählen"),
                     .AllowMultiple = False,
                     .FileTypeFilter = {New FilePickerFileType("ICC") With {.Patterns = {"*.icc", "*.icm", "*.ICC", "*.ICM"}}}
@@ -386,7 +386,7 @@ Namespace Views
             Try
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
-                Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
+                Dim folders = Await FolderRootPickers.OpenFolderPickerAsync(topLevel,New FolderPickerOpenOptions With {
                     .Title = LocalizationService.T("Startordner der Galerie wählen"),
                     .AllowMultiple = False,
                     .SuggestedStartLocation = Await FolderPickerStart.ForPathAsync(topLevel, vm.GalleryStartupCustomFolder)
@@ -430,7 +430,7 @@ Namespace Views
             Try
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
-                Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
+                Dim folders = Await FolderRootPickers.OpenFolderPickerAsync(topLevel,New FolderPickerOpenOptions With {
                     .Title = LocalizationService.T("Zielordner wählen"),
                     .AllowMultiple = False,
                     .SuggestedStartLocation = Await FolderPickerStart.ForPathAsync(topLevel, CardImportService.FixedRootOf(row.Template))
@@ -463,7 +463,7 @@ Namespace Views
             Try
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
-                Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
+                Dim files = Await FolderRootPickers.OpenFilePickerAsync(topLevel,New FilePickerOpenOptions With {
                     .Title = LocalizationService.T("Lightroom-Katalog wählen"),
                     .AllowMultiple = False,
                     .FileTypeFilter = {New FilePickerFileType(LocalizationService.T("Lightroom-Katalog")) With {.Patterns = {"*.lrcat"}}}
@@ -481,7 +481,7 @@ Namespace Views
             Try
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return Nothing
-                Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
+                Dim files = Await FolderRootPickers.OpenFilePickerAsync(topLevel,New FilePickerOpenOptions With {
                     .Title = title,
                     .AllowMultiple = False
                 })
@@ -501,7 +501,7 @@ Namespace Views
             Try
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
-                Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
+                Dim folders = Await FolderRootPickers.OpenFolderPickerAsync(topLevel,New FolderPickerOpenOptions With {
                     .Title = LocalizationService.T("Ordner zum Indizieren wählen"),
                     .AllowMultiple = True
                 })
@@ -525,7 +525,7 @@ Namespace Views
             Try
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
-                Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
+                Dim folders = Await FolderRootPickers.OpenFolderPickerAsync(topLevel,New FolderPickerOpenOptions With {
                     .Title = LocalizationService.T("Ordner für die Daten von FerrumPix wählen"),
                     .AllowMultiple = False
                 })
@@ -548,7 +548,7 @@ Namespace Views
             Try
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
-                Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
+                Dim folders = Await FolderRootPickers.OpenFolderPickerAsync(topLevel,New FolderPickerOpenOptions With {
                     .Title = LocalizationService.T("Neuer Ort dieses Ordners"),
                     .AllowMultiple = False,
                     .SuggestedStartLocation = Await FolderPickerStart.ForPathAsync(topLevel, oldPath)

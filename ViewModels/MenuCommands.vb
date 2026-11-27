@@ -171,10 +171,16 @@ Namespace ViewModels
         Public Property Download As ICommand
 
         ''' <summary>Das Kommando fuer "Herunterladen", oder Nothing ausserhalb des Browsers. Die
-        ''' Pfade werden erst beim Klick gelesen, damit sie die Auswahl dieses Menues meinen.</summary>
-        Public Shared Function BrowserDownload(paths As Func(Of IEnumerable(Of String))) As ICommand
+        ''' Pfade werden erst beim Klick gelesen, damit sie die Auswahl dieses Menues meinen.
+        ''' <paramref name="folder"/> (nur die Galerie) kommt vorher dran und liefert True, wenn das
+        ''' Menue an einer Ordnerkachel stand und der Ordner als ZIP geht.</summary>
+        Public Shared Function BrowserDownload(paths As Func(Of IEnumerable(Of String)),
+                                               Optional folder As Func(Of Boolean) = Nothing) As ICommand
             If Not Services.BrowserBridge.IsActive OrElse paths Is Nothing Then Return Nothing
-            Return New DelegateCommand(Sub() Services.BrowserBridge.OfferDownload(paths(), startNow:=True))
+            Return New DelegateCommand(Sub()
+                                           If folder IsNot Nothing AndAlso folder() Then Return
+                                           Services.BrowserBridge.OfferDownload(paths(), startNow:=True)
+                                       End Sub)
         End Function
 
         ''' <summary>"Öffnen mit": das Kommando bekommt die Kennung des Programms als Parameter.

@@ -595,7 +595,7 @@ Namespace Views
                                     MediaFileTypes.Displayable.Where(Function(ext) Not VideoPreviewService.IsSupportedVideo("x" & ext)),
                                     InsertableImageExtensions.AsEnumerable())
                 Dim patterns = extensions.Select(Function(ext) "*" & ext).Distinct().ToList()
-                Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
+                Dim files = Await FolderRootPickers.OpenFilePickerAsync(topLevel,New FilePickerOpenOptions With {
                     .Title = title,
                     .AllowMultiple = False,
                     .FileTypeFilter = New List(Of FilePickerFileType) From {
@@ -961,7 +961,7 @@ Namespace Views
             Try
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
-                Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
+                Dim files = Await FolderRootPickers.OpenFilePickerAsync(topLevel,New FilePickerOpenOptions With {
                     .Title = LocalizationService.T("XMP-Preset laden"),
                     .AllowMultiple = False,
                     .FileTypeFilter = New List(Of FilePickerFileType) From {

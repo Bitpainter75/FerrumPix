@@ -67,6 +67,10 @@ Module Program
             consoleProgress?.Finish()
         End If
 
+        ' Feste Fotoordner (im Behaelter /photos): vor allem, was einen Ordner zeigt oder Dateiarbeit
+        ' erlaubt. Ohne Angabe bleibt alles, wie es ist. Siehe FolderRoots.
+        FolderRoots.Configure(args)
+
         ' Der Riegel gegen die Telemetrie der Modelllaufzeit. Er wirkt nur, solange noch keine
         ' ORT-Umgebung entstanden ist, deshalb steht er hier und nicht dort, wo die Laufzeit zum
         ' ersten Mal gebraucht wird. Begruendung und Messung stehen bei
@@ -250,7 +254,8 @@ Module Program
         End Try
     End Sub
 
-    ''' <summary>Die Argumente ohne den Protokollschalter.
+    ''' <summary>Die Argumente ohne den Protokollschalter, die Schalter der Bruecke und die festen
+    ''' Fotoordner.
     '''
     ''' Er darf NICHT durchgereicht werden: die Anwendung nimmt das erste Argument als zu oeffnendes
     ''' Bild bzw. als Ordner (siehe App.axaml.vb). Stuende der Schalter davor, waere er ein Pfad, den
@@ -259,7 +264,8 @@ Module Program
     Friend Function ForwardedArguments(args As String()) As String()
         If args Is Nothing Then Return Array.Empty(Of String)()
         Return args.Where(Function(a) Not String.Equals(a, DebugSwitch, StringComparison.OrdinalIgnoreCase) AndAlso
-                                      Not BrowserBridge.IsOwnArgument(a)).ToArray()
+                                      Not BrowserBridge.IsOwnArgument(a) AndAlso
+                                      Not FolderRoots.IsOwnArgument(a)).ToArray()
     End Function
 
     ''' <summary>Was auf diesem Rechner laeuft - eine Zeile, die in einen Fehlerbericht passt.
@@ -324,7 +330,8 @@ Module Program
     ''' Der des Toolkits ist ein gewoehnliches Fenster und erscheint damit auch im Browser.</para>
     '''
     ''' <para>Die Bruecke startet ueber AfterSetup, also sobald das Toolkit steht und bevor das
-    ''' erste Fenster entsteht.</para></summary>
+    ''' erste Fenster entsteht. Ebenda haengt sich der Waechter der festen Fotoordner an den
+    ''' Dateiwaehler des Toolkits (FolderRootPickers.InstallChooserGuard).</para></summary>
     Function BuildBrowserApp(args As String()) As AppBuilder
         Return AppBuilder.Configure(Of App)().
             UseSkia().
@@ -334,7 +341,10 @@ Module Program
             UseManagedSystemDialogs().
             UseReactiveUI(AddressOf ConfigureReactiveUI).
             LogToTrace().
-            AfterSetup(Sub(appBuilder) BrowserBridge.Start(args))
+            AfterSetup(Sub(appBuilder)
+                           BrowserBridge.Start(args)
+                           Views.FolderRootPickers.InstallChooserGuard()
+                       End Sub)
     End Function
 
     ''' <summary>Die gewählte Reihenfolge der Zeichenwege, oder Nothing für die des Toolkits.

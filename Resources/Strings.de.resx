@@ -13065,6 +13065,15 @@
   <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
     <value>Zum Herunterladen bereit: {0}</value>
   </data>
+  <data name="Ordner_herunterladen_570e5004" xml:space="preserve">
+    <value>Ordner herunterladen?</value>
+  </data>
+  <data name="In_diesem_Ordner_liegen_keine_Dateien_zum_Herunt_d6ca04dd" xml:space="preserve">
+    <value>In diesem Ordner liegen keine Dateien zum Herunterladen: {0}</value>
+  </data>
+  <data name="Der_Ordner_0_enth_lt_mindestens_1_Dateien_mit_zu_a02dc3c0" xml:space="preserve">
+    <value>Der Ordner {0} enthält mindestens {1} Dateien mit zusammen {2}. Er wird als ein ZIP heruntergeladen, das kann lange dauern.</value>
+  </data>
   <data name="Auswahl_herunterladen_26b74c13" xml:space="preserve">
     <value>Auswahl herunterladen</value>
   </data>
@@ -13076,5 +13085,29 @@
   </data>
   <data name="Alle_Orte_des_Katalogs_zeigen_c19f79e6" xml:space="preserve">
     <value>Alle Orte des Katalogs zeigen</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_der_freigegebenen_08eca675" xml:space="preserve">
+    <value>Diese Dateien liegen außerhalb der freigegebenen Fotoordner. FerrumPix löscht dort nichts.</value>
+  </data>
+  <data name="Dieser_Ort_liegt_au_erhalb_der_freigegebenen_Fot_c80bd514" xml:space="preserve">
+    <value>Dieser Ort liegt außerhalb der freigegebenen Fotoordner.</value>
+  </data>
+  <data name="0_Bild_er_bersprungen_ihr_Ziel_liegt_au_erhalb_d_d7f45e81" xml:space="preserve">
+    <value>{0} Bild(er) übersprungen: ihr Ziel liegt außerhalb der freigegebenen Fotoordner.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Der__80328781" xml:space="preserve">
+    <value>Beim Start sind feste Fotoordner festgelegt. Der Datenordner bleibt deshalb an seinem Ort.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Date_ad688b7f" xml:space="preserve">
+    <value>Beim Start sind feste Fotoordner festgelegt. Dateioperationen sind genau dort erlaubt, dieser Schalter wirkt nicht.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_42180b80" xml:space="preserve">
+    <value>Der Ordner {0} ist für FerrumPix als Flatpak nicht freigegeben. Was dort liegt, wäre nach dem Beenden verloren. Bitte einen Ordner unter Bilder oder auf einem eingehängten Laufwerk wählen oder den Ordner dauerhaft freigeben, mit Flatseal oder im Terminal mit {1} und danach FerrumPix neu starten.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_5a107e88" xml:space="preserve">
+    <value>Der Ordner {0} ist für FerrumPix als Flatpak nicht freigegeben. Was dort angelegt wird, liegt nur in der Sandbox und ist nach dem Beenden verloren, deshalb schreibt FerrumPix dort nichts. Abhilfe: den Ordner über die Ordnerauswahl wählen, einen Ordner unter Bilder nehmen oder den Ordner dauerhaft freigeben, mit Flatseal oder im Terminal mit {1} und danach FerrumPix neu starten.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nur_z_a9f4527b" xml:space="preserve">
+    <value>Der Ordner {0} ist für FerrumPix als Flatpak nur zum Lesen freigegeben, schreiben lässt sich dort nicht. Abhilfe: einen anderen Ordner wählen oder die Freigabe erweitern, mit Flatseal oder im Terminal mit {1} und danach FerrumPix neu starten.</value>
   </data>
 </root>

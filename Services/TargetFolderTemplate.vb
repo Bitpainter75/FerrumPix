@@ -43,9 +43,9 @@ Namespace Services
             Dim fixedParts As New List(Of String)()
             For Each part In Segments(text)
                 If part = "{pictures}" Then
-                    fixedParts.Add(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures))
+                    fixedParts.Add(FolderRoots.PicturesFolder())
                 ElseIf part = "{home}" Then
-                    fixedParts.Add(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))
+                    fixedParts.Add(FolderRoots.HomeFolder())
                 ElseIf part.Contains("{"c) Then
                     Exit For
                 Else

@@ -149,6 +149,12 @@ Namespace ViewModels
         Private _collagePreviewRequestId As Integer
         Private ReadOnly _collagePreviewTimer As DispatcherTimer
         Private ReadOnly _searchDebounceTimer As DispatcherTimer
+        ''' <summary>Wartezeit des Suchfelds, wenn es nur die sichtbare Liste siebt.</summary>
+        Friend Const ListSearchDebounceMs As Integer = 150
+        ''' <summary>Wartezeit des Suchfelds im Umfang Katalog. Dort startet der Text einen Suchlauf
+        ''' ueber den ganzen Bestand; 150 ms sind kuerzer als die Pause zwischen zwei Tasten beim
+        ''' normalen Tippen, und jede Pause startete eine neue Suche.</summary>
+        Friend Const CatalogSearchDebounceMs As Integer = 400
         ''' <summary>Drosselt FilterAndSort, solange eine Suchansicht stapelweise gefuellt wird
         ''' (RequestFilterAndSortDuringFill). Ohne sie sortierte jeder Stapel den ganzen bisherigen
         ''' Bestand neu: gemessen 556 Laeufe und 15 s auf dem Anzeigefaden fuer 100000 Treffer.</summary>
@@ -204,6 +210,10 @@ Namespace ViewModels
                 Return _currentFolder
             End Get
             Set(value As String)
+                ' Mit festen Fotoordnern landet jeder Weg dorthin, der einen Ordner ausserhalb
+                ' oeffnen wuerde (Favorit, zuletzt geoeffneter Ordner, Startordner, Verlauf), in der
+                ' ersten Wurzel. Siehe FolderRoots.
+                If FolderRoots.IsLocalFolderPath(value) Then value = FolderRoots.ClampToRoots(value)
                 If String.Equals(_currentFolder, value, PathIdentity.Comparison) Then Return
                 Me.RaiseAndSetIfChanged(_currentFolder, value)
                 Me.RaisePropertyChanged(NameOf(CurrentFolderName))
@@ -240,6 +250,8 @@ Namespace ViewModels
                 If String.IsNullOrEmpty(self) Then Return ""
                 Dim parent = IO.Path.GetDirectoryName(self)
                 If String.IsNullOrEmpty(parent) Then Return ""
+                ' Ueber einen festen Fotoordner hinaus geht es nicht nach oben.
+                If Not FolderRoots.Allows(parent) Then Return ""
                 Return IO.Path.GetFileName(parent.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
             End Get
         End Property
@@ -654,6 +666,12 @@ Namespace ViewModels
                     ' in den Ordner oder, bei weiterer Knopfauswahl, deren Knoten ohne Text.
                     If _catalogTextQuery.Length > 0 Then ApplyButtonFilters() Else FilterAndSort()
                 Else
+                    ' Eine Katalogsuche ist ein ganzer Suchlauf ueber den Bestand, kein Sieben der
+                    ' Liste: sie wartet laenger, damit ein getipptes Wort EINE Suche ausloest und
+                    ' nicht eine je Buchstabe. Jeder weitere Tastendruck startet die Frist neu.
+                    _searchDebounceTimer.Interval = TimeSpan.FromMilliseconds(
+                        If(UsesCatalogTextSearch() OrElse _catalogTextQuery.Length > 0,
+                           CatalogSearchDebounceMs, ListSearchDebounceMs))
                     _searchDebounceTimer.Start()
                 End If
             End Set
@@ -2613,7 +2631,7 @@ Namespace ViewModels
             ' schob ihn in die gebundene Sammlung. Bei ein paar tausend Fotos ist jeder Buchstabe ein
             ' vollständiger Neuaufbau der Ansicht. 150 ms sind kurz genug, um beim Tippen nicht zu stören,
             ' und lang genug, damit eine zügig getippte Eingabe nur EINEN Filterlauf auslöst.
-            _searchDebounceTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(150)}
+            _searchDebounceTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(ListSearchDebounceMs)}
             AddHandler _searchDebounceTimer.Tick, Sub()
                                                        _searchDebounceTimer.Stop()
                                                        ' Im Umfang "ganzer Katalog" ist der Text eine
@@ -3954,6 +3972,22 @@ Namespace ViewModels
         End Property
 
         Private Sub InitializeFolderTree()
+            ' FESTE FOTOORDNER (FolderRoots, im Behaelter /photos): nur sie stehen im Baum, je Wurzel
+            ' ein Knoten mit ihren Unterordnern. Kein persoenlicher Ordner, keine Wurzel des
+            ' Dateisystems, keine Laufwerke und keine ueberwachten Ordner daneben.
+            If FolderRoots.IsActive Then
+                For Each root In FolderRoots.Roots
+                    If Not Directory.Exists(root) Then Continue For
+                    Dim name = IO.Path.GetFileName(root)
+                    Dim rootNode = New FolderNode(If(String.IsNullOrEmpty(name), root, name), root)
+                    FolderTree.Add(rootNode)
+                    rootNode.EnsureChildrenLoaded()
+                    rootNode.IsExpanded = True
+                Next
+                _initialFolderNode = FolderTree.FirstOrDefault()
+                Return
+            End If
+
             Dim homePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
             Dim homeNode As FolderNode = Nothing
             If Directory.Exists(homePath) Then
@@ -4047,7 +4081,9 @@ Namespace ViewModels
                 End Sub
 
             Try
-                For Each watched In AppSettingsService.Load().CatalogWatchFolders
+                ' Mit festen Fotoordnern bleibt der Baum bei ihnen; die Liste bleibt leer, und was
+                ' von frueher als eigene Wurzel steht, faellt unten weg.
+                For Each watched In If(FolderRoots.IsActive, New List(Of String)(), AppSettingsService.Load().CatalogWatchFolders)
                     Merken(watched)
                 Next
             Catch ex As Exception
@@ -4103,6 +4139,9 @@ Namespace ViewModels
             _savedSearches.Clear()
             _savedSearches.AddRange(SearchListService.Load())
             For Each search In _savedSearches
+                ' Eine Suche ueber einen Ordner ausserhalb der festen Fotoordner bleibt gespeichert,
+                ' steht aber nicht im Baum (FolderRoots).
+                If FolderRoots.IsLocalFolderPath(search.RootFolder) AndAlso Not FolderRoots.Allows(search.RootFolder) Then Continue For
                 SearchTreeForSource(search.Source).Add(CreateSavedSearchNode(search))
             Next
             RefreshFavorites()
@@ -4323,6 +4362,9 @@ Namespace ViewModels
                         .FavoriteKey = fav.Key
                     }
                 Case Else
+                    ' Ein Ordner ausserhalb der festen Fotoordner bleibt in der Liste gespeichert,
+                    ' wird aber nicht gezeigt (FolderRoots).
+                    If Not FolderRoots.Allows(fav.Path) Then Return Nothing
                     If Not IO.Directory.Exists(fav.Path) Then
                         Return New VirtualNavigationNode(fav.Name, "FavoriteMissing") With {.FavoriteKey = fav.Key, .IsRemovable = True}
                     End If
@@ -5733,7 +5775,7 @@ Namespace ViewModels
         End Sub
 
         Private Sub NavigateToPicturesFolder()
-            Dim picturesPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
+            Dim picturesPath = FolderRoots.PicturesFolder()
             If String.IsNullOrEmpty(picturesPath) OrElse Not Directory.Exists(picturesPath) Then Return
 
             Dim node = FindFolderNode(FolderTree, picturesPath)
@@ -9951,7 +9993,7 @@ Namespace ViewModels
 
         ' --- Laufende Vorgaenge in der Werkzeugleiste -------------------------------------------
         '
-        ' EINE Stelle fuer ALLE Laeufe, an der Stelle des Suchfelds: der Katalogindex, die
+        ' EINE Stelle fuer ALLE Laeufe, neben dem Suchfeld (das nie weicht): der Katalogindex, die
         ' Gesichtssuche ueber die ueberwachten Ordner, die Gesichtssuche ueber die angezeigten
         ' Bilder und eine laufende Suchliste. Vorher zeigten die ersten beiden hier und die dritte
         ' unten in der Fusszeile, die Suchliste gar nicht - drei Orte fuer dieselbe Aussage, und der
@@ -9971,8 +10013,9 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Laeuft ueberhaupt etwas? Traegt die Anzeige und blendet solange das Suchfeld
-        ''' aus.</summary>
+        ''' <summary>Laeuft ueberhaupt etwas? Traegt die Anzeige NEBEN dem Suchfeld. Das Feld selbst
+        ''' haengt nicht daran: ein ausgeblendetes Feld verliert den Fokus, und im Umfang Katalog
+        ''' startet schon das Tippen einen Lauf.</summary>
         Public ReadOnly Property HasBackgroundRuns As Boolean
             Get
                 Return _backgroundRuns.Count > 0
@@ -10315,6 +10358,9 @@ Namespace ViewModels
         ''' inzwischen aktuelle Ordner geprüft.
         ''' </summary>
         Public Async Function LoadFolderImagesAsync(folderPath As String) As Task
+            ' Mit festen Fotoordnern wird nichts ausserhalb geladen, gleich auf welchem Weg der
+            ' Ordner kam; die Wurzel tritt an seine Stelle (wie im Setter von CurrentFolder).
+            If FolderRoots.IsLocalFolderPath(folderPath) Then folderPath = FolderRoots.ClampToRoots(folderPath)
             CancelActiveSearch()
             ClearVirtualFolderState()
             Dim thumbnailToken = BeginNewFolderThumbnailScope()
@@ -10617,7 +10663,9 @@ Namespace ViewModels
 
             If _showParentFolder Then
                 Dim parentPath = IO.Path.GetDirectoryName(folderPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
-                If Not String.IsNullOrEmpty(parentPath) AndAlso Not IsAncestorOrSelf(folderPath, parentPath) AndAlso Directory.Exists(parentPath) Then
+                ' Kein ".." ueber einen festen Fotoordner hinaus (FolderRoots).
+                If Not String.IsNullOrEmpty(parentPath) AndAlso Not IsAncestorOrSelf(folderPath, parentPath) AndAlso
+                   FolderRoots.Allows(parentPath) AndAlso Directory.Exists(parentPath) Then
                     entries.Add(ImageItem.CreateParentFolderEntry(parentPath))
                 End If
             End If
@@ -11131,7 +11179,8 @@ Namespace ViewModels
             If showFolders Then
                 If showParentFolder Then
                     Dim parentPath = IO.Path.GetDirectoryName(folderPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
-                    If Not String.IsNullOrEmpty(parentPath) AndAlso Not IsAncestorOrSelf(folderPath, parentPath) AndAlso Directory.Exists(parentPath) Then
+                    If Not String.IsNullOrEmpty(parentPath) AndAlso Not IsAncestorOrSelf(folderPath, parentPath) AndAlso
+                       FolderRoots.Allows(parentPath) AndAlso Directory.Exists(parentPath) Then
                         rebuilt.Add(If(keepParent, ImageItem.CreateParentFolderEntry(parentPath)))
                     End If
                 End If
@@ -14703,7 +14752,10 @@ Namespace ViewModels
         Public Async Function PasteIntoFolderAsync(targetFolder As String) As Task
             If IsVirtualFolderPath(targetFolder) Then Return
             If String.IsNullOrEmpty(targetFolder) OrElse Not Directory.Exists(targetFolder) OrElse _clipboardPaths.Count = 0 Then Return
-            If Not FileOperationPolicy.CanPasteInto(targetFolder) Then Return
+            If Not FileOperationPolicy.CanPasteInto(targetFolder) Then
+                Await RejectSandboxTargetAsync(targetFolder)
+                Return
+            End If
             Await PastePathsIntoFolderAsync(_clipboardPaths.ToList(), targetFolder, _clipboardCut)
             If _clipboardCut Then _clipboardPaths.Clear()
         End Function
@@ -14715,7 +14767,10 @@ Namespace ViewModels
         Public Async Function PastePathsIntoFolderAsync(paths As IEnumerable(Of String), targetFolder As String, Optional cut As Boolean = False) As Task
             If IsVirtualFolderPath(targetFolder) Then Return
             If paths Is Nothing OrElse String.IsNullOrEmpty(targetFolder) OrElse Not Directory.Exists(targetFolder) Then Return
-            If Not FileOperationPolicy.CanPasteInto(targetFolder) Then Return
+            If Not FileOperationPolicy.CanPasteInto(targetFolder) Then
+                Await RejectSandboxTargetAsync(targetFolder)
+                Return
+            End If
             ' Serverelemente (Pseudo-Pfade) werden nicht dateikopiert, sondern als Originale in den
             ' Zielordner heruntergeladen - beide Server. Die restliche (lokale) Kopierlogik ignoriert
             ' Pseudo-Pfade ohnehin (File.Exists).
@@ -16985,7 +17040,14 @@ Namespace ViewModels
         ''' Ordner und wird hier nicht angelegt, sonst entstuende er im Arbeitsverzeichnis.</summary>
         Private Shared Sub CreateTargetRoot(targetFolder As String)
             Dim root = TargetFolderTemplate.FixedRoot(targetFolder)
-            If root.Length > 0 AndAlso Path.IsPathRooted(root) Then Directory.CreateDirectory(root)
+            ' Im Flatpak ein Ziel, das nach dem Beenden verschwaende: der Stapel bricht mit der
+            ' Meldung ab, bevor irgendetwas entsteht (GitHub #166). Die Aufrufer zeigen sie an.
+            Dim sandboxDenial = FlatpakSandbox.WriteDenial(root)
+            If sandboxDenial.Length > 0 Then Throw New IOException(sandboxDenial)
+            ' Ausserhalb der festen Fotoordner entsteht nichts; die Ziele je Bild weist
+            ' ResolveBatchTargetsAsync mit Meldung ab. Der Ordner fuer "Herunterladen" ist ausgenommen.
+            If root.Length > 0 AndAlso Path.IsPathRooted(root) AndAlso
+               (FolderRoots.Allows(root) OrElse BrowserBridge.IsOwnDownloadFolder(root)) Then Directory.CreateDirectory(root)
         End Sub
 
         ''' <summary>Die Ziele eines Stapels VOR dem Schreiben festlegen und dabei jeden Konflikt
@@ -17019,7 +17081,9 @@ Namespace ViewModels
             Dim sourceList = If(sources, Enumerable.Empty(Of String)()).Where(Function(s) Not String.IsNullOrEmpty(s)).ToList()
             Dim sourceFiles As New HashSet(Of String)(sourceList.Select(Function(s) NormalizePath(VariantKey.FileOf(s))),
                                                       StringComparer.OrdinalIgnoreCase)
-            Dim pictures = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
+            Dim pictures = FolderRoots.PicturesFolder()
+            Dim outsideRoots = 0
+            Dim firstNotShared = ""
             For Each source In sourceList
                 ' Eine Ordnervorlage (GitHub #102) gilt je Bild: "{folder}/export" legt den Unterordner
                 ' neben JEDEM Bild an, auch wenn die Auswahl aus mehreren Ordnern stammt. Ohne
@@ -17030,6 +17094,20 @@ Namespace ViewModels
                 Dim sourceFolder = If(remoteSources, pictures, If(Path.GetDirectoryName(sourceFile), ""))
                 Dim folderForSource = MainWindowViewModel.AnchorTargetFolder(
                     _mainVm.ExpandTargetFolderTemplate(targetFolder, sourceFile, sourceFolder), sourceFolder)
+                ' Feste Fotoordner: ein Ziel ausserhalb (eingetippt, gemerkt, {home} von frueher)
+                ' bekommt nichts, auch keinen angelegten Ordner. Das Ziel "Herunterladen" liegt im
+                ' Datenordner und ist ausgenommen.
+                If Not FolderRoots.Allows(folderForSource) AndAlso Not BrowserBridge.IsOwnDownloadFolder(folderForSource) Then
+                    outsideRoots += 1
+                    Continue For
+                End If
+                ' Im Flatpak ein Ziel, das die Sandbox nicht dauerhaft beschreiben kann ("{folder}/x"
+                ' neben einem Bild in einem nur lesbar freigegebenen Ordner etwa): uebersprungen, und
+                ' die Meldung nennt den ersten solchen Ordner (GitHub #166).
+                If Not FlatpakSandbox.IsPersistentWriteTarget(folderForSource) Then
+                    If firstNotShared.Length = 0 Then firstNotShared = folderForSource
+                    Continue For
+                End If
                 If Not Directory.Exists(folderForSource) Then Directory.CreateDirectory(folderForSource)
                 Dim target = CreateBatchTargetFolderPath(source, folderForSource, outputExtension(source),
                                                          nameSuffix, nameBuilder, makeUnique:=False)
@@ -17056,6 +17134,13 @@ Namespace ViewModels
                 claimed.Add(NormalizePath(target))
                 pairs.Add(New KeyValuePair(Of String, String)(source, target))
             Next
+            If outsideRoots > 0 Then
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Ort nicht verwendbar"),
+                    String.Format(LocalizationService.T("{0} Bild(er) übersprungen: ihr Ziel liegt außerhalb der freigegebenen Fotoordner."), outsideRoots))
+            End If
+            If firstNotShared.Length > 0 Then
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Ort nicht verwendbar"), FlatpakSandbox.WriteDenial(firstNotShared))
+            End If
             Return pairs
         End Function
 
@@ -17958,10 +18043,24 @@ Namespace ViewModels
             If saveToImmich AndAlso uploadedAssetIds.Count > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
         End Function
 
+        ''' <summary>Sagt, warum ein Zielordner im Flatpak abgewiesen ist, wenn das der Grund ist
+        ''' (<see cref="FlatpakSandbox"/>), und gibt dann True. Die uebrigen Gruende einer Sperre
+        ''' bleiben ohne Meldung wie bisher; dort ist schon das Menue grau.</summary>
+        Private Async Function RejectSandboxTargetAsync(targetFolder As String) As Task(Of Boolean)
+            Dim denial = FlatpakSandbox.WriteDenial(targetFolder)
+            If denial.Length = 0 Then Return False
+            Await _mainVm.ShowMessageAsync(LocalizationService.T("Ort nicht verwendbar"), denial)
+            Return True
+        End Function
+
         Public Async Function MovePathsToFolderAsync(paths As IEnumerable(Of String), targetFolder As String) As Task
             If IsVirtualFolderPath(targetFolder) Then Return
             If paths Is Nothing OrElse String.IsNullOrEmpty(targetFolder) OrElse Not Directory.Exists(targetFolder) Then Return
-            If Not FileOperationPolicy.CanPasteInto(targetFolder) Then Return
+            If Not FileOperationPolicy.CanPasteInto(targetFolder) Then
+                ' Verschieben in ein Ziel, das nach dem Beenden verschwaende, nahm auch die Quelle mit.
+                Await RejectSandboxTargetAsync(targetFolder)
+                Return
+            End If
             _conflictBatchDecision = Nothing
             Dim errorMessage As String = Nothing
             Dim sourcePaths As List(Of String) = Nothing

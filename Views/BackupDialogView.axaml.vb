@@ -30,7 +30,7 @@ Namespace Views
                 Dim startFolder = IO.Path.GetDirectoryName(vm.DialogBackupPath)
                 Dim start = Await FolderPickerStart.ForPathAsync(topLevel, startFolder)
                 If vm.DialogShowsBackup Then
-                    Dim file = Await topLevel.StorageProvider.SaveFilePickerAsync(New FilePickerSaveOptions With {
+                    Dim file = Await FolderRootPickers.SaveFilePickerAsync(topLevel,New FilePickerSaveOptions With {
                         .Title = LocalizationService.T("Sicherung speichern unter"),
                         .SuggestedFileName = IO.Path.GetFileName(vm.DialogBackupPath),
                         .DefaultExtension = "zip",
@@ -40,7 +40,7 @@ Namespace Views
                     Dim path = file?.Path.LocalPath
                     If Not String.IsNullOrWhiteSpace(path) Then vm.DialogBackupPath = path
                 Else
-                    Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
+                    Dim files = Await FolderRootPickers.OpenFilePickerAsync(topLevel,New FilePickerOpenOptions With {
                         .Title = LocalizationService.T("Sicherung wählen"),
                         .AllowMultiple = False,
                         .FileTypeFilter = {zipType},

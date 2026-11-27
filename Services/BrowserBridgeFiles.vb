@@ -131,6 +131,10 @@ Namespace Services
             ''' ihm: nach dem fertigen Download, beim Ablauf, beim Verdraengen. Nothing bei einem
             ''' Angebot von Dateien aus dem Bestand.</summary>
             Public OwnedFolder As String
+            ''' <summary>Gesetzt bei "Herunterladen" an einem Ordner (BrowserBridgeFolderDownload.vb):
+            ''' das ZIP entsteht aus dem Inhalt dieses Ordners, wie er bei der Auslieferung ist,
+            ''' Paths bleibt leer. Der Ordner gehoert NICHT dem Angebot und wird nie geloescht.</summary>
+            Public Folder As String
             ''' <summary>Wie viele Auslieferungen gerade laufen. Solange es eine gibt, bleibt der
             ''' eigene Ordner liegen, auch wenn das Angebot schon weg ist; die letzte nimmt ihn mit.
             ''' Gelesen und geschrieben nur unter der Sperre von Offers.</summary>
@@ -230,6 +234,10 @@ Namespace Services
         ''' die Seite ist dann schon geschrieben).</summary>
         Private Shared Async Function ReceiveUploadAsync(context As HttpListenerContext, fileName As String, batch As String) As Task(Of String)
             Dim request = context.Request
+            ' Erst als "nicht angekommen" vermerken: jede Abweisung unten schreibt ihre Antwort, bevor
+            ' der Aufrufer vermerkt, und eine gleich danach geschickte Beistelldatei saehe ihr Bild
+            ' sonst gar nicht. Angekommen traegt es kurz vor der Antwort seinen Namen.
+            If Not IsSidecarName(fileName) Then RememberBatchImage(batch, fileName, Nothing)
             Dim length = request.ContentLength64
             If length < 0 Then
                 context.Response.StatusCode = 411
@@ -335,6 +343,10 @@ Namespace Services
                 Dim stored = UploadStored
                 If stored IsNot Nothing Then Dispatcher.UIThread.Post(Sub() stored(finalPath))
             End If
+            ' VOR der Antwort vermerken: die Seite schickt die Beistelldatei, sobald die Antwort da
+            ' ist, und faende das Bild sonst noch nicht im Ablegen (der Vermerk im Finally des
+            ' Aufrufers kaeme zu spaet; er bleibt fuer Ausnahmen).
+            If Not IsSidecarName(fileName) Then RememberBatchImage(batch, fileName, Path.GetFileName(finalPath))
             Await WriteResultAsync(context, 200, Path.GetFileName(finalPath), Nothing)
             Return finalPath
         End Function
@@ -642,21 +654,24 @@ Namespace Services
             If _listener Is Nothing OrElse paths Is Nothing Then Return Nothing
             Dim files = paths.Where(Function(p) Not String.IsNullOrEmpty(p)).
                               Select(Function(p) VariantKey.FileOf(p)).
-                              Where(Function(p) File.Exists(p) AndAlso FileOperationPolicy.CanCopy(p)).
+                              Where(Function(p) File.Exists(p) AndAlso FileOperationPolicy.CanDownload(p)).
                               Distinct(PathIdentity.Comparer).ToList()
             Return RegisterOffer(files, startNow, Nothing)
         End Function
 
         ''' <summary>Legt das Angebot an und schickt es der Seite. Abgelaufene und verdraengte
         ''' Angebote fallen dabei weg, samt ihrem eigenen Ordner.</summary>
-        Private Shared Function RegisterOffer(files As List(Of String), startNow As Boolean, ownedFolder As String) As String
-            If files Is Nothing OrElse files.Count = 0 Then Return Nothing
+        Private Shared Function RegisterOffer(files As List(Of String), startNow As Boolean, ownedFolder As String,
+                                              Optional folder As String = Nothing) As String
+            If files Is Nothing OrElse (files.Count = 0 AndAlso folder Is Nothing) Then Return Nothing
             Dim offer As New DownloadOffer With {
                 .Paths = files,
                 .Created = DateTime.UtcNow,
                 .OwnedFolder = ownedFolder,
-                .FileName = If(files.Count = 1, Path.GetFileName(files(0)),
-                               $"FerrumPix_{DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}_{files.Count.ToString(CultureInfo.InvariantCulture)}.zip")}
+                .Folder = folder,
+                .FileName = If(folder IsNot Nothing, FolderDisplayName(folder) & ".zip",
+                            If(files.Count = 1, Path.GetFileName(files(0)),
+                               $"FerrumPix_{DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}_{files.Count.ToString(CultureInfo.InvariantCulture)}.zip"))}
             Dim id = Convert.ToHexString(RandomNumberGenerator.GetBytes(16))
             Dim dropped As New List(Of String)()
             SyncLock Offers
@@ -720,7 +735,7 @@ Namespace Services
             Try
                 response.Headers("Cache-Control") = "no-store"
                 response.Headers("Content-Disposition") = ContentDisposition(offer.FileName)
-                If offer.Paths.Count = 1 Then
+                If offer.Folder Is Nothing AndAlso offer.Paths.Count = 1 Then
                     Dim source = offer.Paths(0)
                     Using stream As New FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 16, FileOptions.Asynchronous Or FileOptions.SequentialScan)
                         response.ContentType = "application/octet-stream"
@@ -728,7 +743,11 @@ Namespace Services
                         Await stream.CopyToAsync(response.OutputStream, 1024 * 1024)
                     End Using
                 Else
-                    Dim entries = PlanDownloadEntries(offer.Paths)
+                    ' Ein Ordner wird erst jetzt gelesen, im Hintergrund: so, wie er beim Abruf ist.
+                    Dim folder = offer.Folder
+                    Dim entries = If(folder IsNot Nothing,
+                                     Await Task.Run(Function() PlanFolderDownloadEntries(folder)),
+                                     PlanDownloadEntries(offer.Paths))
                     response.ContentType = "application/zip"
                     response.ContentLength64 = StreamingZipWriter.TotalLength(entries)
                     Await StreamingZipWriter.WriteAsync(response.OutputStream, entries)

@@ -13087,6 +13087,15 @@
   <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
     <value>Připraveno ke stažení: {0}</value>
   </data>
+  <data name="Ordner_herunterladen_570e5004" xml:space="preserve">
+    <value>Stáhnout složku?</value>
+  </data>
+  <data name="In_diesem_Ordner_liegen_keine_Dateien_zum_Herunt_d6ca04dd" xml:space="preserve">
+    <value>V této složce nejsou žádné soubory ke stažení: {0}</value>
+  </data>
+  <data name="Der_Ordner_0_enth_lt_mindestens_1_Dateien_mit_zu_a02dc3c0" xml:space="preserve">
+    <value>Složka {0} obsahuje nejméně {1} souborů o celkové velikosti {2}. Stáhne se jako jeden ZIP, což může trvat dlouho.</value>
+  </data>
   <data name="Auswahl_herunterladen_26b74c13" xml:space="preserve">
     <value>Stáhnout výběr</value>
   </data>
@@ -13098,5 +13107,29 @@
   </data>
   <data name="Alle_Orte_des_Katalogs_zeigen_c19f79e6" xml:space="preserve">
     <value>Zobrazit všechna místa katalogu</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_der_freigegebenen_08eca675" xml:space="preserve">
+    <value>Tyto soubory leží mimo sdílené složky s fotkami. FerrumPix tam nic nemaže.</value>
+  </data>
+  <data name="Dieser_Ort_liegt_au_erhalb_der_freigegebenen_Fot_c80bd514" xml:space="preserve">
+    <value>Toto místo leží mimo sdílené složky s fotkami.</value>
+  </data>
+  <data name="0_Bild_er_bersprungen_ihr_Ziel_liegt_au_erhalb_d_d7f45e81" xml:space="preserve">
+    <value>Přeskočené obrázky: {0}. Cíl leží mimo sdílené složky s fotkami.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Der__80328781" xml:space="preserve">
+    <value>Při spuštění byly určeny pevné složky s fotkami. Datová složka proto zůstává na svém místě.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Date_ad688b7f" xml:space="preserve">
+    <value>Při spuštění byly určeny pevné složky s fotkami. Operace se soubory jsou povoleny právě tam; tento přepínač nemá vliv.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_42180b80" xml:space="preserve">
+    <value>Složka {0} není pro FerrumPix jako Flatpak sdílena. Co by v ní bylo, by se po ukončení FerrumPix ztratilo. Vyberte složku v Obrázcích nebo na připojeném disku, nebo složku trvale sdílejte pomocí Flatseal nebo v terminálu příkazem {1} a potom FerrumPix spusťte znovu.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_5a107e88" xml:space="preserve">
+    <value>Složka {0} není pro FerrumPix jako Flatpak sdílena. Co se v ní vytvoří, existuje jen v sandboxu a po ukončení FerrumPix se ztratí, proto do ní FerrumPix nic nezapisuje. Řešení: vyberte složku přes výběr složky, použijte složku v Obrázcích nebo složku trvale sdílejte pomocí Flatseal nebo v terminálu příkazem {1} a potom FerrumPix spusťte znovu.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nur_z_a9f4527b" xml:space="preserve">
+    <value>Složka {0} je pro FerrumPix jako Flatpak sdílena jen pro čtení, zapisovat do ní nelze. Řešení: vyberte jinou složku nebo rozšiřte oprávnění pomocí Flatseal nebo v terminálu příkazem {1} a potom FerrumPix spusťte znovu.</value>
   </data>
 </root>

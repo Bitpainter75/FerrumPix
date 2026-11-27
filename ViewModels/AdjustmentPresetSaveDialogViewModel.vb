@@ -515,10 +515,11 @@ Namespace ViewModels
         ''' <summary>Der Ordner fuer XMP und LUT: der zuletzt benutzte, sonst der Bilderordner,
         ''' sonst der Benutzerordner.</summary>
         Private Shared Function DefaultExportFolder(lastFolder As String) As String
-            If Not String.IsNullOrWhiteSpace(lastFolder) Then Return lastFolder
-            Dim pictures = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
+            ' Mit festen Fotoordnern die erste Wurzel statt eines Orts ausserhalb (FolderRoots).
+            If Not String.IsNullOrWhiteSpace(lastFolder) AndAlso FolderRoots.Allows(lastFolder) Then Return lastFolder
+            Dim pictures = FolderRoots.PicturesFolder()
             If Not String.IsNullOrWhiteSpace(pictures) Then Return pictures
-            Return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+            Return FolderRoots.HomeFolder()
         End Function
 
         ''' <summary>Der Name als Dateiname: Zeichen, die kein Dateisystem traegt, werden zum

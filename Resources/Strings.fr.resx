@@ -13047,6 +13047,15 @@
   <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
     <value>Prêt à télécharger : {0}</value>
   </data>
+  <data name="Ordner_herunterladen_570e5004" xml:space="preserve">
+    <value>Télécharger le dossier ?</value>
+  </data>
+  <data name="In_diesem_Ordner_liegen_keine_Dateien_zum_Herunt_d6ca04dd" xml:space="preserve">
+    <value>Ce dossier ne contient aucun fichier à télécharger : {0}</value>
+  </data>
+  <data name="Der_Ordner_0_enth_lt_mindestens_1_Dateien_mit_zu_a02dc3c0" xml:space="preserve">
+    <value>Le dossier {0} contient au moins {1} fichiers pour un total de {2}. Il sera téléchargé en un seul ZIP, ce qui peut prendre longtemps.</value>
+  </data>
   <data name="Auswahl_herunterladen_26b74c13" xml:space="preserve">
     <value>Télécharger la sélection</value>
   </data>
@@ -13058,5 +13067,29 @@
   </data>
   <data name="Alle_Orte_des_Katalogs_zeigen_c19f79e6" xml:space="preserve">
     <value>Afficher tous les lieux du catalogue</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_der_freigegebenen_08eca675" xml:space="preserve">
+    <value>Ces fichiers se trouvent en dehors des dossiers photo partagés. FerrumPix n'y supprime rien.</value>
+  </data>
+  <data name="Dieser_Ort_liegt_au_erhalb_der_freigegebenen_Fot_c80bd514" xml:space="preserve">
+    <value>Cet emplacement se trouve en dehors des dossiers photo partagés.</value>
+  </data>
+  <data name="0_Bild_er_bersprungen_ihr_Ziel_liegt_au_erhalb_d_d7f45e81" xml:space="preserve">
+    <value>{0} image(s) ignorée(s) : leur destination se trouve en dehors des dossiers photo partagés.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Der__80328781" xml:space="preserve">
+    <value>Des dossiers photo fixes ont été définis au démarrage. Le dossier de données reste donc à sa place.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Date_ad688b7f" xml:space="preserve">
+    <value>Des dossiers photo fixes ont été définis au démarrage. Les opérations sur les fichiers sont autorisées exactement là ; ce commutateur est sans effet.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_42180b80" xml:space="preserve">
+    <value>Le dossier {0} n'est pas partagé avec FerrumPix en Flatpak. Ce qui y serait enregistré disparaîtrait à la fermeture de FerrumPix. Veuillez choisir un dossier dans Images ou sur un lecteur monté, ou partager le dossier durablement avec Flatseal ou dans un terminal avec {1}, puis redémarrer FerrumPix.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_5a107e88" xml:space="preserve">
+    <value>Le dossier {0} n'est pas partagé avec FerrumPix en Flatpak. Ce qui y est créé n'existe que dans le bac à sable et disparaît à la fermeture de FerrumPix, c'est pourquoi FerrumPix n'y écrit rien. Solution : choisir le dossier avec le sélecteur de dossiers, utiliser un dossier dans Images ou partager le dossier durablement avec Flatseal ou dans un terminal avec {1}, puis redémarrer FerrumPix.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nur_z_a9f4527b" xml:space="preserve">
+    <value>Le dossier {0} est partagé avec FerrumPix en Flatpak en lecture seule, il est impossible d'y écrire. Solution : choisir un autre dossier ou étendre l'autorisation avec Flatseal ou dans un terminal avec {1}, puis redémarrer FerrumPix.</value>
   </data>
 </root>

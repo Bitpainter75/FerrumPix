@@ -548,6 +548,14 @@ Namespace Services
                 reason = LocalizationService.T("Im Flatpak lassen sich nur Ordner verwenden, die FerrumPix direkt sieht, etwa im persönlichen Ordner oder auf einem eingehängten Laufwerk. Ordner, die nur über die Dateiauswahl des Systems freigegeben sind, verschwinden für FerrumPix nach einem Neustart.")
                 Return DataFolderChoice.Rejected
             End If
+            ' Ein Ordner, den die Sandbox nicht dauerhaft sieht: der Schreibtest weiter unten gelaenge,
+            ' und Katalog samt Vorschauen zoegen in ein Dateisystem, das beim Beenden verschwindet
+            ' (GitHub #166). Der Weg ueber die Ordnerauswahl hilft hier nicht, siehe oben.
+            Dim sandboxDenial = FlatpakSandbox.WriteDenial(full, portalHelps:=False)
+            If sandboxDenial.Length > 0 Then
+                reason = sandboxDenial
+                Return DataFolderChoice.Rejected
+            End If
             If IsTemporaryFolder(full) Then
                 reason = LocalizationService.T("Das temporäre Verzeichnis wird beim Neustart geleert. Bitte einen anderen Ordner wählen.")
                 Return DataFolderChoice.Rejected

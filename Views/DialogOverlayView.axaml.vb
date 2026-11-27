@@ -96,7 +96,7 @@ Namespace Views
             Try
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return
-                Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
+                Dim folders = Await FolderRootPickers.OpenFolderPickerAsync(topLevel,New FolderPickerOpenOptions With {
                     .Title = LocalizationService.T("Zielordner wählen"),
                     .AllowMultiple = False,
                     .SuggestedStartLocation = Await FolderPickerStart.ForPathAsync(topLevel, vm.DialogSaveAsTargetFolder)

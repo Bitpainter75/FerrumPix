@@ -260,8 +260,9 @@ flatpak run --env=FERRUMPIX_BROWSER_USER=anna --env=FERRUMPIX_BROWSER_PASSWORD=T
 | `--browser-tls-proxy` | `FERRUMPIX_BROWSER_TLS_PROXY=1` | a reverse proxy with HTTPS stands in front |
 | `--browser-proxy-address=192.168.1.2` | `FERRUMPIX_BROWSER_PROXY_ADDRESS` | where that proxy is, if it runs on a different computer |
 | `--browser-allow-http` | `FERRUMPIX_BROWSER_ALLOW_HTTP=1` | plain HTTP for devices in the home network, with a password |
+| `--folder-roots=/srv/photos` | `FERRUMPIX_FOLDER_ROOTS` | shows and works only in these photo folders, several separated by `:` (`;` on Windows); the container sets `/photos` |
 
-Pictures travel both ways: drop files onto the page, or use Upload in the gallery, to put them into the folder you are looking at, or drop them onto the picture in the editor to add them as a layer. Download in the right-click menu or on a gallery tile brings pictures to the device you sit at, and Save as, Export to and the batch tools can save straight to it as well.
+Pictures travel both ways: drop files onto the page, or use Upload in the gallery, to put them into the folder you are looking at, or drop them onto the picture in the editor to add them as a layer. Download in the right-click menu or on a gallery tile brings pictures to the device you sit at; on a folder, or in the folder tree, it brings the whole folder with its subfolders as one ZIP. Save as, Export to and the batch tools can save straight to it as well.
 
 This is a first version, and a few things are still missing. Copy and paste stay inside FerrumPix and do not reach the clipboard of the device you sit at. Videos play without sound. And because the computer draws everything without the help of its graphics card in this mode, it feels a little less quick than the window does, mostly with very large browser windows.
 

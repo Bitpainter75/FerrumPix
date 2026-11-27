@@ -558,14 +558,29 @@ Namespace Models
         End Property
 
         ''' <summary>Laesst sich das Element im Browser herunterladen? Eine lokale Datei, kein
-        ''' Ordner, kein Serverelement, nicht im Papierkorb, und kopieren duerfte man sie auch.
+        ''' Ordner, kein Serverelement, nicht im Papierkorb, und FileOperationPolicy.CanDownload
+        ''' laesst sie zu. Das ist NICHT die Erlaubnis zum Kopieren: Herunterladen liest nur und
+        ''' haengt deshalb nicht am Benutzerordner (im Behaelter liegen die Fotos ausserhalb).
         ''' Dieselbe Regel fuer "Herunterladen" im Kontextmenue (ContextMenuBuilder.IsDownloadable)
         ''' und das Abzeichen auf der Kachel; gefragt wird sie nur im Browser.</summary>
         Public ReadOnly Property IsDownloadable As Boolean
             Get
                 Return Not IsFolder AndAlso Not IsParentFolderEntry AndAlso Not IsGroupHeader AndAlso
-                       Not IsRemoteAsset AndAlso Not IsTrashed AndAlso Not String.IsNullOrEmpty(FilePath) AndAlso
-                       CanFileOperationCopy
+                       Not IsRemoteAsset AndAlso Not IsTrashed AndAlso Not IsOffline AndAlso
+                       Not String.IsNullOrEmpty(FilePath) AndAlso FileOperationPolicy.CanDownload(FilePath)
+            End Get
+        End Property
+
+        ''' <summary>Laesst sich der Ordner dieser Kachel im Browser als ZIP herunterladen? Ein
+        ''' echter Ordner auf der Platte (kein Elterneintrag, kein Serverordner, nicht aus dem
+        ''' Katalog allein), den Services.BrowserBridge.CanDownloadFolder zulaesst. Dieselbe Regel
+        ''' fuer das Abzeichen und "Herunterladen" im Kontextmenue; gefragt wird sie nur im
+        ''' Browser.</summary>
+        Public ReadOnly Property IsFolderDownloadable As Boolean
+            Get
+                Return IsFolder AndAlso Not IsParentFolderEntry AndAlso Not IsGroupHeader AndAlso
+                       Not IsRemoteAsset AndAlso Not IsTrashed AndAlso Not IsOffline AndAlso
+                       BrowserBridge.CanDownloadFolder(FilePath)
             End Get
         End Property
 

@@ -54,7 +54,7 @@ Namespace Controls.EditorPanels
             Try
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return Nothing
-                Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
+                Dim files = Await Views.FolderRootPickers.OpenFilePickerAsync(topLevel,New FilePickerOpenOptions With {
                     .Title = title,
                     .AllowMultiple = False,
                     .FileTypeFilter = New List(Of FilePickerFileType) From {

@@ -422,7 +422,17 @@ Namespace Services
             listener.Start()
             _listener = listener
 
-            Console.Out.WriteLine($"FerrumPix in the browser: http://{If(local, "127.0.0.1", host)}:{port}")
+            ' 0.0.0.0 ist die Adresse, an der gelauscht wird, keine, die ein Browser oeffnen kann.
+            ' Die Zeile nennt deshalb, was in die Adresszeile gehoert; im Behaelter kann der Port
+            ' draussen ein anderer sein, und hinter einem Proxy gilt dessen Adresse.
+            Dim wildcard = Not local AndAlso (host = "0.0.0.0" OrElse host = "*" OrElse host = "+")
+            If wildcard AndAlso _tlsProxy Then
+                Console.Out.WriteLine($"FerrumPix in the browser: listening on port {port} for the HTTPS proxy; open the address of the proxy")
+            ElseIf wildcard Then
+                Console.Out.WriteLine($"FerrumPix in the browser: listening on port {port} on every network address; open http://<address of this computer>:{port}")
+            Else
+                Console.Out.WriteLine($"FerrumPix in the browser: http://{If(local, "127.0.0.1", host)}:{port}")
+            End If
             If _allowHttp Then
                 ' Im Protokoll des Behaelters (docker logs) steht damit bei jedem Start, dass der
                 ' Zugang unverschluesselt ist und fuer wen.

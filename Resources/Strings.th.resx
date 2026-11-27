@@ -13091,6 +13091,15 @@
   <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
     <value>พร้อมดาวน์โหลด: {0}</value>
   </data>
+  <data name="Ordner_herunterladen_570e5004" xml:space="preserve">
+    <value>ดาวน์โหลดโฟลเดอร์หรือไม่</value>
+  </data>
+  <data name="In_diesem_Ordner_liegen_keine_Dateien_zum_Herunt_d6ca04dd" xml:space="preserve">
+    <value>โฟลเดอร์นี้ไม่มีไฟล์ให้ดาวน์โหลด: {0}</value>
+  </data>
+  <data name="Der_Ordner_0_enth_lt_mindestens_1_Dateien_mit_zu_a02dc3c0" xml:space="preserve">
+    <value>โฟลเดอร์ {0} มีไฟล์อย่างน้อย {1} ไฟล์ รวม {2} จะดาวน์โหลดเป็น ZIP ไฟล์เดียว ซึ่งอาจใช้เวลานาน</value>
+  </data>
   <data name="Auswahl_herunterladen_26b74c13" xml:space="preserve">
     <value>ดาวน์โหลดรายการที่เลือก</value>
   </data>
@@ -13102,5 +13111,29 @@
   </data>
   <data name="Alle_Orte_des_Katalogs_zeigen_c19f79e6" xml:space="preserve">
     <value>แสดงสถานที่ทั้งหมดในแคตตาล็อก</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_der_freigegebenen_08eca675" xml:space="preserve">
+    <value>ไฟล์เหล่านี้อยู่นอกโฟลเดอร์รูปภาพที่แชร์ไว้ FerrumPix จะไม่ลบสิ่งใดที่นั่น</value>
+  </data>
+  <data name="Dieser_Ort_liegt_au_erhalb_der_freigegebenen_Fot_c80bd514" xml:space="preserve">
+    <value>ตำแหน่งนี้อยู่นอกโฟลเดอร์รูปภาพที่แชร์ไว้</value>
+  </data>
+  <data name="0_Bild_er_bersprungen_ihr_Ziel_liegt_au_erhalb_d_d7f45e81" xml:space="preserve">
+    <value>ข้ามรูปภาพ {0} รูป: ปลายทางอยู่นอกโฟลเดอร์รูปภาพที่แชร์ไว้</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Der__80328781" xml:space="preserve">
+    <value>มีการกำหนดโฟลเดอร์รูปภาพแบบคงที่ตอนเริ่มต้น โฟลเดอร์ข้อมูลจึงยังอยู่ที่เดิม</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Date_ad688b7f" xml:space="preserve">
+    <value>มีการกำหนดโฟลเดอร์รูปภาพแบบคงที่ตอนเริ่มต้น อนุญาตให้จัดการไฟล์ได้เฉพาะที่นั่น สวิตช์นี้จึงไม่มีผล</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_42180b80" xml:space="preserve">
+    <value>โฟลเดอร์ {0} ไม่ได้แชร์ให้ FerrumPix แบบ Flatpak สิ่งที่เก็บไว้ที่นั่นจะหายไปเมื่อปิด FerrumPix โปรดเลือกโฟลเดอร์ภายในรูปภาพหรือบนไดรฟ์ที่เมานต์ไว้ หรือแชร์โฟลเดอร์แบบถาวรด้วย Flatseal หรือในเทอร์มินัลด้วย {1} แล้วเริ่ม FerrumPix ใหม่</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_5a107e88" xml:space="preserve">
+    <value>โฟลเดอร์ {0} ไม่ได้แชร์ให้ FerrumPix แบบ Flatpak สิ่งที่สร้างไว้ที่นั่นอยู่แค่ในแซนด์บ็อกซ์และจะหายไปเมื่อปิด FerrumPix ดังนั้น FerrumPix จึงไม่เขียนอะไรลงไป วิธีแก้: เลือกโฟลเดอร์ผ่านตัวเลือกโฟลเดอร์ ใช้โฟลเดอร์ภายในรูปภาพ หรือแชร์โฟลเดอร์แบบถาวรด้วย Flatseal หรือในเทอร์มินัลด้วย {1} แล้วเริ่ม FerrumPix ใหม่</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nur_z_a9f4527b" xml:space="preserve">
+    <value>โฟลเดอร์ {0} แชร์ให้ FerrumPix แบบ Flatpak สำหรับอ่านอย่างเดียว จึงเขียนลงไปไม่ได้ วิธีแก้: เลือกโฟลเดอร์อื่นหรือขยายสิทธิ์ด้วย Flatseal หรือในเทอร์มินัลด้วย {1} แล้วเริ่ม FerrumPix ใหม่</value>
   </data>
 </root>

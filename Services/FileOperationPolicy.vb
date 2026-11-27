@@ -25,6 +25,8 @@ Namespace Services
         ''' <summary>Ein geschuetzter Ordner selbst (Benutzerordner, Bilder, Laufwerk, Freigabe), siehe
         ''' <see cref="FileOperationPolicy.IsProtectedFolder"/>.</summary>
         ProtectedFolder
+        ''' <summary>Ausserhalb der festen Fotoordner (<see cref="FolderRoots"/>).</summary>
+        OutsideFolderRoots
     End Enum
 
     Public NotInheritable Class FileOperationPolicy
@@ -57,8 +59,17 @@ Namespace Services
         Public Shared Property AllowOutsidePersonalFolder As Boolean = False
 
         ''' <summary>Liegt der Pfad dort, wo Dateiarbeit erlaubt ist? Ab Werk der Benutzerordner,
-        ''' mit <see cref="AllowOutsidePersonalFolder"/> alles ausser den Systemordnern.</summary>
+        ''' mit <see cref="AllowOutsidePersonalFolder"/> alles ausser den Systemordnern.
+        '''
+        ''' <para>MIT FESTEN FOTOORDNERN (<see cref="FolderRoots"/>) genau diese, statt des
+        ''' Benutzerordners und ohne den Schalter: im Behaelter ist der Benutzerordner /data/home,
+        ''' und die Fotos unter /photos laegen sonst immer ausserhalb. Systemordner bleiben auch
+        ''' dann gesperrt, beide Schreibweisen wie unten.</para></summary>
         Public Shared Function IsInAllowedArea(path As String) As Boolean
+            If FolderRoots.IsActive Then
+                If String.IsNullOrEmpty(path) OrElse Not FolderRoots.Allows(path) Then Return False
+                Return Not IsSystemPath(path) AndAlso Not IsSystemPath(ResolveLinks(path))
+            End If
             If IsInPersonalFolder(path) Then Return True
             If Not AllowOutsidePersonalFolder OrElse String.IsNullOrEmpty(path) Then Return False
             ' Beide Schreibweisen: ein Verweis aus einem harmlosen Ordner ins System waere sonst ein
@@ -278,12 +289,29 @@ Namespace Services
             Return Not IsOnUnreachableVolume(path) AndAlso IsInAllowedArea(path) AndAlso Not IsHiddenPath(path)
         End Function
 
+        ''' <summary>Darf die Datei im Browser heruntergeladen werden? Herunterladen LIEST nur und
+        ''' haengt deshalb nicht an der Erlaubnis fuer Dateiarbeit (Benutzerordner, Schalter): was
+        ''' die Anwendung zeigt, darf auch auf das Geraet. Gesperrt bleiben, wie beim Kopieren,
+        ''' versteckte Ordner samt Papierkorb und die Ordner des Systems, dazu mit festen
+        ''' Fotoordnern alles ausserhalb von ihnen.</summary>
+        Public Shared Function CanDownload(path As String) As Boolean
+            If String.IsNullOrEmpty(path) OrElse IsOnUnreachableVolume(path) Then Return False
+            If FolderRoots.IsActive AndAlso Not FolderRoots.Allows(path) Then Return False
+            Return Not IsHiddenPath(path) AndAlso Not IsSystemPath(path) AndAlso Not IsSystemPath(ResolveLinks(path))
+        End Function
+
+        ''' <summary>Darf in den Ordner kopiert, verschoben oder ein Ordner darin angelegt werden?
+        ''' Im Flatpak dazu nur, wenn die Sandbox ihn dauerhaft beschreiben kann
+        ''' (<see cref="FlatpakSandbox"/>): der persoenliche Ordner ist dort ohne Freigabe ein
+        ''' leeres Dateisystem im Speicher, und was dorthin verschoben wird, ist nach dem Beenden
+        ''' weg, samt der Quelle (GitHub #166).</summary>
         Public Shared Function CanPasteInto(folderPath As String) As Boolean
             Return Not String.IsNullOrEmpty(folderPath) AndAlso
                    Not OfflineVolumes.IsFolderUnreachable(folderPath) AndAlso
                    Directory.Exists(folderPath) AndAlso
                    IsInAllowedArea(folderPath) AndAlso
-                   Not IsHiddenPath(folderPath)
+                   Not IsHiddenPath(folderPath) AndAlso
+                   FlatpakSandbox.IsPersistentWriteTarget(folderPath)
         End Function
 
         Public Shared Function CanRename(path As String) As Boolean
@@ -320,7 +348,8 @@ Namespace Services
             If Not (File.Exists(path) OrElse Directory.Exists(path)) Then Return FileOperationDenial.Missing
             If IsHiddenPath(path) Then Return FileOperationDenial.HiddenOrTrash
             If Not IsInAllowedArea(path) Then
-                If AllowOutsidePersonalFolder OrElse IsSystemPath(path) OrElse IsSystemPath(ResolveLinks(path)) Then
+                If FolderRoots.IsActive AndAlso Not FolderRoots.Allows(path) Then Return FileOperationDenial.OutsideFolderRoots
+                If FolderRoots.IsActive OrElse AllowOutsidePersonalFolder OrElse IsSystemPath(path) OrElse IsSystemPath(ResolveLinks(path)) Then
                     Return FileOperationDenial.SystemFolder
                 End If
                 Return FileOperationDenial.OutsidePersonalFolder
@@ -344,6 +373,9 @@ Namespace Services
             ' Eine gvfs-Freigabe selbst: was darin liegt, ist mit dem Schalter erlaubt, sie selbst
             ' umzubenennen oder zu loeschen nie, wie bei einem Laufwerk unter /media.
             If IsGvfsRootOrShare(path) Then Return True
+            ' Ein fester Fotoordner selbst (im Behaelter /photos): was darin liegt, ist Bestand,
+            ' er selbst ist der Einhaengepunkt und wird nie umbenannt oder geloescht.
+            If FolderRoots.IsRoot(path) Then Return True
 
             Dim protectedFolders = GetProtectedFolders()
             Dim normalized = NormalizePath(path)

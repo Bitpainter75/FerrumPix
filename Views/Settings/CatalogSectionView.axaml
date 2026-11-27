@@ -35,6 +35,13 @@
                                            Foreground="{DynamicResource FP.Text.Accent}"
                                            FontSize="{DynamicResource FP.Font.Small}"
                                            TextWrapping="Wrap"/>
+                                <!-- Feste Fotoordner (FolderRoots, im Behaelter /photos): der
+                                     Datenordner bleibt, wo er ist (SettingsViewModel.CanChooseDataFolder). -->
+                                <TextBlock Text="Beim Start sind feste Fotoordner festgelegt. Der Datenordner bleibt deshalb an seinem Ort."
+                                           IsVisible="{Binding HasFolderRoots}"
+                                           Foreground="{DynamicResource FP.Text.Accent}"
+                                           FontSize="{DynamicResource FP.Font.Small}"
+                                           TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <Button Classes="ghost" Padding="12,7"
@@ -44,6 +51,7 @@
                                         IsVisible="{Binding HasCustomDataFolder}"
                                         Command="{Binding ResetDataFolderCommand}">Standardort</Button>
                                 <Button Classes="ghost" Padding="12,7"
+                                        IsEnabled="{Binding CanChooseDataFolder}"
                                         Click="OnChooseDataFolderClick">Ort wählen</Button>
                             </StackPanel>
                         </Grid>

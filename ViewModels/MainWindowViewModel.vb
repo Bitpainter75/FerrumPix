@@ -1329,7 +1329,8 @@ Namespace ViewModels
         Private Function ResolveStartupFolder() As (LocalFolder As String, ImmichTarget As String)
             Dim settings = AppSettingsService.Load()
             Dim targetFolder As String = Nothing
-            Dim pictures = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
+            ' Mit festen Fotoordnern ist die erste Wurzel der Bilderordner (FolderRoots).
+            Dim pictures = FolderRoots.PicturesFolder()
 
             Select Case AppSettingsService.NormalizeGalleryStartupFolderMode(settings.GalleryStartupFolderMode)
                 Case "Last"
@@ -1356,7 +1357,9 @@ Namespace ViewModels
                     If NextcloudService.IsConfigured Then Return (pictures, "nextcloud://all")
             End Select
 
-            If String.IsNullOrEmpty(targetFolder) OrElse Not Directory.Exists(targetFolder) Then
+            ' Ein gemerkter oder eingestellter Ordner ausserhalb der festen Fotoordner zaehlt nicht.
+            If String.IsNullOrEmpty(targetFolder) OrElse Not Directory.Exists(targetFolder) OrElse
+               Not FolderRoots.Allows(targetFolder) Then
                 targetFolder = pictures
             End If
             Return (targetFolder, Nothing)
@@ -1942,8 +1945,15 @@ Namespace ViewModels
             If String.IsNullOrWhiteSpace(folder) OrElse Not Directory.Exists(folder) Then
                 folder = CurrentImageFolderOrEmpty()
             End If
-            _dialogFolderChoiceCurrent = If(Not String.IsNullOrWhiteSpace(folder) AndAlso Directory.Exists(folder),
+            _dialogFolderChoiceCurrent = If(Not String.IsNullOrWhiteSpace(folder) AndAlso Directory.Exists(folder) AndAlso
+                                            FolderRoots.Allows(folder),
                                             folder, "")
+            ' Ein zuletzt benutzter Ordner ausserhalb der festen Fotoordner wird nicht vorgeschlagen;
+            ' eine Vorlage zaehlt mit ihrem festen Anfang.
+            If FolderRoots.IsActive AndAlso Not String.IsNullOrWhiteSpace(zuletzt) Then
+                Dim fixedStart = TargetFolderTemplate.FixedRoot(zuletzt)
+                If IO.Path.IsPathRooted(fixedStart) AndAlso Not FolderRoots.Allows(fixedStart) Then zuletzt = ""
+            End If
             ' Eine zuletzt benutzte VORLAGE existiert als Ordner nicht und bleibt trotzdem: ein Muster
             ' tippt niemand bei jedem Export neu (wie beim Import).
             _dialogFolderChoiceLastSaved = If(Not String.IsNullOrWhiteSpace(zuletzt) AndAlso
@@ -6720,10 +6730,11 @@ Namespace ViewModels
 
         Private Function ResolveDefaultSaveAsTargetFolder() As String
             Dim settings = AppSettingsService.Load()
-            If Directory.Exists(settings.LastSaveAsTargetFolder) Then Return settings.LastSaveAsTargetFolder
-            If Directory.Exists(settings.LastGalleryFolder) Then Return settings.LastGalleryFolder
-            If Directory.Exists(settings.GalleryStartupCustomFolder) Then Return settings.GalleryStartupCustomFolder
-            Return Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
+            ' Mit festen Fotoordnern nur Ordner darin, sonst deren erste Wurzel (FolderRoots).
+            For Each candidate In {settings.LastSaveAsTargetFolder, settings.LastGalleryFolder, settings.GalleryStartupCustomFolder}
+                If Directory.Exists(candidate) AndAlso FolderRoots.Allows(candidate) Then Return candidate
+            Next
+            Return FolderRoots.PicturesFolder()
         End Function
 
         ''' <summary>Die gewaehlte Vorlage MIT den Dialogwerten (Anker, Breite/Hoehe) - bewusst als
@@ -7114,8 +7125,8 @@ Namespace ViewModels
                 Dim value As String
                 Select Case segment
                     Case "{folder}" : value = folder.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
-                    Case "{pictures}" : value = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
-                    Case "{home}" : value = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+                    Case "{pictures}" : value = FolderRoots.PicturesFolder()
+                    Case "{home}" : value = FolderRoots.HomeFolder()
                     Case Else
                         If segment.Contains("{"c) OrElse segment.Contains("#"c) Then
                             value = ExpandTargetNamePattern(segment.Replace("{foldername}", folderName), sourcePath, 1).Trim()
@@ -7250,6 +7261,8 @@ Namespace ViewModels
                         lines.Add(LocalizationService.T("Diese Dateien liegen in einem Ordner des Systems. Dort löscht FerrumPix nie etwas, auch nicht mit erlaubten Dateioperationen außerhalb des persönlichen Ordners."))
                     Case FileOperationDenial.OutsidePersonalFolder
                         lines.Add(LocalizationService.T("Diese Dateien liegen außerhalb des persönlichen Ordners. FerrumPix löscht dort nichts. Erlauben lässt sich das unter Einstellungen, Galerie, Dateioperationen außerhalb des persönlichen Ordners erlauben."))
+                    Case FileOperationDenial.OutsideFolderRoots
+                        lines.Add(LocalizationService.T("Diese Dateien liegen außerhalb der freigegebenen Fotoordner. FerrumPix löscht dort nichts."))
                     Case FileOperationDenial.ProtectedFolder
                         lines.Add(LocalizationService.T("Dieser Ordner ist geschützt, etwa der persönliche Ordner, der Bilderordner oder ein Laufwerk oder eine Netzfreigabe selbst. FerrumPix löscht ihn nicht, nur was darin liegt."))
                 End Select

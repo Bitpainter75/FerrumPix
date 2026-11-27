@@ -13046,6 +13046,15 @@
   <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
     <value>Pronto para transferir: {0}</value>
   </data>
+  <data name="Ordner_herunterladen_570e5004" xml:space="preserve">
+    <value>Transferir a pasta?</value>
+  </data>
+  <data name="In_diesem_Ordner_liegen_keine_Dateien_zum_Herunt_d6ca04dd" xml:space="preserve">
+    <value>Não há arquivos para transferir nesta pasta: {0}</value>
+  </data>
+  <data name="Der_Ordner_0_enth_lt_mindestens_1_Dateien_mit_zu_a02dc3c0" xml:space="preserve">
+    <value>A pasta {0} contém pelo menos {1} arquivos com um total de {2}. Será transferida como um único ZIP, o que pode demorar bastante.</value>
+  </data>
   <data name="Auswahl_herunterladen_26b74c13" xml:space="preserve">
     <value>Transferir seleção</value>
   </data>
@@ -13057,5 +13066,29 @@
   </data>
   <data name="Alle_Orte_des_Katalogs_zeigen_c19f79e6" xml:space="preserve">
     <value>Mostrar todos os lugares do catálogo</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_der_freigegebenen_08eca675" xml:space="preserve">
+    <value>Estes ficheiros estão fora das pastas de fotos partilhadas. O FerrumPix não apaga nada aí.</value>
+  </data>
+  <data name="Dieser_Ort_liegt_au_erhalb_der_freigegebenen_Fot_c80bd514" xml:space="preserve">
+    <value>Este local está fora das pastas de fotos partilhadas.</value>
+  </data>
+  <data name="0_Bild_er_bersprungen_ihr_Ziel_liegt_au_erhalb_d_d7f45e81" xml:space="preserve">
+    <value>{0} imagem(ns) ignorada(s): o destino está fora das pastas de fotos partilhadas.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Der__80328781" xml:space="preserve">
+    <value>Foram definidas pastas de fotos fixas no arranque. Por isso, a pasta de dados fica onde está.</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Date_ad688b7f" xml:space="preserve">
+    <value>Foram definidas pastas de fotos fixas no arranque. As operações com ficheiros são permitidas exatamente aí; este interruptor não tem efeito.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_42180b80" xml:space="preserve">
+    <value>A pasta {0} não está partilhada com o FerrumPix como Flatpak. O que ficar ali perder-se-ia ao fechar o FerrumPix. Escolha uma pasta em Imagens ou numa unidade montada, ou partilhe a pasta de forma permanente com o Flatseal ou num terminal com {1} e depois reinicie o FerrumPix.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_5a107e88" xml:space="preserve">
+    <value>A pasta {0} não está partilhada com o FerrumPix como Flatpak. O que for criado ali existe apenas na sandbox e perde-se ao fechar o FerrumPix, por isso o FerrumPix não escreve nada ali. Solução: escolher a pasta através do seletor de pastas, usar uma pasta em Imagens ou partilhar a pasta de forma permanente com o Flatseal ou num terminal com {1} e depois reiniciar o FerrumPix.</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nur_z_a9f4527b" xml:space="preserve">
+    <value>A pasta {0} está partilhada com o FerrumPix como Flatpak apenas para leitura, não é possível escrever ali. Solução: escolher outra pasta ou alargar a permissão com o Flatseal ou num terminal com {1} e depois reiniciar o FerrumPix.</value>
   </data>
 </root>

@@ -13045,6 +13045,15 @@
   <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
     <value>可以下载：{0}</value>
   </data>
+  <data name="Ordner_herunterladen_570e5004" xml:space="preserve">
+    <value>下载文件夹?</value>
+  </data>
+  <data name="In_diesem_Ordner_liegen_keine_Dateien_zum_Herunt_d6ca04dd" xml:space="preserve">
+    <value>此文件夹中没有可下载的文件: {0}</value>
+  </data>
+  <data name="Der_Ordner_0_enth_lt_mindestens_1_Dateien_mit_zu_a02dc3c0" xml:space="preserve">
+    <value>文件夹 {0} 至少包含 {1} 个文件，共 {2}。它将作为一个 ZIP 下载，可能需要较长时间。</value>
+  </data>
   <data name="Auswahl_herunterladen_26b74c13" xml:space="preserve">
     <value>下载所选项</value>
   </data>
@@ -13056,5 +13065,29 @@
   </data>
   <data name="Alle_Orte_des_Katalogs_zeigen_c19f79e6" xml:space="preserve">
     <value>显示目录中的所有地点</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_der_freigegebenen_08eca675" xml:space="preserve">
+    <value>这些文件位于共享的照片文件夹之外。FerrumPix 不会删除那里的任何内容。</value>
+  </data>
+  <data name="Dieser_Ort_liegt_au_erhalb_der_freigegebenen_Fot_c80bd514" xml:space="preserve">
+    <value>此位置位于共享的照片文件夹之外。</value>
+  </data>
+  <data name="0_Bild_er_bersprungen_ihr_Ziel_liegt_au_erhalb_d_d7f45e81" xml:space="preserve">
+    <value>已跳过 {0} 张图片：目标位于共享的照片文件夹之外。</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Der__80328781" xml:space="preserve">
+    <value>启动时已设定固定的照片文件夹。因此数据文件夹保持在原位置。</value>
+  </data>
+  <data name="Beim_Start_sind_feste_Fotoordner_festgelegt_Date_ad688b7f" xml:space="preserve">
+    <value>启动时已设定固定的照片文件夹。仅允许在这些文件夹中进行文件操作；此开关不起作用。</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_42180b80" xml:space="preserve">
+    <value>文件夹 {0} 未向 Flatpak 版 FerrumPix 开放。存放在那里的内容会在 FerrumPix 关闭后丢失。请选择图片文件夹中或已挂载驱动器上的文件夹，或使用 Flatseal 或在终端中运行 {1} 永久开放该文件夹，然后重新启动 FerrumPix。</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nicht_5a107e88" xml:space="preserve">
+    <value>文件夹 {0} 未向 Flatpak 版 FerrumPix 开放。在那里创建的内容只存在于沙盒中，FerrumPix 关闭后就会丢失，因此 FerrumPix 不会在那里写入任何内容。解决方法：通过文件夹选择器选择该文件夹，使用图片文件夹中的文件夹，或使用 Flatseal 或在终端中运行 {1} 永久开放该文件夹，然后重新启动 FerrumPix。</value>
+  </data>
+  <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nur_z_a9f4527b" xml:space="preserve">
+    <value>文件夹 {0} 仅以只读方式向 Flatpak 版 FerrumPix 开放，无法在其中写入。解决方法：选择其他文件夹，或使用 Flatseal 或在终端中运行 {1} 扩展权限，然后重新启动 FerrumPix。</value>
   </data>
 </root>
