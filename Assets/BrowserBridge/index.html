@@ -49,12 +49,15 @@
   #httpNotice.quiet { opacity: 0.45; }
   #httpNotice:hover { opacity: 1; }
   #httpNotice svg { flex: none; color: #F08A1A; }
+  /* Nimmt beim Einfuegen kurz den Fokus, damit jeder Browser das Ereignis paste schickt. */
+  #clipSink { position: fixed; left: -10000px; top: 0; width: 1px; height: 1px; opacity: 0; }
 </style>
 </head>
 <body>
 <div id="stage" tabindex="0"></div>
 <div id="drop" class="fp-layer"></div>
 <input id="filePicker" type="file" multiple hidden>
+<textarea id="clipSink" tabindex="-1" aria-hidden="true" autocomplete="off"></textarea>
 <div id="panel" class="fp-layer">
   <header><span id="panelTitle"></span><button id="panelCancel" class="fp-button" type="button"></button><button id="panelClose" class="fp-button" type="button"></button></header>
   <div id="rows"></div>
@@ -92,6 +95,12 @@ function connect() {
 }
 
 function send(message) {
+  // Waehrend ein Einfuegen den Inhalt des Geraets hinueberbringt, warten Tasten und Maus: STRG+V
+  // muss vor allem ankommen, was danach gedrueckt wurde (siehe "Zwischenablage").
+  if (pasteHold && (message.t === 'k' || message.t === 'm')) {
+    pasteHold.held.push(message);
+    return;
+  }
   if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
 }
 
@@ -108,6 +117,23 @@ function onText(message) {
     reshowOffer(message.id);
   } else if (message.t === 'pick') {
     pickFiles();
+  } else if (message.t === 'variant') {
+    // Wechsel auf die andere Seite (Knopf "Mobile Ansicht" der Anwendung). Dieselbe Sitzung gilt
+    // dort weiter; die Wahl merkt sich der Browser wie die des Anmeldefensters.
+    const mobile = message.to === 'mobile';
+    try { localStorage.setItem('ferrumpix.variant', mobile ? 'mobile' : 'desktop'); } catch (ignored) { }
+    socket.onclose = null;
+    location.assign(mobile ? '/m/' : '/');
+  } else if (message.t === 'copy') {
+    // Ein Text fuer die Zwischenablage dieses Geraets (Link zum Teilen aus der Galerie). Der
+    // Klick, der ihn ausloeste, kam von hier; ohne Zwischenablage (HTTP im Heimnetz) zum Abschreiben.
+    const text = String(message.text || '');
+    const fallback = () => window.prompt('', text);
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).catch(fallback);
+    else fallback();
+  } else if (message.t === 'clip') {
+    // Die Anwendung hat Text oder ein Bild abgelegt (siehe "Zwischenablage").
+    onClip(message).catch(() => clipNotice(text('clipFailed')));
   } else if (message.t === 'reload') {
     // Die Kennung oder die Sitzung gilt nicht mehr: die Anwendung wurde neu gestartet oder
     // gesperrt. Neu laden holt eine frische Kennung oder, ohne Sitzung, das Anmeldefenster.
@@ -276,11 +302,26 @@ function onKey(event, kind) {
   // unter Windows als Strg+Alt und ist trotzdem Text.
   const command = (event.ctrlKey || event.metaKey) && !event.getModifierState('AltGraph');
   if (kind === 'down' && event.key.length === 1 && !command) message.text = event.key;
+  // STRG+C, STRG+X und STRG+V gehen zusaetzlich an die Zwischenablage dieses Geraets. Mit SHIFT
+  // sind es die Anpassungen, die bleiben in der Anwendung.
+  if (kind === 'down' && command && !event.shiftKey && !event.altKey && !event.repeat) {
+    const letter = event.key.toLowerCase();
+    if (letter === 'v' && !pasteHold) {
+      // KEIN preventDefault: der Browser soll einfuegen und damit das Ereignis paste schicken.
+      beginPaste(message);
+      return;
+    }
+    if (letter === 'c' || letter === 'x') armCopy();
+  }
   send(message);
   event.preventDefault();
 }
 stage.addEventListener('keydown', event => onKey(event, 'down'));
 stage.addEventListener('keyup', event => onKey(event, 'up'));
+// Hat das Feld fuer das Einfuegen gerade den Fokus, kommen die Tasten dort an.
+const clipSink = document.getElementById('clipSink');
+clipSink.addEventListener('keydown', event => onKey(event, 'down'));
+clipSink.addEventListener('keyup', event => onKey(event, 'up'));
 
 let resizeTimer = 0;
 addEventListener('resize', () => {
@@ -596,6 +637,301 @@ function showOffer(message) {
   offers.appendChild(offer);
   while (offers.children.length > 4) offers.firstElementChild.remove();
   if (message.start) startDownload(message.id, message.name);
+}
+
+// ZWISCHENABLAGE zwischen diesem Geraet und der Anwendung, die Gegenstelle zu
+// Services/BrowserBridgeClipboard.vb. Die Anwendung hat ihre eigene Zwischenablage; was sie dort
+// ablegt, meldet die Bruecke mit 'clip', und diese Seite holt Text und Bild ab und schreibt sie
+// hier ins System. STRG+V liest umgekehrt das Ereignis paste und bringt Text oder Bild hinueber,
+// BEVOR die Taste die Anwendung erreicht.
+//
+// DIE GESTE. Schreiben darf eine Seite nur auf eine Handlung hin. Chrome und Edge erlauben es der
+// Seite mit dem Fokus ohnehin, Firefox einige Sekunden nach der Taste, das reicht fuer den Weg
+// ueber den WebSocket. WebKit (Safari und jeder Browser auf iOS) schreibt nur im Ereignis selbst;
+// dort legt schon der Tastendruck einen Eintrag mit Zusagen an (ClipboardItem mit Promise), den
+// die Antwort der Anwendung fuellt. Scheitert das Schreiben trotzdem, steht ein Knopf da, dessen
+// Klick wieder eine Geste ist.
+//
+// OHNE HTTPS gibt es die Schnittstelle nicht (nur in sicherem Kontext, also HTTPS oder
+// localhost). Text geht dann ueber das Ereignis copy (execCommand), Bilder gar nicht; Einfuegen
+// geht ueberall, das Ereignis paste braucht keinen sicheren Kontext.
+const clipboardApi = window.isSecureContext && !!navigator.clipboard && typeof navigator.clipboard.write === 'function';
+const holdsGesture = clipboardApi && typeof ClipboardItem === 'function' &&
+                     /AppleWebKit/.test(navigator.userAgent) && !/(Chrome|Chromium|Edg|Firefox)\//.test(navigator.userAgent);
+let copyGesture = null;
+let pasteHold = null;
+let insecureImageNoticed = false;
+let pointerX = -1;
+let pointerY = -1;
+stage.addEventListener('pointermove', event => { pointerX = event.clientX; pointerY = event.clientY; });
+
+// WAS DAS GERAET GERADE HAELT, soweit diese Seite es weiss: ein Fingerabdruck dessen, was sie
+// zuletzt geschrieben oder eingefuegt hat. Bringt STRG+V genau das, hat sich im Geraet nichts
+// getan, und die Anwendung fuegt ihren eigenen Inhalt ein; der ist reicher (eine kopierte
+// Auswahl kennt ihre Lage, kopierte Dateien sind Dateien und kein Text). Nur was neu ist, geht
+// hinueber. Der Fingerabdruck gilt fuer diesen Tab, auch ueber ein Neuladen hinweg.
+let deviceClip = null;
+try { deviceClip = sessionStorage.getItem('ferrumpix.clip'); } catch (ignored) { }
+function rememberDeviceClip(signature) {
+  deviceClip = signature;
+  try { sessionStorage.setItem('ferrumpix.clip', signature); } catch (ignored) { }
+}
+function hashText(value) {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index++) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16) + '.' + value.length;
+}
+// Zeilenenden setzt jedes System anders; ein Bild kann der Browser beim Schreiben neu kodieren,
+// seine Groesse bleibt.
+function textSignature(value) { return 't:' + hashText(String(value).replace(/\r\n?/g, '\n')); }
+function imageSignature(width, height) { return 'i:' + width + 'x' + height; }
+
+function clipNotice(label, actionLabel, action) {
+  for (const old of Array.from(offers.querySelectorAll('.clip-offer'))) old.remove();
+  const note = document.createElement('div');
+  note.className = 'offer fp-layer clip-offer';
+  note.style.position = 'static';
+  const span = document.createElement('span');
+  span.textContent = label;
+  span.title = label;
+  note.appendChild(span);
+  if (action) {
+    const button = document.createElement('button');
+    button.className = 'fp-button accent';
+    button.type = 'button';
+    button.textContent = actionLabel;
+    button.addEventListener('click', () => { note.remove(); action(); stage.focus(); });
+    note.appendChild(button);
+  }
+  const close = document.createElement('button');
+  close.className = 'fp-button';
+  close.type = 'button';
+  close.textContent = text('close');
+  close.addEventListener('click', () => { note.remove(); stage.focus(); });
+  note.appendChild(close);
+  offers.appendChild(note);
+  if (!action) setTimeout(() => note.remove(), 6000);
+}
+
+function fetchClip(id, kind) {
+  const address = '/clipboard?id=' + encodeURIComponent(id) + '&kind=' + kind + '&token=' + encodeURIComponent(token);
+  return fetch(address, { cache: 'no-store', credentials: 'same-origin' }).then(response => {
+    if (response.status === 413) throw new Error('large');
+    if (!response.ok) throw new Error('failed');
+    // Der Typ des Eintrags muss genau stimmen; der Kopf der Antwort traegt noch den Zeichensatz.
+    return kind === 'text' ? response.text().then(value => ({ value, blob: new Blob([value], { type: 'text/plain' }) }))
+                           : response.arrayBuffer().then(bytes => ({ blob: new Blob([bytes], { type: 'image/png' }) }));
+  });
+}
+
+// Der Tastendruck selbst: nur in WebKit noetig, dort aber die einzige Gelegenheit.
+function armCopy() {
+  if (!holdsGesture) return;
+  if (copyGesture) copyGesture.fail();
+  const gesture = { done: false, content: null, parts: {} };
+  const entry = {};
+  for (const type of ['text/plain', 'image/png']) {
+    entry[type] = new Promise((resolve, reject) => { gesture.parts[type] = { resolve, reject }; });
+    entry[type].catch(() => { });
+  }
+  gesture.fail = () => {
+    if (gesture.done) return;
+    gesture.done = true;
+    if (copyGesture === gesture) copyGesture = null;
+    gesture.parts['text/plain'].reject(new Error('none'));
+    gesture.parts['image/png'].reject(new Error('none'));
+  };
+  // Kommt nichts (die Anwendung hat nichts abgelegt), verfaellt der Eintrag still.
+  gesture.timer = setTimeout(gesture.fail, 15000);
+  copyGesture = gesture;
+  navigator.clipboard.write([new ClipboardItem(entry)]).then(() => {
+    if (gesture.content) rememberDeviceClip(gesture.content.signature);
+  }).catch(() => {
+    // Ein Text ohne Bild laesst den Eintrag scheitern (beide Arten stehen fest, bevor die
+    // Anwendung antwortet); dann der Knopf.
+    if (gesture.content) offerClip(gesture.content);
+  });
+}
+
+async function onClip(message) {
+  const gesture = copyGesture && !copyGesture.done ? copyGesture : null;
+  if (gesture) {
+    copyGesture = null;
+    clearTimeout(gesture.timer);
+  }
+  if (message.large) clipNotice(text('clipTooLarge'));
+  const wantsImage = !!message.image && clipboardApi;
+  if (message.image && !clipboardApi && !insecureImageNoticed) {
+    insecureImageNoticed = true;
+    clipNotice(text('clipImageInsecure'));
+  }
+  if (!message.text && !wantsImage) {
+    if (gesture) gesture.fail();
+    return;
+  }
+  let content;
+  try {
+    const [textPart, imagePart] = await Promise.all([
+      message.text ? fetchClip(message.id, 'text') : null,
+      wantsImage ? fetchClip(message.id, 'image') : null]);
+    content = {
+      plain: textPart ? textPart.value : null,
+      text: textPart ? textPart.blob : null,
+      image: imagePart ? imagePart.blob : null,
+      signature: imagePart ? imageSignature(message.w, message.h) : textSignature(textPart.value)
+    };
+  } catch (error) {
+    if (gesture) gesture.fail();
+    // Inzwischen ist etwas Neueres abgelegt: dazu kommt eine eigene Nachricht.
+    if (error.message === 'large') clipNotice(text('clipTooLarge'));
+    return;
+  }
+  if (gesture) {
+    gesture.content = content;
+    gesture.done = true;
+    gesture.parts['text/plain'].resolve(content.text || new Blob([''], { type: 'text/plain' }));
+    if (content.image) gesture.parts['image/png'].resolve(content.image);
+    else gesture.parts['image/png'].reject(new Error('none'));
+    return;
+  }
+  writeClip(content, false);
+}
+
+function writeClip(content, fromButton) {
+  let writing;
+  if (clipboardApi && content.image) {
+    const entry = { 'image/png': content.image };
+    if (content.text) entry['text/plain'] = content.text;
+    writing = navigator.clipboard.write([new ClipboardItem(entry)]);
+  } else if (clipboardApi) {
+    writing = navigator.clipboard.writeText(content.plain);
+  } else {
+    writing = copyByEvent(content.plain) ? Promise.resolve() : Promise.reject(new Error('refused'));
+  }
+  writing.then(() => rememberDeviceClip(content.signature))
+         .catch(() => fromButton ? clipNotice(text('clipFailed')) : offerClip(content));
+}
+
+// Ohne Schnittstelle: das Ereignis copy, das execCommand ausloest, nimmt den Text synchron an.
+function copyByEvent(value) {
+  if (value === null) return false;
+  const put = event => {
+    event.clipboardData.setData('text/plain', value);
+    event.preventDefault();
+  };
+  document.addEventListener('copy', put, true);
+  let done = false;
+  try { done = document.execCommand('copy'); } catch (ignored) { }
+  document.removeEventListener('copy', put, true);
+  return done;
+}
+
+function offerClip(content) {
+  clipNotice(text('clipReady'), text('clipCopy'), () => writeClip(content, true));
+}
+
+// STRG+V. Den Fokus bekommt kurz ein verstecktes Textfeld: nur in ein bearbeitbares Element
+// schicken alle Browser das Ereignis paste. Bis dahin und bis der Inhalt drueben liegt, warten
+// alle weiteren Eingaben (send); kommt kein paste, geht die Taste nach kurzer Zeit trotzdem.
+function beginPaste(down) {
+  const hold = { down, held: [], seen: false };
+  hold.timer = setTimeout(() => finishPaste(hold, true), 400);
+  pasteHold = hold;
+  clipSink.value = '';
+  clipSink.focus({ preventScroll: true });
+}
+function finishPaste(hold, forward) {
+  if (pasteHold !== hold) return;
+  clearTimeout(hold.timer);
+  pasteHold = null;
+  if (document.activeElement === clipSink) stage.focus();
+  if (forward) send(hold.down);
+  for (const message of hold.held) send(message);
+}
+addEventListener('paste', event => {
+  const hold = pasteHold;
+  if (!hold || hold.seen) return;
+  hold.seen = true;
+  clearTimeout(hold.timer);
+  event.preventDefault();
+  stage.focus();
+  // Das Ereignis gibt seinen Inhalt nur jetzt heraus; die Dateien darin bleiben lesbar.
+  const data = event.clipboardData;
+  const plain = data ? data.getData('text/plain') : '';
+  const files = data ? Array.from(data.files || []) : [];
+  hold.timer = setTimeout(() => finishPaste(hold, true), 30000);
+  pasteIntoApp(plain, files).then(forward => finishPaste(hold, forward), () => {
+    clipNotice(text('pasteFailed'));
+    finishPaste(hold, false);
+  });
+}, true);
+
+// Bilddaten (Bildschirmfoto, "Bild kopieren") heissen in jedem Browser "image.png"; kopierte
+// Dateien aus einem Dateimanager tragen ihren Namen.
+function isImageData(files) {
+  return files.length === 1 && /^image\//.test(files[0].type) && (!files[0].name || /^image\.[a-z0-9]+$/i.test(files[0].name));
+}
+function toPng(bitmap) {
+  const canvas = document.createElement('canvas');
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  canvas.getContext('2d').drawImage(bitmap, 0, 0);
+  return new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('png')), 'image/png'));
+}
+
+// Liefert, ob STRG+V danach an die Anwendung geht.
+async function pasteIntoApp(plain, files) {
+  // Kopierte Dateien werden hochgeladen, wie beim Ablegen an der Stelle der Maus: im Editor eine
+  // Ebene, in der Galerie in den Ordner. STRG+V selbst entfaellt dann.
+  if (files.length > 0 && !isImageData(files)) {
+    const signature = 'f:' + hashText(files.map(file => file.name + '/' + file.size).join('|'));
+    if (signature === deviceClip) return true;
+    rememberDeviceClip(signature);
+    enqueue(files, pointerX, pointerY);
+    return false;
+  }
+  let body;
+  let type;
+  let signature;
+  if (files.length > 0) {
+    const bitmap = await createImageBitmap(files[0]);
+    signature = imageSignature(bitmap.width, bitmap.height);
+    if (signature === deviceClip) {
+      bitmap.close();
+      return true;
+    }
+    try {
+      body = files[0].type === 'image/png' ? files[0] : await toPng(bitmap);
+    } finally {
+      bitmap.close();
+    }
+    type = 'image/png';
+  } else if (plain) {
+    signature = textSignature(plain);
+    if (signature === deviceClip) return true;
+    body = new Blob([plain], { type: 'text/plain' });
+    type = 'text/plain;charset=utf-8';
+  } else {
+    return true;
+  }
+  const limit = Number(type === 'image/png' ? texts.clipImageBytes : texts.clipTextBytes) || Infinity;
+  if (body.size > limit) {
+    clipNotice(text('clipTooLarge'));
+    return false;
+  }
+  const response = await fetch('/clipboard', {
+    method: 'POST', body, credentials: 'same-origin',
+    headers: { 'Content-Type': type, 'X-FerrumPix-Token': token }
+  });
+  if (!response.ok) {
+    clipNotice(response.status === 413 ? text('clipTooLarge') : text('pasteFailed'));
+    return false;
+  }
+  rememberDeviceClip(signature);
+  return true;
 }
 
 stage.focus();

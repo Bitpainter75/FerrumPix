@@ -51,6 +51,9 @@ Namespace ViewModels
 
         Private Sub InitializeAppLock()
             AddHandler AppLockService.LockStateChanged, AddressOf OnAppLockStateChanged
+            ' Die Ersteinrichtung im Browser setzt das Kennwort von einem Hintergrundfaden aus.
+            AddHandler AppLockService.ProtectionChanged,
+                Sub(s, e) Dispatcher.UIThread.Post(AddressOf OnAppLockProtectionChanged)
             SyncLockScreen()
         End Sub
 

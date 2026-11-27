@@ -23,6 +23,14 @@ Namespace Services
         ''' Leer, wenn das System nichts sagt. Der Wortlaut kommt vom System und steht deshalb in
         ''' dessen Sprache, nicht in der der Anwendung.</summary>
         Public Shared Function MoveToTrash(path As String, ByRef reason As String) As Boolean
+            If Not MoveToTrashCore(path, reason) Then Return False
+            ' Geloescht heisst auch: keine Freigabe per Link zeigt den Pfad mehr, auch nicht, wenn
+            ' spaeter eine andere Datei dort liegt (ShareStore).
+            ShareStore.ForgetPath(path)
+            Return True
+        End Function
+
+        Private Shared Function MoveToTrashCore(path As String, ByRef reason As String) As Boolean
             reason = ""
             If String.IsNullOrEmpty(path) Then Return False
             If Not (File.Exists(path) OrElse Directory.Exists(path)) Then Return False

@@ -11,11 +11,12 @@
 # wenn der Probelauf gruen war.
 #
 # DER PROBELAUF (packaging/browser-avalonia/probe.sh) startet das amd64-Abbild ohne eingehaengte
-# Daten: ohne Zusage muss es den Start verweigern, mit der Zusage "nur am eigenen Rechner" und
-# einem zufaelligen Kennwort muessen /health "ok", die Seite mit Kennwort 200 und ohne 401 liefern
-# (das Kennwort geht dabei als "Authorization: Basic" mit, wie bei jedem Werkzeug). Ohne Anmeldung
-# kommt das Anmeldefenster der Seite ohne WWW-Authenticate, und die Anmeldung dort setzt ein
-# Sitzungs-Cookie, mit dem die Seite kommt.
+# Daten: ohne Zusage muss es den Start verweigern. Mit der Zusage "nur am eigenen Rechner" und
+# ohne Kennwort (eine Angabe dafuer gibt es nicht mehr) muessen /health "ok" und die Seite nur die
+# Einrichtung liefern (401 ohne WWW-Authenticate, Hochladen und Basic 401). Die Einrichtung ueber
+# POST /setup mit Name und zufaelligem Kennwort setzt ein Sitzungs-Cookie, mit dem die Seite
+# kommt; eine zweite scheitert. Danach kommt die Seite mit Basic 200, mit falschem Kennwort 401,
+# und die Anmeldung im Anmeldefenster setzt ein Cookie.
 #
 # SICHERHEIT: kein pull_request_target, kein Ausloeser von aussen (siehe release.yml). Der Token
 # zum Hochladen ist der eingebaute GITHUB_TOKEN mit "packages: write"; ein weiteres Secret braucht

@@ -39,6 +39,7 @@ Namespace Services
         Private Const PropMute As ULong = 4UL
         Private Const PropVid As ULong = 5UL
         Private Const PropVoConfigured As ULong = 6UL
+        Private Const PropVideoOutRotate As ULong = 7UL
 
         ''' <summary>MPV_ERROR_VO_INIT_FAILED (client.h): die Bildausgabe liess sich nicht aufbauen.</summary>
         Friend Const MpvErrorVoInitFailed As Integer = -15
@@ -192,10 +193,17 @@ Namespace Services
         ''' <para>Die Umgebungsvariable <c>FERRUMPIX_VIDEO_RENDER_API</c> schaltet den abholenden
         ''' Weg auch dort ein, wo er nicht die Vorgabe ist. Sie ist nicht für Anwender gedacht,
         ''' sondern dafür, dass dieser Weg sich überhaupt anderswo als auf einem Mac ausprobieren
-        ''' und im Prüfstand messen lässt.</para></summary>
+        ''' und im Prüfstand messen lässt.</para>
+        '''
+        ''' <para>IM BROWSER (<see cref="BrowserBridge.IsActive"/>) immer: dort läuft die Oberfläche
+        ''' auf der Plattform ohne Bildschirm, und die kennt keine nativen Flächen. Ein
+        ''' <c>MpvVideoView</c> bekommt dort nie ein Fenster, <see cref="AttachWindow"/> wird nie
+        ''' gerufen, und ohne Ausgabeziel baut sich mpv gar nicht erst auf: kein Film und kein
+        ''' Bewegtbild lief, die Fläche blieb schwarz, bis nach vier Sekunden der Rückfall und
+        ''' danach das Standbild kam.</para></summary>
         Public Shared ReadOnly Property UsesRenderSurfaceOnThisPlatform As Boolean
             Get
-                If OperatingSystem.IsMacOS() Then Return True
+                If OperatingSystem.IsMacOS() OrElse BrowserBridge.IsActive Then Return True
                 Return String.Equals(Environment.GetEnvironmentVariable("FERRUMPIX_VIDEO_RENDER_API"), "1", StringComparison.Ordinal)
             End Get
         End Property
@@ -785,6 +793,9 @@ Namespace Services
                     ' kann der Software-Zeichner nicht lesen.
                     SetOptionStringRaw("vo", "libmpv")
                     SetOptionStringRaw("hwdec", If(_enableHardwareAcceleration, "auto-copy", "no"))
+                    ' Im Browser kein Ton: er kaeme aus dem Lautsprecher des Rechners, auf dem
+                    ' FerrumPix laeuft, nicht aus dem Geraet, an dem jemand zusieht.
+                    If BrowserBridge.IsActive Then SetOptionStringRaw("ao", "null")
                 Else
                     SetOptionStringRaw("hwdec", If(_enableHardwareAcceleration, "auto-safe", "no"))
                     If OperatingSystem.IsLinux() Then
@@ -829,6 +840,11 @@ Namespace Services
                     If Not _renderer.TryCreate(_handle) Then
                         Throw New InvalidOperationException("Der Zeichenkontext von libmpv konnte nicht angelegt werden.")
                     End If
+                    ' Die Drehung aus dem Container (Telefonfilme hochkant gespeichert) muss der
+                    ' abholende Weg selbst anwenden, siehe MpvSoftwareRenderer.SetVideoRotation.
+                    ' Beobachtet wird, was die AUSGABE noch drehen soll, nicht die Angabe der Datei:
+                    ' setzt mpv selbst einen Drehfilter ein, steht dort 0.
+                    ObservePropertyRaw(PropVideoOutRotate, "video-out-params/rotate", MpvInterop.MpvFormat.Int64)
                 Else
                     ' Klick aufs Video toggelt Wiedergabe/Pause: Das Video sitzt in einem
                     ' NativeControlHost - Avalonia-Pointer-Events erreichen es NIE, das native
@@ -1054,6 +1070,14 @@ Namespace Services
                     Dim configured = Marshal.ReadInt32(prop.Data) <> 0
                     DiagnosticLogService.LogAlways("VideoPlayback.Weg", If(configured, "Bildausgabe steht", "Bildausgabe abgebaut"))
                     RaiseEvent VideoOutputConfiguredChanged(configured)
+                Case PropVideoOutRotate
+                    ' Ohne Bild (zwischen zwei Filmen) meldet mpv das Feld als nicht vorhanden:
+                    ' dann gilt keine Drehung, bis der naechste Film seine meldet.
+                    Dim rotation = 0
+                    If prop.Format = MpvInterop.MpvFormat.Int64 AndAlso prop.Data <> IntPtr.Zero Then
+                        rotation = CInt(Marshal.ReadInt64(prop.Data) Mod 360L)
+                    End If
+                    _renderer?.SetVideoRotation(rotation)
             End Select
         End Sub
 

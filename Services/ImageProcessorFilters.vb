@@ -3748,6 +3748,9 @@ Namespace Services
         ''' Pfad neu, der im offenen Rezept steht, passt ein gemerktes Basisbild damit nicht mehr.</summary>
         Friend Shared Function CubeLutKeyPart(path As String) As String
             If String.IsNullOrWhiteSpace(path) Then Return If(path, "")
+            ' Unter einer Leseregel, die die LUT nicht freigibt, rechnet die Kette ohne sie
+            ' (RecipeReferences); ein gemerktes Basisbild mit LUT passt dann nicht.
+            If Not RecipeReferences.Allows(path) Then Return "#blocked"
             Return path & "#" & Volatile.Read(_cubeLutGeneration).ToString(System.Globalization.CultureInfo.InvariantCulture)
         End Function
 

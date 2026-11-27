@@ -273,12 +273,111 @@ Namespace Services
             app.Resources("StringDatePickerYearText") = T("Jahr")
         End Sub
 
+        ' --- Sprache je Anfrage (Browser) ---------------------------------------------------------
+        '
+        ' Im Browser sieht jeder Benutzer seine eigene Sprache, waehrend die volle Oberflaeche in der
+        ' Sprache der Anwendung bleibt. Die Sprache einer Anfrage steht deshalb nicht global, sondern
+        ' in einem AsyncLocal: sie gilt nur im Ablauf dieser Anfrage, auch ueber await, Task.Run und
+        ' Dispatcher.UIThread.InvokeAsync hinweg (Avalonias Dispatcher nimmt den ExecutionContext
+        ' samt Kultur mit), und nie fuer eine andere. T() und Tag() fragen sie zuerst.
+
+        Private Shared ReadOnly RequestCultureSlot As New Threading.AsyncLocal(Of CultureInfo)()
+        Private Shared ReadOnly ProcessUiCulture As CultureInfo = CultureInfo.CurrentUICulture
+
+        ''' <summary>Die Kultur der Texte im laufenden Ablauf: die der Anfrage, sonst die der
+        ''' Anwendung.</summary>
+        Public Shared ReadOnly Property TextCulture As CultureInfo
+            Get
+                Return If(RequestCultureSlot.Value, EffectiveCulture)
+            End Get
+        End Property
+
+        ''' <summary>Hat der laufende Ablauf eine eigene Sprache (Anfrage im Browser)?</summary>
+        Public Shared ReadOnly Property HasRequestCulture As Boolean
+            Get
+                Return RequestCultureSlot.Value IsNot Nothing
+            End Get
+        End Property
+
+        ''' <summary>Setzt die Sprache fuer den laufenden Ablauf, Nothing heisst die der Anwendung.
+        ''' Dazu CurrentUICulture, ebenfalls nur fuer diesen Ablauf: Laendernamen
+        ''' (RegionInfo.DisplayName) richten sich nach ihr. Nur am Anfang einer asynchronen
+        ''' Anfrage rufen, deren Ablauf danach endet; sonst <see cref="UseRequestCulture"/>.</summary>
+        Public Shared Sub SetRequestCulture(culture As CultureInfo)
+            RequestCultureSlot.Value = culture
+            CultureInfo.CurrentUICulture = If(culture, ProcessUiCulture)
+        End Sub
+
+        ''' <summary>Wie <see cref="SetRequestCulture"/>, mit Ruecknahme beim Dispose.</summary>
+        Public Shared Function UseRequestCulture(culture As CultureInfo) As IDisposable
+            Dim previous = RequestCultureSlot.Value
+            SetRequestCulture(culture)
+            Return New RequestCultureScope(previous)
+        End Function
+
+        Private NotInheritable Class RequestCultureScope
+            Implements IDisposable
+            Private ReadOnly _previous As CultureInfo
+            Public Sub New(previous As CultureInfo)
+                _previous = previous
+            End Sub
+            Public Sub Dispose() Implements IDisposable.Dispose
+                SetRequestCulture(_previous)
+            End Sub
+        End Class
+
+        ''' <summary>Die Kultur zu einer Sprache der Liste (<see cref="Languages"/>); Nothing fuer
+        ''' "System" (automatisch) und Unbekanntes. Englisch ist die invariante Kultur.</summary>
+        Public Shared Function CultureForLanguage(key As String) As CultureInfo
+            Dim normalized = NormalizeLanguageMode(key)
+            If normalized = "System" Then Return Nothing
+            Dim code = ResolveCultureCode(normalized)
+            If String.IsNullOrEmpty(code) Then Return CultureInfo.InvariantCulture
+            Return CultureInfo.GetCultureInfo(code)
+        End Function
+
+        ''' <summary>Die beste unterstuetzte Sprache aus einem Kopf Accept-Language ("de-DE,de;q=0.9,
+        ''' en;q=0.8"), nach Gewicht; Nothing, wenn keine passt.</summary>
+        Public Shared Function CultureForAcceptLanguage(header As String) As CultureInfo
+            If String.IsNullOrWhiteSpace(header) Then Return Nothing
+            Dim entries As New List(Of (Code As String, Weight As Double, Order As Integer))()
+            Dim index = 0
+            For Each part In header.Split(","c)
+                index += 1
+                Dim pieces = part.Split(";"c)
+                Dim tag = pieces(0).Trim()
+                If tag.Length = 0 OrElse tag = "*" Then Continue For
+                Dim weight = 1.0
+                For Each extra In pieces.Skip(1)
+                    Dim pair = extra.Trim()
+                    If pair.StartsWith("q=", StringComparison.OrdinalIgnoreCase) Then
+                        Double.TryParse(pair.Substring(2), NumberStyles.Float, CultureInfo.InvariantCulture, weight)
+                    End If
+                Next
+                entries.Add((tag.Split("-"c)(0).ToLowerInvariant(), weight, index))
+            Next
+            For Each entry In entries.Where(Function(e) e.Weight > 0).OrderByDescending(Function(e) e.Weight).ThenBy(Function(e) e.Order)
+                If entry.Code = "en" Then Return CultureInfo.InvariantCulture
+                If IsSupportedCultureCode(entry.Code) Then Return CultureInfo.GetCultureInfo(ResourceCultureFor(entry.Code))
+            Next
+            Return Nothing
+        End Function
+
+        ''' <summary>Das Kuerzel fuer lang in HTML: "en" fuer die invariante Kultur, sonst die
+        ''' Sprache ohne Region.</summary>
+        Public Shared Function HtmlLanguage(culture As CultureInfo) As String
+            If culture Is Nothing OrElse culture Is CultureInfo.InvariantCulture OrElse String.IsNullOrEmpty(culture.Name) Then Return "en"
+            Dim language = culture.TwoLetterISOLanguageName
+            If language.Length = 0 OrElse Not language.All(Function(c) Char.IsAsciiLetterLower(c)) Then Return "en"
+            Return language
+        End Function
+
         Public Shared Function T(text As String) As String
             If String.IsNullOrEmpty(text) Then Return text
 
             Try
                 Dim key = MakeKey(text)
-                Dim translated = Strings.GetString(key, EffectiveCulture)
+                Dim translated = Strings.GetString(key, TextCulture)
                 If Not String.IsNullOrEmpty(translated) Then Return translated
 
                 translated = Strings.GetString(key, CultureInfo.InvariantCulture)
@@ -296,7 +395,7 @@ Namespace Services
 
             Try
                 Dim key = MakeTagKey(text)
-                Dim translated = IconTags.GetString(key, EffectiveCulture)
+                Dim translated = IconTags.GetString(key, TextCulture)
                 If Not String.IsNullOrEmpty(translated) Then Return translated
 
                 translated = IconTags.GetString(key, CultureInfo.InvariantCulture)

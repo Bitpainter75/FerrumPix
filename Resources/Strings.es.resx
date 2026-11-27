@@ -3806,8 +3806,8 @@
   <data name="MetadataExtractor_2_9_b4b4b16f" xml:space="preserve">
     <value>MetadataExtractor 2.9</value>
   </data>
-  <data name="QRCoder_1_8_9fe99238" xml:space="preserve">
-    <value>QRCoder 1.8</value>
+  <data name="QRCoder_1_9_5a734f90" xml:space="preserve">
+    <value>QRCoder 1.9</value>
   </data>
   <data name="Phosphor_Icons_db78df19" xml:space="preserve">
     <value>Phosphor Icons</value>
@@ -13091,5 +13091,635 @@
   </data>
   <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nur_z_a9f4527b" xml:space="preserve">
     <value>La carpeta {0} está compartida con FerrumPix como Flatpak solo para lectura, así que no se puede escribir en ella. Solución: elija otra carpeta o amplíe el permiso con Flatseal o en una terminal con {1} y después reinicie FerrumPix.</value>
+  </data>
+  <data name="Das_Kennwort_wurde_inzwischen_schon_festgelegt_B_865e7576" xml:space="preserve">
+    <value>La contraseña ya se ha establecido mientras tanto. Inicia sesión.</value>
+  </data>
+  <data name="Bitte_einen_Benutzernamen_eingeben_h_chstens_64__9e0430a1" xml:space="preserve">
+    <value>Introduce un nombre de usuario, como máximo 64 caracteres.</value>
+  </data>
+  <data name="Benutzername_oder_Kennwort_ist_falsch_3a7298b4" xml:space="preserve">
+    <value>El nombre de usuario o la contraseña son incorrectos.</value>
+  </data>
+  <data name="Bitte_den_Benutzernamen_eingeben_689acf9a" xml:space="preserve">
+    <value>Introduce el nombre de usuario.</value>
+  </data>
+  <data name="Bitte_einmal_einen_Benutzernamen_festlegen_Er_gi_dcd39d83" xml:space="preserve">
+    <value>Establece una vez un nombre de usuario. A partir de ahora se usa junto con la contraseña.</value>
+  </data>
+  <data name="Willkommen_bei_FerrumPix_Bitte_zuerst_Benutzerna_996d65a2" xml:space="preserve">
+    <value>Bienvenido a FerrumPix. Establece primero un nombre de usuario y una contraseña.</value>
+  </data>
+  <data name="Mindestens_8_Zeichen_mit_Gro_buchstaben_Kleinbuc_d7ecebc7" xml:space="preserve">
+    <value>Al menos 8 caracteres con mayúsculas, minúsculas, un número y un carácter especial; un espacio cuenta como carácter especial.</value>
+  </data>
+  <data name="Kennwort_festlegen_35c49577" xml:space="preserve">
+    <value>Establecer contraseña</value>
+  </data>
+  <data name="Desktop_532c67fe" xml:space="preserve">
+    <value>Escritorio</value>
+  </data>
+  <data name="Volle_Oberfl_che_e64e07e3" xml:space="preserve">
+    <value>Interfaz completa</value>
+  </data>
+  <data name="Mobil_6e1dffe9" xml:space="preserve">
+    <value>Móvil</value>
+  </data>
+  <data name="Vereinfachte_Seite_46198397" xml:space="preserve">
+    <value>Página simplificada</value>
+  </data>
+  <data name="Im_Browser_braucht_FerrumPix_immer_ein_Kennwort__de71c557" xml:space="preserve">
+    <value>En el navegador, FerrumPix siempre necesita una contraseña. Se puede cambiar, pero no desactivar.</value>
+  </data>
+  <data name="Zur_vereinfachten_Seite_f_r_Telefon_und_Tablet_w_320f4a9d" xml:space="preserve">
+    <value>Cambiar a la página simplificada para teléfono y tableta</value>
+  </data>
+  <data name="Mobile_Ansicht_bab7686a" xml:space="preserve">
+    <value>Vista móvil</value>
+  </data>
+  <data name="0_ausgew_hlt_0c3edf50" xml:space="preserve">
+    <value>{0} seleccionados</value>
+  </data>
+  <data name="Als_JPEG_mit_Bearbeitung_ea4e5fa6" xml:space="preserve">
+    <value>Como JPEG con la edición</value>
+  </data>
+  <data name="Als_ZIP_herunterladen_805a899a" xml:space="preserve">
+    <value>Descargar como ZIP</value>
+  </data>
+  <data name="Das_Bild_konnte_nicht_geladen_werden_e226829e" xml:space="preserve">
+    <value>No se pudo cargar la imagen</value>
+  </data>
+  <data name="Die_nderung_konnte_nicht_gespeichert_werden_9b35374b" xml:space="preserve">
+    <value>No se pudo guardar el cambio</value>
+  </data>
+  <data name="Erneut_versuchen_3234b7ec" xml:space="preserve">
+    <value>Reintentar</value>
+  </data>
+  <data name="Fotos_69daa51e" xml:space="preserve">
+    <value>Fotos</value>
+  </data>
+  <data name="Hier_gibt_es_keine_Fotos_46e7063a" xml:space="preserve">
+    <value>Aquí no hay fotos</value>
+  </data>
+  <data name="Hierher_hochladen_962952b3" xml:space="preserve">
+    <value>Subir aquí</value>
+  </data>
+  <data name="In_diesem_Ordner_liegen_keine_Fotos_4697a322" xml:space="preserve">
+    <value>En esta carpeta no hay fotos</value>
+  </data>
+  <data name="Informationen_bc3bc55d" xml:space="preserve">
+    <value>Información</value>
+  </data>
+  <data name="Keine_Verbindung_zu_FerrumPix_79bb9eb5" xml:space="preserve">
+    <value>Sin conexión con FerrumPix</value>
+  </data>
+  <data name="Mehr_dfc8541c" xml:space="preserve">
+    <value>Más</value>
+  </data>
+  <data name="Stichwort_Kamera_oder_Dateiname_23be4ec1" xml:space="preserve">
+    <value>Palabra clave, cámara o nombre de archivo</value>
+  </data>
+  <data name="Teilen_b1cfc831" xml:space="preserve">
+    <value>Compartir</value>
+  </data>
+  <data name="Wird_hochgeladen_527eb12c" xml:space="preserve">
+    <value>Subiendo</value>
+  </data>
+  <data name="Zur_Desktop_Ansicht_5a522d33" xml:space="preserve">
+    <value>A la vista de escritorio</value>
+  </data>
+  <data name="Bitte_wenden_Sie_sich_an_den_Administrator_787b0090" xml:space="preserve">
+    <value>Póngase en contacto con el administrador.</value>
+  </data>
+  <data name="FerrumPix_neues_Kennwort_festlegen_cb826349" xml:space="preserve">
+    <value>FerrumPix: establecer una contraseña nueva</value>
+  </data>
+  <data name="Hallo_0_41ce0990" xml:space="preserve">
+    <value>Hola, {0}:</value>
+  </data>
+  <data name="f_r_Ihr_Konto_bei_FerrumPix_wurde_ein_neues_Kenn_d48b8bd7" xml:space="preserve">
+    <value>se ha solicitado una contraseña nueva para su cuenta de FerrumPix. Con este enlace la establece; es válido 30 minutos y una sola vez:</value>
+  </data>
+  <data name="Wenn_Sie_das_nicht_angefordert_haben_k_nnen_Sie__c9cefc15" xml:space="preserve">
+    <value>Si no lo ha solicitado, puede borrar este mensaje sin más.</value>
+  </data>
+  <data name="Zu_viele_Anfragen_Bitte_sp_ter_noch_einmal_versu_6f483281" xml:space="preserve">
+    <value>Demasiadas solicitudes. Vuelva a intentarlo más tarde.</value>
+  </data>
+  <data name="Wenn_es_dazu_ein_Konto_mit_E_Mail_Adresse_gibt_i_26756489" xml:space="preserve">
+    <value>Si existe una cuenta con dirección de correo, hay un mensaje en camino. Si no, póngase en contacto con el administrador.</value>
+  </data>
+  <data name="Der_Verweis_ist_abgelaufen_oder_wurde_schon_benu_de2b66bd" xml:space="preserve">
+    <value>El enlace ha caducado o ya se ha usado.</value>
+  </data>
+  <data name="Kennwort_vergessen_b45939e9" xml:space="preserve">
+    <value>¿Ha olvidado la contraseña?</value>
+  </data>
+  <data name="Benutzername_oder_E_Mail_Adresse_eingeben_Gibt_e_08194606" xml:space="preserve">
+    <value>Introduzca el nombre de usuario o la dirección de correo. Si existe una cuenta con dirección de correo, llegará un enlace para una contraseña nueva.</value>
+  </data>
+  <data name="Benutzername_oder_E_Mail_Adresse_73d23074" xml:space="preserve">
+    <value>Nombre de usuario o dirección de correo</value>
+  </data>
+  <data name="Verweis_senden_37c4aead" xml:space="preserve">
+    <value>Enviar enlace</value>
+  </data>
+  <data name="Zur_ck_zur_Anmeldung_887f2648" xml:space="preserve">
+    <value>Volver al inicio de sesión</value>
+  </data>
+  <data name="Neues_Kennwort_festlegen_144cb35b" xml:space="preserve">
+    <value>Establecer una contraseña nueva</value>
+  </data>
+  <data name="Die_volle_Oberfl_che_gibt_es_nur_f_r_Administrat_546010d4" xml:space="preserve">
+    <value>La interfaz completa es solo para administradores. Se continúa en la página móvil.</value>
+  </data>
+  <data name="0_l_schen_a66ed0e0" xml:space="preserve">
+    <value>¿Eliminar {0}?</value>
+  </data>
+  <data name="Ansehen_97d7cee1" xml:space="preserve">
+    <value>Ver</value>
+  </data>
+  <data name="Mitarbeiten_df833ab8" xml:space="preserve">
+    <value>Colaborar</value>
+  </data>
+  <data name="Kein_Zugriff_aa31bf98" xml:space="preserve">
+    <value>Sin acceso</value>
+  </data>
+  <data name="Ohne_Verschl_sselung_1cc9b2c4" xml:space="preserve">
+    <value>Sin cifrado</value>
+  </data>
+  <data name="Eigent_mer_2843ee90" xml:space="preserve">
+    <value>Propietario</value>
+  </data>
+  <data name="Administrator_1eda2375" xml:space="preserve">
+    <value>Administrador</value>
+  </data>
+  <data name="Benutzer_bd26f3d2" xml:space="preserve">
+    <value>Usuarios</value>
+  </data>
+  <data name="Gesperrt_b1432218" xml:space="preserve">
+    <value>Bloqueado</value>
+  </data>
+  <data name="Diesen_Benutzernamen_gibt_es_schon_ae86e156" xml:space="preserve">
+    <value>Este nombre de usuario ya existe.</value>
+  </data>
+  <data name="Die_E_Mail_Adresse_ist_ung_ltig_d8df6232" xml:space="preserve">
+    <value>La dirección de correo no es válida.</value>
+  </data>
+  <data name="Diese_E_Mail_Adresse_geh_rt_schon_einem_anderen__a9e51850" xml:space="preserve">
+    <value>Esta dirección de correo ya pertenece a otro usuario.</value>
+  </data>
+  <data name="Das_Kennwort_erf_llt_die_Regeln_nicht_aa122aaf" xml:space="preserve">
+    <value>La contraseña no cumple las reglas.</value>
+  </data>
+  <data name="Der_Eigent_mer_bleibt_immer_Administrator_und_l__5a284448" xml:space="preserve">
+    <value>El propietario siempre es administrador y no se puede bloquear ni eliminar.</value>
+  </data>
+  <data name="Diesen_Benutzer_gibt_es_nicht_mehr_d4df6788" xml:space="preserve">
+    <value>Este usuario ya no existe.</value>
+  </data>
+  <data name="Administratoren_sehen_alles_und_brauchen_keine_R_340bea53" xml:space="preserve">
+    <value>Los administradores lo ven todo y no necesitan reglas.</value>
+  </data>
+  <data name="Ohne_Regel_sieht_dieser_Benutzer_nichts_dfc85d80" xml:space="preserve">
+    <value>Sin reglas, este usuario no ve nada.</value>
+  </data>
+  <data name="Keine_Regel_gibt_einen_Ordner_zum_Ansehen_frei_ff196fc4" xml:space="preserve">
+    <value>Ninguna regla permite ver una carpeta.</value>
+  </data>
+  <data name="Auf_der_mobilen_Seite_beginnt_er_hier_40ac6711" xml:space="preserve">
+    <value>En la página móvil empieza aquí:</value>
+  </data>
+  <data name="Die_n_chstliegende_Regel_gewinnt_auch_eine_enger_a8ebe4d4" xml:space="preserve">
+    <value>Gana la regla más cercana, también una más estricta en una subcarpeta.</value>
+  </data>
+  <data name="Das_neue_Kennwort_gilt_ab_sofort_Offene_Anmeldun_c8a9e134" xml:space="preserve">
+    <value>La contraseña nueva rige desde ya. Las sesiones abiertas de este usuario han terminado.</value>
+  </data>
+  <data name="0_kann_sich_danach_nicht_mehr_anmelden_und_seine_b063d31d" xml:space="preserve">
+    <value>{0} ya no podrá iniciar sesión y sus reglas de carpetas desaparecen. Sus fotos y valoraciones se mantienen.</value>
+  </data>
+  <data name="Der_Port_muss_eine_Zahl_von_1_bis_65535_sein_63e44f66" xml:space="preserve">
+    <value>El puerto debe ser un número de 1 a 65535.</value>
+  </data>
+  <data name="Die_ffentliche_Adresse_braucht_die_Form_https_na_ef72da9c" xml:space="preserve">
+    <value>La dirección pública necesita la forma https://name.example, sin ruta.</value>
+  </data>
+  <data name="Bitte_eine_g_ltige_Adresse_f_r_die_Test_E_Mail_e_cb67ff6c" xml:space="preserve">
+    <value>Introduzca una dirección válida para el correo de prueba.</value>
+  </data>
+  <data name="Bitte_Server_und_Absender_eintragen_676a1249" xml:space="preserve">
+    <value>Introduzca servidor y remitente.</value>
+  </data>
+  <data name="Wird_gesendet_bfe4a609" xml:space="preserve">
+    <value>Enviando ...</value>
+  </data>
+  <data name="FerrumPix_Test_E_Mail_6bec34a9" xml:space="preserve">
+    <value>FerrumPix: correo de prueba</value>
+  </data>
+  <data name="Diese_Nachricht_kommt_von_FerrumPix_Der_Mailvers_8e971cfd" xml:space="preserve">
+    <value>Este mensaje viene de FerrumPix. El envío de correo para una contraseña olvidada funciona.</value>
+  </data>
+  <data name="Die_Test_E_Mail_an_0_ist_versendet_ad16c6ef" xml:space="preserve">
+    <value>El correo de prueba a {0} se ha enviado.</value>
+  </data>
+  <data name="Die_Test_E_Mail_lie_sich_nicht_senden_0_b5e3e762" xml:space="preserve">
+    <value>No se pudo enviar el correo de prueba: {0}</value>
+  </data>
+  <data name="Ordner_f_r_die_Regel_w_hlen_0fb8b613" xml:space="preserve">
+    <value>Elegir carpetas para la regla</value>
+  </data>
+  <data name="Wer_FerrumPix_im_Browser_benutzen_darf_Der_Eigen_e0d7be8a" xml:space="preserve">
+    <value>Quién puede usar FerrumPix en el navegador. El propietario de la configuración inicial es administrador y lo ve todo. Los demás usuarios solo tienen la página móvil y solo ven las carpetas que permiten sus reglas. Las valoraciones y marcas son comunes para todos.</value>
+  </data>
+  <data name="E_Mail_Adresse_ce8fdbcb" xml:space="preserve">
+    <value>Dirección de correo</value>
+  </data>
+  <data name="F_r_ein_vergessenes_Kennwort_Angemeldet_wird_wei_1483249b" xml:space="preserve">
+    <value>Para una contraseña olvidada. Se sigue iniciando sesión con el nombre.</value>
+  </data>
+  <data name="Darf_in_die_volle_Oberfl_che_und_in_die_Einstell_3fb7f312" xml:space="preserve">
+    <value>Puede usar la interfaz completa y los ajustes y lo ve todo.</value>
+  </data>
+  <data name="Kann_sich_nicht_anmelden_offene_Anmeldungen_ende_ad4e11c4" xml:space="preserve">
+    <value>No puede iniciar sesión; las sesiones abiertas terminan al instante.</value>
+  </data>
+  <data name="Kennwort_zur_cksetzen_f2e37733" xml:space="preserve">
+    <value>Restablecer contraseña</value>
+  </data>
+  <data name="Kennwort_setzen_55eb847e" xml:space="preserve">
+    <value>Establecer contraseña</value>
+  </data>
+  <data name="Rechte_je_Ordner_bb6f13e0" xml:space="preserve">
+    <value>Permisos por carpeta</value>
+  </data>
+  <data name="Ansehen_hei_t_sehen_und_herunterladen_Mitarbeite_283f34b3" xml:space="preserve">
+    <value>Ver significa ver y descargar, Colaborar añade valorar, marcar y subir, Gestionar añade renombrar y eliminar. Una regla vale para la carpeta y todo lo que contiene.</value>
+  </data>
+  <data name="Benutzer_l_schen_18102426" xml:space="preserve">
+    <value>Eliminar usuario</value>
+  </data>
+  <data name="Neuer_Benutzer_93017c9b" xml:space="preserve">
+    <value>Usuario nuevo</value>
+  </data>
+  <data name="Name_ohne_Gro_und_Kleinschreibung_eindeutig_E_Ma_4dabb81c" xml:space="preserve">
+    <value>Nombre único sin distinguir mayúsculas, dirección de correo opcional. Sin el rol de administrador no ve nada hasta que reciba reglas de carpetas.</value>
+  </data>
+  <data name="Benutzer_anlegen_1614f4af" xml:space="preserve">
+    <value>Crear usuario</value>
+  </data>
+  <data name="E_Mail_f_r_vergessene_Kennw_rter_b66373bf" xml:space="preserve">
+    <value>Correo para contraseñas olvidadas</value>
+  </data>
+  <data name="Mit_einem_Mailserver_schickt_die_Anmeldung_im_Br_528bb2f3" xml:space="preserve">
+    <value>Con un servidor de correo, el inicio de sesión en el navegador envía un enlace a la dirección del usuario si olvida la contraseña. Sin él solo puede ayudar el administrador.</value>
+  </data>
+  <data name="Server_cb0cb170" xml:space="preserve">
+    <value>Servidor</value>
+  </data>
+  <data name="Port_fe035157" xml:space="preserve">
+    <value>Puerto</value>
+  </data>
+  <data name="Verschl_sselung_3be4a22c" xml:space="preserve">
+    <value>Cifrado</value>
+  </data>
+  <data name="Absender_4bc8195c" xml:space="preserve">
+    <value>Remitente</value>
+  </data>
+  <data name="ffentliche_Adresse_a088db22" xml:space="preserve">
+    <value>Dirección pública</value>
+  </data>
+  <data name="Test_E_Mail_an_cb64f2fe" xml:space="preserve">
+    <value>Correo de prueba a</value>
+  </data>
+  <data name="Die_ffentliche_Adresse_bildet_den_Verweis_in_der_86dac91d" xml:space="preserve">
+    <value>La dirección pública forma el enlace del mensaje. Vacía, vale la dirección por la que llega el navegador; con dispositivos de la red doméstica en los que no confía, conviene establecerla.</value>
+  </data>
+  <data name="Test_E_Mail_senden_c79d6b3b" xml:space="preserve">
+    <value>Enviar correo de prueba</value>
+  </data>
+  <data name="Mit_den_Zugangsdaten_Immich_Nextcloud_Mailversan_38be27bf" xml:space="preserve">
+    <value>Con las credenciales: Immich, Nextcloud, envío de correo y contraseñas de inicio de sesión</value>
+  </data>
+  <data name="Automatisch_Sprache_des_Browsers_cac03e47" xml:space="preserve">
+    <value>Automático (idioma del navegador)</value>
+  </data>
+  <data name="F_r_die_mobile_Seite_Meldungen_und_Nachrichten_a_397aed2f" xml:space="preserve">
+    <value>Para la página móvil, los avisos y los mensajes a este usuario. La interfaz completa sigue en el idioma de la aplicación.</value>
+  </data>
+  <data name="Benutzerverwaltung_b05aadc9" xml:space="preserve">
+    <value>Gestión de usuarios</value>
+  </data>
+  <data name="Browser_und_mobile_Ansicht_0b4f1ff5" xml:space="preserve">
+    <value>Navegador y vista móvil</value>
+  </data>
+  <data name="Sperren_und_das_Anmeldefenster_zeigen_nur_mit_Ke_f06c516d" xml:space="preserve">
+    <value>Bloquear y mostrar la ventana de inicio de sesión (solo con contraseña, ver Ajustes, Gestión de usuarios)</value>
+  </data>
+  <data name="Diese_Freigabe_ist_mit_einem_Kennwort_gesch_tzt_7f79b00d" xml:space="preserve">
+    <value>Este enlace compartido está protegido con una contraseña.</value>
+  </data>
+  <data name="Dieser_Link_ist_ung_ltig_abgelaufen_oder_wurde_w_11b25b49" xml:space="preserve">
+    <value>Este enlace no es válido, ha caducado o se ha revocado.</value>
+  </data>
+  <data name="Verf_gbar_bis_0_6c43116a" xml:space="preserve">
+    <value>Disponible hasta {0}</value>
+  </data>
+  <data name="Geteilt_mit_FerrumPix_174ceb7d" xml:space="preserve">
+    <value>Compartido con FerrumPix</value>
+  </data>
+  <data name="Link_zum_Teilen_erstellen_dd8da631" xml:space="preserve">
+    <value>Crear enlace para compartir</value>
+  </data>
+  <data name="An_App_senden_c549c6d8" xml:space="preserve">
+    <value>Enviar a una app</value>
+  </data>
+  <data name="Meine_Freigaben_efe0316c" xml:space="preserve">
+    <value>Mis enlaces compartidos</value>
+  </data>
+  <data name="G_ltig_17770e6b" xml:space="preserve">
+    <value>Validez</value>
+  </data>
+  <data name="0_Tage_f5c5232d" xml:space="preserve">
+    <value>{0} días</value>
+  </data>
+  <data name="1_Jahr_d0e3da3e" xml:space="preserve">
+    <value>1 año</value>
+  </data>
+  <data name="Leer_lassen_um_das_Kennwort_zu_behalten_80f311ac" xml:space="preserve">
+    <value>Dejar vacío para mantener la contraseña</value>
+  </data>
+  <data name="Herunterladen_erlauben_4a950b96" xml:space="preserve">
+    <value>Permitir descarga</value>
+  </data>
+  <data name="Ort_mitgeben_896c2f86" xml:space="preserve">
+    <value>Incluir ubicación</value>
+  </data>
+  <data name="Personen_mitgeben_54d892b8" xml:space="preserve">
+    <value>Incluir personas</value>
+  </data>
+  <data name="Kamera_und_Belichtung_mitgeben_ae1cae53" xml:space="preserve">
+    <value>Incluir cámara y exposición</value>
+  </data>
+  <data name="Link_erstellen_bd3ee5c1" xml:space="preserve">
+    <value>Crear enlace</value>
+  </data>
+  <data name="Link_kopieren_e8b631dd" xml:space="preserve">
+    <value>Copiar enlace</value>
+  </data>
+  <data name="Link_kopiert_3498023f" xml:space="preserve">
+    <value>Enlace copiado</value>
+  </data>
+  <data name="Widerrufen_2c7ccedb" xml:space="preserve">
+    <value>Revocar</value>
+  </data>
+  <data name="Diese_Freigabe_widerrufen_Der_Link_funktioniert__7303b0c3" xml:space="preserve">
+    <value>¿Revocar este enlace compartido? El enlace dejará de funcionar.</value>
+  </data>
+  <data name="Der_Link_steht_nur_auf_dem_Ger_t_auf_dem_er_erst_2751921a" xml:space="preserve">
+    <value>El enlace solo está guardado en el dispositivo donde se creó. ¿Crear un enlace nuevo? El anterior dejará de funcionar.</value>
+  </data>
+  <data name="0_Aufrufe_3632decf" xml:space="preserve">
+    <value>{0} visitas</value>
+  </data>
+  <data name="Abgelaufen_d16b8321" xml:space="preserve">
+    <value>Caducado</value>
+  </data>
+  <data name="Ohne_Wirkung_c307d548" xml:space="preserve">
+    <value>Sin efecto</value>
+  </data>
+  <data name="Noch_keine_Freigaben_316a0d7a" xml:space="preserve">
+    <value>Aún no hay enlaces compartidos</value>
+  </data>
+  <data name="Alle_Freigaben_pausieren_06081b34" xml:space="preserve">
+    <value>Pausar todos los enlaces compartidos</value>
+  </data>
+  <data name="Alle_Freigaben_sind_pausiert_975f19e3" xml:space="preserve">
+    <value>Todos los enlaces compartidos están en pausa.</value>
+  </data>
+  <data name="Link_erstellt_0dce5571" xml:space="preserve">
+    <value>Enlace creado</value>
+  </data>
+  <data name="Das_Kennwort_braucht_mindestens_8_Zeichen_bbe2b0a9" xml:space="preserve">
+    <value>La contraseña necesita al menos 8 caracteres.</value>
+  </data>
+  <data name="Zum_Teilen_braucht_es_auf_jedem_Bild_mindestens__50b502ff" xml:space="preserve">
+    <value>Para compartir se necesita al menos el permiso Colaborar en cada imagen.</value>
+  </data>
+  <data name="Dieser_Ordner_l_sst_sich_nicht_teilen_7fe992a4" xml:space="preserve">
+    <value>Esta carpeta no se puede compartir.</value>
+  </data>
+  <data name="Der_Link_gilt_30_Tage_ohne_Kennwort_mit_Herunter_d7d1cd50" xml:space="preserve">
+    <value>El enlace vale 30 días, sin contraseña, con descarga, sin ubicación ni personas. Puede cambiarlo o revocarlo en la vista móvil en Mis enlaces compartidos y en los ajustes en Enlaces compartidos.</value>
+  </data>
+  <data name="Gel_schter_Benutzer_85498453" xml:space="preserve">
+    <value>Usuario eliminado</value>
+  </data>
+  <data name="Geteilt_von_0_38359dff" xml:space="preserve">
+    <value>Compartido por {0}</value>
+  </data>
+  <data name="Ordner_0_bb112d04" xml:space="preserve">
+    <value>Carpeta {0}</value>
+  </data>
+  <data name="Freigaben_e7f62fb4" xml:space="preserve">
+    <value>Enlaces compartidos</value>
+  </data>
+  <data name="Links_zum_Teilen_von_Bildern_mit_Menschen_ohne_K_28e9e123" xml:space="preserve">
+    <value>Enlaces para compartir imágenes con personas sin cuenta, de todos los usuarios. Un enlace también funciona cuando FerrumPix está bloqueado; el interruptor de abajo detiene todos los enlaces.</value>
+  </data>
+  <data name="Jeder_Link_antwortet_dann_wie_ein_unbekannter_bi_1c93e83b" xml:space="preserve">
+    <value>Cada enlace responde entonces como uno desconocido hasta que el interruptor se vuelva a desactivar.</value>
+  </data>
+  <data name="Absender_E_Mail_Adresse_b8998ec0" xml:space="preserve">
+    <value>Remitente (dirección de correo)</value>
+  </data>
+  <data name="Von_dieser_Adresse_kommen_die_Mails_etwa_fotos_e_fb2fa752" xml:space="preserve">
+    <value>Los correos salen de esta dirección, por ejemplo fotos@example.org. Vacío: el nombre de usuario de la cuenta de correo.</value>
+  </data>
+  <data name="Adresse_von_FerrumPix_im_Browser_b2175d85" xml:space="preserve">
+    <value>Dirección de FerrumPix en el navegador</value>
+  </data>
+  <data name="Unter_dieser_Webadresse_URL_erreichen_andere_Fer_69dfdf58" xml:space="preserve">
+    <value>En esta dirección web (URL) otros acceden a FerrumPix, por ejemplo https://fotos.example.org. Aparece en los enlaces de los correos y de los elementos compartidos. Sin ella, FerrumPix no envía ningún correo para una contraseña olvidada y los elementos compartidos usan la dirección por la que llega ahora el navegador.</value>
+  </data>
+  <data name="Gespeichert_F_r_ein_vergessenes_Kennwort_fehlt_n_a06be747" xml:space="preserve">
+    <value>Guardado. Para una contraseña olvidada aún falta la dirección de FerrumPix en el navegador; sin ella no sale ningún correo.</value>
+  </data>
+  <data name="smtp_example_org_b4c0fa4b" xml:space="preserve">
+    <value>smtp.example.org</value>
+  </data>
+  <data name="fotos_example_org_oder_Name_fotos_example_org_e3bae05e" xml:space="preserve">
+    <value>fotos@example.org o Nombre &lt;fotos@example.org&gt;</value>
+  </data>
+  <data name="https_fotos_example_org_e099205f" xml:space="preserve">
+    <value>https://fotos.example.org</value>
+  </data>
+  <data name="Bitte_den_Server_f_r_den_Mailversand_eintragen_3a4ec116" xml:space="preserve">
+    <value>Introduzca el servidor para el envío de correo.</value>
+  </data>
+  <data name="Gespeichert_Ohne_Server_geht_keine_E_Mail_hinaus_d0b913e3" xml:space="preserve">
+    <value>Guardado. Sin servidor no sale ningún correo.</value>
+  </data>
+  <data name="Bitte_einen_Absender_eintragen_Der_Benutzername__251420c7" xml:space="preserve">
+    <value>Introduzca un remitente. El nombre de usuario de la cuenta de correo no es una dirección de correo y no puede sustituirlo.</value>
+  </data>
+  <data name="Der_Absender_0_ist_keine_g_ltige_E_Mail_Adresse__77648712" xml:space="preserve">
+    <value>El remitente "{0}" no es una dirección de correo válida. Se admiten fotos@example.org o Nombre &lt;fotos@example.org&gt;.</value>
+  </data>
+  <data name="Die_Adresse_braucht_die_Form_https_fotos_example_64db9b5a" xml:space="preserve">
+    <value>La dirección necesita la forma https://fotos.example.org, sin ruta.</value>
+  </data>
+  <data name="In_FerrumPix_kopiert_0551df0f" xml:space="preserve">
+    <value>Copiado en FerrumPix</value>
+  </data>
+  <data name="Die_Zwischenablage_dieses_Ger_ts_hat_den_Inhalt__e94c6e81" xml:space="preserve">
+    <value>El portapapeles de este dispositivo no aceptó el contenido</value>
+  </data>
+  <data name="Bilder_kommen_nur_ber_HTTPS_in_die_Zwischenablag_99058706" xml:space="preserve">
+    <value>Las imágenes solo llegan al portapapeles de este dispositivo por HTTPS</value>
+  </data>
+  <data name="Zu_gro_f_r_die_Zwischenablage_3a2a973c" xml:space="preserve">
+    <value>Demasiado grande para el portapapeles</value>
+  </data>
+  <data name="F_r_dein_Konto_bei_FerrumPix_wurde_ein_neues_Ken_eaadd7c0" xml:space="preserve">
+    <value>Se ha solicitado una nueva contraseña para tu cuenta de FerrumPix. Con el botón la estableces.</value>
+  </data>
+  <data name="Falls_der_Knopf_nicht_geht_kopiere_diesen_Link_i_7085d575" xml:space="preserve">
+    <value>Si el botón no funciona, copia este enlace en el navegador:</value>
+  </data>
+  <data name="Der_Link_gilt_30_Minuten_und_nur_einmal_c20758b4" xml:space="preserve">
+    <value>El enlace es válido durante 30 minutos y solo una vez.</value>
+  </data>
+  <data name="Wenn_du_das_nicht_angefordert_hast_kannst_du_die_62edf257" xml:space="preserve">
+    <value>Si no lo has solicitado, puedes ignorar este correo.</value>
+  </data>
+  <data name="Der_Mailversand_funktioniert_14b78fdc" xml:space="preserve">
+    <value>El envío de correo funciona</value>
+  </data>
+  <data name="FerrumPix_ffnen_367a5059" xml:space="preserve">
+    <value>Abrir FerrumPix</value>
+  </data>
+  <data name="Datei_fehlt_3b100e31" xml:space="preserve">
+    <value>Falta el archivo</value>
+  </data>
+  <data name="Format_nicht_lesbar_98c7af8b" xml:space="preserve">
+    <value>Formato no legible</value>
+  </data>
+  <data name="Es_gibt_schon_0_Freigaben_von_Ihnen_Bitte_zuerst_2d3e153d" xml:space="preserve">
+    <value>Ya tienes {0} enlaces compartidos. Revoca primero uno antiguo.</value>
+  </data>
+  <data name="Es_gibt_schon_0_Freigaben_mehr_nimmt_FerrumPix_n_dd769fe6" xml:space="preserve">
+    <value>Ya hay {0} enlaces compartidos; FerrumPix no admite más.</value>
+  </data>
+  <data name="Eine_Freigabe_nimmt_h_chstens_0_Bilder_auf_ca9697b4" xml:space="preserve">
+    <value>Un enlace compartido admite como máximo {0} imágenes.</value>
+  </data>
+  <data name="Bearbeitungen_und_Beistelldateien_darf_nur_ein_A_fc93eebc" xml:space="preserve">
+    <value>Solo un administrador puede subir ediciones y archivos complementarios</value>
+  </data>
+  <data name="0_endg_ltig_l_schen_Der_Papierkorb_ist_abgeschal_14cfda0b" xml:space="preserve">
+    <value>¿Eliminar {0} definitivamente? La papelera está desactivada, no se puede deshacer.</value>
+  </data>
+  <data name="Der_Code_ist_falsch_3697f932" xml:space="preserve">
+    <value>El código no es correcto.</value>
+  </data>
+  <data name="Die_Anmeldung_ist_abgelaufen_Bitte_noch_einmal_a_5d263fbe" xml:space="preserve">
+    <value>El inicio de sesión ha caducado. Vuelve a iniciar sesión.</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_schon_eingerichtet_b3108a5c" xml:space="preserve">
+    <value>El segundo factor ya está configurado.</value>
+  </data>
+  <data name="Das_Einrichten_ist_abgelaufen_Bitte_neu_beginnen_928161cf" xml:space="preserve">
+    <value>La configuración ha caducado. Vuelve a empezar.</value>
+  </data>
+  <data name="Kennwort_oder_Code_ist_falsch_10de6e3e" xml:space="preserve">
+    <value>La contraseña o el código no son correctos.</value>
+  </data>
+  <data name="Zweiter_Faktor_cfbf71b5" xml:space="preserve">
+    <value>Segundo factor</value>
+  </data>
+  <data name="Mit_einem_zweiten_Faktor_fragt_die_Anmeldung_im__34721313" xml:space="preserve">
+    <value>Con un segundo factor, el inicio de sesión en el navegador pide además de la contraseña un código de una app de autenticación.</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_eingerichtet_brige_Wiederh_bcab83f0" xml:space="preserve">
+    <value>El segundo factor está configurado. Códigos de recuperación restantes: {0}</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_nicht_eingerichtet_d3eef3aa" xml:space="preserve">
+    <value>El segundo factor no está configurado.</value>
+  </data>
+  <data name="Einrichten_34be1cd4" xml:space="preserve">
+    <value>Configurar</value>
+  </data>
+  <data name="Den_QR_Code_mit_der_Authenticator_App_scannen_od_6bc2623a" xml:space="preserve">
+    <value>Escanea el código QR con la app de autenticación o escribe la clave. Después introduce el código de la app.</value>
+  </data>
+  <data name="Schl_ssel_1ac83286" xml:space="preserve">
+    <value>Clave</value>
+  </data>
+  <data name="Code_adac6937" xml:space="preserve">
+    <value>Código</value>
+  </data>
+  <data name="Best_tigen_2019ffd2" xml:space="preserve">
+    <value>Confirmar</value>
+  </data>
+  <data name="Wiederherstellungscodes_4833ba4c" xml:space="preserve">
+    <value>Códigos de recuperación</value>
+  </data>
+  <data name="Jeder_Code_gilt_einmal_falls_die_App_nicht_zur_H_ef4d94e4" xml:space="preserve">
+    <value>Cada código sirve una vez, por si no tienes la app a mano. Solo se muestran ahora; guárdalos en un lugar seguro.</value>
+  </data>
+  <data name="Abschalten_a10c1e28" xml:space="preserve">
+    <value>Desactivar</value>
+  </data>
+  <data name="Zum_Abschalten_das_aktuelle_Kennwort_und_einen_C_6f049c60" xml:space="preserve">
+    <value>Para desactivarlo, introduce la contraseña actual y un código de la app.</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_eingerichtet_04aa51ea" xml:space="preserve">
+    <value>El segundo factor está configurado.</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_abgeschaltet_cd4eb77f" xml:space="preserve">
+    <value>El segundo factor está desactivado.</value>
+  </data>
+  <data name="Bitte_den_Code_eingeben_1bf3f2b2" xml:space="preserve">
+    <value>Introduce el código.</value>
+  </data>
+  <data name="Bitte_den_Code_aus_der_Authenticator_App_eingebe_cda91f15" xml:space="preserve">
+    <value>Introduce el código de la app de autenticación.</value>
+  </data>
+  <data name="Wiederherstellungscode_verwenden_71e32ac1" xml:space="preserve">
+    <value>Usar un código de recuperación</value>
+  </data>
+  <data name="Code_aus_der_App_verwenden_63a6c9a7" xml:space="preserve">
+    <value>Usar el código de la app</value>
+  </data>
+  <data name="Wiederherstellungscode_7e05d9a1" xml:space="preserve">
+    <value>Código de recuperación</value>
+  </data>
+  <data name="Konto_0_364126d0" xml:space="preserve">
+    <value>Cuenta: {0}</value>
+  </data>
+  <data name="Zweiten_Faktor_zur_cksetzen_dd1eed1c" xml:space="preserve">
+    <value>Restablecer el segundo factor</value>
+  </data>
+  <data name="0_meldet_sich_danach_nur_mit_dem_Kennwort_an_und_69c02882" xml:space="preserve">
+    <value>{0} iniciará sesión después solo con la contraseña y podrá volver a configurar el segundo factor. Las sesiones abiertas de este usuario terminan.</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_zur_ckgesetzt_Offene_Anmel_b08ae6d1" xml:space="preserve">
+    <value>El segundo factor se ha restablecido. Las sesiones abiertas de este usuario han terminado.</value>
+  </data>
+  <data name="Textdatei_7704451c" xml:space="preserve">
+    <value>Archivo de texto</value>
+  </data>
+  <data name="F_r_einen_Benutzer_der_seine_Authenticator_App_v_82ff0a19" xml:space="preserve">
+    <value>Para un usuario que ha perdido su app de autenticación. Después inicia sesión solo con la contraseña; las sesiones abiertas terminan.</value>
+  </data>
+  <data name="Zweiter_Faktor_f_r_dein_Konto_2fae6464" xml:space="preserve">
+    <value>Segundo factor para tu cuenta</value>
+  </data>
+  <data name="Die_Anmeldung_im_Browser_fragt_nach_dem_Kennwort_0fdc9ba5" xml:space="preserve">
+    <value>El inicio de sesión en el navegador pide además de la contraseña un código de una app de autenticación. El inicio de sesión en el propio ordenador sigue sin código.</value>
+  </data>
+  <data name="Als_Textdatei_speichern_288a3137" xml:space="preserve">
+    <value>Guardar como archivo de texto</value>
   </data>
 </root>

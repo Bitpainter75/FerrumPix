@@ -2402,6 +2402,8 @@ Namespace Services
         Public Function MoveEverythingForPath(oldPath As String, newPath As String) As (CatalogRows As Integer, Thumbnails As Integer)
             Dim rows = MoveCatalogEntries(oldPath, newPath)
             Dim thumbs = ThumbnailCacheService.MoveCachedThumbnails(oldPath, newPath)
+            ' Freigaben per Link zeigen weiter auf die Datei bzw. den Ordner (ShareStore).
+            ShareStore.MovePath(oldPath, newPath)
             Return (rows, thumbs)
         End Function
 

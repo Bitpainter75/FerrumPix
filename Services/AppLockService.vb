@@ -30,15 +30,33 @@ Namespace Services
         NoSymbol
     End Enum
 
+    ''' <summary>Wie die Ersteinrichtung des Kennworts ausgegangen ist.</summary>
+    Public Enum InitialPasswordOutcome
+        ''' <summary>Das Kennwort ist gesetzt.</summary>
+        Created
+        ''' <summary>Es gab schon eines; die Einrichtung geht nur einmal.</summary>
+        AlreadySet
+        ''' <summary>Das Kennwort erfuellt die Regeln nicht.</summary>
+        Weak
+        ''' <summary>Der Benutzername ist leer, zu lang oder enthaelt Steuerzeichen.</summary>
+        InvalidName
+        ''' <summary>Die E-Mail-Adresse hat nicht die Form name@domain.tld.</summary>
+        InvalidEmail
+    End Enum
+
     ''' <summary>Ergebnis einer Pruefung samt der Wartezeit, wenn zu oft falsch geraten wurde.</summary>
     Public NotInheritable Class PasswordCheckResult
-        Public Sub New(outcome As PasswordCheckOutcome, retryAfter As TimeSpan)
+        Public Sub New(outcome As PasswordCheckOutcome, retryAfter As TimeSpan, Optional userId As String = Nothing)
             Me.Outcome = outcome
             Me.RetryAfter = retryAfter
+            Me.UserId = userId
         End Sub
 
         Public ReadOnly Property Outcome As PasswordCheckOutcome
         Public ReadOnly Property RetryAfter As TimeSpan
+        ''' <summary>Wer sich angemeldet hat, nur bei <see cref="PasswordCheckOutcome.Accepted"/>:
+        ''' der Eigentuemer (<see cref="AppLockService.OwnerUserId"/>) oder ein weiterer Benutzer.</summary>
+        Public ReadOnly Property UserId As String
     End Class
 
     ''' <summary>
@@ -60,8 +78,9 @@ Namespace Services
     ''' <see cref="CheckPassword"/>). Geprueft wird immer nur eines zur Zeit.</para>
     '''
     ''' <para>IM BROWSER (BrowserBridge) gilt dasselbe Kennwort fuer die Sitzungen; eine Sperre
-    ''' beendet sie alle (<see cref="LockStateChanged"/>). Ein beim Start mitgegebenes Kennwort
-    ''' (<see cref="SetStartPassword"/>) geht vor dem gespeicherten.</para>
+    ''' beendet sie alle (<see cref="LockStateChanged"/>). Dort ist es Pflicht: ohne gespeichertes
+    ''' Kennwort legt es der erste Browser fest (<see cref="TrySetInitialPassword"/>), genau
+    ''' einmal. Ein Kennwort beim Start mitzugeben gibt es nicht mehr.</para>
     ''' </summary>
     Public NotInheritable Class AppLockService
 
@@ -81,7 +100,7 @@ Namespace Services
         Public Const MinimumPasswordLength As Integer = 8
 
         ''' <summary>Welche Regeln ein NEUES Kennwort verletzt; leer heisst in Ordnung. Gilt beim
-        ''' Setzen in den Einstellungen und fuer das beim Start mitgegebene, nie beim Entsperren
+        ''' Setzen in den Einstellungen und bei der Ersteinrichtung im Browser, nie beim Entsperren
         ''' (dort zaehlt nur der Hash, ein aelteres Kennwort bleibt gueltig).
         '''
         ''' <para>Mindestens acht Zeichen, je ein Gross- und Kleinbuchstabe, eine Ziffer und ein
@@ -156,9 +175,24 @@ Namespace Services
 
         Private Shared ReadOnly StateLock As New Object()
         Private Shared ReadOnly VerifyGate As New Object()
+        Private Shared ReadOnly SetupGate As New Object()
         Private Shared _isLocked As Boolean
         Private Shared _lastActivityUtc As DateTime = DateTime.UtcNow
-        Private Shared _startPasswordHash As String = ""
+
+        ''' <summary>Nur fuer den Pruefstand: ein Hash, der statt des gespeicherten gilt, ohne die
+        ''' Einstellungen anzufassen (BrowserBridge.Start fuer ein Testfenster). Leer heisst: der
+        ''' gespeicherte gilt.</summary>
+        Friend Shared TestPasswordHash As String = ""
+
+        ''' <summary>Nur fuer den Pruefstand, zusammen mit <see cref="TestPasswordHash"/>: der Name
+        ''' des Eigentuemers fuer diesen Lauf.</summary>
+        Friend Shared TestUserName As String = ""
+
+        ''' <summary>Die Kennung des Eigentuemers. Heute gibt es nur ihn: die Ersteinrichtung legt
+        ''' sein Kennwort fest, und jede Sitzung im Browser gehoert ihm. Sitzungen tragen die
+        ''' Kennung trotzdem, damit spaeter weitere Benutzer dazukommen koennen.</summary>
+        Public Const OwnerUserId As String = "owner"
+
         Private Shared ReadOnly Failures As New Dictionary(Of String, FailureRecord)(StringComparer.Ordinal)
 
         Private NotInheritable Class FailureRecord
@@ -171,33 +205,28 @@ Namespace Services
         ''' Browser); wer die Oberflaeche anfasst, wechselt selbst auf den Anzeigefaden.</summary>
         Public Shared Event LockStateChanged As EventHandler
 
-        ''' <summary>Der Hash, gegen den geprueft wird: der des beim Start mitgegebenen Kennworts,
-        ''' sonst der gespeicherte.</summary>
+        ''' <summary>Ein Kennwort wurde ausserhalb der Einstellungen gesetzt (Ersteinrichtung im
+        ''' Browser, von einem Hintergrundfaden). Wer "Sperren" zeigt, sieht danach nach.</summary>
+        Public Shared Event ProtectionChanged As EventHandler
+
+        ''' <summary>Der Hash, gegen den geprueft wird: der gespeicherte, im Pruefstand ersetzbar
+        ''' (<see cref="TestPasswordHash"/>).</summary>
         Private Shared Function CurrentHash() As String
-            Dim fromStart = _startPasswordHash
-            If Not String.IsNullOrEmpty(fromStart) Then Return fromStart
+            Dim forTests = TestPasswordHash
+            If Not String.IsNullOrEmpty(forTests) Then Return forTests
             Return If(AppSettingsService.Load().AppLockPasswordHash, "")
         End Function
 
         ''' <summary>Der geltende Hash als Marke: aendert sich das Kennwort, aendert sie sich mit.
         ''' Fuer Zwischenspeicher, die eine gelungene Pruefung kurz behalten (BrowserBridge).</summary>
         Friend Shared Function PasswordStamp() As String
-            Return CurrentHash()
+            Return CurrentHash() & "|" & StoredUserName & "|" & UserAccountService.Version.ToString(CultureInfo.InvariantCulture)
         End Function
 
         ''' <summary>Ist ein Kennwort gesetzt? Nur dann gibt es Anmeldefenster und Sperre.</summary>
         Public Shared ReadOnly Property IsProtected As Boolean
             Get
                 Return CurrentHash().Length > 0
-            End Get
-        End Property
-
-        ''' <summary>Kam das Kennwort beim Start mit (Behaelter)? Dann laesst es sich in den
-        ''' Einstellungen weder aendern noch abschalten: beim naechsten Start gaelte wieder das
-        ''' mitgegebene.</summary>
-        Public Shared ReadOnly Property IsPasswordFromStart As Boolean
-            Get
-                Return Not String.IsNullOrEmpty(_startPasswordHash)
             End Get
         End Property
 
@@ -220,56 +249,180 @@ Namespace Services
             Return If(IdleChoices.Contains(value), value, 0)
         End Function
 
-        ''' <summary>Das beim Start mitgegebene Kennwort (Browser, Behaelter). Es geht vor dem
-        ''' gespeicherten und wird nur als Hash gehalten. Mit <paramref name="persist"/> wird es
-        ''' auch in die Einstellungen uebernommen, damit der Behaelter geschuetzt bleibt, wenn die
-        ''' Angabe beim naechsten Start fehlt; ein schon passender Hash bleibt dabei stehen.</summary>
-        Friend Shared Sub SetStartPassword(password As String, persist As Boolean)
-            If String.IsNullOrEmpty(password) Then
-                _startPasswordHash = ""
-                Return
-            End If
-            Dim stored = If(AppSettingsService.Load().AppLockPasswordHash, "")
-            Dim hash As String
-            If stored.Length > 0 AndAlso VerifyHash(password, stored) Then
-                hash = stored
-            Else
-                hash = HashPassword(password)
-                If persist Then AppSettingsService.Update(Sub(s) s.AppLockPasswordHash = hash)
-            End If
-            _startPasswordHash = hash
-        End Sub
+        ''' <summary>Die Ersteinrichtung im Browser: setzt Benutzername und Kennwort des
+        ''' Eigentuemers, wenn noch kein Kennwort gesetzt ist, sonst nichts. Wer zuerst kommt, legt fest; das ist so gewollt, der Browser-Modus
+        ''' hat keinen anderen Weg zum ersten Kennwort. Intern ist das der erste Benutzer, und der
+        ''' ist der Eigentuemer (<see cref="OwnerUserId"/>).
+        '''
+        ''' <para>GENAU EINMAL. Pruefen und Schreiben stehen unter einer Sperre: von zwei
+        ''' gleichzeitigen Versuchen gelingt einer, der andere bekommt
+        ''' <see cref="InitialPasswordOutcome.AlreadySet"/>. Der Hash entsteht vorher, weil er mit
+        ''' Absicht langsam ist; er wird nur geschrieben, wenn noch keiner da ist. Geschrieben wird
+        ''' sofort und nicht verzoegert: ging der Stand verloren, stuende die Einrichtung wieder
+        ''' offen.</para>
+        '''
+        ''' <para>NACH DEM NOTWEG (<see cref="ResetOwnerPassword"/>) steht der Name des Eigentuemers
+        ''' noch da: dann bleibt er, und der eingegebene zaehlt nicht. Ebenso bleibt eine schon
+        ''' gespeicherte E-Mail-Adresse, wenn keine neue kommt.</para>
+        '''
+        ''' <para>Langsam (PBKDF2), deshalb nie auf dem Anzeigefaden rufen.</para></summary>
+        Public Shared Function TrySetInitialPassword(userName As String, password As String, Optional email As String = "") As InitialPasswordOutcome
+            Dim keptName = StoredUserName
+            If keptName.Length = 0 AndAlso Not IsValidUserName(userName) Then Return InitialPasswordOutcome.InvalidName
+            If Not UserAccountService.IsValidEmail(email) Then Return InitialPasswordOutcome.InvalidEmail
+            If PasswordProblems(password).Count > 0 Then Return InitialPasswordOutcome.Weak
+            If IsProtected Then Return InitialPasswordOutcome.AlreadySet
+            Dim hash = HashPassword(password)
+            Dim name = If(keptName.Length > 0, keptName, userName.Trim())
+            Dim mail = If(email, "").Trim()
+            SyncLock SetupGate
+                If IsProtected Then Return InitialPasswordOutcome.AlreadySet
+                If mail.Length > 0 AndAlso UserAccountService.EmailTaken(mail, OwnerUserId) Then Return InitialPasswordOutcome.InvalidEmail
+                AppSettingsService.Update(Sub(s)
+                                              s.AppLockPasswordHash = hash
+                                              s.AppLockUserName = name
+                                              If mail.Length > 0 Then s.AppLockUserEmail = mail
+                                          End Sub)
+                AppSettingsService.FlushNow()
+            End SyncLock
+            DiagnosticLogService.LogAlways("AppLock", "Initial password set.")
+            RaiseEvent ProtectionChanged(Nothing, EventArgs.Empty)
+            Return InitialPasswordOutcome.Created
+        End Function
 
-        ''' <summary>Vergisst das beim Start mitgegebene Kennwort. Fuer den Pruefstand.</summary>
-        Friend Shared Sub ClearStartPassword()
-            _startPasswordHash = ""
+        ''' <summary>Hoechstlaenge eines Benutzernamens, in Zeichen.</summary>
+        Public Const MaxUserNameLength As Integer = 64
+
+        ''' <summary>Ein Benutzername ist gueltig, wenn er nach dem Abschneiden der Leerzeichen am
+        ''' Rand 1 bis <see cref="MaxUserNameLength"/> Zeichen hat und keine Steuerzeichen.</summary>
+        Public Shared Function IsValidUserName(userName As String) As Boolean
+            Dim name = If(userName, "").Trim()
+            If name.Length = 0 OrElse name.Length > MaxUserNameLength Then Return False
+            Return Not name.Any(Function(c) Char.IsControl(c))
+        End Function
+
+        ''' <summary>Der gespeicherte Benutzername des Eigentuemers, leer, wenn noch keiner
+        ''' festgelegt ist.</summary>
+        Public Shared ReadOnly Property StoredUserName As String
+            Get
+                If Not String.IsNullOrEmpty(TestPasswordHash) Then Return If(TestUserName, "").Trim()
+                Return If(AppSettingsService.Load().AppLockUserName, "").Trim()
+            End Get
+        End Property
+
+        ''' <summary>Nach einer gelungenen Anmeldung im Browser: ist noch kein Name gespeichert
+        ''' (Kennwort aus den Einstellungen), wird der eingegebene der Name des Eigentuemers. True,
+        ''' wenn der Name dabei festgelegt wurde.</summary>
+        Friend Shared Function AdoptUserName(userName As String) As Boolean
+            If StoredUserName.Length > 0 OrElse Not IsValidUserName(userName) Then Return False
+            If UserAccountService.NameTaken(userName, OwnerUserId) Then Return False
+            ' Gilt gerade ein Kennwort nur fuer den Pruefstand, gehoert der Name nicht zu dem
+            ' gespeicherten und bleibt draussen.
+            If Not String.IsNullOrEmpty(TestPasswordHash) Then Return False
+            Dim name = userName.Trim()
+            AppSettingsService.Update(Sub(s) s.AppLockUserName = name)
+            AppSettingsService.FlushNow()
+            Return True
+        End Function
+
+        ''' <summary>Der Notweg, wenn der Eigentuemer sein Kennwort vergessen hat und keine Nachricht
+        ''' ankommt: beim Start mit BrowserBridge.ResetAdminSwitch bzw. ResetAdminVariable. Loescht
+        ''' NUR den Hash des Eigentuemers; Name, E-Mail, weitere Benutzer und ihre Regeln bleiben, und
+        ''' die Seite zeigt wieder die Einrichtung fuer den bestehenden Namen.
+        '''
+        ''' <para>NUR EINMAL WIRKSAM: im Behaelter bleibt eine Umgebungsvariable bei jedem Neustart
+        ''' gesetzt. Nach dem Loeschen steht deshalb ein Vermerk in den Einstellungen
+        ''' (AdminPasswordResetConsumed); solange er steht, wirkt die Angabe nicht noch einmal, und
+        ''' eine Zeile im Protokoll bittet, sie zu entfernen. Startet die Anwendung ohne die Angabe,
+        ''' faellt der Vermerk weg. Wer den Behaelter starten kann, hat ohnehin Zugriff auf den
+        ''' Rechner und seine Einstellungen; der Weg verschiebt also keine Grenze.</para>
+        '''
+        ''' <para>Liefert die Zeile fuer das Protokoll, Nothing, wenn nichts zu sagen ist.</para></summary>
+        Friend Shared Function ResetOwnerPassword(requested As Boolean) As String
+            Dim settings = AppSettingsService.Load()
+            If Not requested Then
+                If settings.AdminPasswordResetConsumed Then
+                    AppSettingsService.Update(Sub(s) s.AdminPasswordResetConsumed = False)
+                    AppSettingsService.FlushNow()
+                End If
+                Return Nothing
+            End If
+            If settings.AdminPasswordResetConsumed Then
+                SecurityLog.AdminPasswordReset(applied:=False)
+                Return "The administrator password was already reset once with this setting. Remove it from the start parameters or the environment; it has no effect until then."
+            End If
+            ' Der zweite Faktor des Eigentuemers geht mit: wer den Notweg nimmt, hat Zugriff auf den
+            ' Rechner und hat womoeglich auch das Telefon mit der App verloren.
+            Dim hadSecondFactor = TwoFactorService.IsEnabled(OwnerUserId)
+            AppSettingsService.Update(Sub(s)
+                                          s.AppLockPasswordHash = ""
+                                          s.AdminPasswordResetConsumed = True
+                                          TwoFactorService.RemoveFrom(s, OwnerUserId)
+                                      End Sub)
+            AppSettingsService.FlushNow()
+            RaiseEvent ProtectionChanged(Nothing, EventArgs.Empty)
+            SecurityLog.AdminPasswordReset(applied:=True)
+            If hadSecondFactor Then TwoFactorService.NoteReset(OwnerUserId, "start")
+            Dim name = StoredUserName
+            Return "The administrator password was reset" &
+                   If(hadSecondFactor, " and the second factor of the administrator was removed", "") &
+                   ". The first browser to open the page sets a new password" &
+                   If(name.Length > 0, $" for the user ""{name}""", "") &
+                   ". Other users and folder rules are unchanged. Remove the setting now; it works only once."
+        End Function
+
+        ''' <summary>Zaehlt einen misslungenen Versuch bei den genannten Zaehlern, ohne ein Kennwort
+        ''' zu pruefen (eine abgewiesene Ersteinrichtung). Dieselbe Bremse wie beim Anmelden.</summary>
+        Friend Shared Sub RegisterFailedAttempt(ParamArray counters As String())
+            For Each key In If(counters, Array.Empty(Of String)())
+                If Not String.IsNullOrEmpty(key) Then RegisterFailure(key)
+            Next
         End Sub
 
         ''' <summary>Sperrt beim Start, wenn ein Kennwort gesetzt ist.</summary>
         Public Shared Sub LockAtStart()
-            If IsProtected Then Lock()
+            If IsProtected Then Lock("start", SecurityLog.NoValue, SecurityLog.NoValue)
         End Sub
 
-        ''' <summary>Sperrt die Anwendung. Ohne Kennwort geschieht nichts.</summary>
-        Public Shared Sub Lock()
+        ''' <summary>Sperrt die Anwendung. Ohne Kennwort geschieht nichts. <paramref name="reason"/>
+        ''' steht im Protokoll (SecurityLog): manual, idle, start. Ohne <paramref name="user"/> ist es,
+        ''' wer an der vollen Oberflaeche sitzt.</summary>
+        Public Shared Sub Lock(Optional reason As String = "manual", Optional user As String = Nothing, Optional from As String = Nothing)
             If Not IsProtected Then Return
             SyncLock StateLock
                 If _isLocked Then Return
                 _isLocked = True
             End SyncLock
-            DiagnosticLogService.LogAlways("AppLock", "Locked.")
+            If user Is Nothing Then
+                Dim actor = SecurityLog.DesktopActor()
+                user = actor.User
+                from = actor.From
+            End If
+            SecurityLog.Locked(reason, user, from)
             RaiseEvent LockStateChanged(Nothing, EventArgs.Empty)
         End Sub
 
-        ''' <summary>Entsperrt ohne Pruefung. Nur nach einer gelungenen Pruefung und wenn der Schutz
-        ''' abgeschaltet wird.</summary>
+        ''' <summary>Entsperrt ohne Pruefung nach dem Anmeldefenster der Anwendung, siehe
+        ''' <see cref="UnlockBy"/>.</summary>
         Friend Shared Sub Unlock()
+            UnlockBy("lockscreen")
+        End Sub
+
+        ''' <summary>Entsperrt ohne Pruefung. Nur nach einer gelungenen Pruefung und wenn der Schutz
+        ''' abgeschaltet wird. <paramref name="via"/> steht im Protokoll: signin, lockscreen,
+        ''' settings; ohne <paramref name="user"/> ist es, wer an der vollen Oberflaeche sitzt.</summary>
+        Friend Shared Sub UnlockBy(via As String, Optional user As String = Nothing, Optional from As String = Nothing)
             SyncLock StateLock
                 _lastActivityUtc = Clock()
                 If Not _isLocked Then Return
                 _isLocked = False
             End SyncLock
-            DiagnosticLogService.LogAlways("AppLock", "Unlocked.")
+            If user Is Nothing Then
+                Dim actor = SecurityLog.DesktopActor()
+                user = actor.User
+                from = actor.From
+            End If
+            SecurityLog.Unlocked(via, user, from)
             RaiseEvent LockStateChanged(Nothing, EventArgs.Empty)
         End Sub
 
@@ -291,6 +444,23 @@ Namespace Services
         ''' Anmeldefenster am Rechner merken davon nichts. Die Wartezeit ist die laengste der
         ''' genannten Zaehler; ein Fehlversuch zaehlt bei allen, ein Erfolg setzt alle zurueck.</para></summary>
         Public Shared Function CheckPassword(password As String, ParamArray counters As String()) As PasswordCheckResult
+            Return Check(password, Nothing, counters)
+        End Function
+
+        ''' <summary>Wie <see cref="CheckPassword"/>, dazu der Benutzername (Anmeldung im Browser),
+        ''' gegen alle Benutzer, die sich anmelden duerfen (UserAccountService.ResolveSignIn); wer es
+        ''' war, steht im Ergebnis (<see cref="PasswordCheckResult.UserId"/>). Gross- und
+        ''' Kleinschreibung zaehlen beim Namen nicht (Telefone schreiben das erste Zeichen gern
+        ''' gross). Ein falscher Name zaehlt wie ein falsches Kennwort: dieselbe Antwort, dieselbe
+        ''' Rechenzeit (das Kennwort wird immer geprueft), dieselbe Bremse, und kein Hinweis, ob es
+        ''' den Namen gibt; ein gesperrter Benutzer ebenso. Ist fuer den Eigentuemer noch kein Name
+        ''' gespeichert (Kennwort aus den Einstellungen), passt ihm jeder gueltige, den kein anderer
+        ''' traegt; die Anmeldung legt ihn dann fest (<see cref="AdoptUserName"/>).</summary>
+        Public Shared Function CheckSignIn(userName As String, password As String, ParamArray counters As String()) As PasswordCheckResult
+            Return Check(password, If(userName, ""), counters)
+        End Function
+
+        Private Shared Function Check(password As String, userName As String, counters As String()) As PasswordCheckResult
             Dim hash = CurrentHash()
             If hash.Length = 0 Then Return New PasswordCheckResult(PasswordCheckOutcome.NotProtected, TimeSpan.Zero)
             Dim keys = If(counters, Array.Empty(Of String)()).Where(Function(k) Not String.IsNullOrEmpty(k)).Distinct().ToArray()
@@ -298,12 +468,23 @@ Namespace Services
             Dim wait = RetryAfter(keys)
             If wait > TimeSpan.Zero Then Return New PasswordCheckResult(PasswordCheckOutcome.Throttled, wait)
             Dim matches As Boolean
+            Dim userId = OwnerUserId
             ' Eines zur Zeit: sonst liessen sich viele Versuche gleichzeitig starten, bevor der
             ' erste Fehlversuch gezaehlt ist.
             SyncLock VerifyGate
                 wait = RetryAfter(keys)
                 If wait > TimeSpan.Zero Then Return New PasswordCheckResult(PasswordCheckOutcome.Throttled, wait)
-                matches = VerifyHash(If(password, ""), hash)
+                If userName Is Nothing Then
+                    matches = VerifyHash(If(password, ""), hash)
+                Else
+                    ' Mit Namen (Browser): der Benutzer dazu, Eigentuemer oder ein weiterer. Gibt es
+                    ' ihn nicht, wird trotzdem gerechnet, gegen den Hash des Eigentuemers, und das
+                    ' Ergebnis verworfen: dieselbe Zeit, dieselbe Antwort, kein Hinweis auf den Namen.
+                    Dim candidate = UserAccountService.ResolveSignIn(userName, hash)
+                    Dim verified = VerifyHash(If(password, ""), If(candidate.HasValue, candidate.Value.Hash, hash))
+                    matches = verified AndAlso candidate.HasValue
+                    If matches Then userId = candidate.Value.Id
+                End If
                 For Each key In keys
                     If matches Then
                         ClearFailures(key)
@@ -312,10 +493,51 @@ Namespace Services
                     End If
                 Next
             End SyncLock
-            If matches Then Return New PasswordCheckResult(PasswordCheckOutcome.Accepted, TimeSpan.Zero)
+            If matches Then Return New PasswordCheckResult(PasswordCheckOutcome.Accepted, TimeSpan.Zero, userId)
             DiagnosticLogService.LogAlways("AppLock", $"Wrong password from {String.Join(", ", keys)}.")
             Return New PasswordCheckResult(PasswordCheckOutcome.Rejected, RetryAfter(keys))
         End Function
+
+        ''' <summary>Prueft das Kennwort eines bestimmten Benutzers (Eigentuemer oder weiterer),
+        ''' etwa vor dem Abschalten seines zweiten Faktors. Dieselbe Bremse wie beim Anmelden, eines
+        ''' zur Zeit, in fester Zeit; ohne Hash passt nichts. Langsam (PBKDF2).</summary>
+        Friend Shared Function CheckUserPassword(userId As String, password As String, ParamArray counters As String()) As PasswordCheckResult
+            Dim hash As String
+            If userId = OwnerUserId Then
+                hash = CurrentHash()
+            Else
+                Dim stored As String = Nothing
+                Dim hashes = AppSettingsService.Load().BrowserUserPasswordHashes
+                hash = If(hashes IsNot Nothing AndAlso hashes.TryGetValue(If(userId, ""), stored), If(stored, ""), "")
+            End If
+            Dim keys = If(counters, Array.Empty(Of String)()).Where(Function(k) Not String.IsNullOrEmpty(k)).Distinct().ToArray()
+            If keys.Length = 0 Then keys = {LocalKey}
+            Dim matches As Boolean
+            SyncLock VerifyGate
+                Dim wait = RetryAfter(keys)
+                If wait > TimeSpan.Zero Then Return New PasswordCheckResult(PasswordCheckOutcome.Throttled, wait)
+                ' Auch ohne Hash wird gerechnet, gegen den des Eigentuemers: gleiche Zeit.
+                Dim verified = VerifyHash(If(password, ""), If(hash.Length > 0, hash, CurrentHash()))
+                matches = verified AndAlso hash.Length > 0
+                For Each key In keys
+                    If matches Then
+                        ClearFailures(key)
+                    Else
+                        RegisterFailure(key)
+                    End If
+                Next
+            End SyncLock
+            If matches Then Return New PasswordCheckResult(PasswordCheckOutcome.Accepted, TimeSpan.Zero, userId)
+            Return New PasswordCheckResult(PasswordCheckOutcome.Rejected, RetryAfter(keys))
+        End Function
+
+        ''' <summary>Vergisst die Fehlversuche der genannten Zaehler (ein gelungener zweiter Schritt
+        ''' der Anmeldung).</summary>
+        Friend Shared Sub ClearFailedAttempts(ParamArray counters As String())
+            For Each key In If(counters, Array.Empty(Of String)())
+                If Not String.IsNullOrEmpty(key) Then ClearFailures(key)
+            Next
+        End Sub
 
         ''' <summary>Wie lange noch gewartet werden muss: die laengste Wartezeit der Zaehler.</summary>
         Public Shared Function RetryAfter(ParamArray counters As String()) As TimeSpan
@@ -372,8 +594,9 @@ Namespace Services
             End SyncLock
         End Sub
 
-        ''' <summary>Eine Eingabe am Fenster (Taste, Maus, Rad). Setzt die Zeit bis zur Sperre
-        ''' zurueck; kostet nur das Setzen einer Uhrzeit.</summary>
+        ''' <summary>Eine Eingabe am Fenster (Taste, Maus, Rad) oder eine Anfrage der mobilen Seite
+        ''' mit Sitzung (BrowserBridge.HandleMobileRouteAsync). Setzt die Zeit bis zur Sperre
+        ''' zurueck; kostet nur das Setzen einer Uhrzeit und geht von jedem Faden aus.</summary>
         Public Shared Sub NoteActivity()
             Dim now = Clock()
             SyncLock StateLock
@@ -391,7 +614,7 @@ Namespace Services
                 last = _lastActivityUtc
             End SyncLock
             If Clock() - last < TimeSpan.FromMinutes(minutes) Then Return False
-            Lock()
+            Lock("idle", SecurityLog.NoValue, SecurityLog.NoValue)
             Return True
         End Function
 
@@ -437,7 +660,8 @@ Namespace Services
             End SyncLock
             Clock = Function() DateTime.UtcNow
             Iterations = DefaultIterations
-            _startPasswordHash = ""
+            TestPasswordHash = ""
+            TestUserName = ""
         End Sub
 
     End Class

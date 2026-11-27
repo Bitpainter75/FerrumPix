@@ -108,6 +108,7 @@ Namespace Views
             ("PeopleSection", Function() New Settings.PeopleSectionView()),
             ("CatalogSection", Function() New Settings.CatalogSectionView()),
             ("PerformanceSection", Function() New Settings.PerformanceSectionView()),
+            ("UsersSection", Function() New Settings.UsersSectionView()),
             ("ShortcutsSection", Function() New Settings.ShortcutsSectionView()),
             ("TechnologySection", Function() New Settings.TechnologySectionView())
         }
@@ -514,6 +515,29 @@ Namespace Views
                 DiagnosticLogService.LogException("Settings.AddCatalogWatchFolder", ex)
             End Try
             e.Handled = True
+        End Sub
+
+        ''' <summary>Eine Regel fuer den gewaehlten Benutzer (Abschnitt "Benutzer"): ein Ordner aus
+        ''' dem Ordnerwaehler, der mit FERRUMPIX_FOLDER_ROOTS nur die Fotoordner zeigt.</summary>
+        Friend Async Sub OnAddUserRuleClick(sender As Object, e As RoutedEventArgs)
+            e.Handled = True
+            Dim vm = TryCast(DataContext, SettingsViewModel)
+            If vm Is Nothing Then Return
+            Try
+                Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
+                If topLevel Is Nothing Then Return
+                Dim folders = Await FolderRootPickers.OpenFolderPickerAsync(topLevel, New FolderPickerOpenOptions With {
+                    .Title = LocalizationService.T("Ordner für die Regel wählen"),
+                    .AllowMultiple = True
+                })
+                If folders Is Nothing Then Return
+                For Each folder In folders
+                    Dim path = folder?.Path?.LocalPath
+                    If Not String.IsNullOrWhiteSpace(path) Then vm.AddUserRule(path)
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.AddUserRule", ex)
+            End Try
         End Sub
 
         ''' <summary>Ein anderer Datenordner. Der Ordnerwaehler haengt am TopLevel; Pruefen,

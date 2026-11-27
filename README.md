@@ -29,7 +29,7 @@ It runs on Windows, Linux and macOS, stays fast and local-first, and is built fo
 - Hand a picture to another program with *Open with*, and pass it through G'MIC from the editor if you have it installed.
 - Find the people in your photos and search by them, and search by where a photo was taken - both entirely on your own machine. If you switch it on, a map shows where your photos were taken.
 - Connect to your own Immich or Nextcloud server for browsing, upload, download, editing and metadata sync.
-- Use FerrumPix in a web browser: let it run on the computer where your photos are and work with it from the sofa.
+- Use FerrumPix in a web browser, with the full interface on a laptop or a simple photo app on the phone, with accounts and rights per folder for family and friends and share links for everyone else.
 - Run it on a home server or NAS with Docker or Podman, and reach your whole photo collection from any laptop, tablet or phone. Ready-made templates for HTTPS, a Synology NAS and the home network are included.
 - Work in your own language: twenty-one are built in, and the symbol search finds shapes by their name in each of them.
 
@@ -191,7 +191,62 @@ FerrumPix signs in with your user name and an app password, which you create in 
 
 Sometimes the photos live on one computer and you would rather sit at another. Maybe they are on a small server in the hallway that has no screen at all, or on the big machine in the study while you are on the sofa with a laptop. For that, FerrumPix can show itself in a web browser instead of in a window.
 
-It is the same FerrumPix with everything it can do, gallery, viewer and editor. Nothing is installed on the device you sit at; a browser is enough. The pictures stay where they are, and all the work happens on the computer FerrumPix runs on.
+It is the same FerrumPix with everything it can do, gallery, viewer and editor. Nothing is installed on the device you sit at; a browser is enough. The pictures stay where they are, and all the work happens on the computer FerrumPix runs on. On a phone it becomes a simple photo app, several people can use it with accounts of their own, and pictures can be shared with anyone by a link.
+
+This is a first version, and a few things are still missing. Videos play without sound. And because the computer draws everything without the help of its graphics card in this mode, it feels a little less quick than the window does, mostly with very large browser windows.
+
+### Desktop or mobile
+
+When you sign in, you choose between the full desktop interface and a simpler page made for phones and tablets. The browser remembers your choice, and Mobile view in the gallery switches over later.
+
+The page for phones works like a photo app: all your photos by date with a quick jump through the months, your folders, search with people and places, and a full screen view to swipe and zoom that shows your edits. There you can rate, mark favourites, set a colour label, keep or reject, and the desktop sees it at once. Live Photos and Motion Photos play their short video with a tap on a button or a long press, as on the phone. Photos and videos upload straight from the phone into a folder you pick, and pictures download as the original, as a JPEG with your edits or, several at once, as a ZIP. Over HTTPS the page can be added to the home screen and then opens like an app of its own.
+
+In the full interface pictures travel both ways too: drop files onto the page, or use Upload in the gallery, to put them into the folder you are looking at, or drop them onto the picture in the editor to add them as a layer. Download in the right-click menu or on a gallery tile brings pictures to the device you sit at; on a folder, or in the folder tree, it brings the whole folder with its subfolders as one ZIP. Save as, Export to and the batch tools can save straight to it as well.
+
+Copy and paste reach the clipboard of the device you sit at, for text and pictures, in both directions; files copied on the device are uploaded when you paste them. Copying out of FerrumPix needs HTTPS or localhost, over plain HTTP only text gets there.
+
+### Several people
+
+In the browser FerrumPix always asks for a user name and a password. The first time you open the page, you choose both, and an email address if you like; you become the administrator. The password needs at least 8 characters with an uppercase and a lowercase letter, a digit and a special character. From then on every browser sees FerrumPix's own sign-in window first and stays signed in until FerrumPix is locked again.
+
+Family and friends can get their own accounts. In Settings, User management you add them and decide per folder what each may do: only look and download, also rate and upload, or also rename and delete. They only get the page for phones, in their own language, and see nothing outside their folders; ratings stay shared. Only the administrator gets the full interface and the settings. Everyone can add a second factor to their sign-in, a code from an authenticator app, set up with a QR code and backed by recovery codes.
+
+With a mail server and the address of FerrumPix in the browser set up in Settings, User management, Forgot your password on the sign-in page sends a link to set a new one. If the administrator is locked out and no mail arrives, starting FerrumPix once with `--browser-reset-admin-password` lets them choose a new password and removes their second factor, and everyone else keeps their account.
+
+### Sharing
+
+To show pictures to someone without an account, create a share link from the page for phones or, in the full interface, from the right-click menu of the gallery: for one picture, a selection, a folder or a search result. You choose how long the link works, whether it needs a password, whether pictures may be downloaded and whether place, people and camera go along. The person opening it sees just those pictures, with your edits, and nothing else; My shares lists your links with their views and lets you change or revoke them at any time.
+
+### Home server and NAS with Docker
+
+The most comfortable way to use FerrumPix in the browser is a small server that is always on: a NAS, a mini PC in the cupboard, any Linux machine with Docker or Podman. FerrumPix runs there next to your photos, and every laptop, tablet or phone in the house opens it like a web page. Ratings, keywords, people and edits live in one catalogue on the server, so every device sees the same state.
+
+There is a container image for amd64 and arm64, `ghcr.io/bitpainter75/ferrumpix`, and four ready-made Compose templates in [`docker/`](docker/README.md):
+
+| Template | For |
+|---|---|
+| [`docker-compose.yml`](docker/docker-compose.yml) with [`Caddyfile`](docker/Caddyfile) | all your devices, with HTTPS through Caddy in front of FerrumPix |
+| [`docker-compose.synology.yml`](docker/docker-compose.synology.yml) | a Synology NAS, with HTTPS through the reverse proxy DSM already has |
+| [`docker-compose.synology-http.yml`](docker/docker-compose.synology-http.yml) | a Synology NAS without HTTPS, for a home network you trust |
+| [`docker-compose.local.yml`](docker/docker-compose.local.yml) | only the server itself, nothing else can reach it |
+
+Copy the one that fits into a folder, add an empty folder `data`, name your photo folders and the address in an `.env` file and start it with `docker compose up -d`. Then open the page yourself and set up your account; you become the administrator. Each template explains its few steps at the top, and [`docker/README.md`](docker/README.md) walks through all of them, from the first start to updates and backups.
+
+A few things worth knowing:
+
+- Your photo folders appear under `/photos`, and everything FerrumPix keeps for itself (settings, catalogue, thumbnails, models) goes into the folder `data` next to the template, a plain folder you can look into, back up and copy fonts into.
+- Never open the port in your router; from outside, use HTTPS or a VPN into your home network.
+- A graphics card in the server is optional. The templates carry the lines for Intel and AMD as well as NVIDIA cards, which speed up people recognition and the other model-based tools.
+- The image brings a set of free fonts (among them stand-ins with the same widths as Arial, Times New Roman, Calibri and Cambria, and popular ones like Roboto, Open Sans, Lato and Montserrat). Put your own into `share/FerrumPix/Fonts` inside that `data` folder, and they are available for text in the editor and in saved projects.
+
+Just to try it, without any template, this keeps FerrumPix on the server itself at `http://127.0.0.1:14501`:
+
+```
+docker run -d -p 127.0.0.1:14501:14500 -e FERRUMPIX_BROWSER_LOCAL_FORWARD=1 \
+  -v ferrumpix-data:/data -v ~/Pictures:/photos/Pictures ghcr.io/bitpainter75/ferrumpix
+```
+
+### On your own computer
 
 To try it on your own computer, start FerrumPix with `--browser`:
 
@@ -215,30 +270,26 @@ No window opens. FerrumPix tells you the address instead, `http://127.0.0.1:1450
 
 Leave the terminal open while you use it. FerrumPix runs in that terminal, and closing it ends FerrumPix; the page in the browser then stops reacting.
 
-If you want a sign-in in front of it, give it a password. Every browser then sees FerrumPix's own sign-in window first, in the look of the app, and stays signed in until FerrumPix is locked again. The password is the same as the one in Settings, Access, and FerrumPix keeps it from then on, so the app stays protected even if you start it without it later. It needs at least 8 characters with an uppercase and a lowercase letter, a digit and a special character (a space counts); a weaker one is refused at start. The user name is only for tools that sign in by themselves:
+To reach it from another device, such as a tablet or a laptop in the same network, one more thing is needed. FerrumPix does not encrypt the connection itself, and a password travelling through the network unprotected could be read by anyone listening. So it only lets other devices in through a reverse proxy that provides HTTPS, the kind of small web server many people already run in front of their home services. Tell FerrumPix that the proxy is there:
 
 ```
-ferrumpix --browser --browser-user=anna --browser-password=Tea-Time-42
-```
-
-To reach it from another device, such as a tablet or a laptop in the same network, one more thing is needed. FerrumPix does not encrypt the connection itself, and a password travelling through the network unprotected could be read by anyone listening. So it only lets other devices in through a reverse proxy that provides HTTPS, the kind of small web server many people already run in front of their home services. Tell FerrumPix that the proxy is there, and a password becomes mandatory:
-
-```
-ferrumpix --browser --browser-tls-proxy --browser-user=anna --browser-password=Tea-Time-42
+ferrumpix --browser --browser-tls-proxy
 ```
 
 If you start it for other devices without that, FerrumPix does not start and tells you why. That is on purpose: it is better to be told once than to find out later that your password was readable.
 
-HTTPS is the recommended way. If you only use FerrumPix at home and trust your network, you can also allow plain HTTP on purpose. FerrumPix then only answers devices in your home network, insists on a password, and the page reminds you that the connection is not encrypted:
+HTTPS is the recommended way. If you only use FerrumPix at home and trust your network, you can also allow plain HTTP on purpose. FerrumPix then only answers devices in your home network, and the page reminds you that the connection is not encrypted:
 
 ```
-ferrumpix --browser --browser-allow-http --browser-bind=0.0.0.0:14500 --browser-password=Tea-Time-42
+ferrumpix --browser --browser-allow-http --browser-bind=0.0.0.0:14500
 ```
 
-Everything you can pass on the command line can also come from the environment, which is handy for a service or a container and keeps the password out of the list of running programs:
+Set up your account right after the first start in these modes: whoever opens the page first becomes the administrator.
+
+Everything you can pass on the command line can also come from the environment, which is handy for a service or a container:
 
 ```
-env FERRUMPIX_BROWSER_USER=anna FERRUMPIX_BROWSER_PASSWORD=Tea-Time-42 ferrumpix --browser
+env FERRUMPIX_BROWSER_TLS_PROXY=1 ferrumpix --browser
 ```
 
 If you installed FerrumPix from Flathub, it works the same way. What you would write after `ferrumpix` goes at the end of the Flatpak command, and settings from the environment are handed in with `--env`:
@@ -248,52 +299,18 @@ flatpak run io.github.bitpainter75.ferrumpix --browser
 ```
 
 ```
-flatpak run --env=FERRUMPIX_BROWSER_USER=anna --env=FERRUMPIX_BROWSER_PASSWORD=Tea-Time-42 io.github.bitpainter75.ferrumpix --browser
+flatpak run --env=FERRUMPIX_BROWSER_TLS_PROXY=1 io.github.bitpainter75.ferrumpix --browser
 ```
 
 | On the command line | In the environment | What it does |
 |---|---|---|
 | `--browser` | | shows FerrumPix in the browser instead of a window |
 | `--browser-bind=127.0.0.1:8080` | `FERRUMPIX_BROWSER_BIND` | the address and port to listen on |
-| `--browser-user=anna` | `FERRUMPIX_BROWSER_USER` | a user name, only for tools that sign in by themselves |
-| `--browser-password=Tea-Time-42` | `FERRUMPIX_BROWSER_PASSWORD` | the password for the sign-in window |
 | `--browser-tls-proxy` | `FERRUMPIX_BROWSER_TLS_PROXY=1` | a reverse proxy with HTTPS stands in front |
 | `--browser-proxy-address=192.168.1.2` | `FERRUMPIX_BROWSER_PROXY_ADDRESS` | where that proxy is, if it runs on a different computer |
-| `--browser-allow-http` | `FERRUMPIX_BROWSER_ALLOW_HTTP=1` | plain HTTP for devices in the home network, with a password |
+| `--browser-allow-http` | `FERRUMPIX_BROWSER_ALLOW_HTTP=1` | plain HTTP for devices in the home network |
 | `--folder-roots=/srv/photos` | `FERRUMPIX_FOLDER_ROOTS` | shows and works only in these photo folders, several separated by `:` (`;` on Windows); the container sets `/photos` |
-
-Pictures travel both ways: drop files onto the page, or use Upload in the gallery, to put them into the folder you are looking at, or drop them onto the picture in the editor to add them as a layer. Download in the right-click menu or on a gallery tile brings pictures to the device you sit at; on a folder, or in the folder tree, it brings the whole folder with its subfolders as one ZIP. Save as, Export to and the batch tools can save straight to it as well.
-
-This is a first version, and a few things are still missing. Copy and paste stay inside FerrumPix and do not reach the clipboard of the device you sit at. Videos play without sound. And because the computer draws everything without the help of its graphics card in this mode, it feels a little less quick than the window does, mostly with very large browser windows.
-
-### On a home server or NAS with Docker
-
-The most comfortable way to use FerrumPix in the browser is a small server that is always on: a NAS, a mini PC in the cupboard, any Linux machine with Docker or Podman. FerrumPix runs there next to your photos, and every laptop, tablet or phone in the house opens it like a web page. Ratings, keywords, people and edits live in one catalogue on the server, so every device sees the same state.
-
-There is a container image for amd64 and arm64, `ghcr.io/bitpainter75/ferrumpix`, and four ready-made Compose templates in [`docker/`](docker/README.md):
-
-| Template | For |
-|---|---|
-| [`docker-compose.yml`](docker/docker-compose.yml) with [`Caddyfile`](docker/Caddyfile) | all your devices, with HTTPS through Caddy in front of FerrumPix |
-| [`docker-compose.synology.yml`](docker/docker-compose.synology.yml) | a Synology NAS, with HTTPS through the reverse proxy DSM already has |
-| [`docker-compose.synology-http.yml`](docker/docker-compose.synology-http.yml) | a Synology NAS without HTTPS, for a home network you trust |
-| [`docker-compose.local.yml`](docker/docker-compose.local.yml) | only the server itself, nothing else can reach it |
-
-Copy the one that fits into a folder, write the password into a small file next to it, add an empty folder `data`, name your photo folders and the address in an `.env` file, and start it with `docker compose up -d`. Each template explains its few steps at the top, and [`docker/README.md`](docker/README.md) walks through all of them.
-
-A few things worth knowing:
-
-- Your photo folders appear under `/photos`, and everything FerrumPix keeps for itself (settings, catalogue, thumbnails, models) goes into the folder `data` next to the template, a plain folder you can look into, back up and copy fonts into.
-- Every template that lets other devices in needs a password and does not start without one. Never open the port in your router; from outside, use HTTPS or a VPN into your home network.
-- A graphics card in the server is optional. The templates carry the lines for Intel and AMD as well as NVIDIA cards, which speed up people recognition and the other model-based tools.
-- A server usually brings only a few fonts. Put your own into `share/FerrumPix/Fonts` inside that `data` folder, and they are available for text in the editor and in saved projects.
-
-Just to try it, without any template, this keeps FerrumPix on the server itself at `http://127.0.0.1:14501`:
-
-```
-docker run -d -p 127.0.0.1:14501:14500 -e FERRUMPIX_BROWSER_LOCAL_FORWARD=1 \
-  -v ferrumpix-data:/data -v ~/Pictures:/photos/Pictures ghcr.io/bitpainter75/ferrumpix
-```
+| `--browser-reset-admin-password` | `FERRUMPIX_RESET_ADMIN_PASSWORD=1` | lets the administrator choose a new password once, when it is forgotten |
 
 ## Settings
 
@@ -305,7 +322,7 @@ Gallery and editor can be set up to match how you work: what a double-click open
 
 A drawing tablet setting makes buttons and menu entries act the moment the pen touches down instead of when it lifts, for pens that can drag a slider but press nothing. A trackpad mode adds gestures for laptops: pinch to zoom in the viewer, swipe to the next picture, and drag to move around an enlarged one.
 
-Under *Access* FerrumPix can be protected with a password. A sign-in window then covers it at start, after a time without use that you choose, and whenever you lock it yourself; in the browser it takes the place of the browser's own sign-in. The password protects the running app, not the photo files on the disk.
+Under *User management* FerrumPix can be protected with a password. A sign-in window then covers it at start, after a time without use that you choose, and whenever you lock it yourself; in the browser it takes the place of the browser's own sign-in. The password protects the running app, not the photo files on the disk.
 
 The catalogue with ratings, keywords, people and places, the settings, favourites and saved searches can be backed up into a ZIP file and restored, each part on its own; server passwords only go in if you want them to.
 
@@ -386,7 +403,7 @@ and notarization may be added.
 
 ### Docker and Podman
 
-For a home server or NAS there is a container image, `ghcr.io/bitpainter75/ferrumpix`, for amd64 and arm64. FerrumPix then shows itself in the browser; how to set it up is described in [On a home server or NAS with Docker](#on-a-home-server-or-nas-with-docker), with ready-made templates in [`docker/`](docker/README.md).
+For a home server or NAS there is a container image, `ghcr.io/bitpainter75/ferrumpix`, for amd64 and arm64. FerrumPix then shows itself in the browser; how to set it up is described in [Home server and NAS with Docker](#home-server-and-nas-with-docker), with ready-made templates in [`docker/`](docker/README.md).
 
 ### Good to know
 

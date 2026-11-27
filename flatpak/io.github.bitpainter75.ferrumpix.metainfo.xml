@@ -112,6 +112,29 @@
 
   <releases>
 
+    <release version="0.9.93-1" date="2026-11-27">
+      <description>
+        <p>This update makes FerrumPix in the browser a place for the whole household: a simple page for phones, several users with rights per folder, share links, and one search that finds the same pictures everywhere:</p>
+        <p xml:lang="de">Dieses Update macht FerrumPix im Browser zu einem Ort für den ganzen Haushalt: eine einfache Seite für Telefone, mehrere Benutzer mit Rechten je Ordner, Links zum Teilen und eine Suche, die überall dieselben Bilder findet:</p>
+        <ul>
+          <li>In the browser FerrumPix always asks for a user name and a password. The first time you open the page you choose both there, and signing in lets you pick the full interface or a simpler page for phones and tablets.</li>
+          <li xml:lang="de">Im Browser fragt FerrumPix immer nach Benutzername und Kennwort. Beim ersten Öffnen der Seite legst du beides dort fest, und bei der Anmeldung wählst du die volle Oberfläche oder eine einfachere Seite für Telefone und Tablets.</li>
+          <li>The page for phones shows all photos by date, the folders, people and places, and a full screen view to swipe and zoom with your edits. Rate, label and mark pictures, upload from the phone, download or share them. Over HTTPS it can be installed on the home screen.</li>
+          <li xml:lang="de">Die Seite für Telefone zeigt alle Fotos nach Datum, die Ordner, Personen und Orte und ein Vollbild zum Wischen und Zoomen mit deinen Bearbeitungen. Bewerte, markiere und beschrifte Bilder, lade vom Telefon hoch, lade herunter oder teile sie. Über HTTPS lässt sie sich auf dem Startbildschirm installieren.</li>
+          <li>The administrator can add further users and decide per folder whether they may view, also rate and upload, or also rename and delete. With a mail server set up, a forgotten password can be reset by email.</li>
+          <li xml:lang="de">Der Administrator kann weitere Benutzer anlegen und je Ordner festlegen, ob sie ansehen, auch bewerten und hochladen oder auch umbenennen und löschen dürfen. Mit einem eingerichteten Mailserver lässt sich ein vergessenes Kennwort per E-Mail zurücksetzen.</li>
+          <li>Pictures, folders and search results can be shared with people without an account through a link that can expire, carry its own password and leave out place and people.</li>
+          <li xml:lang="de">Bilder, Ordner und Suchergebnisse lassen sich über einen Link mit Menschen ohne Konto teilen. Der Link kann ablaufen, ein eigenes Kennwort tragen und Ort und Personen weglassen.</li>
+          <li>The search field, saved searches and the page for phones now find the same pictures, including places and the names of people in the picture, with the same rules for required, excluded and quoted words.</li>
+          <li xml:lang="de">Suchfeld, gespeicherte Suchen und die Seite für Telefone finden jetzt dieselben Bilder, auch über Orte und die Namen der Personen im Bild, mit denselben Regeln für Pflichtwörter, ausgeschlossene Wörter und Ausdrücke in Anführungszeichen.</li>
+          <li>In the browser, copy and paste reach the clipboard of your device, and whole folders can be downloaded as a ZIP.</li>
+          <li xml:lang="de">Im Browser erreichen Kopieren und Einfügen die Zwischenablage deines Geräts, und ganze Ordner lassen sich als ZIP herunterladen.</li>
+          <li>The search field in the gallery keeps the keyboard while a search over the whole catalog is running. Importing into a folder the Flatpak cannot see now warns instead of putting pictures where they vanish.</li>
+          <li xml:lang="de">Das Suchfeld der Galerie behält die Tastatur, während eine Suche über den ganzen Katalog läuft. Ein Import in einen Ordner, den das Flatpak nicht sieht, warnt jetzt, statt Bilder dort abzulegen, wo sie wieder verschwinden.</li>
+        </ul>
+      </description>
+    </release>
+
     <release version="0.9.92-1" date="2026-11-27">
       <description>
         <p>This update brings film-like grain, more room in the highlights when you brighten a raw photo, saved adjustments as XMP presets and LUTs, a tool bar you can place where you like, one data folder you can move, a password for the app, and FerrumPix in the browser as a container image:</p>

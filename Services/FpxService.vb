@@ -472,12 +472,39 @@ Namespace Services
             Public Property RetouchStagePath As String = ""
         End Class
 
+        ''' <summary>Der Ordner, unter dem <see cref="Load"/> je Bündel einen eigenen Ordner anlegt.
+        ''' Was dort liegt, stammt aus einem Bündel selbst (Basis, Objekt-Assets); RecipeReferences
+        ''' laesst es deshalb beim Rechnen fuer die Seite im Browser zu.</summary>
+        Friend Shared ReadOnly ExtractionRoot As String = Path.Combine(Path.GetTempPath(), "FerrumPix", "fpx")
+
+        ''' <summary>Liegt das Objektbild im Bündel selbst ("assets/aN.ext")? Dann ist es kein
+        ''' Verweis auf eine fremde Datei.</summary>
+        Friend Shared Function IsBundleAsset(imagePath As String) As Boolean
+            Return Not String.IsNullOrEmpty(imagePath) AndAlso imagePath.StartsWith(AssetsDir, StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <summary>Nur das Rezept eines Bündels, ohne etwas zu entpacken. Nothing, wenn es sich
+        ''' nicht lesen laesst. Fuer Fragen an das Rezept (RecipeReferences), nicht zum Rechnen.</summary>
+        Friend Shared Function ReadRecipeOnly(fpxPath As String) As ImageAdjustments
+            Try
+                Using zip = ZipFile.OpenRead(fpxPath)
+                    Dim recipeZip = zip.GetEntry(RecipeEntry)
+                    If recipeZip Is Nothing Then Return Nothing
+                    Using es = recipeZip.Open()
+                        Return JsonSerializer.Deserialize(Of FpxRecipe)(es, JsonOptions)?.Adjustments
+                    End Using
+                End Using
+            Catch ex As Exception When TypeOf ex IsNot OutOfMemoryException
+                Return Nothing
+            End Try
+        End Function
+
         ''' <summary>Entpackt Basisbild und Objekt-Assets in einen Temp-Ordner und liest das Rezept. Die
         ''' Objekt-Bildpfade werden auf die entpackten Temp-Dateien zurückgeschrieben, sodass der Editor die
         ''' Bearbeitung wie eine normale Bild-Bearbeitung fortsetzen kann.</summary>
         Public Shared Function Load(fpxPath As String) As FpxLoadResult
             If Not File.Exists(fpxPath) Then Return Nothing
-            Dim tempDir = Path.Combine(Path.GetTempPath(), "FerrumPix", "fpx", Guid.NewGuid().ToString("N"))
+            Dim tempDir = Path.Combine(ExtractionRoot, Guid.NewGuid().ToString("N"))
             Directory.CreateDirectory(tempDir)
             Dim success = False
 

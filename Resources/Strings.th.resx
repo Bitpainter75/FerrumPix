@@ -3804,8 +3804,8 @@
   <data name="MetadataExtractor_2_9_b4b4b16f" xml:space="preserve">
     <value>MetadataExtractor 2.9</value>
   </data>
-  <data name="QRCoder_1_8_9fe99238" xml:space="preserve">
-    <value>QRCoder 1.8</value>
+  <data name="QRCoder_1_9_5a734f90" xml:space="preserve">
+    <value>QRCoder 1.9</value>
   </data>
   <data name="Phosphor_Icons_db78df19" xml:space="preserve">
     <value>Phosphor Icons</value>
@@ -13135,5 +13135,635 @@
   </data>
   <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nur_z_a9f4527b" xml:space="preserve">
     <value>โฟลเดอร์ {0} แชร์ให้ FerrumPix แบบ Flatpak สำหรับอ่านอย่างเดียว จึงเขียนลงไปไม่ได้ วิธีแก้: เลือกโฟลเดอร์อื่นหรือขยายสิทธิ์ด้วย Flatseal หรือในเทอร์มินัลด้วย {1} แล้วเริ่ม FerrumPix ใหม่</value>
+  </data>
+  <data name="Das_Kennwort_wurde_inzwischen_schon_festgelegt_B_865e7576" xml:space="preserve">
+    <value>ระหว่างนี้มีการตั้งรหัสผ่านไว้แล้ว โปรดเข้าสู่ระบบ</value>
+  </data>
+  <data name="Bitte_einen_Benutzernamen_eingeben_h_chstens_64__9e0430a1" xml:space="preserve">
+    <value>โปรดป้อนชื่อผู้ใช้ ไม่เกิน 64 อักขระ</value>
+  </data>
+  <data name="Benutzername_oder_Kennwort_ist_falsch_3a7298b4" xml:space="preserve">
+    <value>ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</value>
+  </data>
+  <data name="Bitte_den_Benutzernamen_eingeben_689acf9a" xml:space="preserve">
+    <value>โปรดป้อนชื่อผู้ใช้</value>
+  </data>
+  <data name="Bitte_einmal_einen_Benutzernamen_festlegen_Er_gi_dcd39d83" xml:space="preserve">
+    <value>โปรดตั้งชื่อผู้ใช้หนึ่งครั้ง จากนี้ไปจะใช้คู่กับรหัสผ่าน</value>
+  </data>
+  <data name="Willkommen_bei_FerrumPix_Bitte_zuerst_Benutzerna_996d65a2" xml:space="preserve">
+    <value>ยินดีต้อนรับสู่ FerrumPix โปรดตั้งชื่อผู้ใช้และรหัสผ่านก่อน</value>
+  </data>
+  <data name="Mindestens_8_Zeichen_mit_Gro_buchstaben_Kleinbuc_d7ecebc7" xml:space="preserve">
+    <value>อย่างน้อย 8 อักขระ มีตัวพิมพ์ใหญ่ ตัวพิมพ์เล็ก ตัวเลข และอักขระพิเศษ; ช่องว่างนับเป็นอักขระพิเศษ</value>
+  </data>
+  <data name="Kennwort_festlegen_35c49577" xml:space="preserve">
+    <value>ตั้งรหัสผ่าน</value>
+  </data>
+  <data name="Desktop_532c67fe" xml:space="preserve">
+    <value>เดสก์ท็อป</value>
+  </data>
+  <data name="Volle_Oberfl_che_e64e07e3" xml:space="preserve">
+    <value>หน้าจอเต็มรูปแบบ</value>
+  </data>
+  <data name="Mobil_6e1dffe9" xml:space="preserve">
+    <value>มือถือ</value>
+  </data>
+  <data name="Vereinfachte_Seite_46198397" xml:space="preserve">
+    <value>หน้าแบบง่าย</value>
+  </data>
+  <data name="Im_Browser_braucht_FerrumPix_immer_ein_Kennwort__de71c557" xml:space="preserve">
+    <value>ในเบราว์เซอร์ FerrumPix ต้องใช้รหัสผ่านเสมอ เปลี่ยนได้ แต่ปิดไม่ได้</value>
+  </data>
+  <data name="Zur_vereinfachten_Seite_f_r_Telefon_und_Tablet_w_320f4a9d" xml:space="preserve">
+    <value>สลับไปยังหน้าแบบง่ายสำหรับโทรศัพท์และแท็บเล็ต</value>
+  </data>
+  <data name="Mobile_Ansicht_bab7686a" xml:space="preserve">
+    <value>มุมมองมือถือ</value>
+  </data>
+  <data name="0_ausgew_hlt_0c3edf50" xml:space="preserve">
+    <value>เลือกแล้ว {0} รายการ</value>
+  </data>
+  <data name="Als_JPEG_mit_Bearbeitung_ea4e5fa6" xml:space="preserve">
+    <value>เป็น JPEG พร้อมการแก้ไข</value>
+  </data>
+  <data name="Als_ZIP_herunterladen_805a899a" xml:space="preserve">
+    <value>ดาวน์โหลดเป็น ZIP</value>
+  </data>
+  <data name="Das_Bild_konnte_nicht_geladen_werden_e226829e" xml:space="preserve">
+    <value>ไม่สามารถโหลดภาพได้</value>
+  </data>
+  <data name="Die_nderung_konnte_nicht_gespeichert_werden_9b35374b" xml:space="preserve">
+    <value>ไม่สามารถบันทึกการเปลี่ยนแปลงได้</value>
+  </data>
+  <data name="Erneut_versuchen_3234b7ec" xml:space="preserve">
+    <value>ลองอีกครั้ง</value>
+  </data>
+  <data name="Fotos_69daa51e" xml:space="preserve">
+    <value>ภาพถ่าย</value>
+  </data>
+  <data name="Hier_gibt_es_keine_Fotos_46e7063a" xml:space="preserve">
+    <value>ที่นี่ไม่มีภาพถ่าย</value>
+  </data>
+  <data name="Hierher_hochladen_962952b3" xml:space="preserve">
+    <value>อัปโหลดมาที่นี่</value>
+  </data>
+  <data name="In_diesem_Ordner_liegen_keine_Fotos_4697a322" xml:space="preserve">
+    <value>ไม่มีภาพถ่ายในโฟลเดอร์นี้</value>
+  </data>
+  <data name="Informationen_bc3bc55d" xml:space="preserve">
+    <value>ข้อมูล</value>
+  </data>
+  <data name="Keine_Verbindung_zu_FerrumPix_79bb9eb5" xml:space="preserve">
+    <value>ไม่มีการเชื่อมต่อกับ FerrumPix</value>
+  </data>
+  <data name="Mehr_dfc8541c" xml:space="preserve">
+    <value>เพิ่มเติม</value>
+  </data>
+  <data name="Stichwort_Kamera_oder_Dateiname_23be4ec1" xml:space="preserve">
+    <value>คำสำคัญ กล้อง หรือชื่อไฟล์</value>
+  </data>
+  <data name="Teilen_b1cfc831" xml:space="preserve">
+    <value>แชร์</value>
+  </data>
+  <data name="Wird_hochgeladen_527eb12c" xml:space="preserve">
+    <value>กำลังอัปโหลด</value>
+  </data>
+  <data name="Zur_Desktop_Ansicht_5a522d33" xml:space="preserve">
+    <value>ไปที่มุมมองเดสก์ท็อป</value>
+  </data>
+  <data name="Bitte_wenden_Sie_sich_an_den_Administrator_787b0090" xml:space="preserve">
+    <value>โปรดติดต่อผู้ดูแลระบบ</value>
+  </data>
+  <data name="FerrumPix_neues_Kennwort_festlegen_cb826349" xml:space="preserve">
+    <value>FerrumPix: ตั้งรหัสผ่านใหม่</value>
+  </data>
+  <data name="Hallo_0_41ce0990" xml:space="preserve">
+    <value>สวัสดี {0}</value>
+  </data>
+  <data name="f_r_Ihr_Konto_bei_FerrumPix_wurde_ein_neues_Kenn_d48b8bd7" xml:space="preserve">
+    <value>มีการขอรหัสผ่านใหม่สำหรับบัญชี FerrumPix ของคุณ ตั้งได้ผ่านลิงก์นี้ ใช้ได้ 30 นาทีและเพียงครั้งเดียว:</value>
+  </data>
+  <data name="Wenn_Sie_das_nicht_angefordert_haben_k_nnen_Sie__c9cefc15" xml:space="preserve">
+    <value>หากคุณไม่ได้ขอ ลบข้อความนี้ได้เลย</value>
+  </data>
+  <data name="Zu_viele_Anfragen_Bitte_sp_ter_noch_einmal_versu_6f483281" xml:space="preserve">
+    <value>มีคำขอมากเกินไป โปรดลองอีกครั้งภายหลัง</value>
+  </data>
+  <data name="Wenn_es_dazu_ein_Konto_mit_E_Mail_Adresse_gibt_i_26756489" xml:space="preserve">
+    <value>หากมีบัญชีที่มีอีเมล ข้อความกำลังส่งไป มิฉะนั้นโปรดติดต่อผู้ดูแลระบบ</value>
+  </data>
+  <data name="Der_Verweis_ist_abgelaufen_oder_wurde_schon_benu_de2b66bd" xml:space="preserve">
+    <value>ลิงก์หมดอายุหรือถูกใช้ไปแล้ว</value>
+  </data>
+  <data name="Kennwort_vergessen_b45939e9" xml:space="preserve">
+    <value>ลืมรหัสผ่าน?</value>
+  </data>
+  <data name="Benutzername_oder_E_Mail_Adresse_eingeben_Gibt_e_08194606" xml:space="preserve">
+    <value>ป้อนชื่อผู้ใช้หรืออีเมล หากมีบัญชีที่มีอีเมล จะได้รับลิงก์สำหรับรหัสผ่านใหม่</value>
+  </data>
+  <data name="Benutzername_oder_E_Mail_Adresse_73d23074" xml:space="preserve">
+    <value>ชื่อผู้ใช้หรืออีเมล</value>
+  </data>
+  <data name="Verweis_senden_37c4aead" xml:space="preserve">
+    <value>ส่งลิงก์</value>
+  </data>
+  <data name="Zur_ck_zur_Anmeldung_887f2648" xml:space="preserve">
+    <value>กลับไปหน้าเข้าสู่ระบบ</value>
+  </data>
+  <data name="Neues_Kennwort_festlegen_144cb35b" xml:space="preserve">
+    <value>ตั้งรหัสผ่านใหม่</value>
+  </data>
+  <data name="Die_volle_Oberfl_che_gibt_es_nur_f_r_Administrat_546010d4" xml:space="preserve">
+    <value>หน้าจอเต็มสำหรับผู้ดูแลระบบเท่านั้น กำลังไปที่หน้ามือถือ</value>
+  </data>
+  <data name="0_l_schen_a66ed0e0" xml:space="preserve">
+    <value>ลบ {0} หรือไม่?</value>
+  </data>
+  <data name="Ansehen_97d7cee1" xml:space="preserve">
+    <value>ดู</value>
+  </data>
+  <data name="Mitarbeiten_df833ab8" xml:space="preserve">
+    <value>ร่วมทำงาน</value>
+  </data>
+  <data name="Kein_Zugriff_aa31bf98" xml:space="preserve">
+    <value>ไม่มีสิทธิ์เข้าถึง</value>
+  </data>
+  <data name="Ohne_Verschl_sselung_1cc9b2c4" xml:space="preserve">
+    <value>ไม่เข้ารหัส</value>
+  </data>
+  <data name="Eigent_mer_2843ee90" xml:space="preserve">
+    <value>เจ้าของ</value>
+  </data>
+  <data name="Administrator_1eda2375" xml:space="preserve">
+    <value>ผู้ดูแลระบบ</value>
+  </data>
+  <data name="Benutzer_bd26f3d2" xml:space="preserve">
+    <value>ผู้ใช้</value>
+  </data>
+  <data name="Gesperrt_b1432218" xml:space="preserve">
+    <value>ถูกระงับ</value>
+  </data>
+  <data name="Diesen_Benutzernamen_gibt_es_schon_ae86e156" xml:space="preserve">
+    <value>มีชื่อผู้ใช้นี้อยู่แล้ว</value>
+  </data>
+  <data name="Die_E_Mail_Adresse_ist_ung_ltig_d8df6232" xml:space="preserve">
+    <value>อีเมลไม่ถูกต้อง</value>
+  </data>
+  <data name="Diese_E_Mail_Adresse_geh_rt_schon_einem_anderen__a9e51850" xml:space="preserve">
+    <value>อีเมลนี้เป็นของผู้ใช้อื่นแล้ว</value>
+  </data>
+  <data name="Das_Kennwort_erf_llt_die_Regeln_nicht_aa122aaf" xml:space="preserve">
+    <value>รหัสผ่านไม่เป็นไปตามกฎ</value>
+  </data>
+  <data name="Der_Eigent_mer_bleibt_immer_Administrator_und_l__5a284448" xml:space="preserve">
+    <value>เจ้าของเป็นผู้ดูแลระบบเสมอ และระงับหรือลบไม่ได้</value>
+  </data>
+  <data name="Diesen_Benutzer_gibt_es_nicht_mehr_d4df6788" xml:space="preserve">
+    <value>ไม่มีผู้ใช้นี้แล้ว</value>
+  </data>
+  <data name="Administratoren_sehen_alles_und_brauchen_keine_R_340bea53" xml:space="preserve">
+    <value>ผู้ดูแลระบบเห็นทุกอย่างและไม่ต้องใช้กฎ</value>
+  </data>
+  <data name="Ohne_Regel_sieht_dieser_Benutzer_nichts_dfc85d80" xml:space="preserve">
+    <value>หากไม่มีกฎ ผู้ใช้นี้จะไม่เห็นอะไรเลย</value>
+  </data>
+  <data name="Keine_Regel_gibt_einen_Ordner_zum_Ansehen_frei_ff196fc4" xml:space="preserve">
+    <value>ไม่มีกฎใดอนุญาตให้ดูโฟลเดอร์</value>
+  </data>
+  <data name="Auf_der_mobilen_Seite_beginnt_er_hier_40ac6711" xml:space="preserve">
+    <value>บนหน้ามือถือจะเริ่มที่นี่:</value>
+  </data>
+  <data name="Die_n_chstliegende_Regel_gewinnt_auch_eine_enger_a8ebe4d4" xml:space="preserve">
+    <value>กฎที่ใกล้ที่สุดมีผล รวมถึงกฎที่เข้มกว่าในโฟลเดอร์ย่อย</value>
+  </data>
+  <data name="Das_neue_Kennwort_gilt_ab_sofort_Offene_Anmeldun_c8a9e134" xml:space="preserve">
+    <value>รหัสผ่านใหม่มีผลทันที การเข้าสู่ระบบที่เปิดอยู่ของผู้ใช้นี้สิ้นสุดแล้ว</value>
+  </data>
+  <data name="0_kann_sich_danach_nicht_mehr_anmelden_und_seine_b063d31d" xml:space="preserve">
+    <value>{0} จะเข้าสู่ระบบไม่ได้อีก และกฎของโฟลเดอร์จะหายไป รูปภาพและคะแนนยังอยู่</value>
+  </data>
+  <data name="Der_Port_muss_eine_Zahl_von_1_bis_65535_sein_63e44f66" xml:space="preserve">
+    <value>พอร์ตต้องเป็นตัวเลขตั้งแต่ 1 ถึง 65535</value>
+  </data>
+  <data name="Die_ffentliche_Adresse_braucht_die_Form_https_na_ef72da9c" xml:space="preserve">
+    <value>ที่อยู่สาธารณะต้องอยู่ในรูป https://name.example โดยไม่มีพาธ</value>
+  </data>
+  <data name="Bitte_eine_g_ltige_Adresse_f_r_die_Test_E_Mail_e_cb67ff6c" xml:space="preserve">
+    <value>โปรดป้อนที่อยู่ที่ถูกต้องสำหรับอีเมลทดสอบ</value>
+  </data>
+  <data name="Bitte_Server_und_Absender_eintragen_676a1249" xml:space="preserve">
+    <value>โปรดป้อนเซิร์ฟเวอร์และผู้ส่ง</value>
+  </data>
+  <data name="Wird_gesendet_bfe4a609" xml:space="preserve">
+    <value>กำลังส่ง ...</value>
+  </data>
+  <data name="FerrumPix_Test_E_Mail_6bec34a9" xml:space="preserve">
+    <value>FerrumPix: อีเมลทดสอบ</value>
+  </data>
+  <data name="Diese_Nachricht_kommt_von_FerrumPix_Der_Mailvers_8e971cfd" xml:space="preserve">
+    <value>ข้อความนี้มาจาก FerrumPix การส่งอีเมลสำหรับรหัสผ่านที่ลืมทำงานได้</value>
+  </data>
+  <data name="Die_Test_E_Mail_an_0_ist_versendet_ad16c6ef" xml:space="preserve">
+    <value>ส่งอีเมลทดสอบถึง {0} แล้ว</value>
+  </data>
+  <data name="Die_Test_E_Mail_lie_sich_nicht_senden_0_b5e3e762" xml:space="preserve">
+    <value>ส่งอีเมลทดสอบไม่ได้: {0}</value>
+  </data>
+  <data name="Ordner_f_r_die_Regel_w_hlen_0fb8b613" xml:space="preserve">
+    <value>เลือกโฟลเดอร์สำหรับกฎ</value>
+  </data>
+  <data name="Wer_FerrumPix_im_Browser_benutzen_darf_Der_Eigen_e0d7be8a" xml:space="preserve">
+    <value>ผู้ที่ใช้ FerrumPix ในเบราว์เซอร์ได้ เจ้าของจากการตั้งค่าครั้งแรกเป็นผู้ดูแลระบบและเห็นทุกอย่าง ผู้ใช้อื่นได้เฉพาะหน้ามือถือและเห็นเฉพาะโฟลเดอร์ที่กฎอนุญาต คะแนนและเครื่องหมายใช้ร่วมกันทุกคน</value>
+  </data>
+  <data name="E_Mail_Adresse_ce8fdbcb" xml:space="preserve">
+    <value>อีเมล</value>
+  </data>
+  <data name="F_r_ein_vergessenes_Kennwort_Angemeldet_wird_wei_1483249b" xml:space="preserve">
+    <value>สำหรับรหัสผ่านที่ลืม การเข้าสู่ระบบยังใช้ชื่อเหมือนเดิม</value>
+  </data>
+  <data name="Darf_in_die_volle_Oberfl_che_und_in_die_Einstell_3fb7f312" xml:space="preserve">
+    <value>ใช้หน้าจอเต็มและการตั้งค่าได้ และเห็นทุกอย่าง</value>
+  </data>
+  <data name="Kann_sich_nicht_anmelden_offene_Anmeldungen_ende_ad4e11c4" xml:space="preserve">
+    <value>เข้าสู่ระบบไม่ได้ การเข้าสู่ระบบที่เปิดอยู่จะสิ้นสุดทันที</value>
+  </data>
+  <data name="Kennwort_zur_cksetzen_f2e37733" xml:space="preserve">
+    <value>รีเซ็ตรหัสผ่าน</value>
+  </data>
+  <data name="Kennwort_setzen_55eb847e" xml:space="preserve">
+    <value>ตั้งรหัสผ่าน</value>
+  </data>
+  <data name="Rechte_je_Ordner_bb6f13e0" xml:space="preserve">
+    <value>สิทธิ์ตามโฟลเดอร์</value>
+  </data>
+  <data name="Ansehen_hei_t_sehen_und_herunterladen_Mitarbeite_283f34b3" xml:space="preserve">
+    <value>ดู หมายถึงดูและดาวน์โหลด ร่วมทำงานเพิ่มการให้คะแนน ทำเครื่องหมาย และอัปโหลด จัดการเพิ่มการเปลี่ยนชื่อและลบ กฎใช้กับโฟลเดอร์และทุกอย่างข้างใน</value>
+  </data>
+  <data name="Benutzer_l_schen_18102426" xml:space="preserve">
+    <value>ลบผู้ใช้</value>
+  </data>
+  <data name="Neuer_Benutzer_93017c9b" xml:space="preserve">
+    <value>ผู้ใช้ใหม่</value>
+  </data>
+  <data name="Name_ohne_Gro_und_Kleinschreibung_eindeutig_E_Ma_4dabb81c" xml:space="preserve">
+    <value>ชื่อต้องไม่ซ้ำโดยไม่สนตัวพิมพ์ใหญ่เล็ก อีเมลเป็นตัวเลือก หากไม่มีบทบาทผู้ดูแลระบบ จะไม่เห็นอะไรจนกว่าจะมีกฎโฟลเดอร์</value>
+  </data>
+  <data name="Benutzer_anlegen_1614f4af" xml:space="preserve">
+    <value>สร้างผู้ใช้</value>
+  </data>
+  <data name="E_Mail_f_r_vergessene_Kennw_rter_b66373bf" xml:space="preserve">
+    <value>อีเมลสำหรับรหัสผ่านที่ลืม</value>
+  </data>
+  <data name="Mit_einem_Mailserver_schickt_die_Anmeldung_im_Br_528bb2f3" xml:space="preserve">
+    <value>เมื่อมีเซิร์ฟเวอร์อีเมล หน้าเข้าสู่ระบบในเบราว์เซอร์จะส่งลิงก์ไปยังอีเมลของผู้ใช้เมื่อลืมรหัสผ่าน หากไม่มี มีเพียงผู้ดูแลระบบที่ช่วยได้</value>
+  </data>
+  <data name="Server_cb0cb170" xml:space="preserve">
+    <value>เซิร์ฟเวอร์</value>
+  </data>
+  <data name="Port_fe035157" xml:space="preserve">
+    <value>พอร์ต</value>
+  </data>
+  <data name="Verschl_sselung_3be4a22c" xml:space="preserve">
+    <value>การเข้ารหัส</value>
+  </data>
+  <data name="Absender_4bc8195c" xml:space="preserve">
+    <value>ผู้ส่ง</value>
+  </data>
+  <data name="ffentliche_Adresse_a088db22" xml:space="preserve">
+    <value>ที่อยู่สาธารณะ</value>
+  </data>
+  <data name="Test_E_Mail_an_cb64f2fe" xml:space="preserve">
+    <value>อีเมลทดสอบถึง</value>
+  </data>
+  <data name="Die_ffentliche_Adresse_bildet_den_Verweis_in_der_86dac91d" xml:space="preserve">
+    <value>ที่อยู่สาธารณะใช้สร้างลิงก์ในข้อความ หากว่างจะใช้ที่อยู่ที่เบราว์เซอร์เข้ามา หากมีอุปกรณ์ในเครือข่ายบ้านที่ไม่ไว้ใจ ควรตั้งค่าไว้</value>
+  </data>
+  <data name="Test_E_Mail_senden_c79d6b3b" xml:space="preserve">
+    <value>ส่งอีเมลทดสอบ</value>
+  </data>
+  <data name="Mit_den_Zugangsdaten_Immich_Nextcloud_Mailversan_38be27bf" xml:space="preserve">
+    <value>รวมข้อมูลเข้าสู่ระบบ: Immich, Nextcloud, การส่งอีเมล และรหัสผ่านสำหรับเข้าสู่ระบบ</value>
+  </data>
+  <data name="Automatisch_Sprache_des_Browsers_cac03e47" xml:space="preserve">
+    <value>อัตโนมัติ (ภาษาของเบราว์เซอร์)</value>
+  </data>
+  <data name="F_r_die_mobile_Seite_Meldungen_und_Nachrichten_a_397aed2f" xml:space="preserve">
+    <value>สำหรับหน้ามือถือ การแจ้งเตือน และข้อความถึงผู้ใช้นี้ หน้าจอเต็มยังคงใช้ภาษาของแอป</value>
+  </data>
+  <data name="Benutzerverwaltung_b05aadc9" xml:space="preserve">
+    <value>การจัดการผู้ใช้</value>
+  </data>
+  <data name="Browser_und_mobile_Ansicht_0b4f1ff5" xml:space="preserve">
+    <value>เบราว์เซอร์และมุมมองมือถือ</value>
+  </data>
+  <data name="Sperren_und_das_Anmeldefenster_zeigen_nur_mit_Ke_f06c516d" xml:space="preserve">
+    <value>ล็อกและแสดงหน้าต่างเข้าสู่ระบบ (เฉพาะเมื่อมีรหัสผ่าน ดูการตั้งค่า การจัดการผู้ใช้)</value>
+  </data>
+  <data name="Diese_Freigabe_ist_mit_einem_Kennwort_gesch_tzt_7f79b00d" xml:space="preserve">
+    <value>การแชร์นี้มีรหัสผ่านป้องกัน</value>
+  </data>
+  <data name="Dieser_Link_ist_ung_ltig_abgelaufen_oder_wurde_w_11b25b49" xml:space="preserve">
+    <value>ลิงก์นี้ไม่ถูกต้อง หมดอายุ หรือถูกเพิกถอนแล้ว</value>
+  </data>
+  <data name="Verf_gbar_bis_0_6c43116a" xml:space="preserve">
+    <value>ใช้ได้ถึง {0}</value>
+  </data>
+  <data name="Geteilt_mit_FerrumPix_174ceb7d" xml:space="preserve">
+    <value>แชร์ด้วย FerrumPix</value>
+  </data>
+  <data name="Link_zum_Teilen_erstellen_dd8da631" xml:space="preserve">
+    <value>สร้างลิงก์แชร์</value>
+  </data>
+  <data name="An_App_senden_c549c6d8" xml:space="preserve">
+    <value>ส่งไปยังแอป</value>
+  </data>
+  <data name="Meine_Freigaben_efe0316c" xml:space="preserve">
+    <value>การแชร์ของฉัน</value>
+  </data>
+  <data name="G_ltig_17770e6b" xml:space="preserve">
+    <value>ระยะเวลา</value>
+  </data>
+  <data name="0_Tage_f5c5232d" xml:space="preserve">
+    <value>{0} วัน</value>
+  </data>
+  <data name="1_Jahr_d0e3da3e" xml:space="preserve">
+    <value>1 ปี</value>
+  </data>
+  <data name="Leer_lassen_um_das_Kennwort_zu_behalten_80f311ac" xml:space="preserve">
+    <value>เว้นว่างไว้เพื่อใช้รหัสผ่านเดิม</value>
+  </data>
+  <data name="Herunterladen_erlauben_4a950b96" xml:space="preserve">
+    <value>อนุญาตให้ดาวน์โหลด</value>
+  </data>
+  <data name="Ort_mitgeben_896c2f86" xml:space="preserve">
+    <value>รวมสถานที่</value>
+  </data>
+  <data name="Personen_mitgeben_54d892b8" xml:space="preserve">
+    <value>รวมบุคคล</value>
+  </data>
+  <data name="Kamera_und_Belichtung_mitgeben_ae1cae53" xml:space="preserve">
+    <value>รวมกล้องและการรับแสง</value>
+  </data>
+  <data name="Link_erstellen_bd3ee5c1" xml:space="preserve">
+    <value>สร้างลิงก์</value>
+  </data>
+  <data name="Link_kopieren_e8b631dd" xml:space="preserve">
+    <value>คัดลอกลิงก์</value>
+  </data>
+  <data name="Link_kopiert_3498023f" xml:space="preserve">
+    <value>คัดลอกลิงก์แล้ว</value>
+  </data>
+  <data name="Widerrufen_2c7ccedb" xml:space="preserve">
+    <value>เพิกถอน</value>
+  </data>
+  <data name="Diese_Freigabe_widerrufen_Der_Link_funktioniert__7303b0c3" xml:space="preserve">
+    <value>เพิกถอนการแชร์นี้หรือไม่ ลิงก์จะใช้ไม่ได้อีก</value>
+  </data>
+  <data name="Der_Link_steht_nur_auf_dem_Ger_t_auf_dem_er_erst_2751921a" xml:space="preserve">
+    <value>ลิงก์ถูกเก็บไว้เฉพาะในอุปกรณ์ที่สร้างเท่านั้น สร้างลิงก์ใหม่หรือไม่ ลิงก์เดิมจะใช้ไม่ได้อีก</value>
+  </data>
+  <data name="0_Aufrufe_3632decf" xml:space="preserve">
+    <value>เปิดดู {0} ครั้ง</value>
+  </data>
+  <data name="Abgelaufen_d16b8321" xml:space="preserve">
+    <value>หมดอายุ</value>
+  </data>
+  <data name="Ohne_Wirkung_c307d548" xml:space="preserve">
+    <value>ไม่มีผล</value>
+  </data>
+  <data name="Noch_keine_Freigaben_316a0d7a" xml:space="preserve">
+    <value>ยังไม่มีการแชร์</value>
+  </data>
+  <data name="Alle_Freigaben_pausieren_06081b34" xml:space="preserve">
+    <value>หยุดการแชร์ทั้งหมดชั่วคราว</value>
+  </data>
+  <data name="Alle_Freigaben_sind_pausiert_975f19e3" xml:space="preserve">
+    <value>การแชร์ทั้งหมดหยุดชั่วคราวอยู่</value>
+  </data>
+  <data name="Link_erstellt_0dce5571" xml:space="preserve">
+    <value>สร้างลิงก์แล้ว</value>
+  </data>
+  <data name="Das_Kennwort_braucht_mindestens_8_Zeichen_bbe2b0a9" xml:space="preserve">
+    <value>รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร</value>
+  </data>
+  <data name="Zum_Teilen_braucht_es_auf_jedem_Bild_mindestens__50b502ff" xml:space="preserve">
+    <value>การแชร์ต้องมีสิทธิ์ร่วมทำงานเป็นอย่างน้อยในทุกภาพ</value>
+  </data>
+  <data name="Dieser_Ordner_l_sst_sich_nicht_teilen_7fe992a4" xml:space="preserve">
+    <value>ไม่สามารถแชร์โฟลเดอร์นี้ได้</value>
+  </data>
+  <data name="Der_Link_gilt_30_Tage_ohne_Kennwort_mit_Herunter_d7d1cd50" xml:space="preserve">
+    <value>ลิงก์ใช้ได้ 30 วัน ไม่มีรหัสผ่าน ดาวน์โหลดได้ ไม่รวมสถานที่และบุคคล แก้ไขหรือเพิกถอนได้ในมุมมองมือถือที่การแชร์ของฉัน และในการตั้งค่าที่การแชร์</value>
+  </data>
+  <data name="Gel_schter_Benutzer_85498453" xml:space="preserve">
+    <value>ผู้ใช้ที่ถูกลบ</value>
+  </data>
+  <data name="Geteilt_von_0_38359dff" xml:space="preserve">
+    <value>แชร์โดย {0}</value>
+  </data>
+  <data name="Ordner_0_bb112d04" xml:space="preserve">
+    <value>โฟลเดอร์ {0}</value>
+  </data>
+  <data name="Freigaben_e7f62fb4" xml:space="preserve">
+    <value>การแชร์</value>
+  </data>
+  <data name="Links_zum_Teilen_von_Bildern_mit_Menschen_ohne_K_28e9e123" xml:space="preserve">
+    <value>ลิงก์สำหรับแชร์ภาพกับผู้ที่ไม่มีบัญชีจากผู้ใช้ทุกคน ลิงก์ยังใช้ได้แม้ FerrumPix ถูกล็อก ใช้สวิตช์ด้านล่างเพื่อหยุดลิงก์ทั้งหมด</value>
+  </data>
+  <data name="Jeder_Link_antwortet_dann_wie_ein_unbekannter_bi_1c93e83b" xml:space="preserve">
+    <value>จากนั้นทุกลิงก์จะตอบเหมือนลิงก์ที่ไม่รู้จัก จนกว่าจะปิดสวิตช์อีกครั้ง</value>
+  </data>
+  <data name="In_FerrumPix_kopiert_0551df0f" xml:space="preserve">
+    <value>คัดลอกใน FerrumPix แล้ว</value>
+  </data>
+  <data name="Die_Zwischenablage_dieses_Ger_ts_hat_den_Inhalt__e94c6e81" xml:space="preserve">
+    <value>คลิปบอร์ดของอุปกรณ์นี้ไม่รับเนื้อหา</value>
+  </data>
+  <data name="Bilder_kommen_nur_ber_HTTPS_in_die_Zwischenablag_99058706" xml:space="preserve">
+    <value>รูปภาพเข้าสู่คลิปบอร์ดของอุปกรณ์นี้ได้ผ่าน HTTPS เท่านั้น</value>
+  </data>
+  <data name="Zu_gro_f_r_die_Zwischenablage_3a2a973c" xml:space="preserve">
+    <value>ใหญ่เกินไปสำหรับคลิปบอร์ด</value>
+  </data>
+  <data name="Absender_E_Mail_Adresse_b8998ec0" xml:space="preserve">
+    <value>ผู้ส่ง (ที่อยู่อีเมล)</value>
+  </data>
+  <data name="Von_dieser_Adresse_kommen_die_Mails_etwa_fotos_e_fb2fa752" xml:space="preserve">
+    <value>อีเมลจะส่งจากที่อยู่นี้ เช่น fotos@example.org ว่างไว้: ใช้ชื่อผู้ใช้ของบัญชีอีเมล</value>
+  </data>
+  <data name="Adresse_von_FerrumPix_im_Browser_b2175d85" xml:space="preserve">
+    <value>ที่อยู่ของ FerrumPix ในเบราว์เซอร์</value>
+  </data>
+  <data name="Unter_dieser_Webadresse_URL_erreichen_andere_Fer_69dfdf58" xml:space="preserve">
+    <value>ผู้อื่นเข้าถึง FerrumPix ได้ที่ที่อยู่เว็บ (URL) นี้ เช่น https://fotos.example.org ที่อยู่นี้จะอยู่ในลิงก์ของอีเมลและการแชร์ หากไม่มี FerrumPix จะไม่ส่งอีเมลเมื่อลืมรหัสผ่าน และการแชร์จะใช้ที่อยู่ที่เบราว์เซอร์กำลังเข้ามา</value>
+  </data>
+  <data name="Gespeichert_F_r_ein_vergessenes_Kennwort_fehlt_n_a06be747" xml:space="preserve">
+    <value>บันทึกแล้ว สำหรับกรณีลืมรหัสผ่าน ยังไม่มีที่อยู่ของ FerrumPix ในเบราว์เซอร์ หากไม่มีจะไม่มีอีเมลส่งออกไป</value>
+  </data>
+  <data name="smtp_example_org_b4c0fa4b" xml:space="preserve">
+    <value>smtp.example.org</value>
+  </data>
+  <data name="fotos_example_org_oder_Name_fotos_example_org_e3bae05e" xml:space="preserve">
+    <value>fotos@example.org หรือ ชื่อ &lt;fotos@example.org&gt;</value>
+  </data>
+  <data name="https_fotos_example_org_e099205f" xml:space="preserve">
+    <value>https://fotos.example.org</value>
+  </data>
+  <data name="Bitte_den_Server_f_r_den_Mailversand_eintragen_3a4ec116" xml:space="preserve">
+    <value>โปรดป้อนเซิร์ฟเวอร์สำหรับส่งอีเมล</value>
+  </data>
+  <data name="Gespeichert_Ohne_Server_geht_keine_E_Mail_hinaus_d0b913e3" xml:space="preserve">
+    <value>บันทึกแล้ว หากไม่มีเซิร์ฟเวอร์จะไม่มีอีเมลถูกส่งออก</value>
+  </data>
+  <data name="Bitte_einen_Absender_eintragen_Der_Benutzername__251420c7" xml:space="preserve">
+    <value>โปรดป้อนผู้ส่ง ชื่อผู้ใช้ของบัญชีอีเมลไม่ใช่ที่อยู่อีเมลและใช้แทนไม่ได้</value>
+  </data>
+  <data name="Der_Absender_0_ist_keine_g_ltige_E_Mail_Adresse__77648712" xml:space="preserve">
+    <value>ผู้ส่ง "{0}" ไม่ใช่ที่อยู่อีเมลที่ถูกต้อง ใช้ได้คือ fotos@example.org หรือ ชื่อ &lt;fotos@example.org&gt;</value>
+  </data>
+  <data name="Die_Adresse_braucht_die_Form_https_fotos_example_64db9b5a" xml:space="preserve">
+    <value>ที่อยู่ต้องอยู่ในรูปแบบ https://fotos.example.org โดยไม่มีพาธ</value>
+  </data>
+  <data name="F_r_dein_Konto_bei_FerrumPix_wurde_ein_neues_Ken_eaadd7c0" xml:space="preserve">
+    <value>มีการขอรหัสผ่านใหม่สำหรับบัญชี FerrumPix ของคุณ ตั้งรหัสผ่านได้ด้วยปุ่มนี้</value>
+  </data>
+  <data name="Falls_der_Knopf_nicht_geht_kopiere_diesen_Link_i_7085d575" xml:space="preserve">
+    <value>หากปุ่มใช้ไม่ได้ ให้คัดลอกลิงก์นี้ไปยังเบราว์เซอร์:</value>
+  </data>
+  <data name="Der_Link_gilt_30_Minuten_und_nur_einmal_c20758b4" xml:space="preserve">
+    <value>ลิงก์นี้ใช้ได้ 30 นาทีและเพียงครั้งเดียว</value>
+  </data>
+  <data name="Wenn_du_das_nicht_angefordert_hast_kannst_du_die_62edf257" xml:space="preserve">
+    <value>หากคุณไม่ได้ขอ คุณสามารถเพิกเฉยต่ออีเมลนี้ได้</value>
+  </data>
+  <data name="Der_Mailversand_funktioniert_14b78fdc" xml:space="preserve">
+    <value>การส่งอีเมลใช้งานได้</value>
+  </data>
+  <data name="FerrumPix_ffnen_367a5059" xml:space="preserve">
+    <value>เปิด FerrumPix</value>
+  </data>
+  <data name="Datei_fehlt_3b100e31" xml:space="preserve">
+    <value>ไม่พบไฟล์</value>
+  </data>
+  <data name="Format_nicht_lesbar_98c7af8b" xml:space="preserve">
+    <value>อ่านรูปแบบไม่ได้</value>
+  </data>
+  <data name="Es_gibt_schon_0_Freigaben_von_Ihnen_Bitte_zuerst_2d3e153d" xml:space="preserve">
+    <value>คุณมีการแชร์อยู่แล้ว {0} รายการ โปรดเพิกถอนรายการเก่าก่อน</value>
+  </data>
+  <data name="Es_gibt_schon_0_Freigaben_mehr_nimmt_FerrumPix_n_dd769fe6" xml:space="preserve">
+    <value>มีการแชร์อยู่แล้ว {0} รายการ FerrumPix รับเพิ่มไม่ได้อีก</value>
+  </data>
+  <data name="Eine_Freigabe_nimmt_h_chstens_0_Bilder_auf_ca9697b4" xml:space="preserve">
+    <value>การแชร์หนึ่งรายการมีรูปได้ไม่เกิน {0} รูป</value>
+  </data>
+  <data name="Bearbeitungen_und_Beistelldateien_darf_nur_ein_A_fc93eebc" xml:space="preserve">
+    <value>เฉพาะผู้ดูแลระบบเท่านั้นที่อัปโหลดการแก้ไขและไฟล์ประกอบได้</value>
+  </data>
+  <data name="0_endg_ltig_l_schen_Der_Papierkorb_ist_abgeschal_14cfda0b" xml:space="preserve">
+    <value>ลบ {0} อย่างถาวรหรือไม่ ถังขยะปิดอยู่ จึงย้อนกลับไม่ได้</value>
+  </data>
+  <data name="Der_Code_ist_falsch_3697f932" xml:space="preserve">
+    <value>รหัสไม่ถูกต้อง</value>
+  </data>
+  <data name="Die_Anmeldung_ist_abgelaufen_Bitte_noch_einmal_a_5d263fbe" xml:space="preserve">
+    <value>การเข้าสู่ระบบหมดเวลาแล้ว โปรดเข้าสู่ระบบอีกครั้ง</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_schon_eingerichtet_b3108a5c" xml:space="preserve">
+    <value>ตั้งค่าปัจจัยที่สองไว้แล้ว</value>
+  </data>
+  <data name="Das_Einrichten_ist_abgelaufen_Bitte_neu_beginnen_928161cf" xml:space="preserve">
+    <value>การตั้งค่าหมดเวลาแล้ว โปรดเริ่มใหม่</value>
+  </data>
+  <data name="Kennwort_oder_Code_ist_falsch_10de6e3e" xml:space="preserve">
+    <value>รหัสผ่านหรือรหัสไม่ถูกต้อง</value>
+  </data>
+  <data name="Zweiter_Faktor_cfbf71b5" xml:space="preserve">
+    <value>ปัจจัยที่สอง</value>
+  </data>
+  <data name="Mit_einem_zweiten_Faktor_fragt_die_Anmeldung_im__34721313" xml:space="preserve">
+    <value>เมื่อใช้ปัจจัยที่สอง การเข้าสู่ระบบในเบราว์เซอร์จะขอรหัสจากแอปยืนยันตัวตนนอกเหนือจากรหัสผ่าน</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_eingerichtet_brige_Wiederh_bcab83f0" xml:space="preserve">
+    <value>ตั้งค่าปัจจัยที่สองแล้ว รหัสกู้คืนที่เหลือ: {0}</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_nicht_eingerichtet_d3eef3aa" xml:space="preserve">
+    <value>ยังไม่ได้ตั้งค่าปัจจัยที่สอง</value>
+  </data>
+  <data name="Einrichten_34be1cd4" xml:space="preserve">
+    <value>ตั้งค่า</value>
+  </data>
+  <data name="Den_QR_Code_mit_der_Authenticator_App_scannen_od_6bc2623a" xml:space="preserve">
+    <value>สแกนคิวอาร์โค้ดด้วยแอปยืนยันตัวตนหรือพิมพ์คีย์ จากนั้นป้อนรหัสจากแอป</value>
+  </data>
+  <data name="Schl_ssel_1ac83286" xml:space="preserve">
+    <value>คีย์</value>
+  </data>
+  <data name="Code_adac6937" xml:space="preserve">
+    <value>รหัส</value>
+  </data>
+  <data name="Best_tigen_2019ffd2" xml:space="preserve">
+    <value>ยืนยัน</value>
+  </data>
+  <data name="Wiederherstellungscodes_4833ba4c" xml:space="preserve">
+    <value>รหัสกู้คืน</value>
+  </data>
+  <data name="Jeder_Code_gilt_einmal_falls_die_App_nicht_zur_H_ef4d94e4" xml:space="preserve">
+    <value>แต่ละรหัสใช้ได้ครั้งเดียว ในกรณีที่ไม่มีแอปอยู่ใกล้มือ รหัสจะแสดงเฉพาะตอนนี้ โปรดเก็บไว้ในที่ปลอดภัย</value>
+  </data>
+  <data name="Abschalten_a10c1e28" xml:space="preserve">
+    <value>ปิด</value>
+  </data>
+  <data name="Zum_Abschalten_das_aktuelle_Kennwort_und_einen_C_6f049c60" xml:space="preserve">
+    <value>หากต้องการปิด ให้ป้อนรหัสผ่านปัจจุบันและรหัสจากแอป</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_eingerichtet_04aa51ea" xml:space="preserve">
+    <value>ตั้งค่าปัจจัยที่สองเรียบร้อยแล้ว</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_abgeschaltet_cd4eb77f" xml:space="preserve">
+    <value>ปิดปัจจัยที่สองแล้ว</value>
+  </data>
+  <data name="Bitte_den_Code_eingeben_1bf3f2b2" xml:space="preserve">
+    <value>โปรดป้อนรหัส</value>
+  </data>
+  <data name="Bitte_den_Code_aus_der_Authenticator_App_eingebe_cda91f15" xml:space="preserve">
+    <value>โปรดป้อนรหัสจากแอปยืนยันตัวตน</value>
+  </data>
+  <data name="Wiederherstellungscode_verwenden_71e32ac1" xml:space="preserve">
+    <value>ใช้รหัสกู้คืน</value>
+  </data>
+  <data name="Code_aus_der_App_verwenden_63a6c9a7" xml:space="preserve">
+    <value>ใช้รหัสจากแอป</value>
+  </data>
+  <data name="Wiederherstellungscode_7e05d9a1" xml:space="preserve">
+    <value>รหัสกู้คืน</value>
+  </data>
+  <data name="Konto_0_364126d0" xml:space="preserve">
+    <value>บัญชี: {0}</value>
+  </data>
+  <data name="Zweiten_Faktor_zur_cksetzen_dd1eed1c" xml:space="preserve">
+    <value>รีเซ็ตปัจจัยที่สอง</value>
+  </data>
+  <data name="0_meldet_sich_danach_nur_mit_dem_Kennwort_an_und_69c02882" xml:space="preserve">
+    <value>หลังจากนี้ {0} จะเข้าสู่ระบบด้วยรหัสผ่านเท่านั้นและตั้งค่าปัจจัยที่สองใหม่ได้ เซสชันที่เปิดอยู่ของผู้ใช้นี้จะสิ้นสุดลง</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_zur_ckgesetzt_Offene_Anmel_b08ae6d1" xml:space="preserve">
+    <value>รีเซ็ตปัจจัยที่สองแล้ว เซสชันที่เปิดอยู่ของผู้ใช้นี้สิ้นสุดลงแล้ว</value>
+  </data>
+  <data name="Textdatei_7704451c" xml:space="preserve">
+    <value>ไฟล์ข้อความ</value>
+  </data>
+  <data name="F_r_einen_Benutzer_der_seine_Authenticator_App_v_82ff0a19" xml:space="preserve">
+    <value>สำหรับผู้ใช้ที่ทำแอปยืนยันตัวตนหาย หลังจากนั้นจะเข้าสู่ระบบด้วยรหัสผ่านเท่านั้น เซสชันที่เปิดอยู่จะสิ้นสุดลง</value>
+  </data>
+  <data name="Zweiter_Faktor_f_r_dein_Konto_2fae6464" xml:space="preserve">
+    <value>ปัจจัยที่สองสำหรับบัญชีของคุณ</value>
+  </data>
+  <data name="Die_Anmeldung_im_Browser_fragt_nach_dem_Kennwort_0fdc9ba5" xml:space="preserve">
+    <value>การเข้าสู่ระบบในเบราว์เซอร์จะขอรหัสจากแอปยืนยันตัวตนนอกเหนือจากรหัสผ่าน การเข้าสู่ระบบบนคอมพิวเตอร์เครื่องนี้โดยตรงยังคงไม่ต้องใช้รหัส</value>
+  </data>
+  <data name="Als_Textdatei_speichern_288a3137" xml:space="preserve">
+    <value>บันทึกเป็นไฟล์ข้อความ</value>
   </data>
 </root>

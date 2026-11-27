@@ -661,7 +661,7 @@ Namespace Services
 
             ' --- Cube-LUT: exakt die Bedingungen aus ApplyCubeLut ---
             Dim lutStrength = Clamp(adj.LutStrength / 100.0F, 0, 1)
-            If lutStrength > 0 AndAlso Not String.IsNullOrWhiteSpace(adj.LutPath) Then
+            If lutStrength > 0 AndAlso Not String.IsNullOrWhiteSpace(adj.LutPath) AndAlso RecipeReferences.Allows(adj.LutPath) Then
                 Dim lut = LoadCubeLut(adj.LutPath)
                 If lut IsNot Nothing Then
                     chain.CubeTable = lut.Table

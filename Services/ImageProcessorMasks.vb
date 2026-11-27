@@ -1995,7 +1995,8 @@ Namespace Services
                 ' gemessen 97 ms je Ebene, und bei mehreren Bildebenen ist das die Pause, die man
                 ' beim Ebenenwechsel spuert. Hier wird gleich verkleinert dekodiert.
                 If (kind = "image" OrElse kind = "selectionimage") AndAlso
-                   Not String.IsNullOrWhiteSpace(annotation.ImagePath) AndAlso File.Exists(annotation.ImagePath) Then
+                   Not String.IsNullOrWhiteSpace(annotation.ImagePath) AndAlso File.Exists(annotation.ImagePath) AndAlso
+                   RecipeReferences.Allows(annotation.ImagePath) Then
                     Dim fromImageFile = BuildImageThumbnailFromFile(annotation.ImagePath, boxSize)
                     If fromImageFile IsNot Nothing Then Return fromImageFile
                 End If

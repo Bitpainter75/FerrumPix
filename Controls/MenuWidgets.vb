@@ -36,6 +36,11 @@ Namespace Controls
         Public Shared ReadOnly Property LabelColorValues As IReadOnlyList(Of String) =
             Array.ConvertAll(LabelColors, Function(color) color.Hex)
 
+        ''' <summary>Dieselben neun Farben mit ihrem Namen (unuebersetzt, Schluessel fuer
+        ''' LocalizationService.T), in derselben Reihenfolge. Die mobile Seite im Browser bietet
+        ''' genau diese an.</summary>
+        Friend Shared ReadOnly Property LabelColorEntries As IReadOnlyList(Of (Name As String, Hex As String)) = LabelColors
+
         Private Sub New()
         End Sub
 

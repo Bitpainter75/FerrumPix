@@ -232,6 +232,15 @@
                 </Button>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                         Padding="14,10"
+                        Tag="UsersSection"
+                        Click="OnSectionNavClick">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/users-three.svg" Width="18" Height="18"/>
+                        <TextBlock Text="Benutzerverwaltung"/>
+                    </StackPanel>
+                </Button>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                        Padding="14,10"
                         Tag="ShortcutsSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
@@ -371,6 +380,14 @@
 
 
                 <Border x:Name="PerformanceSection" Classes="section">
+                </Border>
+
+                <!-- BENUTZERVERWALTUNG: oben das Kennwort des Anmeldefensters und die Sperre (zählt
+                     auch am Rechner), darunter alles, was nur im Browser wirkt: Benutzer, Rechte je
+                     Ordner, Mailversand, öffentliche Adresse, Freigaben. Unter "Leistung", weil es
+                     für den reinen Desktop-Nutzer meist nicht zählt; Tastenkürzel und Technik
+                     bleiben die letzten. -->
+                <Border x:Name="UsersSection" Classes="section">
                 </Border>
 
                 <!-- Rein informative Übersicht der Belegungen. Die Texte

@@ -45,6 +45,27 @@ Namespace Services
     ''' "Authorization: Basic" mitschicken; das gilt dann fuer diese eine Anfrage und legt keine
     ''' Sitzung an.</para>
     '''
+    ''' <para>DAS KENNWORT IST PFLICHT, in jeder Betriebsart der Bruecke. Ist noch keines
+    ''' gespeichert, zeigt dieselbe Seite statt der Anmeldung die EINRICHTUNG (POST /setup): neues
+    ''' Kennwort zweimal, danach ist der Browser angemeldet. Wer zuerst kommt, legt fest; ohne
+    ''' Einmalcode und ohne Beschraenkung aufs Heimnetz, so entschieden. Bis dahin ist ausser der
+    ''' Seite, ihrem Bild, den Symbolen und /health nichts erreichbar: kein WebSocket, kein
+    ''' Hochladen und Herunterladen, keine Schnittstelle, keine Basic-Anmeldung (es gibt kein
+    ''' Kennwort, gegen das sie gelingen koennte). Die Einrichtung gelingt genau einmal
+    ''' (AppLockService.TrySetInitialPassword).</para>
+    '''
+    ''' <para>BENUTZER. Jede Sitzung traegt eine Benutzerkennung: den Eigentuemer
+    ''' (AppLockService.OwnerUserId), den die Einrichtung festlegt, oder einen weiteren Benutzer
+    ''' (UserAccountService). Wer die volle Oberflaeche betreten darf, steht an einer Stelle
+    ''' (<see cref="CanUseDesktop"/>: nur Administratoren), und die mobile Schnittstelle holt ihren
+    ''' Benutzer an einer Stelle (<see cref="SignedInUser"/>, darueber MobileContext). Ein
+    ''' gesperrter oder geloeschter Benutzer hat keine gueltige Sitzung mehr, auch wenn sein Cookie
+    ''' noch gilt.</para>
+    '''
+    ''' <para>KENNWORT VERGESSEN (POST /forgot, GET und POST /reset, PasswordResetService): ein
+    ''' Verweis per E-Mail, wenn ein Mailserver eingerichtet ist; die Antwort ist fuer jedes Konto
+    ''' dieselbe.</para>
+    '''
     ''' <para>GEGEN FREMDE SEITEN: SameSite=Strict, dazu prueft POST /login und /logout die Herkunft
     ''' (Origin gegen Host) und verlangt JSON, was jeder fremden Seite eine Vorabfrage des Browsers
     ''' aufzwingt, die hier nie beantwortet wird. Gegen Raten zaehlt AppLockService Fehlversuche je
@@ -59,7 +80,10 @@ Namespace Services
         ''' Fehlversuche. Gibt keinen Zugang.</summary>
         Friend Const LoginCookieName As String = "ferrumpix_login"
         Friend Const LoginRoute As String = "/login"
+        Friend Const SetupRoute As String = "/setup"
         Friend Const LogoutRoute As String = "/logout"
+        Friend Const ForgotRoute As String = "/forgot"
+        Friend Const ResetRoute As String = "/reset"
         Friend Const LoginImageRoute As String = "/login/welcome.jpg"
 
         Private Const LoginPageAsset As String = "avares://FerrumPix/Assets/BrowserBridge/login.html"
@@ -76,6 +100,11 @@ Namespace Services
         Private NotInheritable Class BrowserSession
             Public LastUsedUtc As DateTime
             Public Sender As String
+            ''' <summary>Die Adresse bei der Anmeldung, wie sie im Protokoll steht (<see cref="LogAddress"/>).</summary>
+            Public Address As String
+            ''' <summary>Wem die Sitzung gehoert: AppLockService.OwnerUserId oder die Kennung eines
+            ''' weiteren Benutzers (UserAccountService).</summary>
+            Public UserId As String
         End Class
 
         ''' <summary>Die Sitzungen, nach dem SHA-256 des Cookie-Werts. Der Wert selbst steht nur im
@@ -88,28 +117,35 @@ Namespace Services
         ''' <summary>Der zuletzt gelungene Basic-Kopf eines Werkzeugs (als Hash samt Marke des
         ''' Kennworts) und bis wann er ohne neue Pruefung gilt.</summary>
         Private Shared _basicHeaderKey As String = ""
+        Private Shared _basicHeaderUser As String
         Private Shared _basicHeaderUntilUtc As DateTime
 
         Private Shared _loginPageText As String
         Private Shared _loginImage As Byte()
         Private Shared _lockHandler As EventHandler
 
-        ''' <summary>Ob die Bruecke ueber den eigenen Rechner hinaus erreichbar ist (Proxy oder
-        ''' Heimnetz). Dann ist ein Kennwort Pflicht, und die Einstellungen lassen es nicht
-        ''' abschalten.</summary>
+        ''' <summary>Laeuft die Bruecke? Dann ist ein Kennwort Pflicht, in jeder Betriebsart, und die
+        ''' Einstellungen lassen es nicht abschalten (aendern bleibt moeglich).</summary>
         Public Shared ReadOnly Property RequiresPassword As Boolean
             Get
-                Return _listener IsNot Nothing AndAlso (_tlsProxy OrElse _allowHttp)
+                Return _listener IsNot Nothing
             End Get
         End Property
 
-        ''' <summary>Braucht ein Browser eine Sitzung? Nur wenn ein Kennwort gesetzt ist; ohne
-        ''' Kennwort ist die Bruecke nur am eigenen Rechner erreichbar (ReadOptions).</summary>
-        Private Shared ReadOnly Property NeedsSignIn As Boolean
-            Get
-                Return AppLockService.IsProtected
-            End Get
-        End Property
+        ''' <summary>Ob ein Benutzer die volle Oberflaeche (<c>/</c>, den WebSocket, Hoch- und
+        ''' Herunterladen der Desktop-Seite) betreten darf. Die eine Stelle fuer diese Entscheidung:
+        ''' nur Administratoren, also der Eigentuemer und weitere Benutzer mit dieser Rolle. Die
+        ''' volle Oberflaeche zeigt alles und fuehrt zu den Einstellungen; Rechte je Ordner gibt es
+        ''' dort nicht.</summary>
+        Friend Shared Function CanUseDesktop(userId As String) As Boolean
+            Return Not String.IsNullOrEmpty(userId) AndAlso UserAccountService.IsAdmin(userId)
+        End Function
+
+        ''' <summary>Angemeldet und berechtigt fuer die volle Oberflaeche? Fuer die Wege der
+        ''' Desktop-Seite (Hochladen, Herunterladen samt Ordner als ZIP).</summary>
+        Private Shared Function IsSignedInForDesktop(context As HttpListenerContext) As Boolean
+            Return CanUseDesktop(SignedInUser(context))
+        End Function
 
         ''' <summary>Wie lange eine Sitzung ohne Nutzung gilt.</summary>
         Friend Shared Function SessionLifetime() As TimeSpan
@@ -176,7 +212,7 @@ Namespace Services
         ''' wenn sie inzwischen abgelaufen oder beendet ist; dann wird er getrennt.</summary>
         Private Shared Function TouchClientSession() As Boolean
             Dim key = _clientSessionKey
-            If key.Length = 0 Then Return Not NeedsSignIn
+            If key.Length = 0 Then Return False
             Dim now = AppLockService.Clock()
             Dim lifetime = SessionLifetime()
             SyncLock Sessions
@@ -192,17 +228,64 @@ Namespace Services
         End Function
 
         ''' <summary>Legt eine Sitzung an und liefert den Wert fuer das Cookie.</summary>
-        Private Shared Function CreateSession(sender As String) As String
+        Private Shared Function CreateSession(request As HttpListenerRequest, userId As String) As String
             Dim value = Convert.ToHexString(RandomNumberGenerator.GetBytes(32))
             Dim now = AppLockService.Clock()
+            Dim sender = SenderKey(request)
+            Dim address = LogAddress(request)
             SyncLock Sessions
                 If Sessions.Count >= MaxSessions Then
                     Dim oldest = Sessions.OrderBy(Function(pair) pair.Value.LastUsedUtc).First().Key
                     Sessions.Remove(oldest)
                 End If
-                Sessions(SessionKey(value)) = New BrowserSession With {.LastUsedUtc = now, .Sender = sender}
+                Sessions(SessionKey(value)) = New BrowserSession With {.LastUsedUtc = now, .Sender = sender, .Address = address, .UserId = userId}
             End SyncLock
             Return value
+        End Function
+
+        ''' <summary>Wer an der vollen Oberflaeche sitzt, fuer das Protokoll (SecurityLog.DesktopActor):
+        ''' Name und Adresse der Sitzung des verbundenen Browsers, ohne ihn zweimal "-".</summary>
+        Friend Shared Function ConnectedActor() As (User As String, From As String)
+            Dim key = _clientSessionKey
+            If key.Length > 0 Then
+                SyncLock Sessions
+                    Dim session As BrowserSession = Nothing
+                    If Sessions.TryGetValue(key, session) Then Return (SecurityLog.UserNameOf(session.UserId), session.Address)
+                End SyncLock
+            End If
+            Return (SecurityLog.NoValue, SecurityLog.NoValue)
+        End Function
+
+        ''' <summary>Die Adresse einer Anfrage fuer das Protokoll (SecurityLog): dieselbe, die die
+        ''' Bremse zaehlt (<see cref="CounterAddress"/>), hinter dem vertrauten Proxy also die
+        ''' weitergereichte, aber voll und nicht als ihr /64. IPv4 in IPv6 erscheint als IPv4.</summary>
+        Friend Shared Function LogAddress(request As HttpListenerRequest) As String
+            Dim address As IPAddress
+            Try
+                address = CounterAddress(request)
+            Catch ex As Exception When TypeOf ex Is ObjectDisposedException OrElse TypeOf ex Is InvalidOperationException
+                ' Die Verbindung ist schon zu; die Zeile kommt trotzdem, ohne Adresse.
+                Return SecurityLog.NoValue
+            End Try
+            If address Is Nothing Then Return SecurityLog.NoValue
+            If address.IsIPv4MappedToIPv6 Then address = address.MapToIPv4()
+            Return address.ToString()
+        End Function
+
+        ''' <summary>Die Wurzeln, relativ zu denen das Protokoll Pfade nennt: die Startordner der
+        ''' vollen Oberflaeche (Fotoordner, sonst Benutzerordner und ueberwachte Ordner).</summary>
+        Friend Shared Function LogRoots() As List(Of String)
+            Return New MobileContext(AppLockService.OwnerUserId, "").BrowseRoots()
+        End Function
+
+        ''' <summary>Der Benutzer einer Sitzung, sonst Nothing.</summary>
+        Private Shared Function SessionUser(key As String) As String
+            If String.IsNullOrEmpty(key) Then Return Nothing
+            SyncLock Sessions
+                Dim session As BrowserSession = Nothing
+                If Sessions.TryGetValue(key, session) Then Return session.UserId
+            End SyncLock
+            Return Nothing
         End Function
 
         ''' <summary>Wie viele Sitzungen gelten. Fuer den Pruefstand.</summary>
@@ -244,6 +327,36 @@ Namespace Services
             If ended > 0 Then DiagnosticLogService.LogAlways("BrowserBridge", $"Password changed, ended {ended} other session(s).")
         End Sub
 
+        ''' <summary>Beendet alle Sitzungen eines Benutzers, ausser <paramref name="keepKey"/>: nach
+        ''' einem neuen Kennwort, dem Sperren, Loeschen oder Herabstufen (UserAccountService). Ist der
+        ''' verbundene Browser darunter, wird er getrennt. Der kurz gemerkte Basic-Kopf eines
+        ''' Werkzeugs gilt danach ebenfalls nicht mehr.</summary>
+        Friend Shared Sub EndSessionsOfUser(userId As String, keepKey As String)
+            If String.IsNullOrEmpty(userId) Then Return
+            Dim ended As Integer
+            Dim disconnect = False
+            SyncLock Sessions
+                Dim keys = Sessions.Where(Function(pair) String.Equals(pair.Value.UserId, userId, StringComparison.Ordinal) AndAlso
+                                                         Not String.Equals(pair.Key, keepKey, StringComparison.Ordinal)).
+                                    Select(Function(pair) pair.Key).ToList()
+                For Each key In keys
+                    Sessions.Remove(key)
+                    If String.Equals(key, _clientSessionKey, StringComparison.Ordinal) Then disconnect = True
+                Next
+                ended = keys.Count
+                _basicHeaderKey = ""
+            End SyncLock
+            If disconnect Then DisconnectSignedInClient()
+            If ended > 0 Then DiagnosticLogService.LogAlways("BrowserBridge", $"Ended {ended} session(s) of {userId}.")
+        End Sub
+
+        ''' <summary>Wie viele Sitzungen ein Benutzer hat. Fuer den Pruefstand.</summary>
+        Friend Shared Function SessionCountOf(userId As String) As Integer
+            SyncLock Sessions
+                Return Sessions.Values.Where(Function(s) String.Equals(s.UserId, userId, StringComparison.Ordinal)).Count()
+            End SyncLock
+        End Function
+
         Private Shared Sub EndSession(key As String)
             If String.IsNullOrEmpty(key) Then Return
             SyncLock Sessions
@@ -276,56 +389,161 @@ Namespace Services
             End Try
         End Sub
 
-        ''' <summary>Ob die Anfrage angemeldet ist: ohne Kennwort immer, sonst mit gueltiger
-        ''' Sitzung oder (fuer Werkzeuge) mit "Authorization: Basic".</summary>
+        ''' <summary>Ob die Anfrage angemeldet ist: mit gueltiger Sitzung oder (fuer Werkzeuge) mit
+        ''' "Authorization: Basic". Ohne gesetztes Kennwort nie.</summary>
         Private Shared Function IsSignedIn(context As HttpListenerContext) As Boolean
-            If Not NeedsSignIn Then Return True
-            If ValidSessionKey(context.Request) IsNot Nothing Then Return True
-            Return IsSignedInByBasic(context.Request)
+            Return SignedInUser(context) IsNot Nothing
         End Function
+
+        ''' <summary>Der angemeldete Benutzer einer Anfrage, sonst Nothing: aus der Sitzung, oder
+        ''' fuer ein Werkzeug mit Basic der Benutzer zu Name und Kennwort im Kopf. Ein Benutzer, den
+        ''' es nicht mehr gibt oder der gesperrt ist, gilt nicht, auch mit gueltigem Cookie.</summary>
+        Private Shared Function SignedInUser(context As HttpListenerContext) As String
+            If Not AppLockService.IsProtected Then Return Nothing
+            Dim key = ValidSessionKey(context.Request)
+            Dim user As String = Nothing
+            If key IsNot Nothing Then
+                user = SessionUser(key)
+            Else
+                user = BasicSignedInUserOnce(context.Request)
+            End If
+            If user Is Nothing OrElse Not UserAccountService.IsActive(user) Then Return Nothing
+            Return user
+        End Function
+
+        ''' <summary>Das Ergebnis von <see cref="BasicSignedInUser"/> je Anfrage. Eine Anfrage fragt
+        ''' ihren Benutzer an mehreren Stellen (Sprache, Pruefung der Schnittstelle, Kontext); ohne
+        ''' dieses Merken zaehlte ein falscher Basic-Kopf eines Werkzeugs bis zu dreimal als
+        ''' Fehlversuch.</summary>
+        Private Shared ReadOnly BasicOutcomes As New System.Runtime.CompilerServices.ConditionalWeakTable(Of HttpListenerRequest, BasicOutcome)()
+
+        Private NotInheritable Class BasicOutcome
+            Public ReadOnly UserId As String
+            Public Sub New(userId As String)
+                Me.UserId = userId
+            End Sub
+        End Class
+
+        ''' <summary><see cref="BasicSignedInUser"/>, je Anfrage hoechstens einmal gerechnet.</summary>
+        Private Shared Function BasicSignedInUserOnce(request As HttpListenerRequest) As String
+            Dim known As BasicOutcome = Nothing
+            If BasicOutcomes.TryGetValue(request, known) Then Return known.UserId
+            Dim user = BasicSignedInUser(request)
+            BasicOutcomes.AddOrUpdate(request, New BasicOutcome(user))
+            Return user
+        End Function
+
+        ''' <summary>Fuer die Schnittstelle der mobilen Seite: der angemeldete Benutzer dieser
+        ''' Anfrage, sonst Nothing, und dann ist die Antwort schon geschrieben (401 mit JSON, nie
+        ''' WWW-Authenticate). Die eine Stelle, an der eine Anfrage ihren Benutzer bekommt; heute
+        ''' ist das immer der Eigentuemer.</summary>
+        Friend Shared Async Function RequireSessionAsync(context As HttpListenerContext) As Task(Of String)
+            Dim user = SignedInUser(context)
+            If user IsNot Nothing Then Return user
+            Dim answer As New Dictionary(Of String, Object) From {{"ok", False}, {"signIn", True}}
+            If Not AppLockService.IsProtected Then answer("setup") = True
+            Dim bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(answer))
+            context.Response.StatusCode = 401
+            context.Response.ContentType = "application/json; charset=utf-8"
+            context.Response.Headers("Cache-Control") = "no-store"
+            context.Response.ContentLength64 = bytes.Length
+            Await context.Response.OutputStream.WriteAsync(bytes)
+            context.Response.Close()
+            Return Nothing
+        End Function
+
+        ''' <summary>Die Pruefung vor der mobilen Seite (BrowserBridgeMobile.vb), dieselbe wie vor
+        ''' der vollen: ohne Kennwort nur die Einrichtung, ohne Sitzung nur die Anmeldung (mit Mobil
+        ''' vorgewaehlt), und die Schnittstelle antwortet ohne Sitzung 401. Ohne Kennwort bekommt
+        ''' auch die feste Huelle der Seite (Manifest, Skript, Stil, Symbole) nichts: bis zur
+        ''' Einrichtung ist ausser ihr nichts erreichbar. Alles Uebrige entscheidet die Seite selbst
+        ''' (HandleMobileAsync).</summary>
+        Private Shared Async Function HandleMobileRouteAsync(context As HttpListenerContext, path As String) As Task
+            ' Die mobile Seite spricht die Sprache ihres Benutzers (ohne Anmeldung die des Browsers),
+            ' nur im Ablauf dieser Anfrage.
+            ApplyRequestLanguage(context.Request, SignedInUser(context))
+            Dim isPage = path = "/m" OrElse path = MobilePagePrefix OrElse path = MobilePagePrefix & "index.html"
+            Dim isApi = path = "/api/m" OrElse path.StartsWith(MobileApiPrefix, StringComparison.Ordinal)
+            If isApi Then
+                If Await RequireSessionAsync(context) Is Nothing Then Return
+                ' Wer auf der mobilen Seite arbeitet, ist aktiv: sonst sperrte die Zeit ohne Eingabe
+                ' am Fenster die Anwendung, und das Sperren beendet ALLE Sitzungen, auch seine. Nur
+                ' mit Sitzung (ein Werkzeug mit Basic haelt die Anwendung nicht offen). NoteActivity
+                ' setzt nur eine Uhrzeit unter einer Sperre, ist threadsicher und braucht weder den
+                ' Anzeigefaden noch eine Drossel.
+                If ValidSessionKey(context.Request) IsNot Nothing Then AppLockService.NoteActivity()
+            ElseIf isPage Then
+                If Not IsSignedIn(context) Then
+                    Await ServeLoginPageAsync(context, mobile:=True)
+                    Return
+                End If
+            ElseIf Not AppLockService.IsProtected Then
+                context.Response.StatusCode = 401
+                context.Response.Close()
+                Return
+            End If
+            Await HandleMobileAsync(context, path)
+        End Function
+
+        ''' <summary>Schickt den verbundenen Browser auf die andere Seite: <c>/m/</c> fuer die mobile,
+        ''' <c>/</c> fuer die volle. Die Seite merkt sich die Wahl fuer die naechste Anmeldung.</summary>
+        Public Shared Sub SwitchPageVariant(mobile As Boolean)
+            Dim json = If(mobile, "{""t"":""variant"",""to"":""mobile""}", "{""t"":""variant"",""to"":""desktop""}")
+            Dim ignored = SendTextAsync(json)
+        End Sub
 
         ''' <summary>Die Anmeldung eines Werkzeugs, aus dem Kopf Authorization gelesen. Ein Browser
         ''' schickt den Kopf nur, wenn er vorher dazu aufgefordert wurde, und das geschieht nicht
-        ''' mehr. Fehlversuche zaehlen wie im Anmeldefenster.</summary>
-        Private Shared Function IsSignedInByBasic(request As HttpListenerRequest) As Boolean
+        ''' mehr. Fehlversuche zaehlen wie im Anmeldefenster. Name und Kennwort gelten wie dort, fuer
+        ''' jeden Benutzer; geliefert wird seine Kennung, sonst Nothing.</summary>
+        Private Shared Function BasicSignedInUser(request As HttpListenerRequest) As String
+            If Not AppLockService.IsProtected Then Return Nothing
             Dim header = request.Headers("Authorization")
-            If String.IsNullOrEmpty(header) OrElse Not header.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase) Then Return False
+            If String.IsNullOrEmpty(header) OrElse Not header.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase) Then Return Nothing
             ' Ein Werkzeug schickt den Kopf bei jeder Anfrage; die Pruefung ist mit Absicht langsam.
-            ' Der zuletzt gelungene Kopf gilt deshalb eine Minute ohne neue Rechnung, solange das
-            ' Kennwort dasselbe ist.
+            ' Der zuletzt gelungene Kopf gilt deshalb eine Minute ohne neue Rechnung, solange
+            ' Kennwoerter und Benutzer dieselben sind (die Marke zaehlt jede Aenderung mit).
             Dim headerKey = SessionKey(header) & "|" & AppLockService.PasswordStamp()
             Dim now = AppLockService.Clock()
+            Dim cachedUser As String = Nothing
             SyncLock Sessions
-                If String.Equals(headerKey, _basicHeaderKey, StringComparison.Ordinal) AndAlso now < _basicHeaderUntilUtc Then Return True
+                If String.Equals(headerKey, _basicHeaderKey, StringComparison.Ordinal) AndAlso now < _basicHeaderUntilUtc Then cachedUser = _basicHeaderUser
             End SyncLock
+            ' Ein inzwischen eingerichteter zweiter Faktor gilt auch fuer den gemerkten Kopf.
+            If cachedUser IsNot Nothing Then Return If(BasicAllowedFor(cachedUser), cachedUser, Nothing)
             Dim decoded As String
             Try
                 decoded = Encoding.UTF8.GetString(Convert.FromBase64String(header.Substring(6).Trim()))
             Catch ex As FormatException
-                Return False
+                Return Nothing
             End Try
             Dim separator = decoded.IndexOf(":"c)
-            If separator < 0 Then Return False
-            If Not CredentialsMatch(decoded.Substring(0, separator), decoded.Substring(separator + 1), SenderKey(request)) Then Return False
+            If separator < 0 Then Return Nothing
+            Dim result = AppLockService.CheckSignIn(decoded.Substring(0, separator), decoded.Substring(separator + 1), SenderKey(request))
+            Select Case result.Outcome
+                Case PasswordCheckOutcome.Accepted
+                    ' Ein Konto mit zweitem Faktor kommt mit Basic nicht herein: der Kopf traegt
+                    ' keinen Code (BrowserBridgeTwoFactor.vb). Werkzeuge brauchen ein Konto ohne.
+                    If Not BasicAllowedFor(result.UserId) Then
+                        SecurityLog.Write("signin.refused", SecurityLog.UserNameOf(result.UserId), LogAddress(request), "via", "basic", "reason", "twofactor")
+                        Return Nothing
+                    End If
+                    SecurityLog.SignedIn(result.UserId, LogAddress(request), "basic")
+                Case PasswordCheckOutcome.Throttled
+                    SecurityLog.Throttled("basic", LogAddress(request), result.RetryAfter)
+                    Return Nothing
+                Case PasswordCheckOutcome.Rejected
+                    SecurityLog.SignInFailed(LogAddress(request), "basic")
+                    Return Nothing
+                Case Else
+                    Return Nothing
+            End Select
             SyncLock Sessions
                 _basicHeaderKey = headerKey
+                _basicHeaderUser = result.UserId
                 _basicHeaderUntilUtc = now.AddMinutes(1)
             End SyncLock
-            Return True
-        End Function
-
-        Friend Shared Function CredentialsMatch(user As String, password As String) As Boolean
-            Return CredentialsMatch(user, password, AppLockService.LocalKey)
-        End Function
-
-        ''' <summary>Name und Kennwort eines Werkzeugs. Der Name zaehlt nur, wenn beim Start einer
-        ''' gesetzt wurde; beide Vergleiche laufen immer.</summary>
-        Private Shared Function CredentialsMatch(user As String, password As String, sender As String) As Boolean
-            Dim result = AppLockService.CheckPassword(If(password, ""), sender)
-            Dim passwordMatches = result.Outcome = PasswordCheckOutcome.Accepted
-            Dim userMatches = _user.Length = 0 OrElse CryptographicOperations.FixedTimeEquals(
-                Encoding.UTF8.GetBytes(If(user, "")), Encoding.UTF8.GetBytes(_user))
-            Return passwordMatches And userMatches
+            Return result.UserId
         End Function
 
         ''' <summary>Der Zaehler der Fehlversuche fuer die Absenderadresse.
@@ -434,78 +652,424 @@ Namespace Services
 
         ' --- Anmelden und Abmelden ---------------------------------------------------------------
 
-        ''' <summary>POST /login mit {"password": "..."}. Bei Erfolg: Sitzung, Cookie und die
-        ''' Anwendung ist entsperrt, fuer alle Browser mit Sitzung.</summary>
+        ''' <summary>Liest den Rumpf einer Anmeldung oder Einrichtung: nur POST, nur von der eigenen
+        ''' Seite, nur JSON, hoechstens <see cref="MaxLoginBodyBytes"/>. Liefert die Felder als
+        ''' Zeichenketten oder Nothing; dann ist die Antwort (405, 403, 415, 413, 400) geschrieben.</summary>
+        Private Shared Async Function ReadSignInBodyAsync(context As HttpListenerContext) As Task(Of Dictionary(Of String, String))
+            Dim request = context.Request
+            Dim status = 0
+            If Not String.Equals(request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase) Then
+                status = 405
+            ElseIf Not IsOwnOrigin(request) Then
+                status = 403
+            ElseIf Not If(request.ContentType, "").StartsWith("application/json", StringComparison.OrdinalIgnoreCase) Then
+                status = 415
+            ElseIf request.ContentLength64 < 0 OrElse request.ContentLength64 > MaxLoginBodyBytes Then
+                status = 413
+            End If
+            Dim fields As New Dictionary(Of String, String)(StringComparer.Ordinal)
+            If status = 0 Then
+                Try
+                    Dim buffer(CInt(request.ContentLength64) - 1) As Byte
+                    Dim read = 0
+                    While read < buffer.Length
+                        Dim count = Await request.InputStream.ReadAsync(buffer, read, buffer.Length - read)
+                        If count <= 0 Then Exit While
+                        read += count
+                    End While
+                    Using document = JsonDocument.Parse(New ReadOnlyMemory(Of Byte)(buffer, 0, read))
+                        If document.RootElement.ValueKind = JsonValueKind.Object Then
+                            For Each field In document.RootElement.EnumerateObject()
+                                If field.Value.ValueKind = JsonValueKind.String Then fields(field.Name) = field.Value.GetString()
+                            Next
+                        End If
+                    End Using
+                Catch ex As Exception When TypeOf ex Is JsonException OrElse TypeOf ex Is IOException
+                    status = 400
+                End Try
+            End If
+            If status = 0 Then Return fields
+            context.Response.StatusCode = status
+            context.Response.Close()
+            Return Nothing
+        End Function
+
+        ''' <summary>POST /login mit {"user": "...", "password": "..."}. Bei Erfolg: Sitzung, Cookie
+        ''' und die Anwendung ist entsperrt, fuer alle Browser mit Sitzung. Ein falscher Name zaehlt
+        ''' wie ein falsches Kennwort, mit derselben Meldung (AppLockService.CheckSignIn). Ist noch
+        ''' kein Name gespeichert, wird der eingegebene nach dem Erfolg der Name des Eigentuemers.
+        ''' Ohne gesetztes Kennwort gibt es nichts anzumelden: 409, und die Seite laedt neu und
+        ''' zeigt die Einrichtung.</summary>
         Private Shared Async Function HandleLoginAsync(context As HttpListenerContext) As Task
             Dim request = context.Request
-            If Not String.Equals(request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase) Then
-                context.Response.StatusCode = 405
-                context.Response.Close()
-                Return
-            End If
-            If Not IsOwnOrigin(request) Then
-                context.Response.StatusCode = 403
-                context.Response.Close()
-                Return
-            End If
-            Dim contentType = If(request.ContentType, "")
-            If Not contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase) Then
-                context.Response.StatusCode = 415
-                context.Response.Close()
-                Return
-            End If
-            If request.ContentLength64 < 0 OrElse request.ContentLength64 > MaxLoginBodyBytes Then
-                context.Response.StatusCode = 413
-                context.Response.Close()
-                Return
-            End If
-            Dim password As String = ""
-            Try
-                Dim buffer(CInt(request.ContentLength64) - 1) As Byte
-                Dim read = 0
-                While read < buffer.Length
-                    Dim count = Await request.InputStream.ReadAsync(buffer, read, buffer.Length - read)
-                    If count <= 0 Then Exit While
-                    read += count
-                End While
-                Using document = JsonDocument.Parse(New ReadOnlyMemory(Of Byte)(buffer, 0, read))
-                    Dim value As JsonElement
-                    If document.RootElement.ValueKind = JsonValueKind.Object AndAlso
-                       document.RootElement.TryGetProperty("password", value) AndAlso
-                       value.ValueKind = JsonValueKind.String Then password = value.GetString()
-                End Using
-            Catch ex As Exception When TypeOf ex Is JsonException OrElse TypeOf ex Is IOException
-                context.Response.StatusCode = 400
-                context.Response.Close()
-                Return
-            End Try
+            Dim fields = Await ReadSignInBodyAsync(context)
+            If fields Is Nothing Then Return
+            Dim password As String = Nothing
+            Dim user As String = Nothing
+            If Not fields.TryGetValue("password", password) Then password = ""
+            If Not fields.TryGetValue("user", user) Then user = ""
 
-            If Not NeedsSignIn Then
-                Await WriteLoginAnswerAsync(context, 200, Nothing, 0)
+            If Not AppLockService.IsProtected Then
+                Await WriteLoginAnswerAsync(context, 409, "", 0, setup:=True)
                 Return
             End If
-            Dim sender = SenderKey(request)
+            ' Der zweite Schritt (Code oder Wiederherstellungscode) geht an denselben Weg
+            ' (BrowserBridgeTwoFactor.vb).
+            If fields.ContainsKey("code") OrElse fields.ContainsKey("recovery") Then
+                Await HandleSecondFactorAsync(context, fields)
+                Return
+            End If
+            Dim from = LogAddress(request)
             Dim counters = LoginCounterKeys(request)
-            Dim result = Await Task.Run(Function() AppLockService.CheckPassword(password, counters))
+            Dim result = Await Task.Run(Function() AppLockService.CheckSignIn(user, password, counters))
             Select Case result.Outcome
-                Case PasswordCheckOutcome.Accepted, PasswordCheckOutcome.NotProtected
-                    Dim value = CreateSession(sender)
-                    context.Response.Headers.Add("Set-Cookie", SessionCookie(value, SessionCookieMaxAgeSeconds(), IsSecureRequest(request)))
-                    AppLockService.Unlock()
-                    DiagnosticLogService.LogAlways("BrowserBridge", $"Signed in from {sender}.")
-                    Await WriteLoginAnswerAsync(context, 200, Nothing, 0)
+                Case PasswordCheckOutcome.Accepted
+                    Dim userId = If(result.UserId, AppLockService.OwnerUserId)
+                    If userId = AppLockService.OwnerUserId AndAlso AppLockService.AdoptUserName(user) Then
+                        SecurityLog.UserNameClaimed(SecurityLog.UserNameOf(userId), from)
+                    End If
+                    ' Mit zweitem Faktor noch keine Sitzung: erst der Code. Erst jetzt, wo das
+                    ' Kennwort stimmt, erfaehrt die Seite, dass das Konto einen hat.
+                    If TwoFactorService.IsEnabled(userId) Then
+                        Await BeginSecondStepAsync(context, userId)
+                        Return
+                    End If
+                    Await CompleteSignInAsync(context, userId)
                 Case PasswordCheckOutcome.Throttled
                     Dim seconds = CInt(Math.Ceiling(result.RetryAfter.TotalSeconds))
                     context.Response.Headers("Retry-After") = seconds.ToString(CultureInfo.InvariantCulture)
+                    SecurityLog.Throttled("signin", from, result.RetryAfter)
                     Dim text = Await Dispatcher.UIThread.InvokeAsync(Function() ViewModels.LockScreenViewModel.ThrottledText(result.RetryAfter))
                     Await WriteLoginAnswerAsync(context, 429, text, seconds)
                 Case Else
+                    If result.Outcome = PasswordCheckOutcome.Rejected Then SecurityLog.SignInFailed(from, "page")
                     Dim text = Await Dispatcher.UIThread.InvokeAsync(
                         Function() If(result.RetryAfter > TimeSpan.Zero,
                                       ViewModels.LockScreenViewModel.ThrottledText(result.RetryAfter),
-                                      LocalizationService.T("Das Kennwort ist falsch.")))
+                                      LocalizationService.T("Benutzername oder Kennwort ist falsch.")))
                     Await WriteLoginAnswerAsync(context, 401, text, 0)
             End Select
+        End Function
+
+        ''' <summary>Der Abschluss einer Anmeldung im Browser, mit oder nach dem zweiten Faktor:
+        ''' Sitzung, Cookie, Protokoll, entsperrt fuer einen Administrator, Sprache, Ziel.</summary>
+        Private Shared Async Function CompleteSignInAsync(context As HttpListenerContext, userId As String) As Task
+            Dim request = context.Request
+            Dim from = LogAddress(request)
+            ' Eine Anmeldung macht einen offenen Verweis zum Zuruecksetzen ungueltig.
+            PasswordResetService.Forget(userId)
+            Dim value = CreateSession(request, userId)
+            context.Response.Headers.Add("Set-Cookie", SessionCookie(value, SessionCookieMaxAgeSeconds(), IsSecureRequest(request)))
+            SecurityLog.SignedIn(userId, from, "page")
+            ' Entsperrt wird die Anwendung nur fuer einen Administrator: die Sperre gilt der
+            ' vollen Oberflaeche, und die sieht nur er.
+            If CanUseDesktop(userId) Then UnlockForApp(userId, from)
+            RememberLanguage(context, userId)
+            Await WriteLoginAnswerAsync(context, 200, Nothing, 0, target:=TargetFor(userId))
+        End Function
+
+        ''' <summary>POST /setup mit {"user": "...", "password": "...", "repeat": "..."}: die
+        ''' Ersteinrichtung von Benutzername und Kennwort, solange kein Kennwort gesetzt ist. Dieselben Regeln wie in den Einstellungen,
+        ''' dieselbe Herkunftspruefung und dieselbe Bremse wie beim Anmelden (ein abgewiesener
+        ''' Versuch zaehlt als Fehlversuch). Bei Erfolg: Kennwort gespeichert, Sitzung des
+        ''' Eigentuemers, Cookie, 200. Ist inzwischen eines gesetzt (auch von einem zweiten,
+        ''' gleichzeitigen Versuch), 409: die Einrichtung geht nur einmal.</summary>
+        Private Shared Async Function HandleSetupAsync(context As HttpListenerContext) As Task
+            Dim request = context.Request
+            Dim fields = Await ReadSignInBodyAsync(context)
+            If fields Is Nothing Then Return
+            If AppLockService.IsProtected Then
+                Dim taken = Await Dispatcher.UIThread.InvokeAsync(Function() LocalizationService.T("Das Kennwort wurde inzwischen schon festgelegt. Bitte anmelden."))
+                Await WriteLoginAnswerAsync(context, 409, taken, 0)
+                Return
+            End If
+            Dim counters = LoginCounterKeys(request)
+            Dim wait = AppLockService.RetryAfter(counters)
+            If wait > TimeSpan.Zero Then
+                Dim seconds = CInt(Math.Ceiling(wait.TotalSeconds))
+                context.Response.Headers("Retry-After") = seconds.ToString(CultureInfo.InvariantCulture)
+                SecurityLog.Throttled("setup", LogAddress(request), wait)
+                Dim text = Await Dispatcher.UIThread.InvokeAsync(Function() ViewModels.LockScreenViewModel.ThrottledText(wait))
+                Await WriteLoginAnswerAsync(context, 429, text, seconds)
+                Return
+            End If
+            Dim password As String = Nothing
+            Dim repeat As String = Nothing
+            Dim user As String = Nothing
+            Dim email As String = Nothing
+            If Not fields.TryGetValue("password", password) Then password = ""
+            If Not fields.TryGetValue("repeat", repeat) Then repeat = ""
+            If Not fields.TryGetValue("user", user) Then user = ""
+            If Not fields.TryGetValue("email", email) Then email = ""
+            Dim problems = AppLockService.PasswordProblems(password)
+            ' Nach dem Notweg fuer das Kennwort steht der Name schon fest; dann zaehlt der eingegebene nicht.
+            Dim nameValid = AppLockService.StoredUserName.Length > 0 OrElse AppLockService.IsValidUserName(user)
+            Dim emailValid = UserAccountService.IsValidEmail(email) AndAlso Not UserAccountService.EmailTaken(email, AppLockService.OwnerUserId)
+            If Not nameValid OrElse Not emailValid OrElse problems.Count > 0 OrElse password <> repeat Then
+                AppLockService.RegisterFailedAttempt(counters)
+                Dim text = Await Dispatcher.UIThread.InvokeAsync(
+                    Function() If(Not nameValid, LocalizationService.T("Bitte einen Benutzernamen eingeben, höchstens 64 Zeichen."),
+                               If(Not emailValid, LocalizationService.T("Die E-Mail-Adresse ist ungültig."),
+                               If(problems.Count > 0, ViewModels.SettingsViewModel.PasswordRuleText(problems(0)),
+                                  LocalizationService.T("Die beiden neuen Kennwörter stimmen nicht überein.")))))
+                Await WriteLoginAnswerAsync(context, 400, text, 0)
+                Return
+            End If
+            Dim outcome = Await Task.Run(Function() AppLockService.TrySetInitialPassword(user, password, email))
+            If outcome <> InitialPasswordOutcome.Created Then
+                Dim taken = Await Dispatcher.UIThread.InvokeAsync(Function() LocalizationService.T("Das Kennwort wurde inzwischen schon festgelegt. Bitte anmelden."))
+                Await WriteLoginAnswerAsync(context, 409, taken, 0)
+                Return
+            End If
+            Dim from = LogAddress(request)
+            ' Die Einrichtung legt den ersten Benutzer fest, und der ist der Eigentuemer.
+            Dim value = CreateSession(request, AppLockService.OwnerUserId)
+            context.Response.Headers.Add("Set-Cookie", SessionCookie(value, SessionCookieMaxAgeSeconds(), IsSecureRequest(request)))
+            SecurityLog.SetupDone(SecurityLog.UserNameOf(AppLockService.OwnerUserId), from)
+            UnlockForApp(AppLockService.OwnerUserId, from)
+            Await WriteLoginAnswerAsync(context, 200, Nothing, 0, target:=TargetFor(AppLockService.OwnerUserId))
+        End Function
+
+        ' --- Sprache je Anfrage ------------------------------------------------------------------
+
+        ''' <summary>Die zuletzt benutzte Sprache in diesem Browser, fuer die Anmeldeseite vor der
+        ''' Anmeldung. Gibt keinen Zugang.</summary>
+        Friend Const LanguageCookieName As String = "ferrumpix_lang"
+
+        ''' <summary>Die Sprache einer Anfrage im Browser: mit Benutzer seine eingestellte, bei
+        ''' "automatisch" die des Browsers (Accept-Language); ohne Benutzer die zuletzt in diesem
+        ''' Browser benutzte (Cookie), sonst Accept-Language; passt nichts, die der Anwendung.</summary>
+        Friend Shared Function RequestLanguageFor(request As HttpListenerRequest, userId As String) As CultureInfo
+            Dim culture As CultureInfo = Nothing
+            If Not String.IsNullOrEmpty(userId) Then
+                culture = UserAccountService.CultureOf(userId)
+            Else
+                culture = LocalizationService.CultureForAcceptLanguage(request.Cookies(LanguageCookieName)?.Value)
+            End If
+            If culture Is Nothing Then culture = LocalizationService.CultureForAcceptLanguage(request.Headers("Accept-Language"))
+            Return culture
+        End Function
+
+        ''' <summary>Setzt die Sprache fuer den Ablauf dieser Anfrage (LocalizationService.
+        ''' SetRequestCulture), ohne die Sprache der Anwendung anzufassen. Nur in den Wegen der
+        ''' Anmeldung und der mobilen Seite; die volle Oberflaeche bleibt in der Sprache der
+        ''' Anwendung.</summary>
+        Friend Shared Sub ApplyRequestLanguage(request As HttpListenerRequest, userId As String)
+            LocalizationService.SetRequestCulture(RequestLanguageFor(request, userId))
+        End Sub
+
+        ''' <summary>Merkt die Sprache eines Benutzers in diesem Browser, damit die Anmeldeseite das
+        ''' naechste Mal schon in ihr erscheint.</summary>
+        Friend Shared Sub RememberLanguage(context As HttpListenerContext, userId As String)
+            Dim culture = RequestLanguageFor(context.Request, userId)
+            If culture Is Nothing Then Return
+            Dim code = If(culture Is CultureInfo.InvariantCulture, "en", culture.Name)
+            context.Response.Headers.Add("Set-Cookie",
+                $"{LanguageCookieName}={code}; Max-Age=31536000; Path=/; HttpOnly; SameSite=Strict" & If(IsSecureRequest(context.Request), "; Secure", ""))
+        End Sub
+
+        ''' <summary>Schickt eine Arbeit an die Anwendung (Anzeigefaden) OHNE die Sprache der
+        ''' Anfrage: der Dispatcher nimmt den Ablauf mit, und die Oberflaeche der Anwendung soll in
+        ''' ihrer eigenen Sprache bleiben.</summary>
+        Friend Shared Sub PostToApp(action As Action)
+            Dispatcher.UIThread.Post(
+                Sub()
+                    LocalizationService.SetRequestCulture(Nothing)
+                    action()
+                End Sub)
+        End Sub
+
+        ''' <summary>Entsperrt die Anwendung aus einer Anfrage heraus, in der Sprache der Anwendung.</summary>
+        Private Shared Sub UnlockForApp(userId As String, from As String)
+            Using LocalizationService.UseRequestCulture(Nothing)
+                AppLockService.UnlockBy("signin", SecurityLog.UserNameOf(userId), from)
+            End Using
+        End Sub
+
+        ''' <summary>Wohin die Seite nach der Anmeldung geht: die volle Oberflaeche nur fuer einen
+        ''' Administrator, sonst die mobile Seite. Entscheidet der Server; die Wahl im
+        ''' Anmeldefenster ist nur ein Wunsch.</summary>
+        Private Shared Function TargetFor(userId As String) As String
+            Return If(CanUseDesktop(userId), "/", MobilePagePrefix)
+        End Function
+
+        ' --- Kennwort vergessen ----------------------------------------------------------------
+
+        ''' <summary>POST /forgot mit {"who": Name oder E-Mail}. Ohne eingerichteten Mailserver oder
+        ''' ohne eingetragene oeffentliche Adresse (<see cref="CanSendResetMail"/>) sagt die Antwort
+        ''' nur, dass der Administrator hilft. Sonst ist sie fuer jedes Konto
+        ''' dieselbe, in derselben Zeit (die Nachricht geht im Hintergrund hinaus): ob es das Konto
+        ''' gibt und ob es eine Adresse hat, erfaehrt niemand. Gebremst wird je Browser und Adresse
+        ''' (429) und je Konto (still), siehe PasswordResetService.</summary>
+        Private Shared Async Function HandleForgotAsync(context As HttpListenerContext) As Task
+            Dim request = context.Request
+            Dim fields = Await ReadSignInBodyAsync(context)
+            If fields Is Nothing Then Return
+            If Not AppLockService.IsProtected Then
+                Await WriteLoginAnswerAsync(context, 409, "", 0, setup:=True)
+                Return
+            End If
+            Dim linkBase = ConfiguredPublicAddress()
+            If linkBase Is Nothing OrElse Not MailService.IsConfigured Then
+                SecurityLog.ResetRequested(LogAddress(request))
+                Dim adminText = Await Dispatcher.UIThread.InvokeAsync(Function() LocalizationService.T("Bitte wenden Sie sich an den Administrator."))
+                Await WriteLoginAnswerAsync(context, 200, Nothing, 0, message:=adminText)
+                Return
+            End If
+            Dim who As String = Nothing
+            If Not fields.TryGetValue("who", who) Then who = ""
+            Dim counters = LoginCounterKeys(request)
+            ' Die Texte entstehen erst, wenn das Konto feststeht: in seiner Sprache (T() ist
+            ' threadsicher und fragt die Sprache des Ablaufs, LocalizationService.TextCulture).
+            Dim texts As Func(Of PasswordResetService.MailTexts) =
+                Function() New PasswordResetService.MailTexts With {
+                    .Subject = LocalizationService.T("FerrumPix: neues Kennwort festlegen"),
+                    .Title = LocalizationService.T("Neues Kennwort festlegen"),
+                    .Greeting = LocalizationService.T("Hallo {0},"),
+                    .Intro = LocalizationService.T("Für dein Konto bei FerrumPix wurde ein neues Kennwort angefordert. Über den Knopf legst du es fest."),
+                    .ButtonText = LocalizationService.T("Neues Kennwort festlegen"),
+                    .LinkHint = LocalizationService.T("Falls der Knopf nicht geht, kopiere diesen Link in den Browser:"),
+                    .Validity = LocalizationService.T("Der Link gilt 30 Minuten und nur einmal."),
+                    .Ignore = LocalizationService.T("Wenn du das nicht angefordert hast, kannst du diese Mail ignorieren.")}
+            Dim accepted = PasswordResetService.Request(who, counters, linkBase, texts)
+            ' Nur der Absender: wer gemeint war und ob es das Konto gibt, steht nicht im Protokoll.
+            If accepted Then SecurityLog.ResetRequested(LogAddress(request))
+            If Not accepted Then
+                Dim wait = TimeSpan.FromHours(1)
+                SecurityLog.Throttled("forgot", LogAddress(request), wait)
+                context.Response.Headers("Retry-After") = CInt(wait.TotalSeconds).ToString(CultureInfo.InvariantCulture)
+                Dim text = Await Dispatcher.UIThread.InvokeAsync(Function() LocalizationService.T("Zu viele Anfragen. Bitte später noch einmal versuchen."))
+                Await WriteLoginAnswerAsync(context, 429, text, 0)
+                Return
+            End If
+            Dim sent = Await Dispatcher.UIThread.InvokeAsync(Function() LocalizationService.T("Wenn es dazu ein Konto mit E-Mail-Adresse gibt, ist eine Nachricht unterwegs. Sonst wenden Sie sich bitte an den Administrator."))
+            Await WriteLoginAnswerAsync(context, 200, Nothing, 0, message:=sent)
+        End Function
+
+        ''' <summary>Die eingetragene oeffentliche Adresse (AppSettings.BrowserPublicAddress) ohne
+        ''' Schraegstrich am Ende, wenn sie taugt (<see cref="IsUsablePublicAddress"/>), sonst
+        ''' Nothing.</summary>
+        Friend Shared Function ConfiguredPublicAddress() As String
+            Dim configured = If(AppSettingsService.Load().BrowserPublicAddress, "").Trim().TrimEnd("/"c)
+            Return If(IsUsablePublicAddress(configured), configured, Nothing)
+        End Function
+
+        ''' <summary>Ob "Kennwort vergessen" eine Nachricht verschicken kann: Mailserver eingerichtet
+        ''' UND oeffentliche Adresse eingetragen. Der Verweis in der Nachricht beginnt NUR mit dieser
+        ''' Adresse, nie mit einem Namen aus der Anfrage: Host und X-Forwarded-Host schickt der
+        ''' Absender von /forgot selbst, und ein Verweis auf seinen Rechner verriete ihm das Token,
+        ''' sobald der Empfaenger klickt (Uebernahme des Kontos). Ohne Adresse antwortet /forgot wie
+        ''' ohne Mailserver.</summary>
+        Friend Shared Function CanSendResetMail() As Boolean
+            Return ConfiguredPublicAddress() IsNot Nothing AndAlso MailService.IsConfigured
+        End Function
+
+        ''' <summary>Der Anfang eines Links, den der Browser dieser Anfrage selbst angezeigt bekommt
+        ''' (Freigaben): die eingetragene oeffentliche Adresse, sonst die Adresse, ueber die der
+        ''' Browser gerade kommt (Host bzw. hinter dem vertrauten Proxy X-Forwarded-Host, mit https
+        ''' hinter dem Proxy). Diese Anfrage ist schon ueber einen zugesagten Weg gekommen
+        ''' (IsAcceptedRoute), also ueber HTTPS oder erlaubtes HTTP.
+        '''
+        ''' <para>Ohne eingetragene Adresse stammt der Name aus Koepfen, die der Absender setzen
+        ''' kann. Das ist hier hinnehmbar, weil der Link an genau diesen Absender zurueckgeht; fuer
+        ''' einen Link an jemand anderen (die Mail zum Zuruecksetzen) taugt es nicht, siehe
+        ''' <see cref="CanSendResetMail"/>.</para></summary>
+        Friend Shared Function RequestLinkBase(request As HttpListenerRequest) As String
+            Dim configured = ConfiguredPublicAddress()
+            If configured IsNot Nothing Then Return configured
+            Dim scheme = If(IsSecureRequest(request), "https", "http")
+            Dim host = PublicHost(request)
+            If String.IsNullOrEmpty(host) OrElse host.Any(Function(c) Char.IsWhiteSpace(c) OrElse c = "/"c OrElse c = "\"c OrElse c = "@"c) Then
+                host = "127.0.0.1"
+            End If
+            Return scheme & "://" & host
+        End Function
+
+        ''' <summary>Taugt eine eingetragene Adresse fuer den Verweis? https immer, http nur, wenn
+        ''' die Bruecke ohnehin unverschluesselt laeuft (Heimnetz oder eigener Rechner). Nur
+        ''' Schema, Name und Port, kein Pfad, keine Anmeldedaten.</summary>
+        Friend Shared Function IsUsablePublicAddress(address As String) As Boolean
+            If String.IsNullOrWhiteSpace(address) Then Return False
+            Dim parsed As Uri = Nothing
+            If Not Uri.TryCreate(address, UriKind.Absolute, parsed) Then Return False
+            If parsed.UserInfo.Length > 0 OrElse parsed.AbsolutePath <> "/" OrElse parsed.Query.Length > 0 OrElse parsed.Fragment.Length > 0 Then Return False
+            If parsed.Scheme = Uri.UriSchemeHttps Then Return True
+            Return parsed.Scheme = Uri.UriSchemeHttp AndAlso Not _tlsProxy
+        End Function
+
+        ''' <summary>GET /reset?t=: die Seite fuer das neue Kennwort, im Bild des Anmeldefensters.
+        ''' Ein ungueltiger oder abgelaufener Verweis zeigt das gleich.</summary>
+        Private Shared Async Function HandleResetPageAsync(context As HttpListenerContext) As Task
+            Dim token = If(context.Request.QueryString("t"), "")
+            Await ServeLoginPageAsync(context, mobile:=False, modeOverride:=If(PasswordResetService.IsValid(token), "reset", "resetInvalid"))
+        End Function
+
+        ''' <summary>POST /reset mit {"token", "password", "repeat"}: setzt das neue Kennwort mit den
+        ''' Regeln wie immer. Danach enden alle Sitzungen dieses Benutzers, und dieser Browser ist
+        ''' angemeldet. Ein ungueltiger Versuch zaehlt als Fehlversuch (dieselbe Bremse).</summary>
+        Private Shared Async Function HandleResetAsync(context As HttpListenerContext) As Task
+            Dim request = context.Request
+            If String.Equals(request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) Then
+                Await HandleResetPageAsync(context)
+                Return
+            End If
+            Dim fields = Await ReadSignInBodyAsync(context)
+            If fields Is Nothing Then Return
+            If Not AppLockService.IsProtected Then
+                Await WriteLoginAnswerAsync(context, 409, "", 0, setup:=True)
+                Return
+            End If
+            Dim counters = LoginCounterKeys(request)
+            Dim wait = AppLockService.RetryAfter(counters)
+            If wait > TimeSpan.Zero Then
+                Dim seconds = CInt(Math.Ceiling(wait.TotalSeconds))
+                context.Response.Headers("Retry-After") = seconds.ToString(CultureInfo.InvariantCulture)
+                SecurityLog.Throttled("reset", LogAddress(request), wait)
+                Dim throttled = Await Dispatcher.UIThread.InvokeAsync(Function() ViewModels.LockScreenViewModel.ThrottledText(wait))
+                Await WriteLoginAnswerAsync(context, 429, throttled, seconds)
+                Return
+            End If
+            Dim token As String = Nothing
+            Dim password As String = Nothing
+            Dim repeat As String = Nothing
+            If Not fields.TryGetValue("token", token) Then token = ""
+            If Not fields.TryGetValue("password", password) Then password = ""
+            If Not fields.TryGetValue("repeat", repeat) Then repeat = ""
+            Dim problems = AppLockService.PasswordProblems(password)
+            If problems.Count > 0 OrElse password <> repeat Then
+                Dim text = Await Dispatcher.UIThread.InvokeAsync(
+                    Function() If(problems.Count > 0, ViewModels.SettingsViewModel.PasswordRuleText(problems(0)),
+                                  LocalizationService.T("Die beiden neuen Kennwörter stimmen nicht überein.")))
+                Await WriteLoginAnswerAsync(context, 400, text, 0)
+                Return
+            End If
+            Dim userId = PasswordResetService.Consume(token)
+            If userId Is Nothing OrElse Not UserAccountService.IsActive(userId) Then
+                AppLockService.RegisterFailedAttempt(counters)
+                SecurityLog.Write("password.reset.invalid", SecurityLog.NoValue, LogAddress(request))
+                Dim expired = Await Dispatcher.UIThread.InvokeAsync(Function() LocalizationService.T("Der Verweis ist abgelaufen oder wurde schon benutzt."))
+                Await WriteLoginAnswerAsync(context, 400, expired, 0)
+                Return
+            End If
+            Dim outcome = Await Task.Run(Function() UserAccountService.SetPassword(userId, password))
+            If outcome <> UserChangeOutcome.Done Then
+                Await WriteLoginAnswerAsync(context, 400, "", 0)
+                Return
+            End If
+            Dim from = LogAddress(request)
+            ' Das Zuruecksetzen gilt nur dem Kennwort, nicht dem zweiten Faktor: mit ihm geht es
+            ' erst nach dem Code weiter (BrowserBridgeTwoFactor.vb), wie bei jeder Anmeldung.
+            If TwoFactorService.IsEnabled(userId) Then
+                SecurityLog.ResetByLink(userId, from)
+                Await BeginSecondStepAsync(context, userId)
+                Return
+            End If
+            Dim value = CreateSession(request, userId)
+            context.Response.Headers.Add("Set-Cookie", SessionCookie(value, SessionCookieMaxAgeSeconds(), IsSecureRequest(request)))
+            SecurityLog.ResetByLink(userId, from)
+            If CanUseDesktop(userId) Then UnlockForApp(userId, from)
+            RememberLanguage(context, userId)
+            Await WriteLoginAnswerAsync(context, 200, Nothing, 0, target:=TargetFor(userId))
         End Function
 
         ''' <summary>POST /logout: beendet die Sitzung dieses Browsers, die anderen bleiben.</summary>
@@ -518,16 +1082,32 @@ Namespace Services
                 Return
             End If
             Dim value = ReadSessionCookie(request)
-            If value IsNot Nothing Then EndSession(SessionKey(value))
+            If value IsNot Nothing Then
+                Dim key = SessionKey(value)
+                Dim userId = SessionUser(key)
+                EndSession(key)
+                If userId IsNot Nothing Then SecurityLog.SignedOut(userId, LogAddress(request))
+            End If
             context.Response.Headers.Add("Set-Cookie", SessionCookie("", 0, IsSecureRequest(request)))
             Await WriteLoginAnswerAsync(context, 200, Nothing, 0)
         End Function
 
+        ''' <summary>Die Antwort auf Anmelden, Einrichten und Abmelden als JSON. <paramref name="setup"/>
+        ''' sagt der Seite, dass noch kein Kennwort gesetzt ist und sie die Einrichtung zeigen soll.
+        ''' <paramref name="target"/> ist nach einer Anmeldung die Seite, auf die es geht (der Server
+        ''' entscheidet, nicht die Wahl im Fenster), <paramref name="message"/> ein Satz fuer die
+        ''' Seite ohne Fehler (Kennwort vergessen).</summary>
         Private Shared Async Function WriteLoginAnswerAsync(context As HttpListenerContext, status As Integer,
-                                                           errorText As String, retrySeconds As Integer) As Task
+                                                           errorText As String, retrySeconds As Integer,
+                                                           Optional setup As Boolean = False,
+                                                           Optional target As String = Nothing,
+                                                           Optional message As String = Nothing) As Task
             Dim answer As New Dictionary(Of String, Object) From {{"ok", errorText Is Nothing}}
-            If errorText IsNot Nothing Then answer("error") = errorText
+            If Not String.IsNullOrEmpty(errorText) Then answer("error") = errorText
             If retrySeconds > 0 Then answer("retry") = retrySeconds
+            If setup Then answer("setup") = True
+            If Not String.IsNullOrEmpty(target) Then answer("target") = target
+            If Not String.IsNullOrEmpty(message) Then answer("message") = message
             Dim bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(answer))
             context.Response.StatusCode = status
             context.Response.ContentType = "application/json; charset=utf-8"
@@ -539,17 +1119,25 @@ Namespace Services
 
         ' --- Das Anmeldefenster als Seite ----------------------------------------------------------
 
-        ''' <summary>Liefert das Anmeldefenster. Status 401, aber OHNE WWW-Authenticate: ein Browser
-        ''' zeigt dann den Inhalt statt seines Dialogs, ein Werkzeug sieht am Status, dass es nicht
-        ''' angemeldet ist.</summary>
-        Private Shared Async Function ServeLoginPageAsync(context As HttpListenerContext) As Task
+        ''' <summary>Liefert das Anmeldefenster, ohne gesetztes Kennwort die Einrichtung im selben
+        ''' Bild. Status 401, aber OHNE WWW-Authenticate: ein Browser zeigt dann den Inhalt statt
+        ''' seines Dialogs, ein Werkzeug sieht am Status, dass es nicht angemeldet ist.
+        ''' <paramref name="mobile"/> waehlt die mobile Seite vor (Aufruf ueber /m/); sonst waehlt
+        ''' die Seite selbst nach der letzten Wahl oder dem Geraet.</summary>
+        Private Shared Async Function ServeLoginPageAsync(context As HttpListenerContext, mobile As Boolean,
+                                                         Optional modeOverride As String = Nothing) As Task
             If _loginPageText Is Nothing Then _loginPageText = LoadAssetText(LoginPageAsset)
             Dim nonce = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16))
             Dim parts = Await Dispatcher.UIThread.InvokeAsync(Function() LoginPageParts())
+            Dim mode = If(Not AppLockService.IsProtected, "setup", If(modeOverride, PageMode()))
             Dim page = _loginPageText.
                 Replace("__FERRUMPIX_NONCE__", nonce, StringComparison.Ordinal).
                 Replace("__FERRUMPIX_COLORS__", parts.Colors, StringComparison.Ordinal).
                 Replace("__FERRUMPIX_LANG__", parts.Language, StringComparison.Ordinal).
+                Replace("__FERRUMPIX_MODE__", mode, StringComparison.Ordinal).
+                Replace("__FERRUMPIX_MAIL__", If(CanSendResetMail(), "1", ""), StringComparison.Ordinal).
+                Replace("__FERRUMPIX_KEPT_USER__", JsonSerializer.Serialize(If(AppLockService.IsProtected, "", AppLockService.StoredUserName)), StringComparison.Ordinal).
+                Replace("__FERRUMPIX_VARIANT__", If(mobile, "mobile", ""), StringComparison.Ordinal).
                 Replace("__FERRUMPIX_LOGIN_TEXTS__", parts.Texts, StringComparison.Ordinal)
             Dim bytes = Encoding.UTF8.GetBytes(page)
             Dim response = context.Response
@@ -571,6 +1159,14 @@ Namespace Services
             response.ContentLength64 = bytes.Length
             Await response.OutputStream.WriteAsync(bytes)
             response.Close()
+        End Function
+
+        ''' <summary>Was die Seite zeigt: "setup" ohne Kennwort (Einrichtung), "claim" mit Kennwort,
+        ''' aber noch ohne Namen (Anmeldung, die den Namen einmal festlegt), sonst "login".</summary>
+        Friend Shared Function PageMode() As String
+            If Not AppLockService.IsProtected Then Return "setup"
+            If AppLockService.StoredUserName.Length = 0 Then Return "claim"
+            Return "login"
         End Function
 
         ''' <summary>Das Bild des Anmeldefensters. Das einzige, was es ohne Sitzung ausser der Seite
@@ -612,7 +1208,39 @@ Namespace Services
                 {"password", LocalizationService.T("Kennwort")},
                 {"unlock", LocalizationService.T("Entsperren")},
                 {"empty", LocalizationService.T("Bitte das Kennwort eingeben.")},
-                {"failed", LocalizationService.T("Die Anmeldung ist fehlgeschlagen.")}}
+                {"failed", LocalizationService.T("Die Anmeldung ist fehlgeschlagen.")},
+                {"user", LocalizationService.T("Benutzername")},
+                {"userEmpty", LocalizationService.T("Bitte den Benutzernamen eingeben.")},
+                {"claim", LocalizationService.T("Bitte einmal einen Benutzernamen festlegen. Er gilt ab jetzt zusammen mit dem Kennwort.")},
+                {"setupTitle", LocalizationService.T("Willkommen bei FerrumPix. Bitte zuerst Benutzername und Kennwort festlegen.")},
+                {"newPassword", LocalizationService.T("Neues Kennwort")},
+                {"repeat", LocalizationService.T("Neues Kennwort wiederholen")},
+                {"rules", LocalizationService.T("Mindestens 8 Zeichen mit Großbuchstaben, Kleinbuchstaben, Zahl und Sonderzeichen; ein Leerzeichen zählt als Sonderzeichen.")},
+                {"setup", LocalizationService.T("Kennwort festlegen")},
+                {"setupEmpty", LocalizationService.T("Bitte ein neues Kennwort eingeben.")},
+                {"mismatch", LocalizationService.T("Die beiden neuen Kennwörter stimmen nicht überein.")},
+                {"view", LocalizationService.T("Ansicht")},
+                {"desktop", LocalizationService.T("Desktop")},
+                {"desktopHint", LocalizationService.T("Volle Oberfläche")},
+                {"mobile", LocalizationService.T("Mobil")},
+                {"mobileHint", LocalizationService.T("Vereinfachte Seite")},
+                {"email", LocalizationService.T("E-Mail-Adresse")},
+                {"forgot", LocalizationService.T("Kennwort vergessen?")},
+                {"forgotTitle", LocalizationService.T("Benutzername oder E-Mail-Adresse eingeben. Gibt es dazu ein Konto mit E-Mail-Adresse, kommt ein Verweis für ein neues Kennwort.")},
+                {"forgotField", LocalizationService.T("Benutzername oder E-Mail-Adresse")},
+                {"forgotSend", LocalizationService.T("Verweis senden")},
+                {"admin", LocalizationService.T("Bitte wenden Sie sich an den Administrator.")},
+                {"backToLogin", LocalizationService.T("Zurück zur Anmeldung")},
+                {"resetTitle", LocalizationService.T("Neues Kennwort festlegen")},
+                {"resetInvalid", LocalizationService.T("Der Verweis ist abgelaufen oder wurde schon benutzt.")},
+                {"mobileOnly", LocalizationService.T("Die volle Oberfläche gibt es nur für Administratoren. Es geht weiter zur mobilen Seite.")},
+                {"secondTitle", LocalizationService.T("Bitte den Code aus der Authenticator-App eingeben.")},
+                {"code", LocalizationService.T("Code")},
+                {"codeEmpty", LocalizationService.T("Bitte den Code eingeben.")},
+                {"confirm", LocalizationService.T("Bestätigen")},
+                {"useRecovery", LocalizationService.T("Wiederherstellungscode verwenden")},
+                {"useCode", LocalizationService.T("Code aus der App verwenden")},
+                {"recoveryCode", LocalizationService.T("Wiederherstellungscode")}}
             Dim colors As New StringBuilder()
             For Each entry In {("root", "FP.Bg.Root", "#0B0E11"), ("elevated", "FP.Bg.Elevated", "#192128"),
                                ("input", "FP.Bg.Input", "#10161B"), ("text", "FP.Text.Primary", "#E7ECF0"),
@@ -620,8 +1248,7 @@ Namespace Services
                                ("border", "FP.Border.Strong", "#34414C"), ("border-normal", "FP.Border.Normal", "#26313B")}
                 colors.Append("--").Append(entry.Item1).Append(":"c).Append(ThemeColor(entry.Item2, entry.Item3)).Append(";"c)
             Next
-            Dim language = Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName
-            If language.Length = 0 OrElse Not language.All(Function(c) Char.IsAsciiLetterLower(c)) Then language = "en"
+            Dim language = LocalizationService.HtmlLanguage(LocalizationService.TextCulture)
             Return New LoginParts With {
                 .Colors = colors.ToString(),
                 .Language = language,
@@ -651,9 +1278,12 @@ Namespace Services
             SyncLock Sessions
                 Sessions.Clear()
                 _basicHeaderKey = ""
+                _basicHeaderUser = Nothing
             End SyncLock
             _clientSessionKey = ""
             RemoveSessionHooks()
+            PasswordResetService.ResetForTests()
+            ForgetSecondSteps(Nothing)
         End Sub
 
     End Class

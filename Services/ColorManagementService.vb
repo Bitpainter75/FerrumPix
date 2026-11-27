@@ -104,6 +104,16 @@ Namespace Services
         ''' unterscheiden, denn der Metadatenleser sieht den ICC-Block selbst.</summary>
         Public Shared Function ProfileFromExif(stream As IO.Stream) As SKColorSpace
             If stream Is Nothing Then Return Nothing
+            ' Ein Datenstrom, dessen Format der Metadatenleser nicht erkennt (etwa die eingebettete
+            ' Vorschau mancher RAW oder ein Format ohne EXIF-Leser), traegt fuer ihn auch keinen
+            ' Hinweis. Vorher fragen statt die Ausnahme abzuwarten: sie kam sonst je Kachel und
+            ' schrieb je Bild einen Eintrag ins Fehlerprotokoll.
+            If stream.CanSeek Then
+                Dim start = stream.Position
+                Dim kind = MetadataExtractor.Util.FileTypeDetector.DetectFileType(stream)
+                stream.Seek(start, IO.SeekOrigin.Begin)
+                If kind = MetadataExtractor.Util.FileType.Unknown Then Return Nothing
+            End If
             Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(stream)
             If verzeichnisse Is Nothing Then Return Nothing
 

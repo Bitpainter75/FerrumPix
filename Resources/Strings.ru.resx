@@ -3804,8 +3804,8 @@
   <data name="MetadataExtractor_2_9_b4b4b16f" xml:space="preserve">
     <value>MetadataExtractor 2.9</value>
   </data>
-  <data name="QRCoder_1_8_9fe99238" xml:space="preserve">
-    <value>QRCoder 1.8</value>
+  <data name="QRCoder_1_9_5a734f90" xml:space="preserve">
+    <value>QRCoder 1.9</value>
   </data>
   <data name="Phosphor_Icons_db78df19" xml:space="preserve">
     <value>Phosphor Icons</value>
@@ -13131,5 +13131,635 @@
   </data>
   <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nur_z_a9f4527b" xml:space="preserve">
     <value>Папка {0} открыта для FerrumPix в виде Flatpak только для чтения, записывать туда нельзя. Решение: выберите другую папку или расширьте доступ с помощью Flatseal или в терминале командой {1}, а затем перезапустите FerrumPix.</value>
+  </data>
+  <data name="Das_Kennwort_wurde_inzwischen_schon_festgelegt_B_865e7576" xml:space="preserve">
+    <value>Пароль уже был задан за это время. Войдите.</value>
+  </data>
+  <data name="Bitte_einen_Benutzernamen_eingeben_h_chstens_64__9e0430a1" xml:space="preserve">
+    <value>Введите имя пользователя, не более 64 символов.</value>
+  </data>
+  <data name="Benutzername_oder_Kennwort_ist_falsch_3a7298b4" xml:space="preserve">
+    <value>Неверное имя пользователя или пароль.</value>
+  </data>
+  <data name="Bitte_den_Benutzernamen_eingeben_689acf9a" xml:space="preserve">
+    <value>Введите имя пользователя.</value>
+  </data>
+  <data name="Bitte_einmal_einen_Benutzernamen_festlegen_Er_gi_dcd39d83" xml:space="preserve">
+    <value>Задайте один раз имя пользователя. С этого момента оно действует вместе с паролем.</value>
+  </data>
+  <data name="Willkommen_bei_FerrumPix_Bitte_zuerst_Benutzerna_996d65a2" xml:space="preserve">
+    <value>Добро пожаловать в FerrumPix. Сначала задайте имя пользователя и пароль.</value>
+  </data>
+  <data name="Mindestens_8_Zeichen_mit_Gro_buchstaben_Kleinbuc_d7ecebc7" xml:space="preserve">
+    <value>Не менее 8 символов: заглавные и строчные буквы, цифра и специальный символ; пробел считается специальным символом.</value>
+  </data>
+  <data name="Kennwort_festlegen_35c49577" xml:space="preserve">
+    <value>Задать пароль</value>
+  </data>
+  <data name="Desktop_532c67fe" xml:space="preserve">
+    <value>Компьютер</value>
+  </data>
+  <data name="Volle_Oberfl_che_e64e07e3" xml:space="preserve">
+    <value>Полный интерфейс</value>
+  </data>
+  <data name="Mobil_6e1dffe9" xml:space="preserve">
+    <value>Мобильная</value>
+  </data>
+  <data name="Vereinfachte_Seite_46198397" xml:space="preserve">
+    <value>Упрощённая страница</value>
+  </data>
+  <data name="Im_Browser_braucht_FerrumPix_immer_ein_Kennwort__de71c557" xml:space="preserve">
+    <value>В браузере FerrumPix всегда требует пароль. Его можно изменить, но не отключить.</value>
+  </data>
+  <data name="Zur_vereinfachten_Seite_f_r_Telefon_und_Tablet_w_320f4a9d" xml:space="preserve">
+    <value>Перейти на упрощённую страницу для телефона и планшета</value>
+  </data>
+  <data name="Mobile_Ansicht_bab7686a" xml:space="preserve">
+    <value>Мобильный вид</value>
+  </data>
+  <data name="0_ausgew_hlt_0c3edf50" xml:space="preserve">
+    <value>Выбрано: {0}</value>
+  </data>
+  <data name="Als_JPEG_mit_Bearbeitung_ea4e5fa6" xml:space="preserve">
+    <value>Как JPEG с обработкой</value>
+  </data>
+  <data name="Als_ZIP_herunterladen_805a899a" xml:space="preserve">
+    <value>Скачать как ZIP</value>
+  </data>
+  <data name="Das_Bild_konnte_nicht_geladen_werden_e226829e" xml:space="preserve">
+    <value>Не удалось загрузить изображение</value>
+  </data>
+  <data name="Die_nderung_konnte_nicht_gespeichert_werden_9b35374b" xml:space="preserve">
+    <value>Не удалось сохранить изменение</value>
+  </data>
+  <data name="Erneut_versuchen_3234b7ec" xml:space="preserve">
+    <value>Повторить</value>
+  </data>
+  <data name="Fotos_69daa51e" xml:space="preserve">
+    <value>Фото</value>
+  </data>
+  <data name="Hier_gibt_es_keine_Fotos_46e7063a" xml:space="preserve">
+    <value>Здесь нет фотографий</value>
+  </data>
+  <data name="Hierher_hochladen_962952b3" xml:space="preserve">
+    <value>Отправить сюда</value>
+  </data>
+  <data name="In_diesem_Ordner_liegen_keine_Fotos_4697a322" xml:space="preserve">
+    <value>В этой папке нет фотографий</value>
+  </data>
+  <data name="Informationen_bc3bc55d" xml:space="preserve">
+    <value>Сведения</value>
+  </data>
+  <data name="Keine_Verbindung_zu_FerrumPix_79bb9eb5" xml:space="preserve">
+    <value>Нет соединения с FerrumPix</value>
+  </data>
+  <data name="Mehr_dfc8541c" xml:space="preserve">
+    <value>Ещё</value>
+  </data>
+  <data name="Stichwort_Kamera_oder_Dateiname_23be4ec1" xml:space="preserve">
+    <value>Ключевое слово, камера или имя файла</value>
+  </data>
+  <data name="Teilen_b1cfc831" xml:space="preserve">
+    <value>Поделиться</value>
+  </data>
+  <data name="Wird_hochgeladen_527eb12c" xml:space="preserve">
+    <value>Отправка</value>
+  </data>
+  <data name="Zur_Desktop_Ansicht_5a522d33" xml:space="preserve">
+    <value>К версии для компьютера</value>
+  </data>
+  <data name="Bitte_wenden_Sie_sich_an_den_Administrator_787b0090" xml:space="preserve">
+    <value>Обратитесь к администратору.</value>
+  </data>
+  <data name="FerrumPix_neues_Kennwort_festlegen_cb826349" xml:space="preserve">
+    <value>FerrumPix: задайте новый пароль</value>
+  </data>
+  <data name="Hallo_0_41ce0990" xml:space="preserve">
+    <value>Здравствуйте, {0}!</value>
+  </data>
+  <data name="f_r_Ihr_Konto_bei_FerrumPix_wurde_ein_neues_Kenn_d48b8bd7" xml:space="preserve">
+    <value>Для вашей учётной записи FerrumPix запрошен новый пароль. По этой ссылке вы его зададите; она действует 30 минут и только один раз:</value>
+  </data>
+  <data name="Wenn_Sie_das_nicht_angefordert_haben_k_nnen_Sie__c9cefc15" xml:space="preserve">
+    <value>Если вы этого не запрашивали, просто удалите это сообщение.</value>
+  </data>
+  <data name="Zu_viele_Anfragen_Bitte_sp_ter_noch_einmal_versu_6f483281" xml:space="preserve">
+    <value>Слишком много запросов. Повторите попытку позже.</value>
+  </data>
+  <data name="Wenn_es_dazu_ein_Konto_mit_E_Mail_Adresse_gibt_i_26756489" xml:space="preserve">
+    <value>Если существует учётная запись с адресом электронной почты, сообщение уже в пути. Иначе обратитесь к администратору.</value>
+  </data>
+  <data name="Der_Verweis_ist_abgelaufen_oder_wurde_schon_benu_de2b66bd" xml:space="preserve">
+    <value>Срок действия ссылки истёк, или она уже использована.</value>
+  </data>
+  <data name="Kennwort_vergessen_b45939e9" xml:space="preserve">
+    <value>Забыли пароль?</value>
+  </data>
+  <data name="Benutzername_oder_E_Mail_Adresse_eingeben_Gibt_e_08194606" xml:space="preserve">
+    <value>Введите имя пользователя или адрес электронной почты. Если есть учётная запись с адресом, придёт ссылка для нового пароля.</value>
+  </data>
+  <data name="Benutzername_oder_E_Mail_Adresse_73d23074" xml:space="preserve">
+    <value>Имя пользователя или адрес электронной почты</value>
+  </data>
+  <data name="Verweis_senden_37c4aead" xml:space="preserve">
+    <value>Отправить ссылку</value>
+  </data>
+  <data name="Zur_ck_zur_Anmeldung_887f2648" xml:space="preserve">
+    <value>Назад ко входу</value>
+  </data>
+  <data name="Neues_Kennwort_festlegen_144cb35b" xml:space="preserve">
+    <value>Задать новый пароль</value>
+  </data>
+  <data name="Die_volle_Oberfl_che_gibt_es_nur_f_r_Administrat_546010d4" xml:space="preserve">
+    <value>Полный интерфейс доступен только администраторам. Переход на мобильную страницу.</value>
+  </data>
+  <data name="0_l_schen_a66ed0e0" xml:space="preserve">
+    <value>Удалить {0}?</value>
+  </data>
+  <data name="Ansehen_97d7cee1" xml:space="preserve">
+    <value>Просмотр</value>
+  </data>
+  <data name="Mitarbeiten_df833ab8" xml:space="preserve">
+    <value>Участие</value>
+  </data>
+  <data name="Kein_Zugriff_aa31bf98" xml:space="preserve">
+    <value>Нет доступа</value>
+  </data>
+  <data name="Ohne_Verschl_sselung_1cc9b2c4" xml:space="preserve">
+    <value>Без шифрования</value>
+  </data>
+  <data name="Eigent_mer_2843ee90" xml:space="preserve">
+    <value>Владелец</value>
+  </data>
+  <data name="Administrator_1eda2375" xml:space="preserve">
+    <value>Администратор</value>
+  </data>
+  <data name="Benutzer_bd26f3d2" xml:space="preserve">
+    <value>Пользователи</value>
+  </data>
+  <data name="Gesperrt_b1432218" xml:space="preserve">
+    <value>Заблокирован</value>
+  </data>
+  <data name="Diesen_Benutzernamen_gibt_es_schon_ae86e156" xml:space="preserve">
+    <value>Такое имя пользователя уже есть.</value>
+  </data>
+  <data name="Die_E_Mail_Adresse_ist_ung_ltig_d8df6232" xml:space="preserve">
+    <value>Адрес электронной почты недействителен.</value>
+  </data>
+  <data name="Diese_E_Mail_Adresse_geh_rt_schon_einem_anderen__a9e51850" xml:space="preserve">
+    <value>Этот адрес уже принадлежит другому пользователю.</value>
+  </data>
+  <data name="Das_Kennwort_erf_llt_die_Regeln_nicht_aa122aaf" xml:space="preserve">
+    <value>Пароль не соответствует правилам.</value>
+  </data>
+  <data name="Der_Eigent_mer_bleibt_immer_Administrator_und_l__5a284448" xml:space="preserve">
+    <value>Владелец всегда остаётся администратором, его нельзя заблокировать или удалить.</value>
+  </data>
+  <data name="Diesen_Benutzer_gibt_es_nicht_mehr_d4df6788" xml:space="preserve">
+    <value>Этого пользователя больше нет.</value>
+  </data>
+  <data name="Administratoren_sehen_alles_und_brauchen_keine_R_340bea53" xml:space="preserve">
+    <value>Администраторы видят всё, правила им не нужны.</value>
+  </data>
+  <data name="Ohne_Regel_sieht_dieser_Benutzer_nichts_dfc85d80" xml:space="preserve">
+    <value>Без правил этот пользователь ничего не видит.</value>
+  </data>
+  <data name="Keine_Regel_gibt_einen_Ordner_zum_Ansehen_frei_ff196fc4" xml:space="preserve">
+    <value>Ни одно правило не разрешает просмотр папки.</value>
+  </data>
+  <data name="Auf_der_mobilen_Seite_beginnt_er_hier_40ac6711" xml:space="preserve">
+    <value>На мобильной странице он начинает здесь:</value>
+  </data>
+  <data name="Die_n_chstliegende_Regel_gewinnt_auch_eine_enger_a8ebe4d4" xml:space="preserve">
+    <value>Действует ближайшее правило, в том числе более строгое на вложенной папке.</value>
+  </data>
+  <data name="Das_neue_Kennwort_gilt_ab_sofort_Offene_Anmeldun_c8a9e134" xml:space="preserve">
+    <value>Новый пароль действует сразу. Открытые входы этого пользователя завершены.</value>
+  </data>
+  <data name="0_kann_sich_danach_nicht_mehr_anmelden_und_seine_b063d31d" xml:space="preserve">
+    <value>{0} больше не сможет войти, правила для папок будут удалены. Фото и оценки сохранятся.</value>
+  </data>
+  <data name="Der_Port_muss_eine_Zahl_von_1_bis_65535_sein_63e44f66" xml:space="preserve">
+    <value>Порт должен быть числом от 1 до 65535.</value>
+  </data>
+  <data name="Die_ffentliche_Adresse_braucht_die_Form_https_na_ef72da9c" xml:space="preserve">
+    <value>Публичный адрес должен иметь вид https://name.example, без пути.</value>
+  </data>
+  <data name="Bitte_eine_g_ltige_Adresse_f_r_die_Test_E_Mail_e_cb67ff6c" xml:space="preserve">
+    <value>Введите действительный адрес для тестового письма.</value>
+  </data>
+  <data name="Bitte_Server_und_Absender_eintragen_676a1249" xml:space="preserve">
+    <value>Укажите сервер и отправителя.</value>
+  </data>
+  <data name="Wird_gesendet_bfe4a609" xml:space="preserve">
+    <value>Отправка ...</value>
+  </data>
+  <data name="FerrumPix_Test_E_Mail_6bec34a9" xml:space="preserve">
+    <value>FerrumPix: тестовое письмо</value>
+  </data>
+  <data name="Diese_Nachricht_kommt_von_FerrumPix_Der_Mailvers_8e971cfd" xml:space="preserve">
+    <value>Это сообщение от FerrumPix. Отправка писем для забытого пароля работает.</value>
+  </data>
+  <data name="Die_Test_E_Mail_an_0_ist_versendet_ad16c6ef" xml:space="preserve">
+    <value>Тестовое письмо на {0} отправлено.</value>
+  </data>
+  <data name="Die_Test_E_Mail_lie_sich_nicht_senden_0_b5e3e762" xml:space="preserve">
+    <value>Не удалось отправить тестовое письмо: {0}</value>
+  </data>
+  <data name="Ordner_f_r_die_Regel_w_hlen_0fb8b613" xml:space="preserve">
+    <value>Выбрать папки для правила</value>
+  </data>
+  <data name="Wer_FerrumPix_im_Browser_benutzen_darf_Der_Eigen_e0d7be8a" xml:space="preserve">
+    <value>Кто может пользоваться FerrumPix в браузере. Владелец из первоначальной настройки является администратором и видит всё. Остальные пользователи получают только мобильную страницу и видят только папки, разрешённые их правилами. Оценки и пометки общие для всех.</value>
+  </data>
+  <data name="E_Mail_Adresse_ce8fdbcb" xml:space="preserve">
+    <value>Адрес электронной почты</value>
+  </data>
+  <data name="F_r_ein_vergessenes_Kennwort_Angemeldet_wird_wei_1483249b" xml:space="preserve">
+    <value>На случай забытого пароля. Вход по-прежнему выполняется по имени.</value>
+  </data>
+  <data name="Darf_in_die_volle_Oberfl_che_und_in_die_Einstell_3fb7f312" xml:space="preserve">
+    <value>Может открывать полный интерфейс и настройки и видит всё.</value>
+  </data>
+  <data name="Kann_sich_nicht_anmelden_offene_Anmeldungen_ende_ad4e11c4" xml:space="preserve">
+    <value>Не может войти; открытые входы сразу завершаются.</value>
+  </data>
+  <data name="Kennwort_zur_cksetzen_f2e37733" xml:space="preserve">
+    <value>Сбросить пароль</value>
+  </data>
+  <data name="Kennwort_setzen_55eb847e" xml:space="preserve">
+    <value>Задать пароль</value>
+  </data>
+  <data name="Rechte_je_Ordner_bb6f13e0" xml:space="preserve">
+    <value>Права по папкам</value>
+  </data>
+  <data name="Ansehen_hei_t_sehen_und_herunterladen_Mitarbeite_283f34b3" xml:space="preserve">
+    <value>Просмотр означает видеть и скачивать, Участие добавляет оценки, пометки и загрузку, Управление добавляет переименование и удаление. Правило действует для папки и всего, что в ней.</value>
+  </data>
+  <data name="Benutzer_l_schen_18102426" xml:space="preserve">
+    <value>Удалить пользователя</value>
+  </data>
+  <data name="Neuer_Benutzer_93017c9b" xml:space="preserve">
+    <value>Новый пользователь</value>
+  </data>
+  <data name="Name_ohne_Gro_und_Kleinschreibung_eindeutig_E_Ma_4dabb81c" xml:space="preserve">
+    <value>Имя уникально без учёта регистра, адрес электронной почты необязателен. Без роли администратора пользователь ничего не видит, пока не получит правила для папок.</value>
+  </data>
+  <data name="Benutzer_anlegen_1614f4af" xml:space="preserve">
+    <value>Создать пользователя</value>
+  </data>
+  <data name="E_Mail_f_r_vergessene_Kennw_rter_b66373bf" xml:space="preserve">
+    <value>Почта для забытых паролей</value>
+  </data>
+  <data name="Mit_einem_Mailserver_schickt_die_Anmeldung_im_Br_528bb2f3" xml:space="preserve">
+    <value>С почтовым сервером страница входа в браузере при забытом пароле отправляет ссылку на адрес пользователя. Без него поможет только администратор.</value>
+  </data>
+  <data name="Server_cb0cb170" xml:space="preserve">
+    <value>Сервер</value>
+  </data>
+  <data name="Port_fe035157" xml:space="preserve">
+    <value>Порт</value>
+  </data>
+  <data name="Verschl_sselung_3be4a22c" xml:space="preserve">
+    <value>Шифрование</value>
+  </data>
+  <data name="Absender_4bc8195c" xml:space="preserve">
+    <value>Отправитель</value>
+  </data>
+  <data name="ffentliche_Adresse_a088db22" xml:space="preserve">
+    <value>Публичный адрес</value>
+  </data>
+  <data name="Test_E_Mail_an_cb64f2fe" xml:space="preserve">
+    <value>Тестовое письмо на</value>
+  </data>
+  <data name="Die_ffentliche_Adresse_bildet_den_Verweis_in_der_86dac91d" xml:space="preserve">
+    <value>Публичный адрес образует ссылку в сообщении. Если пусто, берётся адрес, по которому пришёл браузер; при устройствах в домашней сети, которым вы не доверяете, его стоит задать.</value>
+  </data>
+  <data name="Test_E_Mail_senden_c79d6b3b" xml:space="preserve">
+    <value>Отправить тестовое письмо</value>
+  </data>
+  <data name="Mit_den_Zugangsdaten_Immich_Nextcloud_Mailversan_38be27bf" xml:space="preserve">
+    <value>С учётными данными: Immich, Nextcloud, отправка почты и пароли входа</value>
+  </data>
+  <data name="Automatisch_Sprache_des_Browsers_cac03e47" xml:space="preserve">
+    <value>Автоматически (язык браузера)</value>
+  </data>
+  <data name="F_r_die_mobile_Seite_Meldungen_und_Nachrichten_a_397aed2f" xml:space="preserve">
+    <value>Для мобильной страницы, уведомлений и писем этому пользователю. Полный интерфейс остаётся на языке приложения.</value>
+  </data>
+  <data name="Benutzerverwaltung_b05aadc9" xml:space="preserve">
+    <value>Управление пользователями</value>
+  </data>
+  <data name="Browser_und_mobile_Ansicht_0b4f1ff5" xml:space="preserve">
+    <value>Браузер и мобильный вид</value>
+  </data>
+  <data name="Sperren_und_das_Anmeldefenster_zeigen_nur_mit_Ke_f06c516d" xml:space="preserve">
+    <value>Заблокировать и показать окно входа (только с паролем, см. Настройки, Управление пользователями)</value>
+  </data>
+  <data name="Diese_Freigabe_ist_mit_einem_Kennwort_gesch_tzt_7f79b00d" xml:space="preserve">
+    <value>Эта ссылка защищена паролем.</value>
+  </data>
+  <data name="Dieser_Link_ist_ung_ltig_abgelaufen_oder_wurde_w_11b25b49" xml:space="preserve">
+    <value>Эта ссылка недействительна, истекла или отозвана.</value>
+  </data>
+  <data name="Verf_gbar_bis_0_6c43116a" xml:space="preserve">
+    <value>Доступно до {0}</value>
+  </data>
+  <data name="Geteilt_mit_FerrumPix_174ceb7d" xml:space="preserve">
+    <value>Опубликовано с помощью FerrumPix</value>
+  </data>
+  <data name="Link_zum_Teilen_erstellen_dd8da631" xml:space="preserve">
+    <value>Создать ссылку для доступа</value>
+  </data>
+  <data name="An_App_senden_c549c6d8" xml:space="preserve">
+    <value>Отправить в приложение</value>
+  </data>
+  <data name="Meine_Freigaben_efe0316c" xml:space="preserve">
+    <value>Мои ссылки</value>
+  </data>
+  <data name="G_ltig_17770e6b" xml:space="preserve">
+    <value>Срок действия</value>
+  </data>
+  <data name="0_Tage_f5c5232d" xml:space="preserve">
+    <value>Дней: {0}</value>
+  </data>
+  <data name="1_Jahr_d0e3da3e" xml:space="preserve">
+    <value>1 год</value>
+  </data>
+  <data name="Leer_lassen_um_das_Kennwort_zu_behalten_80f311ac" xml:space="preserve">
+    <value>Оставьте пустым, чтобы сохранить пароль</value>
+  </data>
+  <data name="Herunterladen_erlauben_4a950b96" xml:space="preserve">
+    <value>Разрешить загрузку</value>
+  </data>
+  <data name="Ort_mitgeben_896c2f86" xml:space="preserve">
+    <value>Показывать место</value>
+  </data>
+  <data name="Personen_mitgeben_54d892b8" xml:space="preserve">
+    <value>Показывать людей</value>
+  </data>
+  <data name="Kamera_und_Belichtung_mitgeben_ae1cae53" xml:space="preserve">
+    <value>Показывать камеру и экспозицию</value>
+  </data>
+  <data name="Link_erstellen_bd3ee5c1" xml:space="preserve">
+    <value>Создать ссылку</value>
+  </data>
+  <data name="Link_kopieren_e8b631dd" xml:space="preserve">
+    <value>Копировать ссылку</value>
+  </data>
+  <data name="Link_kopiert_3498023f" xml:space="preserve">
+    <value>Ссылка скопирована</value>
+  </data>
+  <data name="Widerrufen_2c7ccedb" xml:space="preserve">
+    <value>Отозвать</value>
+  </data>
+  <data name="Diese_Freigabe_widerrufen_Der_Link_funktioniert__7303b0c3" xml:space="preserve">
+    <value>Отозвать эту ссылку? После этого она перестанет работать.</value>
+  </data>
+  <data name="Der_Link_steht_nur_auf_dem_Ger_t_auf_dem_er_erst_2751921a" xml:space="preserve">
+    <value>Ссылка хранится только на устройстве, где она была создана. Создать новую ссылку? Прежняя перестанет работать.</value>
+  </data>
+  <data name="0_Aufrufe_3632decf" xml:space="preserve">
+    <value>Просмотров: {0}</value>
+  </data>
+  <data name="Abgelaufen_d16b8321" xml:space="preserve">
+    <value>Истекла</value>
+  </data>
+  <data name="Ohne_Wirkung_c307d548" xml:space="preserve">
+    <value>Не действует</value>
+  </data>
+  <data name="Noch_keine_Freigaben_316a0d7a" xml:space="preserve">
+    <value>Ссылок пока нет</value>
+  </data>
+  <data name="Alle_Freigaben_pausieren_06081b34" xml:space="preserve">
+    <value>Приостановить все ссылки</value>
+  </data>
+  <data name="Alle_Freigaben_sind_pausiert_975f19e3" xml:space="preserve">
+    <value>Все ссылки приостановлены.</value>
+  </data>
+  <data name="Link_erstellt_0dce5571" xml:space="preserve">
+    <value>Ссылка создана</value>
+  </data>
+  <data name="Das_Kennwort_braucht_mindestens_8_Zeichen_bbe2b0a9" xml:space="preserve">
+    <value>Пароль должен содержать не менее 8 символов.</value>
+  </data>
+  <data name="Zum_Teilen_braucht_es_auf_jedem_Bild_mindestens__50b502ff" xml:space="preserve">
+    <value>Чтобы поделиться, на каждом изображении нужно как минимум право Участие.</value>
+  </data>
+  <data name="Dieser_Ordner_l_sst_sich_nicht_teilen_7fe992a4" xml:space="preserve">
+    <value>Этой папкой нельзя поделиться.</value>
+  </data>
+  <data name="Der_Link_gilt_30_Tage_ohne_Kennwort_mit_Herunter_d7d1cd50" xml:space="preserve">
+    <value>Ссылка действует 30 дней, без пароля, с загрузкой, без места и людей. Изменить или отозвать её можно в мобильном виде в разделе Мои ссылки и в настройках в разделе Ссылки.</value>
+  </data>
+  <data name="Gel_schter_Benutzer_85498453" xml:space="preserve">
+    <value>Удалённый пользователь</value>
+  </data>
+  <data name="Geteilt_von_0_38359dff" xml:space="preserve">
+    <value>Поделился: {0}</value>
+  </data>
+  <data name="Ordner_0_bb112d04" xml:space="preserve">
+    <value>Папка {0}</value>
+  </data>
+  <data name="Freigaben_e7f62fb4" xml:space="preserve">
+    <value>Ссылки</value>
+  </data>
+  <data name="Links_zum_Teilen_von_Bildern_mit_Menschen_ohne_K_28e9e123" xml:space="preserve">
+    <value>Ссылки для показа изображений людям без учётной записи, от всех пользователей. Ссылка работает и тогда, когда FerrumPix заблокирован; переключатель ниже останавливает все ссылки.</value>
+  </data>
+  <data name="Jeder_Link_antwortet_dann_wie_ein_unbekannter_bi_1c93e83b" xml:space="preserve">
+    <value>Тогда каждая ссылка отвечает как неизвестная, пока переключатель снова не будет выключен.</value>
+  </data>
+  <data name="In_FerrumPix_kopiert_0551df0f" xml:space="preserve">
+    <value>Скопировано в FerrumPix</value>
+  </data>
+  <data name="Die_Zwischenablage_dieses_Ger_ts_hat_den_Inhalt__e94c6e81" xml:space="preserve">
+    <value>Буфер обмена этого устройства не принял содержимое</value>
+  </data>
+  <data name="Bilder_kommen_nur_ber_HTTPS_in_die_Zwischenablag_99058706" xml:space="preserve">
+    <value>Изображения попадают в буфер обмена этого устройства только через HTTPS</value>
+  </data>
+  <data name="Zu_gro_f_r_die_Zwischenablage_3a2a973c" xml:space="preserve">
+    <value>Слишком велико для буфера обмена</value>
+  </data>
+  <data name="Absender_E_Mail_Adresse_b8998ec0" xml:space="preserve">
+    <value>Отправитель (адрес эл. почты)</value>
+  </data>
+  <data name="Von_dieser_Adresse_kommen_die_Mails_etwa_fotos_e_fb2fa752" xml:space="preserve">
+    <value>Письма отправляются с этого адреса, например fotos@example.org. Пусто: имя пользователя почтового аккаунта.</value>
+  </data>
+  <data name="Adresse_von_FerrumPix_im_Browser_b2175d85" xml:space="preserve">
+    <value>Адрес FerrumPix в браузере</value>
+  </data>
+  <data name="Unter_dieser_Webadresse_URL_erreichen_andere_Fer_69dfdf58" xml:space="preserve">
+    <value>По этому веб-адресу (URL) другие открывают FerrumPix, например https://fotos.example.org. Он стоит в ссылках в письмах и общих доступах. Без него FerrumPix не отправляет письма при забытом пароле, а общие доступы используют адрес, через который сейчас пришёл браузер.</value>
+  </data>
+  <data name="Gespeichert_F_r_ein_vergessenes_Kennwort_fehlt_n_a06be747" xml:space="preserve">
+    <value>Сохранено. Для забытого пароля ещё не хватает адреса FerrumPix в браузере; без него письма не уходят.</value>
+  </data>
+  <data name="smtp_example_org_b4c0fa4b" xml:space="preserve">
+    <value>smtp.example.org</value>
+  </data>
+  <data name="fotos_example_org_oder_Name_fotos_example_org_e3bae05e" xml:space="preserve">
+    <value>fotos@example.org или Имя &lt;fotos@example.org&gt;</value>
+  </data>
+  <data name="https_fotos_example_org_e099205f" xml:space="preserve">
+    <value>https://fotos.example.org</value>
+  </data>
+  <data name="Bitte_den_Server_f_r_den_Mailversand_eintragen_3a4ec116" xml:space="preserve">
+    <value>Укажите сервер для отправки почты.</value>
+  </data>
+  <data name="Gespeichert_Ohne_Server_geht_keine_E_Mail_hinaus_d0b913e3" xml:space="preserve">
+    <value>Сохранено. Без сервера письма не отправляются.</value>
+  </data>
+  <data name="Bitte_einen_Absender_eintragen_Der_Benutzername__251420c7" xml:space="preserve">
+    <value>Укажите отправителя. Имя пользователя почтового аккаунта не является адресом эл. почты и не может его заменить.</value>
+  </data>
+  <data name="Der_Absender_0_ist_keine_g_ltige_E_Mail_Adresse__77648712" xml:space="preserve">
+    <value>Отправитель "{0}" не является действительным адресом эл. почты. Допустимо fotos@example.org или Имя &lt;fotos@example.org&gt;.</value>
+  </data>
+  <data name="Die_Adresse_braucht_die_Form_https_fotos_example_64db9b5a" xml:space="preserve">
+    <value>Адрес должен иметь вид https://fotos.example.org, без пути.</value>
+  </data>
+  <data name="F_r_dein_Konto_bei_FerrumPix_wurde_ein_neues_Ken_eaadd7c0" xml:space="preserve">
+    <value>Для вашей учётной записи FerrumPix запрошен новый пароль. Задайте его кнопкой.</value>
+  </data>
+  <data name="Falls_der_Knopf_nicht_geht_kopiere_diesen_Link_i_7085d575" xml:space="preserve">
+    <value>Если кнопка не работает, скопируйте эту ссылку в браузер:</value>
+  </data>
+  <data name="Der_Link_gilt_30_Minuten_und_nur_einmal_c20758b4" xml:space="preserve">
+    <value>Ссылка действует 30 минут и только один раз.</value>
+  </data>
+  <data name="Wenn_du_das_nicht_angefordert_hast_kannst_du_die_62edf257" xml:space="preserve">
+    <value>Если вы этого не запрашивали, можете проигнорировать это письмо.</value>
+  </data>
+  <data name="Der_Mailversand_funktioniert_14b78fdc" xml:space="preserve">
+    <value>Отправка почты работает</value>
+  </data>
+  <data name="FerrumPix_ffnen_367a5059" xml:space="preserve">
+    <value>Открыть FerrumPix</value>
+  </data>
+  <data name="Datei_fehlt_3b100e31" xml:space="preserve">
+    <value>Файл отсутствует</value>
+  </data>
+  <data name="Format_nicht_lesbar_98c7af8b" xml:space="preserve">
+    <value>Формат не читается</value>
+  </data>
+  <data name="Es_gibt_schon_0_Freigaben_von_Ihnen_Bitte_zuerst_2d3e153d" xml:space="preserve">
+    <value>У вас уже {0} ссылок. Сначала отзовите одну из старых.</value>
+  </data>
+  <data name="Es_gibt_schon_0_Freigaben_mehr_nimmt_FerrumPix_n_dd769fe6" xml:space="preserve">
+    <value>Уже есть {0} ссылок, больше FerrumPix не принимает.</value>
+  </data>
+  <data name="Eine_Freigabe_nimmt_h_chstens_0_Bilder_auf_ca9697b4" xml:space="preserve">
+    <value>Одна ссылка вмещает не более {0} изображений.</value>
+  </data>
+  <data name="Bearbeitungen_und_Beistelldateien_darf_nur_ein_A_fc93eebc" xml:space="preserve">
+    <value>Загружать правки и сопутствующие файлы может только администратор</value>
+  </data>
+  <data name="0_endg_ltig_l_schen_Der_Papierkorb_ist_abgeschal_14cfda0b" xml:space="preserve">
+    <value>Удалить {0} навсегда? Корзина отключена, это нельзя отменить.</value>
+  </data>
+  <data name="Der_Code_ist_falsch_3697f932" xml:space="preserve">
+    <value>Неверный код.</value>
+  </data>
+  <data name="Die_Anmeldung_ist_abgelaufen_Bitte_noch_einmal_a_5d263fbe" xml:space="preserve">
+    <value>Срок входа истёк. Войдите снова.</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_schon_eingerichtet_b3108a5c" xml:space="preserve">
+    <value>Второй фактор уже настроен.</value>
+  </data>
+  <data name="Das_Einrichten_ist_abgelaufen_Bitte_neu_beginnen_928161cf" xml:space="preserve">
+    <value>Срок настройки истёк. Начните заново.</value>
+  </data>
+  <data name="Kennwort_oder_Code_ist_falsch_10de6e3e" xml:space="preserve">
+    <value>Неверный пароль или код.</value>
+  </data>
+  <data name="Zweiter_Faktor_cfbf71b5" xml:space="preserve">
+    <value>Второй фактор</value>
+  </data>
+  <data name="Mit_einem_zweiten_Faktor_fragt_die_Anmeldung_im__34721313" xml:space="preserve">
+    <value>Со вторым фактором вход в браузере запрашивает, кроме пароля, код из приложения-аутентификатора.</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_eingerichtet_brige_Wiederh_bcab83f0" xml:space="preserve">
+    <value>Второй фактор настроен. Осталось кодов восстановления: {0}</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_nicht_eingerichtet_d3eef3aa" xml:space="preserve">
+    <value>Второй фактор не настроен.</value>
+  </data>
+  <data name="Einrichten_34be1cd4" xml:space="preserve">
+    <value>Настроить</value>
+  </data>
+  <data name="Den_QR_Code_mit_der_Authenticator_App_scannen_od_6bc2623a" xml:space="preserve">
+    <value>Отсканируйте QR-код приложением-аутентификатором или введите ключ вручную. Затем введите код из приложения.</value>
+  </data>
+  <data name="Schl_ssel_1ac83286" xml:space="preserve">
+    <value>Ключ</value>
+  </data>
+  <data name="Code_adac6937" xml:space="preserve">
+    <value>Код</value>
+  </data>
+  <data name="Best_tigen_2019ffd2" xml:space="preserve">
+    <value>Подтвердить</value>
+  </data>
+  <data name="Wiederherstellungscodes_4833ba4c" xml:space="preserve">
+    <value>Коды восстановления</value>
+  </data>
+  <data name="Jeder_Code_gilt_einmal_falls_die_App_nicht_zur_H_ef4d94e4" xml:space="preserve">
+    <value>Каждый код действует один раз, если приложения нет под рукой. Они показываются только сейчас; храните их в надёжном месте.</value>
+  </data>
+  <data name="Abschalten_a10c1e28" xml:space="preserve">
+    <value>Отключить</value>
+  </data>
+  <data name="Zum_Abschalten_das_aktuelle_Kennwort_und_einen_C_6f049c60" xml:space="preserve">
+    <value>Чтобы отключить, введите текущий пароль и код из приложения.</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_eingerichtet_04aa51ea" xml:space="preserve">
+    <value>Второй фактор включён.</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_abgeschaltet_cd4eb77f" xml:space="preserve">
+    <value>Второй фактор отключён.</value>
+  </data>
+  <data name="Bitte_den_Code_eingeben_1bf3f2b2" xml:space="preserve">
+    <value>Введите код.</value>
+  </data>
+  <data name="Bitte_den_Code_aus_der_Authenticator_App_eingebe_cda91f15" xml:space="preserve">
+    <value>Введите код из приложения-аутентификатора.</value>
+  </data>
+  <data name="Wiederherstellungscode_verwenden_71e32ac1" xml:space="preserve">
+    <value>Использовать код восстановления</value>
+  </data>
+  <data name="Code_aus_der_App_verwenden_63a6c9a7" xml:space="preserve">
+    <value>Использовать код из приложения</value>
+  </data>
+  <data name="Wiederherstellungscode_7e05d9a1" xml:space="preserve">
+    <value>Код восстановления</value>
+  </data>
+  <data name="Konto_0_364126d0" xml:space="preserve">
+    <value>Учётная запись: {0}</value>
+  </data>
+  <data name="Zweiten_Faktor_zur_cksetzen_dd1eed1c" xml:space="preserve">
+    <value>Сбросить второй фактор</value>
+  </data>
+  <data name="0_meldet_sich_danach_nur_mit_dem_Kennwort_an_und_69c02882" xml:space="preserve">
+    <value>{0} затем входит только с паролем и может снова настроить второй фактор. Открытые сеансы этого пользователя завершаются.</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_zur_ckgesetzt_Offene_Anmel_b08ae6d1" xml:space="preserve">
+    <value>Второй фактор сброшен. Открытые сеансы этого пользователя завершены.</value>
+  </data>
+  <data name="Textdatei_7704451c" xml:space="preserve">
+    <value>Текстовый файл</value>
+  </data>
+  <data name="F_r_einen_Benutzer_der_seine_Authenticator_App_v_82ff0a19" xml:space="preserve">
+    <value>Для пользователя, потерявшего приложение-аутентификатор. Затем он входит только с паролем; открытые сеансы завершаются.</value>
+  </data>
+  <data name="Zweiter_Faktor_f_r_dein_Konto_2fae6464" xml:space="preserve">
+    <value>Второй фактор для вашей учётной записи</value>
+  </data>
+  <data name="Die_Anmeldung_im_Browser_fragt_nach_dem_Kennwort_0fdc9ba5" xml:space="preserve">
+    <value>Вход в браузере запрашивает, кроме пароля, код из приложения-аутентификатора. Вход на самом компьютере остаётся без кода.</value>
+  </data>
+  <data name="Als_Textdatei_speichern_288a3137" xml:space="preserve">
+    <value>Сохранить как текстовый файл</value>
   </data>
 </root>

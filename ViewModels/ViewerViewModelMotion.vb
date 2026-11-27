@@ -84,6 +84,16 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Der grosse Knopf mitten auf dem Bild, wie der auf einer Videokachel: da, solange
+        ''' zum Bild ein Film gehoert und er nicht laeuft. Waehrend des Films liegt die Videoflaeche
+        ''' ueber dem Bild, und der Knopf geht; am Ende steht er wieder da.</summary>
+        Public ReadOnly Property ShowsMotionPlayOverlay As Boolean
+            Get
+                EnsureMotionWiring()
+                Return HasMotionClip AndAlso Not _isMotionPlaying
+            End Get
+        End Property
+
         ''' <summary>Der Hinweis am Knopf, je nachdem, ob der Film laeuft.</summary>
         Public ReadOnly Property MotionButtonTip As String
             Get
@@ -143,6 +153,8 @@ Namespace ViewModels
                     If _isMotionPlaying AndAlso _mediaPlayer Is Nothing Then EndMotionPlayback(stopPlayer:=False)
                 Case NameOf(IsVideoFile)
                     Me.RaisePropertyChanged(NameOf(ShowsVideoStage))
+                Case NameOf(HasMotionClip), NameOf(IsMotionPlaying)
+                    Me.RaisePropertyChanged(NameOf(ShowsMotionPlayOverlay))
             End Select
         End Sub
 

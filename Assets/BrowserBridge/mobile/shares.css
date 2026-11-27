@@ -1,0 +1,24 @@
+/* Freigaben per Link in der mobilen Seite (shares.js): das Formular im Blatt und die Liste
+   "Meine Freigaben". Farben und Masse aus app.css. */
+.share-form { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
+.share-field { width: 100%; min-height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg);
+  color: var(--text); padding: 0 12px; font: inherit; font-size: 16px; outline: none; -webkit-appearance: none; appearance: none; }
+.share-field:focus { border-color: var(--accent); }
+select.share-field { margin-top: 4px; }
+.share-url { font-size: 14px; }
+.share-label { display: flex; flex-direction: column; color: var(--muted); font-size: 13px; }
+.share-check { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.share-check input { width: 22px; height: 22px; accent-color: var(--accent); flex: none; }
+.share-buttons { display: flex; justify-content: flex-end; gap: 8px; padding-top: 6px; }
+.share-primary { min-height: 44px; padding: 0 20px; border-radius: 22px; background: var(--accent); color: #111; font-weight: 700; }
+.share-primary:disabled { opacity: 0.5; }
+
+.shares-panel { position: fixed; inset: 0; z-index: 15; background: var(--bg); display: flex; flex-direction: column; }
+.shares-panel .scroller { padding-bottom: var(--safe-bottom); }
+.share-pause { padding: 4px 16px; border-bottom: 1px solid var(--line); }
+.share-paused { padding: 12px 16px; color: var(--danger); }
+.share-list { display: flex; flex-direction: column; }
+.share-row { display: flex; align-items: center; gap: 8px; min-height: 64px; padding: 6px 8px 6px 16px; border-bottom: 1px solid var(--line); }
+.share-text { flex: 1; min-width: 0; }
+.share-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.share-details { color: var(--muted); font-size: 13px; }

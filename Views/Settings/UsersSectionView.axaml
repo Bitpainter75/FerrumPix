@@ -1,0 +1,379 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:settings="clr-namespace:FerrumPix.Views.Settings"
+             x:Class="FerrumPix.Views.Settings.UsersSectionView">
+                    <!-- BENUTZERVERWALTUNG, unter "Leistung": oben der Zugang (Kennwort des
+                         Anmeldefensters, Sperrzeit; SettingsViewModelAccess.vb, nichts wirkt vor
+                         "Anwenden"), darunter die weiteren Benutzer fuer den Browser, Rechte je
+                         Ordner und der Mailversand fuer "Kennwort vergessen"
+                         (SettingsViewModelUsers.vb, jede Aenderung wirkt sofort). -->
+                    <UserControl.Styles>
+                        <Style Selector="TextBlock.users-status">
+                            <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+                        </Style>
+                        <Style Selector="TextBlock.users-status.error">
+                            <Setter Property="Foreground" Value="{DynamicResource FP.Text.Danger}"/>
+                        </Style>
+                    </UserControl.Styles>
+                    <StackPanel Spacing="14">
+                        <TextBlock Text="Benutzerverwaltung" Foreground="{DynamicResource FP.Text.Accent}" FontSize="{DynamicResource FP.Font.Heading}" FontWeight="SemiBold"/>
+
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Zugang" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Ein Kennwort für FerrumPix. Mit Kennwort erscheint beim Start, nach der eingestellten Zeit ohne Eingabe und mit STRG+L ein Anmeldefenster; im Browser ersetzt es die Anmeldung des Browsers. Das Kennwort schützt die laufende Anwendung, nicht die Fotos: die Dateien liegen weiter offen auf der Platte." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Mit Kennwort schützen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Ein vergessenes Kennwort lässt sich hier nicht zurückholen. Dann bei beendeter Anwendung den Eintrag AppLockPasswordHash aus der Datei settings.json löschen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding AccessProtectionWanted}"
+                                          IsEnabled="{Binding AccessProtectionToggleEnabled}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <TextBlock Text="Im Browser braucht FerrumPix immer ein Kennwort. Ändern lässt es sich, abschalten nicht."
+                                   IsVisible="{Binding AccessPasswordRequired}"
+                                   Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding AccessShowsCurrentPassword}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Aktuelles Kennwort" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Jede Änderung am Zugang verlangt das aktuelle Kennwort." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <TextBox Grid.Column="1" Width="260" PasswordChar="•"
+                                     Text="{Binding AccessCurrentPassword, Mode=TwoWay}"
+                                     VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding AccessShowsNewPassword}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Neues Kennwort" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Mindestens 8 Zeichen mit Großbuchstaben, Kleinbuchstaben, Zahl und Sonderzeichen; ein Leerzeichen zählt als Sonderzeichen. Zweimal eingeben. Leer lassen, um nur die Sperrzeit zu ändern." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center" Width="260">
+                                <TextBox PasswordChar="•" PlaceholderText="Neues Kennwort"
+                                         Text="{Binding AccessNewPassword, Mode=TwoWay}"/>
+                                <TextBox PasswordChar="•" PlaceholderText="Neues Kennwort wiederholen"
+                                         Text="{Binding AccessNewPasswordRepeat, Mode=TwoWay}"/>
+                                <!-- Was noch fehlt, eine Regel je Zeile, beim Tippen. "Anwenden" wird
+                                     erst aktiv, wenn alles erfuellt ist (CanApplyAccess). -->
+                                <TextBlock Classes="no-translate"
+                                           Text="{Binding AccessPasswordHints}"
+                                           IsVisible="{Binding AccessHasPasswordHints}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding AccessShowsIdle}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Sperren nach Inaktivität" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Ohne Taste und Maus sperrt sich FerrumPix nach dieser Zeit. Im Browser endet damit auch die Anmeldung." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding AccessIdleOptions}"
+                                      SelectedItem="{Binding SelectedAccessIdle, Mode=TwoWay}"
+                                      MinWidth="200"
+                                      VerticalAlignment="Center"
+                                      FontSize="{DynamicResource FP.Font.Body}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Classes="no-translate users-status"
+                                       Text="{Binding AccessStatusText}"
+                                       Classes.error="{Binding AccessStatusIsError}"
+                                       FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"
+                                       VerticalAlignment="Center" Margin="0,0,40,0"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <Button Classes="ghost" Padding="12,7"
+                                        IsVisible="{Binding AccessIsProtected}"
+                                        Command="{Binding LockNowCommand}">Jetzt sperren</Button>
+                                <Button Classes="accent" Padding="12,7"
+                                        Command="{Binding ApplyAccessCommand}">Anwenden</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- BROWSER UND MOBILE ANSICHT: alles, was nur im Browser wirkt. -->
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,8,0,0"/>
+                        <TextBlock Text="Browser und mobile Ansicht" Foreground="{DynamicResource FP.Text.Accent}" FontSize="{DynamicResource FP.Font.Heading}" FontWeight="SemiBold"/>
+
+                        <!-- Die Adresse von FerrumPix im Browser: gilt fuer die Verweise in den Mails
+                             und in den Freigaben, deshalb nicht im Mailblock und mit eigenem Anwenden
+                             (SavePublicAddress). Die Meldung steht in der rechten Spalte, damit die
+                             Suche der Einstellungen sie nicht fuer eine Zwischenueberschrift haelt. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="560" Margin="0,0,24,0">
+                                <TextBlock Text="Adresse von FerrumPix im Browser" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Unter dieser Webadresse (URL) erreichen andere FerrumPix, etwa https://fotos.example.org. Sie steht in den Links der Mails und der Freigaben. Ohne sie verschickt FerrumPix keine Mail für ein vergessenes Kennwort, und Freigaben nehmen die Adresse, über die der Browser gerade kommt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center" MaxWidth="400">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBox Classes="no-translate" Width="260" PlaceholderText="https://fotos.example.org" Text="{Binding PublicAddress, Mode=TwoWay}"/>
+                                    <Button Classes="accent" Padding="12,7" Command="{Binding ApplyPublicAddressCommand}">Anwenden</Button>
+                                </StackPanel>
+                                <TextBlock Classes="no-translate users-status"
+                                           Text="{Binding PublicAddressStatusText}"
+                                           Classes.error="{Binding PublicAddressStatusIsError}"
+                                           IsVisible="{Binding PublicAddressStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                           FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- ZWEITER FAKTOR des eigenen Kontos (SettingsViewModelTwoFactor.vb): das
+                             Konto, mit dem diese Oberflaeche gerade bedient wird. Wirkt nur im
+                             Browser; das Anmeldefenster am Rechner fragt nie einen Code. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="560" Margin="0,0,24,0">
+                                <TextBlock Text="Zweiter Faktor für dein Konto" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
+                                <TextBlock Text="Die Anmeldung im Browser fragt nach dem Kennwort zusätzlich einen Code aus einer Authenticator-App. Die Anmeldung am Rechner selbst bleibt ohne Code." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Classes="no-translate" Text="{Binding OwnTwoFactorSummary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="6" Width="260" VerticalAlignment="Center">
+                                <Button Classes="accent" Padding="12,7" HorizontalAlignment="Right"
+                                        IsVisible="{Binding OwnTwoFactorCanBegin}"
+                                        Command="{Binding BeginOwnTwoFactorCommand}">Einrichten</Button>
+                                <StackPanel Spacing="6" IsVisible="{Binding OwnTwoFactorCanDisable}">
+                                    <TextBox PasswordChar="•" PlaceholderText="Aktuelles Kennwort" Text="{Binding OwnTwoFactorPassword, Mode=TwoWay}"/>
+                                    <TextBox Classes="no-translate" PlaceholderText="000000" MaxLength="6" Text="{Binding OwnTwoFactorCode, Mode=TwoWay}"/>
+                                    <Button Classes="ghost" Padding="12,7" HorizontalAlignment="Right" Command="{Binding DisableOwnTwoFactorCommand}">Abschalten</Button>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Beim Einrichten: QR-Code und Schluessel, dann der Code aus der App. -->
+                        <Border Classes="card" Padding="14" IsVisible="{Binding OwnTwoFactorEnrolling}">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="20">
+                                <Border Background="White" Padding="8" CornerRadius="6" VerticalAlignment="Top">
+                                    <Image Source="{Binding OwnTwoFactorQr}" Width="200" Height="200"
+                                           RenderOptions.BitmapInterpolationMode="None"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="8">
+                                    <TextBlock Text="Den QR-Code mit der Authenticator-App scannen oder den Schlüssel abtippen. Danach den Code aus der App eingeben." FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="Schlüssel" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <SelectableTextBlock Classes="no-translate" Text="{Binding OwnTwoFactorSecret}" FontFamily="DejaVu Sans Mono, Consolas, Menlo, monospace" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBox Classes="no-translate" Width="140" PlaceholderText="000000" MaxLength="6" Text="{Binding OwnTwoFactorCode, Mode=TwoWay}"/>
+                                        <Button Classes="accent" Padding="12,7" Command="{Binding ConfirmOwnTwoFactorCommand}">Bestätigen</Button>
+                                        <Button Classes="ghost" Padding="12,7" Command="{Binding CancelOwnTwoFactorCommand}">Abbrechen</Button>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Nach dem Einrichten einmal die Wiederherstellungscodes. -->
+                        <Border Classes="card" Padding="14" IsVisible="{Binding HasOwnTwoFactorRecoveryCodes}">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Wiederherstellungscodes" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
+                                <TextBlock Text="Jeder Code gilt einmal, falls die App nicht zur Hand ist. Sie erscheinen nur jetzt; bitte sicher aufbewahren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <SelectableTextBlock Classes="no-translate" Text="{Binding OwnTwoFactorRecoveryText}" FontFamily="DejaVu Sans Mono, Consolas, Menlo, monospace" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Classes="ghost" Padding="12,7" Click="OnSaveRecoveryCodesClick">Als Textdatei speichern</Button>
+                                    <Button Classes="accent" Padding="12,7" Command="{Binding CloseOwnRecoveryCodesCommand}">Fertig</Button>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Classes="no-translate users-status"
+                                   Text="{Binding OwnTwoFactorStatusText}"
+                                   Classes.error="{Binding OwnTwoFactorStatusIsError}"
+                                   IsVisible="{Binding OwnTwoFactorStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                   FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Benutzer" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Wer FerrumPix im Browser benutzen darf. Der Eigentümer aus der Einrichtung ist Administrator und sieht alles. Weitere Benutzer bekommen nur die mobile Seite und sehen nur die Ordner, die ihre Regeln freigeben. Bewertungen und Markierungen sind für alle gemeinsam." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <ListBox ItemsSource="{Binding UserRows}" SelectedItem="{Binding SelectedUserRow, Mode=TwoWay}" MaxHeight="260">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <!-- Vor jedem Benutzer ein Personensymbol. -->
+                                    <StackPanel Orientation="Horizontal" Spacing="10" Margin="2,4">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/user-circle.svg"
+                                                       Width="24" Height="24" VerticalAlignment="Center"/>
+                                        <StackPanel Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Classes="no-translate" Text="{Binding Name}" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
+                                            <TextBlock Classes="no-translate" Text="{Binding Details}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <!-- Der gewaehlte Benutzer -->
+                        <Border Classes="card" Padding="14" IsVisible="{Binding HasSelectedUser}">
+                            <StackPanel Spacing="12">
+                                <TextBlock Classes="no-translate" Text="{Binding SelectedUserTitle}" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
+
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="560" Margin="0,0,24,0">
+                                        <TextBlock Text="E-Mail-Adresse" FontSize="{DynamicResource FP.Font.Body}"/>
+                                        <TextBlock Text="Für ein vergessenes Kennwort. Angemeldet wird weiter mit dem Namen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <TextBox Classes="no-translate" Width="260" Text="{Binding SelectedUserEmail, Mode=TwoWay}"/>
+                                        <Button Classes="ghost" Padding="12,7" Command="{Binding SaveUserEmailCommand}">Übernehmen</Button>
+                                    </StackPanel>
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="560" Margin="0,0,24,0">
+                                        <TextBlock Text="Sprache" FontSize="{DynamicResource FP.Font.Body}"/>
+                                        <TextBlock Text="Für die mobile Seite, Meldungen und Nachrichten an diesen Benutzer. Die volle Oberfläche bleibt in der Sprache der Anwendung." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ComboBox Grid.Column="1" MinWidth="220" VerticalAlignment="Center"
+                                              ItemsSource="{Binding UserLanguageOptions}" SelectedItem="{Binding SelectedUserLanguage, Mode=TwoWay}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </Grid>
+
+                                <!-- Den zweiten Faktor eines anderen Benutzers zuruecksetzen, mit Rueckfrage
+                                     (SettingsViewModelTwoFactor.vb); das eigene Konto oben. -->
+                                <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding CanResetSelectedUserTwoFactor}">
+                                    <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="560" Margin="0,0,24,0">
+                                        <TextBlock Text="Zweiter Faktor" FontSize="{DynamicResource FP.Font.Body}"/>
+                                        <TextBlock Text="Für einen Benutzer, der seine Authenticator-App verloren hat. Danach meldet er sich nur mit dem Kennwort an; offene Anmeldungen enden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center" Command="{Binding ResetSelectedUserTwoFactorCommand}">Zweiten Faktor zurücksetzen</Button>
+                                </Grid>
+
+                                <StackPanel Spacing="12" IsVisible="{Binding SelectedUserIsOther}">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="560" Margin="0,0,24,0">
+                                            <TextBlock Text="Administrator" FontSize="{DynamicResource FP.Font.Body}"/>
+                                            <TextBlock Text="Darf in die volle Oberfläche und in die Einstellungen und sieht alles." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding SelectedUserIsAdmin}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="560" Margin="0,0,24,0">
+                                            <TextBlock Text="Gesperrt" FontSize="{DynamicResource FP.Font.Body}"/>
+                                            <TextBlock Text="Kann sich nicht anmelden; offene Anmeldungen enden sofort." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding SelectedUserIsDisabled}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="560" Margin="0,0,24,0">
+                                            <TextBlock Text="Kennwort zurücksetzen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                            <TextBlock Text="Mindestens 8 Zeichen mit Großbuchstaben, Kleinbuchstaben, Zahl und Sonderzeichen; ein Leerzeichen zählt als Sonderzeichen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Spacing="6" Width="260" VerticalAlignment="Center">
+                                            <TextBox PasswordChar="•" PlaceholderText="Neues Kennwort" Text="{Binding SelectedUserNewPassword, Mode=TwoWay}"/>
+                                            <TextBox PasswordChar="•" PlaceholderText="Neues Kennwort wiederholen" Text="{Binding SelectedUserNewPasswordRepeat, Mode=TwoWay}"/>
+                                            <Button Classes="ghost" Padding="12,7" HorizontalAlignment="Right" Command="{Binding SetUserPasswordCommand}">Kennwort setzen</Button>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <StackPanel Spacing="8" IsVisible="{Binding SelectedUserNeedsRules}">
+                                        <TextBlock Text="Rechte je Ordner" FontSize="{DynamicResource FP.Font.Body}"/>
+                                        <TextBlock Text="Ansehen heißt sehen und herunterladen, Mitarbeiten dazu bewerten, markieren und hochladen, Verwalten dazu umbenennen und löschen. Eine Regel gilt für den Ordner und alles darunter." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                        <ItemsControl ItemsSource="{Binding UserRuleRows}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,3" AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
+                                                        <TextBlock Classes="no-translate" Text="{Binding Folder}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+                                                        <ComboBox Grid.Column="1" ItemsSource="{Binding Options}" SelectedItem="{Binding SelectedLevel, Mode=TwoWay}" MinWidth="160" VerticalAlignment="Center">
+                                                            <ComboBox.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                                                </DataTemplate>
+                                                            </ComboBox.ItemTemplate>
+                                                        </ComboBox>
+                                                        <Button Grid.Column="2" Classes="ghost" Padding="10,6" Margin="8,0,0,0" Command="{Binding RemoveCommand}">Entfernen</Button>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <Button Classes="ghost" Padding="12,7" HorizontalAlignment="Left" Click="OnAddUserRuleClick">Ordner hinzufügen</Button>
+                                    </StackPanel>
+                                    <TextBlock Classes="no-translate" Text="{Binding UserRulesSummary}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+
+                                    <Button Classes="ghost" Padding="12,7" HorizontalAlignment="Left" Command="{Binding DeleteUserCommand}">Benutzer löschen</Button>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Neuer Benutzer -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Neuer Benutzer" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Name ohne Groß- und Kleinschreibung eindeutig, E-Mail-Adresse freiwillig. Ohne Administratorrolle sieht er nichts, bis er Regeln für Ordner bekommt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="6" Width="260" VerticalAlignment="Center">
+                                <TextBox Classes="no-translate" PlaceholderText="Benutzername" Text="{Binding NewUserName, Mode=TwoWay}"/>
+                                <TextBox Classes="no-translate" PlaceholderText="E-Mail-Adresse" Text="{Binding NewUserEmail, Mode=TwoWay}"/>
+                                <TextBox PasswordChar="•" PlaceholderText="Neues Kennwort" Text="{Binding NewUserPassword, Mode=TwoWay}"/>
+                                <TextBox PasswordChar="•" PlaceholderText="Neues Kennwort wiederholen" Text="{Binding NewUserPasswordRepeat, Mode=TwoWay}"/>
+                                <CheckBox IsChecked="{Binding NewUserIsAdmin, Mode=TwoWay}">Administrator</CheckBox>
+                                <Button Classes="accent" Padding="12,7" HorizontalAlignment="Right" Command="{Binding CreateUserCommand}">Benutzer anlegen</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Classes="no-translate users-status"
+                                   Text="{Binding UsersStatusText}"
+                                   Classes.error="{Binding UsersStatusIsError}"
+                                   IsVisible="{Binding UsersStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                   FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+
+                        <!-- Mailversand fuer "Kennwort vergessen" -->
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,8,0,0"/>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="E-Mail für vergessene Kennwörter" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Mit einem Mailserver schickt die Anmeldung im Browser bei einem vergessenen Kennwort einen Verweis an die E-Mail-Adresse des Benutzers. Ohne ihn hilft nur der Administrator." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="8">
+                            <TextBlock Grid.Row="0" Text="Server" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" Classes="no-translate" PlaceholderText="smtp.example.org" Text="{Binding MailHost, Mode=TwoWay}"/>
+                            <TextBlock Grid.Row="1" Text="Port" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" Classes="no-translate" Width="120" HorizontalAlignment="Left" Text="{Binding MailPort, Mode=TwoWay}"/>
+                            <TextBlock Grid.Row="2" Text="Verschlüsselung" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Row="2" Grid.Column="1" MinWidth="200" ItemsSource="{Binding MailSecurityOptions}" SelectedItem="{Binding SelectedMailSecurity, Mode=TwoWay}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Grid.Row="3" Text="Benutzername" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="3" Grid.Column="1" Classes="no-translate" Text="{Binding MailUserName, Mode=TwoWay}"/>
+                            <TextBlock Grid.Row="4" Text="Kennwort" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="4" Grid.Column="1" PasswordChar="•" Text="{Binding MailPassword, Mode=TwoWay}"/>
+                            <TextBlock Grid.Row="5" Text="Absender (E-Mail-Adresse)" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="5" Grid.Column="1" Classes="no-translate" PlaceholderText="fotos@example.org oder Name &lt;fotos@example.org&gt;" Text="{Binding MailSender, Mode=TwoWay}"/>
+                            <TextBlock Grid.Row="6" Grid.Column="1" Text="Von dieser Adresse kommen die Mails, etwa fotos@example.org. Leer: der Benutzername des Mailkontos." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            <TextBlock Grid.Row="7" Text="Test-E-Mail an" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="7" Grid.Column="1" Classes="no-translate" Text="{Binding MailTestRecipient, Mode=TwoWay}"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Classes="no-translate users-status"
+                                       Text="{Binding MailStatusText}"
+                                       Classes.error="{Binding MailStatusIsError}"
+                                       FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"
+                                       VerticalAlignment="Center" Margin="0,0,40,0"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <Button Classes="ghost" Padding="12,7" Command="{Binding SendTestMailCommand}">Test-E-Mail senden</Button>
+                                <Button Classes="accent" Padding="12,7" Command="{Binding SaveMailCommand}">Speichern</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Freigaben per Link aller Benutzer (SharesAdminPanel, SettingsViewModelShares.vb). -->
+                        <settings:SharesAdminPanel/>
+                    </StackPanel>
+</UserControl>

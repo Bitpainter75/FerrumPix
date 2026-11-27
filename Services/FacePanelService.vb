@@ -275,7 +275,7 @@ Namespace Services
             Return FaceScanRunner.ApplyOrientationOwned(SkiaSharp.SKBitmap.Decode(bytes), origin)
         End Function
 
-        Private Shared Function CropFromFile(path As String, x As Double, y As Double,
+        Friend Shared Function CropFromFile(path As String, x As Double, y As Double,
                                              w As Double, h As Double, previewBytes As Byte()) As Bitmap
             Dim source As SkiaSharp.SKBitmap = Nothing
             Try

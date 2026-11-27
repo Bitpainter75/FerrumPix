@@ -476,11 +476,25 @@ Namespace Views
             If button IsNot Nothing Then button.IsVisible = AppLockService.IsProtected
             Dim upload = Me.FindControl(Of Button)("BrowserUploadButton")
             If upload IsNot Nothing Then upload.IsVisible = BrowserBridge.IsActive
+            Dim mobile = Me.FindControl(Of Button)("BrowserMobileButton")
+            If mobile IsNot Nothing Then mobile.IsVisible = BrowserBridge.IsActive
+        End Sub
+
+        Private Sub OnAppLockProtectionChanged(sender As Object, e As EventArgs)
+            Dispatcher.UIThread.Post(AddressOf UpdateLockAppButton)
+        End Sub
+
+        ''' <summary>"Mobile Ansicht": der Browser wechselt auf die vereinfachte Seite.</summary>
+        Private Sub OnBrowserMobileClick(sender As Object, e As RoutedEventArgs)
+            BrowserBridge.SwitchPageVariant(mobile:=True)
         End Sub
 
         Private Sub OnGalleryAttachedToVisualTree(sender As Object, e As VisualTreeAttachmentEventArgs)
             _isAttached = True
             UpdateLockAppButton()
+            ' Die Ersteinrichtung im Browser setzt das Kennwort, waehrend die Galerie zu sehen ist.
+            RemoveHandler AppLockService.ProtectionChanged, AddressOf OnAppLockProtectionChanged
+            AddHandler AppLockService.ProtectionChanged, AddressOf OnAppLockProtectionChanged
             RebindViewModel()
             Dispatcher.UIThread.Post(Sub() Me.Focus(), DispatcherPriority.Background)
             RestoreFolderTreeSelectionAfterRecreation()
@@ -3210,6 +3224,7 @@ Namespace Views
                 .CopyPath = New DelegateCommand(Sub() OnContextCopyPath(Nothing, Nothing)),
                 .ShowInFileManager = vm.OpenFileManagerCommand,
                 .Download = MenuCommands.BrowserDownload(Function() vm.GetPathsForTransfer(vm.ContextItems), AddressOf vm.DownloadContextFolder),
+                .ShareLink = vm.BrowserShareLinkCommand(),
                 .OpenWith = vm.OpenWithCommand,
                 .OpenWithPrograms = Services.OpenWithService.ConfiguredPrograms(),
                 .Delete = vm.DeleteSelectedCommand,

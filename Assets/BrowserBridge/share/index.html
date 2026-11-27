@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="__FERRUMPIX_LANG__">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0B0E11">
+<meta name="color-scheme" content="dark">
+<title>FerrumPix</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+<link rel="stylesheet" href="/s/_/share.css?v=__FERRUMPIX_VERSION__">
+<!-- Die Seite einer Freigabe per Link, Gegenstelle zu Services/BrowserBridgeShares.vb. Ohne
+     Anmeldung, ohne WebSocket, ohne Zugriff auf die Schnittstelle der mobilen Seite: sie spricht
+     nur mit den Wegen unter ihrem eigenen Pfad. Die Texte setzt der Server als JSON ein. -->
+<script type="application/json" id="fp-texts">__FERRUMPIX_SHARE_TEXTS__</script>
+<script src="/s/_/share.js?v=__FERRUMPIX_VERSION__" defer></script>
+</head>
+<body>
+<header class="bar">
+  <div class="heading"><h1 id="title"></h1><div class="meta" id="meta"></div></div>
+  <button class="text-button" type="button" id="zip" hidden></button>
+</header>
+<main id="main">
+  <form class="lock" id="lock" hidden>
+    <p id="lock-title"></p>
+    <input type="password" id="lock-password" autocomplete="current-password">
+    <div class="error" id="lock-error" hidden></div>
+    <button class="primary" type="submit" id="lock-open"></button>
+  </form>
+  <div class="note" id="note" hidden></div>
+  <div class="grid" id="grid"></div>
+</main>
+<footer class="brand" id="brand"></footer>
+<div class="viewer" id="viewer" hidden>
+  <div class="stage" id="stage"></div>
+  <button class="icon nav prev" type="button" id="prev"></button>
+  <button class="icon nav next" type="button" id="next"></button>
+  <div class="viewer-top">
+    <button class="icon" type="button" id="close"></button>
+    <div class="viewer-title" id="viewer-title"></div>
+    <button class="icon" type="button" id="sound" hidden></button>
+    <button class="icon" type="button" id="live" hidden></button>
+    <button class="icon" type="button" id="download" hidden></button>
+    <button class="icon" type="button" id="info"></button>
+  </div>
+  <div class="sheet" id="sheet" hidden></div>
+</div>
+</body>
+</html>

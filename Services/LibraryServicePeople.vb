@@ -88,6 +88,8 @@ Namespace Services
                 SaveFacesCore(filePath, sourceModifiedAt, faces, committed)
             Finally
                 If Not committed Then InvalidateCentroids()
+                ' Ein erkanntes Gesicht einer benannten Person bringt ihren Namen ins Bild.
+                SearchVocabulary.Invalidate()
             End Try
         End Sub
 
@@ -401,6 +403,9 @@ Namespace Services
                 _centroidSums = Nothing
                 _centroidCounts = Nothing
             End SyncLock
+            ' Dieselben Handgriffe (Benennen, Verschieben, Entfernen) aendern die Personennamen
+            ' je Bild im Wortvorrat der Suche.
+            SearchVocabulary.Invalidate()
         End Sub
 
         Private ReadOnly _centroidLock As New Object()
@@ -1462,6 +1467,7 @@ Namespace Services
                     cmd.ExecuteNonQuery()
                 End Using
             End Using
+            SearchVocabulary.Invalidate()
         End Sub
 
         ''' Zu welchem Bild gehoert dieses Gesicht? Vor einem Verschieben zu fragen, nicht danach -
@@ -1806,6 +1812,7 @@ Namespace Services
                     End Using
                 End Using
                 RemoveFromCentroids(removedFromCentroids)
+                If removed > 0 Then SearchVocabulary.Invalidate()
             Catch ex As Exception
                 DiagnosticLogService.LogException("Library.RemoveFacesForImages", ex)
                 Return 0

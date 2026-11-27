@@ -462,6 +462,98 @@ the application starts when the user asks it to.
   in the editor has no effect while everything else works unchanged.
 
 
+8. Fonts in the Docker image
+----------------------------
+
+This section concerns ONLY the Docker image (ghcr.io/bitpainter75/ferrumpix).
+No other package ships these fonts; on a desktop FerrumPix uses the fonts of
+the system. In the image they are system fonts of its Ubuntu base, found
+through fontconfig and offered for text in the editor. FerrumPix does not
+modify them. Most come as Ubuntu packages, whose copyright file with the full
+licence text stays in the image under /usr/share/doc/<package>/copyright; the
+two fetched from their publishers carry theirs in licenses/fonts/.
+
+  DejaVu Sans, Serif and Sans Mono (Ubuntu package fonts-dejavu-core)
+  Copyright (c) 2003 Bitstream, Inc.; DejaVu changes are in the public domain
+  Bitstream Vera Fonts License
+  https://dejavu-fonts.github.io/
+
+  Liberation Sans, Serif and Mono (fonts-liberation)
+  Digitized data copyright (c) 2010 Google Corporation;
+  Copyright (c) 2012 Red Hat, Inc. with Reserved Font Name Liberation
+  SIL Open Font License 1.1
+  https://github.com/liberationfonts
+
+  Carlito (fonts-crosextra-carlito)
+  Copyright (c) 2010-2013 tyPoland Lukasz Dziedzic, Reserved Font Name "Carlito"
+  SIL Open Font License 1.1
+  https://github.com/googlefonts/carlito
+
+  Caladea (fonts-crosextra-caladea)
+  Copyright 2012 The Caladea Project Authors
+  SIL Open Font License 1.1
+  https://github.com/huertatipografica/Caladea
+
+  Noto Sans, Noto Serif and the other Noto fonts of fonts-noto-core
+  Copyright 2010-2020 Google Inc. and Google LLC
+  SIL Open Font License 1.1
+  https://github.com/notofonts
+
+  Roboto and Roboto Condensed (fonts-roboto-unhinted)
+  Copyright 2015 Google Inc.
+  Apache License 2.0 (full text below)
+  https://github.com/googlefonts/roboto
+
+  Open Sans (fonts-open-sans)
+  Digitized data copyright (c) 2010-2011 Google Corporation
+  Apache License 2.0 (full text below)
+  https://github.com/googlefonts/opensans
+
+  Lato (fonts-lato)
+  Copyright (c) 2010-2011 Lukasz Dziedzic
+  SIL Open Font License 1.1
+  https://www.latofonts.com/
+
+  Montserrat and Montserrat Alternates (fonts-montserrat)
+  Copyright 2011 The Montserrat Project Authors
+  SIL Open Font License 1.1
+  https://github.com/JulietaUla/Montserrat
+
+  Source Sans 3 (fonts-adobe-sourcesans3)
+  Copyright 2010-2023 Adobe, with Reserved Font Name "Source"
+  SIL Open Font License 1.1
+  https://github.com/adobe-fonts/source-sans
+
+  Nunito (fonts-nunito)
+  Copyright 2014 The Nunito Project Authors
+  SIL Open Font License 1.1
+  https://github.com/googlefonts/nunito
+
+  Inter and Inter Display (fonts-inter)
+  Copyright 2016-2023 The Inter Project Authors
+  SIL Open Font License 1.1
+  https://github.com/rsms/inter
+
+  Source Serif 4 (release 4.005R, the 12 static OpenType files of the text
+  family, fetched with a pinned checksum; licence in licenses/fonts/source-serif-4/)
+  Copyright 2014-2023 Adobe, with Reserved Font Name "Source"
+  SIL Open Font License 1.1
+  https://github.com/adobe-fonts/source-serif
+
+  Oswald (the six static TrueType files at a pinned commit, each with a pinned
+  checksum; licence in licenses/fonts/oswald/)
+  Copyright 2016 The Oswald Project Authors
+  SIL Open Font License 1.1
+  https://github.com/googlefonts/OswaldFont
+
+Also only in the Docker image, and not a font: the time zone database
+(Ubuntu package tzdata), so that the TZ setting of a container takes effect.
+
+  Time Zone Database (tz)
+  Public domain
+  https://www.iana.org/time-zones
+
+
 ================================================================================
 FULL LICENCE TEXTS
 ================================================================================
@@ -510,7 +602,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 --------------------------------------------------------------------------------
 Apache License 2.0
 --------------------------------------------------------------------------------
-Used by: MetadataExtractor, and the model files listed above that state it.
+Used by: MetadataExtractor, the model files listed above that state it, and the
+fonts Roboto and Open Sans in the Docker image.
 libomp is under this licence with the LLVM Exceptions; that complete text is
 LICENSE.libomp.txt in licenses/libraw/.
 

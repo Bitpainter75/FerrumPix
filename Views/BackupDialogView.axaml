@@ -56,7 +56,7 @@
         </CheckBox>
         <CheckBox IsChecked="{Binding DialogBackupSecrets, Mode=TwoWay}" IsEnabled="{Binding CanChooseBackupSecrets}"
                   Margin="24,0,0,0">
-            <TextBlock Text="Mit den Zugangsdaten für Immich und Nextcloud" TextWrapping="Wrap"/>
+            <TextBlock Text="Mit den Zugangsdaten: Immich, Nextcloud, Mailversand und die Kennwörter der Anmeldung" TextWrapping="Wrap"/>
         </CheckBox>
         <CheckBox IsChecked="{Binding DialogBackupFavorites, Mode=TwoWay}" IsEnabled="{Binding CanChooseBackupFavorites}">
             <TextBlock Text="Favoriten" TextWrapping="Wrap"/>

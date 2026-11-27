@@ -287,6 +287,11 @@ Namespace ViewModels
             Return Build("Herunterladen", "download-simple", c)
         End Function
 
+        ''' <summary>Nur im Browser: eine Freigabe per Link fuer Auswahl oder Ordner.</summary>
+        Public Shared Function ShareLink(c As ICommand) As AppAction
+            Return Build("Link zum Teilen erstellen", "link", c)
+        End Function
+
         ''' <summary>Das Untermenue "Öffnen mit", je eingetragenem Programm ein Eintrag.</summary>
         Public Shared Function OpenWith(children As IReadOnlyList(Of Object)) As AppAction
             Return New AppAction(LocalizationService.T("Öffnen mit"), "arrow-square-out", Nothing, Nothing, children)

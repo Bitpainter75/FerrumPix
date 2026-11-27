@@ -1,0 +1,86 @@
+/* Die Seite einer Freigabe per Link: im Stil der mobilen Seite, dunkel, Akzent wie die Anwendung,
+   sichere Raender fuer Geraete mit Aussparung. Kein Stil steht im HTML. */
+:root {
+  --bg: #0B0E11;
+  --elevated: #192128;
+  --raised: #222C35;
+  --line: #26313B;
+  --text: #E7ECF0;
+  --muted: #8B98A5;
+  --accent: #F08A1A;
+  --danger: #FF6B6B;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+[hidden] { display: none !important; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+  font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, Cantarell, sans-serif; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
+
+.bar { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 8px;
+  padding: calc(10px + var(--safe-top)) calc(12px + var(--safe-right)) 10px calc(16px + var(--safe-left));
+  background: rgba(11, 14, 17, 0.94); border-bottom: 1px solid var(--line); }
+.heading { flex: 1; min-width: 0; }
+.heading h1 { margin: 0; font-size: 19px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meta { color: var(--muted); font-size: 13px; }
+.text-button { min-height: 44px; padding: 0 14px; border-radius: 22px; color: var(--accent); font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+.text-button:hover, .text-button:active { background: var(--raised); }
+.icon { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 22px; flex: none; }
+.icon:hover, .icon:active { background: rgba(255, 255, 255, 0.12); }
+
+main { padding: 2px calc(2px + var(--safe-right)) 2px calc(2px + var(--safe-left)); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 2px; }
+@media (min-width: 900px) { .grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); } }
+.tile { position: relative; aspect-ratio: 1; overflow: hidden; background: var(--elevated); padding: 0; content-visibility: auto; contain-intrinsic-size: 160px; }
+.tile img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity 0.15s; }
+.tile img.loaded { opacity: 1; }
+.tile .badge { position: absolute; right: 4px; bottom: 4px; color: #fff; filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8)); }
+.tile .badge svg { width: 18px; height: 18px; }
+.note { padding: 48px 24px; text-align: center; color: var(--muted); }
+.brand { padding: 18px 16px calc(18px + var(--safe-bottom)); text-align: center; color: var(--muted); font-size: 12px; }
+
+.lock { max-width: 360px; margin: 56px auto; padding: 0 20px; display: flex; flex-direction: column; gap: 12px; }
+.lock p { margin: 0 0 4px; }
+.lock input { height: 46px; border-radius: 10px; border: 1px solid var(--line); background: var(--elevated); color: var(--text);
+  padding: 0 14px; font: inherit; font-size: 16px; outline: none; }
+.lock input:focus { border-color: var(--accent); }
+.lock .error { color: var(--danger); font-size: 14px; }
+.primary { min-height: 46px; border-radius: 23px; background: var(--accent); color: #111; font-weight: 700; }
+
+.viewer { position: fixed; inset: 0; z-index: 10; background: #000; touch-action: none; user-select: none; -webkit-user-select: none; }
+.stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.stage img, .stage video { max-width: 100%; max-height: 100%; object-fit: contain; -webkit-user-drag: none; }
+.stage .failed { color: var(--muted); padding: 24px; text-align: center; }
+/* Der Film eines Bewegtbilds ueber dem Bild, in derselben Flaeche; Wischen geht an die Buehne. */
+.stage video.motion { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; pointer-events: none; }
+.icon.on { color: var(--accent); }
+.viewer-top { position: absolute; left: 0; right: 0; top: 0; z-index: 2; display: flex; align-items: center; color: #fff;
+  padding: var(--safe-top) calc(4px + var(--safe-right)) 0 calc(4px + var(--safe-left)); min-height: calc(52px + var(--safe-top));
+  background: linear-gradient(rgba(0, 0, 0, 0.6), transparent); transition: opacity 0.2s; }
+.viewer-title { flex: 1; min-width: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; line-height: 1.25; }
+/* Zwei Zeilen wie auf der mobilen Seite: oben Datum und Uhrzeit, darunter kleiner der Dateiname. */
+.viewer-title .when, .viewer-title .name { overflow: hidden; text-overflow: ellipsis; }
+.viewer-title .name { font-size: 12px; color: rgba(255, 255, 255, 0.75); }
+.viewer-title .name.only { font-size: 14px; color: #fff; }
+.nav { position: absolute; top: 50%; z-index: 2; width: 56px; height: 96px; margin-top: -48px; border-radius: 28px; color: #fff;
+  background: rgba(0, 0, 0, 0.35); display: none; }
+.nav svg { width: 32px; height: 32px; }
+.nav.prev { left: calc(8px + var(--safe-left)); }
+.nav.next { right: calc(8px + var(--safe-right)); }
+.nav:hover { background: rgba(0, 0, 0, 0.6); color: var(--accent); }
+@media (hover: hover) and (pointer: fine) { .nav { display: inline-flex; align-items: center; justify-content: center; } }
+.nav.off { visibility: hidden; }
+.viewer.chrome-off .viewer-top, .viewer.chrome-off .nav { opacity: 0; pointer-events: none; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; max-height: 70%; overflow-y: auto; background: var(--elevated);
+  border-radius: 16px 16px 0 0; padding: 8px calc(16px + var(--safe-right)) calc(12px + var(--safe-bottom)) calc(16px + var(--safe-left)); }
+/* Infoblatt: der Dateiname fett und umbrechend, darunter Bezeichnung links und Wert rechts. */
+.info-name { font-weight: 650; font-size: 17px; padding: 8px 0 4px; overflow-wrap: anywhere; }
+.row { display: grid; grid-template-columns: minmax(84px, 38%) 1fr; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+.row:last-child { border-bottom: 0; }
+.row .k { color: var(--muted); font-size: 13px; }
+.row.plain { display: block; }
+.row .v { overflow-wrap: anywhere; }

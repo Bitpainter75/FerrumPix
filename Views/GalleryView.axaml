@@ -2214,6 +2214,23 @@
                                        VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
+                    <!-- Wechsel auf die mobile Seite: nur im Browser (UpdateLockAppButton). Die
+                         Seite geht mit derselben Sitzung nach /m/ (BrowserBridge.SwitchPageVariant). -->
+                    <Button x:Name="BrowserMobileButton"
+                            Classes="ghost"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Padding="8,7"
+                            IsVisible="False"
+                            Click="OnBrowserMobileClick"
+                            ToolTip.Tip="Zur vereinfachten Seite für Telefon und Tablet wechseln">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/device-mobile.svg"
+                                           Width="20" Height="20"/>
+                            <TextBlock Text="Mobile Ansicht"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                     <Button Classes="ghost"
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Left"

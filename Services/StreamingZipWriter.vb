@@ -24,6 +24,11 @@ Namespace Services
         ''' <summary>Pruefsumme eines im Speicher gepackten Eintrags. Fuer die ungepackten entsteht
         ''' sie erst beim Schreiben und steht dann im Datennachsatz.</summary>
         Public Crc As UInteger
+        ''' <summary>Gesetzt bei einem ungepackten Eintrag, dessen Bytes erst beim Schreiben
+        ''' entstehen (ein JPEG ohne Metadaten fuer eine Freigabe); dann wird nicht von
+        ''' <see cref="SourcePath"/> gelesen. Liefert sie nicht genau <see cref="Size"/> Bytes, endet
+        ''' das Archiv mit einem Abbruch.</summary>
+        Public Producer As Func(Of Byte())
     End Class
 
     ''' <summary>
@@ -184,6 +189,20 @@ Namespace Services
                 End If
 
                 Dim checksum As New Crc32Accumulator()
+                If entry.Producer IsNot Nothing Then
+                    Dim produced = entry.Producer()
+                    If produced Is Nothing OrElse produced.LongLength <> entry.Size Then
+                        Throw New IOException($"{entry.EntryName} changed while it was being sent.")
+                    End If
+                    checksum.Append(produced, 0, produced.Length)
+                    Await target.WriteAsync(produced, 0, produced.Length)
+                    offset += produced.Length
+                    checksums.Add(checksum.Value)
+                    Dim producedDescriptor = DataDescriptor(checksum.Value, entry.Size, zip64)
+                    Await target.WriteAsync(producedDescriptor, 0, producedDescriptor.Length)
+                    offset += producedDescriptor.Length
+                    Continue For
+                End If
                 Dim written = 0L
                 Using source As New FileStream(entry.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 16, FileOptions.Asynchronous Or FileOptions.SequentialScan)
                     Do

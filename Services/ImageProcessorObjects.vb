@@ -3027,6 +3027,9 @@ Namespace Services
         ''' verwendet wird - siehe Aufrufstelle im Select Case (Kind "image").
         Private Shared Sub DrawImageAnnotation(canvas As SKCanvas, imagePath As String, rect As SKRect, opacity As Single, stroke As SKColor, strokeWidth As Single, Optional stretchToFill As Boolean = False)
             If String.IsNullOrWhiteSpace(imagePath) OrElse Not File.Exists(imagePath) Then Return
+            ' Rechnet die Kette fuer einen Benutzer mit Rechten je Ordner, bleibt ein Bild weg, das er
+            ' nicht lesen darf (RecipeReferences).
+            If Not RecipeReferences.Allows(imagePath) Then Return
 
             ' Ein eben gemalter Stand einer Ebene liegt noch im Speicher - dann nicht die Datei
             ' dekodieren, die gerade erst aus genau diesem Raster geschrieben wurde. Alle anderen
@@ -3096,6 +3099,9 @@ Namespace Services
         ''' Ziel-Rects (jedes nicht-quadratische Foto) sichtbar von der Live-Vorschau ab.
         Private Shared Sub DrawSvgAnnotation(canvas As SKCanvas, iconPath As String, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional gradient As GradientFillSpec = Nothing)
             If String.IsNullOrWhiteSpace(iconPath) Then Return
+            ' Ein Symbol aus einem alten Bild zeigt in den entfernten Ordner; gefragt wird nach dem
+            ' Ziel, auf das es heute verweist (RecipeReferences).
+            If Not RecipeReferences.Allows(IconAssets.ResolveLegacy(iconPath)) Then Return
             Dim shape = GetShapePath(iconPath)
             If shape Is Nothing OrElse shape.Path.IsEmpty OrElse shape.Bounds.Width <= 0 OrElse shape.Bounds.Height <= 0 Then Return
 

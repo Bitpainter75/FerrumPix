@@ -1,4 +1,5 @@
-# FerrumPix in the browser on a Synology NAS, WITHOUT HTTPS, for the home network only.
+# FerrumPix in the browser on a Synology NAS, WITHOUT HTTPS, for the home network only. A template
+# to copy; README.md next to it explains every step.
 #
 # WARNING: the connection is unencrypted. Password, pictures and everything shown travel
 # readable through your network. Use this only in a home network you trust, never open the port
@@ -7,29 +8,45 @@
 #
 # What FerrumPix does in this mode (FERRUMPIX_BROWSER_ALLOW_HTTP=1):
 #   - it only answers private addresses: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16,
-#     169.254.0.0/16, fc00::/7, fe80::/10 and the NAS itself; everybody else gets 403 and is never
-#     asked for the password,
-#   - it refuses to start without a password,
+#     169.254.0.0/16, fc00::/7, fe80::/10 and the NAS itself; everybody else gets 403 and never
+#     sees the sign-in page,
+#   - it always needs a password; until one is set, the page shows nothing but the setup,
 #   - its log and the page in the browser say that the connection is unencrypted.
 #
-# 1. Create the folders in File Station, for example
+# SETUP
+# 1. Create the folder in File Station, for example
 #      /volume1/docker/ferrumpix/data     settings, catalog, thumbnails and models; own fonts go
 #                                         to ./data/share/FerrumPix/Fonts, no separate volume
-#      /volume1/docker/ferrumpix/password.txt   the password in the first line: at least 8
-#                                               characters with an uppercase and a lowercase letter,
-#                                               a digit and a special character (a space counts),
-#                                               otherwise FerrumPix does not start
-#    and note the user id and group id of the DSM user who owns them (SSH: `id <user>`;
+#    and note the user id and group id of the DSM user who owns it (SSH: `id <user>`;
 #    the first DSM user is usually 1026, the group "users" is 100).
 # 2. Put this file and an .env next to it in /volume1/docker/ferrumpix:
 #      FERRUMPIX_UID=1026
 #      FERRUMPIX_GID=100
 #      FERRUMPIX_PHOTOS=/volume1/photo
-#      FERRUMPIX_USER=anna            (optional)
 # 3. Container Manager > Project > Create > choose /volume1/docker/ferrumpix, use this file.
-# 4. Open http://<address of the NAS>:14500 (for example http://192.168.1.10:14500) and sign in.
+# 4. Open http://<address of the NAS>:14500 (for example http://192.168.1.10:14500) yourself
+#    right after the start. The first visit is the setup: a user name, an email address if you
+#    like (for Forgot your password) and the password twice, at least 8 characters with an
+#    uppercase and a lowercase letter, a digit and a special character. Whoever opens the page
+#    first becomes the administrator. There is no password in this file or in .env.
 #    Use the IPv4 address or the local name of the NAS: a device that reaches the NAS over its
 #    global IPv6 address looks like any address on the internet and gets 403.
+#
+# AFTERWARDS
+# - Further users, their rights per folder and the mail server for Forgot your password:
+#   Settings, User management, in the full desktop interface.
+# - Photo folders: one line per folder under "volumes", each below /photos. FerrumPix shows only
+#   /photos; FERRUMPIX_FOLDER_ROOTS below changes that.
+# - Update over SSH in /volume1/docker/ferrumpix: sudo docker compose pull, then
+#   sudo docker compose up -d. The image follows :latest; for a fixed version put
+#   FERRUMPIX_IMAGE=ghcr.io/bitpainter75/ferrumpix:<version> into .env.
+# - The image checks its own health; no healthcheck is needed here.
+# - Language and date format of the first start: FERRUMPIX_LANG in .env, for example
+#   de_DE.UTF-8; later it can be changed in Settings.
+# - Local time: the image runs on UTC. Uncomment TZ under "environment" and set your time zone,
+#   for example Europe/Berlin.
+# - Without HTTPS the page for phones cannot be added to the home screen, and copying out of
+#   FerrumPix reaches your device as text only.
 #
 # WHY THE HOST NETWORK: FerrumPix decides by the address a connection comes from. With a
 # published port on a Docker network, a connection can arrive from the gateway of that network
@@ -60,19 +77,16 @@ services:
     environment:
       FERRUMPIX_BROWSER_ALLOW_HTTP: "1"
       FERRUMPIX_BROWSER_BIND: "0.0.0.0:14500"
-      FERRUMPIX_BROWSER_USER: "${FERRUMPIX_USER:-}"
-      FERRUMPIX_BROWSER_PASSWORD_FILE: /run/secrets/ferrumpix_password
       LANG: "${FERRUMPIX_LANG:-C.UTF-8}"
-    secrets:
-      - ferrumpix_password
+      # Local time (the image runs on UTC):
+      # TZ: "Europe/Berlin"
+      # The image sets /photos. Only for folders outside it, several separated by ":":
+      # FERRUMPIX_FOLDER_ROOTS: "/photos:/archive"
     volumes:
       - ./data:/data
-      # Every photo folder under /photos/<name>; add lines in the same pattern.
+      # Every photo folder below /photos, one line each, for example:
       - "${FERRUMPIX_PHOTOS:?FERRUMPIX_PHOTOS is missing in .env}:/photos/Photos"
+      # - /volume1/archive:/photos/Archive
     # Instead of network_mode: host (see above, the address check is weaker then):
     # ports:
     #   - "14500:14500"
-
-secrets:
-  ferrumpix_password:
-    file: ./password.txt

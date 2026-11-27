@@ -108,7 +108,14 @@ Namespace Services
         ''' Der Ordner der bereitgelegten Anpassungen im Bereitstellungsordner.
         Private Const StagedPresetsName As String = "presets"
         Private Const CurrentFormatVersion As Integer = 1
-        Private Shared ReadOnly SecretFieldNames As String() = {"ImmichApiKey", "NextcloudAppPassword"}
+        ''' Die Zugangsdaten: Serverschluessel, das Kennwort des Mailservers und die Hashes der
+        ''' Anmeldung (Eigentuemer und weitere Benutzer) samt zweitem Faktor (Geheimnis und
+        ''' Wiederherstellungscodes). Ohne Zustimmung kommen sie nicht in eine Sicherung, und eine
+        ''' Wiederherstellung ohne sie behaelt die jetzigen.
+        Private Shared ReadOnly SecretFieldNames As String() = {
+            "ImmichApiKey", "NextcloudAppPassword", "MailSmtpPassword",
+            NameOf(AppSettings.AppLockPasswordHash), NameOf(AppSettings.BrowserUserPasswordHashes),
+            NameOf(AppSettings.TwoFactorSecrets), NameOf(AppSettings.TwoFactorRecoveryHashes)}
         ''' Die Angaben, die dem Rechner gehoeren und nie aus einer Sicherung kommen: wo der
         ''' Datenordner liegt und welche Aufteilung der Orte erreicht ist. Eine Sicherung von einem
         ''' anderen Rechner oder von frueher zeigte sonst auf einen Ort, an dem nichts liegt.

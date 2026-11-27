@@ -13,13 +13,17 @@
         <!-- Dieselbe Bauweise wie die erste Seite des Einrichtungsassistenten: Welcome.jpg als
              HINTERGRUND eines Rahmens mit derselben Rundung (ein eigenes Bild malte seine Ecken
              ueber den runden Rand), darueber ein Schleier in der Kartenfarbe, der unten deckt.
-             Das Bild traegt Logo und Schriftzug selbst, ein Logo daneben waere doppelt. -->
+             Das Bild traegt Logo und Schriftzug selbst, ein Logo daneben waere doppelt.
+             Die Karte waechst bis 600 x 440 und schrumpft mit einem kleinen Fenster mit, statt
+             ueber dessen Rand zu ragen; die Felder stehen unten und bleiben so sichtbar. Im
+             Browser erscheint diese Ansicht nicht: dort beendet die Sperre alle Sitzungen, und
+             die Seite zeigt ihr eigenes Anmeldefenster (login.html). -->
         <Border Background="{DynamicResource FP.Bg.Elevated}"
                 CornerRadius="16"
                 BoxShadow="0 24 70 0 #B0000000"
-                Width="600" Height="440"
+                MaxWidth="600" MaxHeight="440" MinHeight="260"
                 Margin="24"
-                HorizontalAlignment="Center" VerticalAlignment="Center"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                 PointerPressed="OnCardPointerPressed">
             <Panel>
                 <Border CornerRadius="16" IsHitTestVisible="False">
@@ -38,7 +42,7 @@
                     </Border.OpacityMask>
                 </Border>
 
-                <StackPanel VerticalAlignment="Bottom" Margin="56,0,56,30" Spacing="12">
+                <StackPanel VerticalAlignment="Bottom" Margin="32,0,32,24" MaxWidth="488" Spacing="12">
                     <TextBlock Text="FerrumPix ist gesperrt."
                                FontSize="{DynamicResource FP.Font.Subtitle}"
                                FontWeight="SemiBold"

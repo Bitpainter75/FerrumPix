@@ -33,19 +33,20 @@ Namespace Services
     ''' <para>ZUGANG IN DREI STUFEN. Erstens die Adresse: ab Werk nur der eigene Rechner
     ''' (127.0.0.1). Die Bruecke spricht nur HTTP, unverschluesselt; ueber den eigenen Rechner
     ''' hinaus gibt es sie deshalb nur hinter einem Reverse Proxy, der verschluesselt, oder fuer
-    ''' Absender im Heimnetz mit Kennwort, beides nur auf ausdrueckliche Zusage
-    ''' (<see cref="ReadOptions"/>). Zweitens die Anmeldung: ist ein Kennwort
-    ''' gesetzt, bekommt ein Browser ohne Sitzung nur das Anmeldefenster als eigene Seite und nach
-    ''' der Anmeldung ein Sitzungs-Cookie (BrowserBridgeSessions.vb); hinter dem Proxy und im
-    ''' Heimnetz ist das Pflicht. Drittens die Verbindung: jede ausgelieferte
+    ''' Absender im Heimnetz, beides nur auf ausdrueckliche Zusage
+    ''' (<see cref="ReadOptions"/>). Zweitens die Anmeldung, in jeder Betriebsart Pflicht: ein
+    ''' Browser ohne Sitzung bekommt nur das Anmeldefenster als eigene Seite und nach der Anmeldung
+    ''' ein Sitzungs-Cookie (BrowserBridgeSessions.vb); ist noch kein Kennwort gesetzt, statt
+    ''' dessen die Einrichtung, und sonst nichts. Drittens die Verbindung: jede ausgelieferte
     ''' Seite traegt eine einmalige Kennung, und der WebSocket nimmt nur eine Verbindung an, die
     ''' diese Kennung vorzeigt und deren Herkunft die eigene Seite ist. Ohne die dritte Stufe
     ''' koennte jede fremde Webseite im selben Browser die Anwendung fernbedienen.</para>
     '''
-    ''' <para>DAS KENNWORT ist das des Anmeldefensters der Anwendung (AppLockService). Ein beim
-    ''' Start mitgegebenes (<see cref="PasswordVariable"/>) geht vor und wird als Hash in die
-    ''' Einstellungen uebernommen, damit ein frischer Behaelter nie offen steht. Die Texte der
-    ''' Seite setzt der Server beim Ausliefern in der Sprache der Anwendung ein.</para>
+    ''' <para>DAS KENNWORT ist das des Anmeldefensters der Anwendung (AppLockService), gespeichert
+    ''' als Hash in den Einstellungen. Mitgeben laesst es sich beim Start nicht (mehr); die
+    ''' frueheren Angaben dafuer werden nur noch im Protokoll genannt
+    ''' (<see cref="RetiredSettings"/>). Die Texte der Seite setzt der Server beim Ausliefern in
+    ''' der Sprache der Anwendung ein.</para>
     ''' </summary>
     Partial Public NotInheritable Class BrowserBridge
 
@@ -56,20 +57,18 @@ Namespace Services
         ''' <summary>Startparameter fuer Adresse und Port, etwa <c>--browser-bind=0.0.0.0:14500</c>.</summary>
         Public Const BindSwitch As String = "--browser-bind="
 
-        ''' <summary>Startparameter fuer den Benutzernamen der Anmeldung.</summary>
-        Public Const UserSwitch As String = "--browser-user="
-
-        ''' <summary>Startparameter fuer das Kennwort der Anmeldung. Ein Kennwort auf der
-        ''' Befehlszeile ist fuer jeden Nutzer des Rechners in der Prozessliste zu sehen; wo das
-        ''' stoert, steht es besser in der Umgebung (<see cref="PasswordVariable"/>).</summary>
-        Public Const PasswordSwitch As String = "--browser-password="
-
         ''' <summary>Adresse und Port, etwa <c>0.0.0.0:14500</c>.</summary>
         Public Const BindVariable As String = "FERRUMPIX_BROWSER_BIND"
 
-        Public Const UserVariable As String = "FERRUMPIX_BROWSER_USER"
+        ''' <summary>Angaben, die frueher Kennwort und Benutzernamen beim Start mitgaben. Sie
+        ''' werden nicht mehr gelesen: das Kennwort legt der erste Browser fest und aendert sich nur
+        ''' in den Einstellungen, einen Benutzernamen gibt es ohne vorgegebenes Kennwort nicht. Ist
+        ''' eine davon noch gesetzt, steht beim Start eine Zeile im Protokoll, und die Anwendung
+        ''' startet trotzdem (<see cref="RetiredSettings"/>).</summary>
+        Private Shared ReadOnly RetiredVariables As String() =
+            {"FERRUMPIX_BROWSER_PASSWORD", "FERRUMPIX_BROWSER_PASSWORD_FILE", "FERRUMPIX_BROWSER_USER"}
 
-        Public Const PasswordVariable As String = "FERRUMPIX_BROWSER_PASSWORD"
+        Private Shared ReadOnly RetiredSwitches As String() = {"--browser-password=", "--browser-user="}
 
         ''' <summary>Auf "1" gesetzt, darf die Bruecke an allen Adressen lauschen, mit oder ohne
         ''' Kennwort. Das ist fuer den Behaelter gedacht: darin muss sie an allen Adressen lauschen,
@@ -95,7 +94,7 @@ Namespace Services
 
         ''' <summary>Startparameter: unverschluesselt im Heimnetz. Die Bruecke darf dann an einer
         ''' Adresse im Netz lauschen, ohne Proxy, nimmt aber nur Anfragen von PRIVATEN Absendern an
-        ''' (<see cref="IsPrivateAddress"/>) und verlangt ein Kennwort. Schliesst die beiden anderen
+        ''' (<see cref="IsPrivateAddress"/>). Schliesst die beiden anderen
         ''' Zusagen aus, siehe <see cref="ReadOptions"/>.</summary>
         Public Const AllowHttpSwitch As String = "--browser-allow-http"
 
@@ -128,7 +127,6 @@ Namespace Services
         Private Shared ReadOnly ClientLock As New Object()
         Private Shared ReadOnly SendGate As New SemaphoreSlim(1, 1)
         Private Shared _pageText As String
-        Private Shared _user As String = ""
         Private Shared _loopbackHostOnly As Boolean
         Private Shared _tlsProxy As Boolean
         Private Shared _trustEverySender As Boolean
@@ -177,16 +175,56 @@ Namespace Services
                    argument.StartsWith(StartSwitch & "-", StringComparison.OrdinalIgnoreCase)
         End Function
 
-        ''' <summary>Startet Webserver und Bildabholung. Adresse, Benutzername und Kennwort kommen
-        ''' aus den Startparametern, ersatzweise aus der Umgebung. Gerufen, sobald das Toolkit steht.</summary>
+        ''' <summary>Startet Webserver und Bildabholung. Adresse und Zusagen kommen aus den
+        ''' Startparametern, ersatzweise aus der Umgebung. Gerufen, sobald das Toolkit steht.</summary>
         Public Shared Sub Start(args As String())
             Dim problem As String = Nothing
-            Dim options = ReadCheckedOptions(args, problem)
+            Dim options = ReadOptions(args, problem)
             If options Is Nothing Then Throw New InvalidOperationException(problem)
             IsActive = True
             LimitImageSmoothing()
+            For Each retired In RetiredSettings(args)
+                Dim line = $"{retired} is no longer read: the first browser that opens the page sets the password, and it changes only in Settings, User management."
+                Console.Out.WriteLine("FerrumPix in the browser: " & line)
+                DiagnosticLogService.LogAlways("BrowserBridge", line)
+            Next
+            ' Der Notweg fuer das Kennwort des Eigentuemers, vor der Sperre beim Start: danach zeigt
+            ' die Seite die Einrichtung fuer den bestehenden Namen (AppLockService.ResetOwnerPassword).
+            Dim resetLine = AppLockService.ResetOwnerPassword(IsResetAdminRequested(args))
+            If resetLine IsNot Nothing Then
+                Console.Out.WriteLine("FerrumPix in the browser: " & resetLine)
+                DiagnosticLogService.LogAlways("BrowserBridge", resetLine)
+            End If
             Start(options)
         End Sub
+
+        ''' <summary>Startparameter fuer den Notweg: loescht beim Start einmal das Kennwort des
+        ''' Eigentuemers (Administrator), wenn er es vergessen hat und keine Nachricht ankommt.</summary>
+        Public Const ResetAdminSwitch As String = "--browser-reset-admin-password"
+
+        ''' <summary>Dasselbe als Umgebung, auf "1" gesetzt (Behaelter).</summary>
+        Public Const ResetAdminVariable As String = "FERRUMPIX_RESET_ADMIN_PASSWORD"
+
+        Friend Shared Function IsResetAdminRequested(args As String()) As Boolean
+            Return Environment.GetEnvironmentVariable(ResetAdminVariable) = "1" OrElse
+                   (args IsNot Nothing AndAlso args.Any(Function(a) String.Equals(a, ResetAdminSwitch, StringComparison.OrdinalIgnoreCase)))
+        End Function
+
+        ''' <summary>Welche der frueheren Angaben fuer Kennwort und Benutzernamen noch gesetzt sind,
+        ''' als Startparameter oder in der Umgebung. Sie wirken nicht mehr; die Liste dient nur der
+        ''' Zeile im Protokoll.</summary>
+        Friend Shared Function RetiredSettings(args As String()) As IReadOnlyList(Of String)
+            Dim found As New List(Of String)()
+            For Each variable In RetiredVariables
+                If Not String.IsNullOrEmpty(Environment.GetEnvironmentVariable(variable)) Then found.Add(variable)
+            Next
+            For Each switch In RetiredSwitches
+                If args IsNot Nothing AndAlso args.Any(Function(a) a IsNot Nothing AndAlso a.StartsWith(switch, StringComparison.OrdinalIgnoreCase)) Then
+                    found.Add(switch.TrimEnd("="c))
+                End If
+            Next
+            Return found
+        End Function
 
         ''' <summary>Prueft die Angaben fuer die Bruecke, bevor irgendetwas startet. Nothing heisst
         ''' in Ordnung, sonst steht hier der Satz fuer die Konsole. Main ruft das vor dem Aufbau
@@ -194,25 +232,8 @@ Namespace Services
         ''' Aufrufkette mitten im Start.</summary>
         Public Shared Function CheckArguments(args As String()) As String
             Dim problem As String = Nothing
-            ReadCheckedOptions(args, problem)
+            ReadOptions(args, problem)
             Return problem
-        End Function
-
-        ''' <summary><see cref="ReadOptions"/> und danach die Regeln fuer das mitgegebene Kennwort
-        ''' (AppLockService.PasswordProblems): es wird das Kennwort des Anmeldefensters und muss
-        ''' deshalb dieselben Regeln erfuellen wie eines aus den Einstellungen. Erst nach allen
-        ''' anderen Pruefungen, damit eine falsche Zusage zuerst genannt wird. Ohne Kennwort am
-        ''' eigenen Rechner gibt es nichts zu pruefen.</summary>
-        Private Shared Function ReadCheckedOptions(args As String(), ByRef problem As String) As BridgeOptions
-            Dim options = ReadOptions(args, problem)
-            If options Is Nothing OrElse options.Password.Length = 0 Then Return options
-            Dim problems = AppLockService.PasswordProblems(options.Password)
-            If problems.Count = 0 Then Return options
-            problem = $"The password ({PasswordSwitch}, {PasswordVariable} or FERRUMPIX_BROWSER_PASSWORD_FILE) is too weak. " &
-                      $"It becomes the password of the sign-in window and needs at least {AppLockService.MinimumPasswordLength} characters " &
-                      "with an uppercase letter, a lowercase letter, a digit and a special character (a space counts). " &
-                      $"Missing: {AppLockService.DescribeForConsole(problems)}."
-            Return Nothing
         End Function
 
         Private Shared Function Setting(args As String(), prefix As String, variable As String) As String
@@ -221,13 +242,12 @@ Namespace Services
             Return Environment.GetEnvironmentVariable(variable)
         End Function
 
-        ''' <summary>Was fuer einen Lauf der Bruecke feststeht: wo sie lauscht, wer sich anmelden
-        ''' darf und unter welcher Zusage sie ueber den eigenen Rechner hinaus erreichbar ist.</summary>
+        ''' <summary>Was fuer einen Lauf der Bruecke feststeht: wo sie lauscht und unter welcher
+        ''' Zusage sie ueber den eigenen Rechner hinaus erreichbar ist. Ein Kennwort gehoert nicht
+        ''' dazu: es ist immer Pflicht und steht in den Einstellungen.</summary>
         Friend NotInheritable Class BridgeOptions
             Public Host As String = "127.0.0.1"
             Public Port As Integer = 14500
-            Public User As String = ""
-            Public Password As String = ""
             Public LocalForward As Boolean
             Public TlsProxy As Boolean
             Public AllowHttp As Boolean
@@ -238,22 +258,15 @@ Namespace Services
                     Return Host = "127.0.0.1" OrElse String.Equals(Host, "localhost", StringComparison.OrdinalIgnoreCase)
                 End Get
             End Property
-
-            ''' <summary>Gibt es ein Kennwort: mitgegeben oder in den Einstellungen gesetzt
-            ''' (Anmeldefenster der Anwendung, AppLockService)? Fuer den Betrieb im Netz Pflicht.</summary>
-            Public ReadOnly Property HasPassword As Boolean
-                Get
-                    Return Password.Length > 0 OrElse AppLockService.IsProtected
-                End Get
-            End Property
         End Class
 
-        ''' <summary>Liest Adresse, Anmeldung und Zusagen aus Startparametern und Umgebung und
-        ''' prueft sie. Liefert Nothing und den Grund in <paramref name="problem"/>, wenn etwas
-        ''' nicht stimmt.
+        ''' <summary>Liest Adresse und Zusagen aus Startparametern und Umgebung und prueft sie.
+        ''' Liefert Nothing und den Grund in <paramref name="problem"/>, wenn etwas nicht stimmt.
+        ''' Ein Kennwort verlangt hier keine Zusage mehr: ohne gespeichertes Kennwort zeigt die
+        ''' Bruecke in jeder Betriebsart nur die Einrichtung (BrowserBridgeSessions.vb).
         '''
         ''' <para>DIE VERBINDUNG IST UNVERSCHLUESSELT. Die Bruecke spricht nur HTTP, und die
-        ''' Anmeldung des Browsers schickt Name und Kennwort dabei lesbar mit, bei jeder Anfrage.
+        ''' Anmeldung schickt das Kennwort dabei lesbar mit, danach jede Anfrage das Cookie.
         ''' Im eigenen Rechner bleibt das unter sich. Ueber ein Netz kann es jeder mitlesen, der an
         ''' der Leitung sitzt, samt allem, was ueber die Verbindung geht. Eine Adresse ausser der
         ''' eigenen gibt es deshalb nur unter einer von zwei Zusagen:</para>
@@ -266,19 +279,16 @@ Namespace Services
         ''' Angenommen wird dann nur, was VOM PROXY KOMMT (<see cref="IsTrustedSender"/>: vom
         ''' eigenen Rechner oder von einer mit <see cref="ProxyAddressSwitch"/> genannten Adresse)
         ''' und was er als verschluesselt angenommen kennzeichnet (X-Forwarded-Proto: https). Wer
-        ''' den Port am Proxy vorbei aufruft, wird abgewiesen, BEVOR der Browser nach Name und
-        ''' Kennwort fragt. Ein Kennwort ist hier Pflicht. Lauscht die Bruecke dabei an einer
-        ''' Adresse im Netz, muss die Adresse des Proxys genannt sein.</para>
+        ''' den Port am Proxy vorbei aufruft, wird abgewiesen, BEVOR er das Anmeldefenster zu sehen
+        ''' bekommt. Lauscht die Bruecke dabei an einer Adresse im Netz, muss die Adresse des Proxys
+        ''' genannt sein.</para>
         '''
         ''' <para><see cref="AllowHttpSwitch"/>: bewusst unverschluesselt im Heimnetz. Angenommen
-        ''' wird dann nur, was von einer privaten Adresse kommt (<see cref="IsPrivateAddress"/>),
-        ''' und nur mit Kennwort. Zusammen mit einer der beiden anderen Zusagen startet die Bruecke
-        ''' nicht.</para></summary>
+        ''' wird dann nur, was von einer privaten Adresse kommt (<see cref="IsPrivateAddress"/>).
+        ''' Zusammen mit einer der beiden anderen Zusagen startet die Bruecke nicht.</para></summary>
         Friend Shared Function ReadOptions(args As String(), ByRef problem As String) As BridgeOptions
             problem = Nothing
             Dim options As New BridgeOptions With {
-                .User = If(Setting(args, UserSwitch, UserVariable), ""),
-                .Password = If(Setting(args, PasswordSwitch, PasswordVariable), ""),
                 .LocalForward = Environment.GetEnvironmentVariable(LocalForwardVariable) = "1",
                 .TlsProxy = Environment.GetEnvironmentVariable(TlsProxyVariable) = "1" OrElse
                             (args IsNot Nothing AndAlso args.Any(Function(a) String.Equals(a, TlsProxySwitch, StringComparison.OrdinalIgnoreCase))),
@@ -301,10 +311,6 @@ Namespace Services
                 Return Nothing
             End If
 
-            If options.User.Length > 0 AndAlso options.Password.Length = 0 Then
-                problem = $"A user name for the browser needs a password as well ({PasswordSwitch} or {PasswordVariable})."
-                Return Nothing
-            End If
             Dim proxyAddresses = Setting(args, ProxyAddressSwitch, ProxyAddressVariable)
             If Not String.IsNullOrWhiteSpace(proxyAddresses) Then
                 For Each part In proxyAddresses.Split(","c, StringSplitOptions.RemoveEmptyEntries Or StringSplitOptions.TrimEntries)
@@ -336,23 +342,15 @@ Namespace Services
                     problem = $"{AllowHttpSwitch} opens FerrumPix to the home network, {LocalForwardVariable}=1 promises that the port is only open on this computer. Set only one of them."
                     Return Nothing
                 End If
-                ' Ohne Kennwort bediente jeder im Heimnetz die Anwendung, und eine fremde Webseite
-                ' koennte ihren Namen auf die Adresse im Heimnetz zeigen lassen: Herkunft und Host
-                ' stimmten dann ueberein. Erst die Anmeldung haelt beides draussen.
-                If Not options.HasPassword Then
-                    problem = $"Without encryption in the home network ({AllowHttpSwitch}) FerrumPix needs a password ({PasswordSwitch} or {PasswordVariable}, or one set in Settings, Access)."
-                    Return Nothing
-                End If
+                ' Ein Kennwort verlangt hier keine Zusage mehr: ohne eines zeigt die Bruecke nur die
+                ' Einrichtung, und danach haelt die Anmeldung jeden im Heimnetz und eine fremde
+                ' Webseite, die ihren Namen auf die Adresse zeigen laesst, draussen.
                 Return options
             End If
 
             ' Hinter einem Proxy ist die Bruecke von aussen erreichbar, gleich an welcher Adresse
             ' sie selbst lauscht: steht der Proxy auf demselben Rechner, ist das 127.0.0.1.
             If options.TlsProxy Then
-                If Not options.HasPassword Then
-                    problem = $"Behind a reverse proxy FerrumPix can be reached from other computers and needs a password ({PasswordSwitch} or {PasswordVariable}, or one set in Settings, Access)."
-                    Return Nothing
-                End If
                 ' An einer Adresse im Netz erreicht JEDER den Port, nicht nur der Proxy. Die Bruecke
                 ' muss dann wissen, welcher Absender der Proxy ist; ohne das wiese sie alle ab.
                 If Not options.IsLoopback AndAlso Not options.LocalForward AndAlso options.ProxyAddresses.Count = 0 Then
@@ -365,29 +363,31 @@ Namespace Services
             If options.LocalForward Then Return options
             If options.IsLoopback Then Return options
             problem = $"The address {bind} can be reached from other computers, and the connection is not encrypted: " &
-                      "user name, password and everything shown would be readable on the network. " &
+                      "password and everything shown would be readable on the network. " &
                       $"Put a reverse proxy with TLS in front and start with {TlsProxySwitch}, or stay on 127.0.0.1. " &
-                      $"Inside a home network {AllowHttpSwitch} with a password allows it without encryption."
+                      $"Inside a home network {AllowHttpSwitch} allows it without encryption."
             Return Nothing
         End Function
 
-        ''' <summary>Fuer den Pruefstand: am eigenen Rechner, mit Anmeldung.</summary>
+        ''' <summary>Fuer den Pruefstand: am eigenen Rechner, mit Anmeldung. Name und Kennwort
+        ''' gelten nur fuer diesen Lauf (AppLockService.TestPasswordHash, TestUserName) und kommen
+        ''' nicht in die Einstellungen; ohne Kennwort bleibt das gespeicherte, ohne eines also die
+        ''' Einrichtung.</summary>
         Friend Shared Sub Start(bind As String, user As String, password As String)
             Dim separator = bind.LastIndexOf(":"c)
+            If Not String.IsNullOrEmpty(password) Then
+                AppLockService.TestUserName = If(user, "")
+                AppLockService.TestPasswordHash = AppLockService.HashPassword(password)
+            End If
             Start(New BridgeOptions With {
                 .Host = bind.Substring(0, separator),
-                .Port = Integer.Parse(bind.Substring(separator + 1), Globalization.CultureInfo.InvariantCulture),
-                .User = If(user, ""), .Password = If(password, "")})
+                .Port = Integer.Parse(bind.Substring(separator + 1), Globalization.CultureInfo.InvariantCulture)})
         End Sub
 
         Private Shared Sub Start(options As BridgeOptions)
             If _listener IsNot Nothing Then Return
-            _user = options.User
-            ' Das mitgegebene Kennwort gilt als das des Anmeldefensters, nur als Hash gehalten. Beim
-            ' echten Start (IsActive) kommt es auch in die Einstellungen: fehlt die Angabe beim
-            ' naechsten Start, bleibt der Behaelter trotzdem geschuetzt. Danach beginnt die Sitzung
-            ' gesperrt, und jeder Browser braucht eine Anmeldung.
-            AppLockService.SetStartPassword(options.Password, persist:=IsActive)
+            ' Die Sitzung beginnt gesperrt, und jeder Browser braucht eine Anmeldung. Ohne Kennwort
+            ' gibt es nichts zu sperren; dann zeigt die Seite die Einrichtung.
             If IsActive Then AppLockService.LockAtStart()
             InstallSessionHooks()
             _tlsProxy = options.TlsProxy
@@ -421,6 +421,11 @@ Namespace Services
             listener.AuthenticationSchemes = AuthenticationSchemes.Anonymous
             listener.Start()
             _listener = listener
+            ' Die Zwischenablage der Anwendung bekommt den Weg zum Geraet des Browsers
+            ' (BrowserBridgeClipboard.vb). Erst jetzt: scheitert der Start (Port belegt, Adresse
+            ' fehlt), bleibt die Zwischenablage der Anwendung unberuehrt, statt einen
+            ' Stellvertreter ohne Bruecke dahinter zu behalten.
+            InstallClipboard()
 
             ' 0.0.0.0 ist die Adresse, an der gelauscht wird, keine, die ein Browser oeffnen kann.
             ' Die Zeile nennt deshalb, was in die Adresszeile gehoert; im Behaelter kann der Port
@@ -442,6 +447,13 @@ Namespace Services
                 Console.Out.WriteLine(notice)
                 DiagnosticLogService.LogAlways("BrowserBridge", notice)
             End If
+            If Not AppLockService.IsProtected Then
+                ' Gewollt ohne Einmalcode und ohne Beschraenkung: wer zuerst kommt, legt fest. Die
+                ' Zeile steht deshalb deutlich im Protokoll (im Behaelter docker logs).
+                Const setupNotice As String = "No password set yet, the first browser to open the page sets it. Until then only the setup page is reachable."
+                Console.Out.WriteLine("FerrumPix in the browser: " & setupNotice)
+                DiagnosticLogService.LogAlways("BrowserBridge", setupNotice)
+            End If
             Dim ignored = Task.Run(AddressOf AcceptLoopAsync)
             Dispatcher.UIThread.Post(AddressOf StartFramePump)
         End Sub
@@ -449,6 +461,9 @@ Namespace Services
         ''' <summary>Haelt Webserver und Bildabholung an. Fuer den Pruefstand, die Anwendung endet
         ''' mit dem Prozess.</summary>
         Friend Shared Sub [Stop]()
+            ' Was noch an Stapeln beim Hochladen offen ist, kommt ins Protokoll, solange die
+            ' Bruecke noch laeuft (danach schriebe es nur in die Datei).
+            SecurityLog.FlushUploads(all:=True)
             StopFramePump()
             Dim listener = _listener
             _listener = Nothing
@@ -470,9 +485,11 @@ Namespace Services
             _trustEverySender = False
             _proxyAddresses = Array.Empty(Of IPAddress)()
             ResetSessions()
-            AppLockService.ClearStartPassword()
+            AppLockService.TestPasswordHash = ""
+            AppLockService.TestUserName = ""
             AppLockService.ClearAllFailures()
             ResetFileTransfers()
+            RestoreClipboard()
             WindowSource = AddressOf ApplicationWindows
         End Sub
 
@@ -534,9 +551,11 @@ Namespace Services
                         context.Response.Close()
                         Return
                     End If
-                    ' Ohne Sitzung keine Bilder und keine Eingaben. Die Seite bekommt nur die
-                    ' Aufforderung, neu zu laden, und damit das Anmeldefenster.
-                    Dim sessionKey = If(NeedsSignIn, ValidSessionKey(context.Request), "")
+                    ' Ohne Sitzung (oder ohne Recht auf die volle Oberflaeche) keine Bilder und
+                    ' keine Eingaben. Die Seite bekommt nur die Aufforderung, neu zu laden, und
+                    ' damit das Anmeldefenster oder die Einrichtung.
+                    Dim sessionKey = ValidSessionKey(context.Request)
+                    If sessionKey IsNot Nothing AndAlso Not CanUseDesktop(SessionUser(sessionKey)) Then sessionKey = Nothing
                     Dim socketContext = Await context.AcceptWebSocketAsync(Nothing)
                     If sessionKey Is Nothing Then
                         Await SendRawAsync(socketContext.WebSocket, Encoding.UTF8.GetBytes("{""t"":""reload""}"), WebSocketMessageType.Text)
@@ -551,12 +570,30 @@ Namespace Services
                 End If
                 ' Das Anmeldefenster: Anmelden, Abmelden und sein eines Bild, alles ohne Sitzung
                 ' (BrowserBridgeSessions.vb).
+                ' Die Wege der Anmeldung sprechen die Sprache dieses Browsers (zuletzt benutzte oder
+                ' Accept-Language), nicht unbedingt die der Anwendung.
+                If path = LoginRoute OrElse path = SetupRoute OrElse path = LogoutRoute OrElse path = ForgotRoute OrElse path = ResetRoute Then
+                    ApplyRequestLanguage(context.Request, Nothing)
+                End If
                 If path = LoginRoute Then
                     Await HandleLoginAsync(context)
                     Return
                 End If
+                If path = SetupRoute Then
+                    Await HandleSetupAsync(context)
+                    Return
+                End If
                 If path = LogoutRoute Then
                     Await HandleLogoutAsync(context)
+                    Return
+                End If
+                ' Kennwort vergessen: Anfrage, Seite und neues Kennwort, ohne Sitzung.
+                If path = ForgotRoute Then
+                    Await HandleForgotAsync(context)
+                    Return
+                End If
+                If path = ResetRoute Then
+                    Await HandleResetAsync(context)
                     Return
                 End If
                 If path = LoginImageRoute Then
@@ -578,6 +615,24 @@ Namespace Services
                     Await HandleDownloadAsync(context)
                     Return
                 End If
+                ' Die Zwischenablage des Geraets, siehe BrowserBridgeClipboard.vb: Anmeldung und die
+                ' Kennung der bedienenden Seite.
+                If path = ClipboardRoute Then
+                    Await HandleClipboardAsync(context)
+                    Return
+                End If
+                ' Freigaben per Link (BrowserBridgeShares.vb): ohne Anmeldung und unabhaengig von der
+                ' Sperre, nur mit dem Token im Pfad und gegebenenfalls dem Kennwort der Freigabe.
+                If IsShareRoute(path) Then
+                    Await HandleShareRouteAsync(context, path)
+                    Return
+                End If
+                ' Die mobile Seite und ihre Schnittstelle (BrowserBridgeSessions.vb,
+                ' HandleMobileRouteAsync): dieselbe Sitzung, dieselbe Pruefung.
+                If IsMobileRoute(path) Then
+                    Await HandleMobileRouteAsync(context, path)
+                    Return
+                End If
 
                 If path <> "/" AndAlso path <> "/index.html" Then
                     context.Response.StatusCode = 404
@@ -585,10 +640,21 @@ Namespace Services
                     Return
                 End If
 
-                ' Ohne Sitzung nur das Anmeldefenster, und nie WWW-Authenticate: der Browser zeigte
-                ' sonst seinen eigenen Dialog (BrowserBridgeSessions.vb).
-                If Not IsSignedIn(context) Then
-                    Await ServeLoginPageAsync(context)
+                ' Ohne Sitzung nur das Anmeldefenster (ohne Kennwort die Einrichtung), und nie
+                ' WWW-Authenticate: der Browser zeigte sonst seinen eigenen Dialog
+                ' (BrowserBridgeSessions.vb). Die volle Oberflaeche nur, wem sie zusteht.
+                Dim user = SignedInUser(context)
+                If user IsNot Nothing AndAlso Not CanUseDesktop(user) Then
+                    ' Angemeldet, aber kein Administrator: die volle Oberflaeche gibt es fuer ihn
+                    ' nicht, nur die mobile Seite.
+                    RedirectMobile(context, MobilePagePrefix)
+                    Return
+                End If
+                If user Is Nothing Then
+                    ApplyRequestLanguage(context.Request, Nothing)
+                    ' "?view=mobile" waehlt die mobile Seite vor, wie ein Aufruf ueber /m/.
+                    Dim mobileWanted = String.Equals(context.Request.QueryString("view"), "mobile", StringComparison.Ordinal)
+                    Await ServeLoginPageAsync(context, mobile:=mobileWanted)
                     Return
                 End If
 
@@ -599,6 +665,8 @@ Namespace Services
                                                             Replace(TextsPlaceholder, texts, StringComparison.Ordinal))
                 ' Mit Sitzung zaehlen die 30 Tage des Cookies wieder von hier an.
                 RefreshSessionCookie(context)
+                ' Fuer Links aus dem Kontextmenue der Galerie: die Adresse dieses Browsers.
+                RememberShareLinkBase(context.Request)
                 context.Response.ContentType = "text/html; charset=utf-8"
                 context.Response.Headers("Cache-Control") = "no-store"
                 context.Response.ContentLength64 = page.Length
@@ -639,9 +707,19 @@ Namespace Services
 
         ''' <summary>Die Herkunft der Seite, die den WebSocket oeffnet, muss dieser Server selbst
         ''' sein. Ein Browser schickt den Kopf immer mit und laesst ihn sich von keiner Seite
-        ''' faelschen; eine fremde Seite scheitert deshalb hier.</summary>
+        ''' faelschen; eine fremde Seite scheitert deshalb hier.
+        '''
+        ''' <para>Als eigen gilt der Host-Kopf der Anfrage und, wenn eine eingetragen ist, der Name
+        ''' der oeffentlichen Adresse (AppSettings.BrowserPublicAddress). NICHT X-Forwarded-Host:
+        ''' den reichen nginx und der Proxy von DSM so durch, wie ihn der Absender mitschickt, er
+        ''' ist also eine Angabe des Absenders und keine des Proxys. Caddy und DSM lassen den
+        ''' Host-Kopf ohnehin stehen; ein Proxy, der ihn auf die innere Adresse umschreibt, braucht
+        ''' die eingetragene Adresse.</para></summary>
         Friend Shared Function IsOwnOrigin(request As HttpListenerRequest) As Boolean
-            Return IsOwnOrigin(request.Headers("Origin"), PublicHost(request))
+            Dim origin = request.Headers("Origin")
+            If IsOwnOrigin(origin, request.Headers("Host")) Then Return True
+            Dim configured = ConfiguredPublicAddress()
+            Return configured IsNot Nothing AndAlso IsOwnOrigin(origin, New Uri(configured, UriKind.Absolute).Authority)
         End Function
 
         ''' <summary>Kommt die Anfrage ueber den Weg, der zugesagt ist? Am eigenen Rechner immer.
@@ -675,9 +753,9 @@ Namespace Services
             SyncLock LoggedRefusals
                 If LoggedRefusals.Count >= MaxLoggedRefusals OrElse Not LoggedRefusals.Add(sender) Then Return
             End SyncLock
-            Dim line = $"Refused a request from {sender} (Host {request.Headers("Host")}, X-Forwarded-Proto {If(request.Headers("X-Forwarded-Proto"), "none")})."
-            Console.Out.WriteLine("FerrumPix in the browser: " & line)
-            DiagnosticLogService.LogAlways("BrowserBridge", line)
+            ' Als Sicherheitsereignis (SecurityLog), mit der Adresse der Verbindung: einem
+            ' weitergereichten Kopf glaubt ein abgewiesener Weg nicht.
+            SecurityLog.Refused(sender, request.Headers("Host"), If(request.Headers("X-Forwarded-Proto"), "none"))
         End Sub
 
         ''' <summary>Ob ein Absender im Heimnetz sitzt: eine private, eine Link-Local- oder die
@@ -747,9 +825,12 @@ Namespace Services
             Return String.Equals(first, "https", StringComparison.OrdinalIgnoreCase)
         End Function
 
-        ''' <summary>Der Name, unter dem der BROWSER die Seite kennt. Hinter einem Proxy steht er in
-        ''' X-Forwarded-Host, wenn der Proxy den Host-Kopf auf die innere Adresse umschreibt; die
-        ''' Herkunft der Seite wird gegen diesen Namen geprueft.</summary>
+        ''' <summary>Der Name, unter dem der BROWSER die Seite kennt, NUR fuer die Anzeige eines Links
+        ''' (Freigaben ohne eingetragene Adresse). Hinter einem Proxy steht er in X-Forwarded-Host,
+        ''' wenn der Proxy den Host-Kopf auf die innere Adresse umschreibt. Den Kopf kann aber der
+        ''' Absender selbst mitschicken, nginx und DSM reichen ihn durch; fuer keine Entscheidung
+        ''' ueber Sicherheit und fuer keinen Link, der an einen anderen geht (die Mail zum
+        ''' Zuruecksetzen nimmt nur die eingetragene Adresse, die Herkunft prueft IsOwnOrigin).</summary>
         Private Shared Function PublicHost(request As HttpListenerRequest) As String
             If _tlsProxy Then
                 Dim forwarded = request.Headers("X-Forwarded-Host")
@@ -803,6 +884,8 @@ Namespace Services
                         accepted = True
                         ReplaceClient(socket)
                         _clientSessionKey = If(sessionKey, "")
+                        ' Nur diese Seite darf an die Zwischenablage (BrowserBridgeClipboard.vb).
+                        _clientToken = ReadString(message, "token")
                         ' Was vom abgeloesten Browser noch wartet, gehoert nicht in diese Sitzung.
                         ClearInput()
                         Dispatcher.UIThread.Post(Sub() OnClientConnected(message))

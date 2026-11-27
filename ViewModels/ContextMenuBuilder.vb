@@ -192,6 +192,12 @@ Namespace ViewModels
                                           (entries.Count = 1 AndAlso entries(0) IsNot Nothing AndAlso entries(0).IsFolderDownloadable)) Then
                 AddIfOffered(list, commands.Download, FooterMenuCatalog.Download(commands.Download))
             End If
+            ' Link zum Teilen: dieselben Bedingungen wie Herunterladen (lokale Dateien bzw. EIN
+            ' Ordner); das Kommando gibt es nur im Browser (GalleryViewModel.CreateShareLinkAsync).
+            If Not isParentEntry AndAlso (entries.Any(AddressOf IsDownloadable) OrElse
+                                          (entries.Count = 1 AndAlso entries(0) IsNot Nothing AndAlso entries(0).IsFolderDownloadable)) Then
+                AddIfOffered(list, commands.ShareLink, FooterMenuCatalog.ShareLink(commands.ShareLink))
+            End If
             Divider(list)
 
             ' --- Stapelarbeit am Bild ----------------------------------------------------------

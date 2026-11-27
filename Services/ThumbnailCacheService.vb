@@ -566,6 +566,28 @@ Namespace Services
                                             lastWriteTime As DateTime,
                                             fileSize As Long,
                                             Optional cancellationToken As CancellationToken = Nothing) As ThumbnailCacheOutcome
+            Return WithVariantOf(filePath, Function(file) EnsureCachedCore(file, lastWriteTime, fileSize, cancellationToken))
+        End Function
+
+        ''' <summary>Ruft <paramref name="work"/> mit dem Pfad der Datei hinter einem Schluessel und
+        ''' merkt die Kennung der Variante fuer diesen Aufruf (siehe <see cref="AmbientVariantId"/>).
+        ''' Ein gewoehnlicher Pfad geht unveraendert durch.</summary>
+        Private Shared Function WithVariantOf(Of T)(key As String, work As Func(Of String, T)) As T
+            Dim previous = _ambientVariantId
+            Try
+                Dim variantId As String = Nothing
+                Dim file = VariantKey.Split(key, variantId)
+                _ambientVariantId = variantId
+                Return work(file)
+            Finally
+                _ambientVariantId = previous
+            End Try
+        End Function
+
+        Private Shared Function EnsureCachedCore(filePath As String,
+                                                 lastWriteTime As DateTime,
+                                                 fileSize As Long,
+                                                 cancellationToken As CancellationToken) As ThumbnailCacheOutcome
             cancellationToken.ThrowIfCancellationRequested()
             ' Ob es die Quelle gibt, fragt erst der Schreibweg unten: Aenderungszeit und Groesse hat
             ' der Aufrufer gerade gelesen, und sie stecken im Namen der Kachel. Ein zweiter Blick auf
@@ -619,8 +641,13 @@ Namespace Services
 
         ''' <summary>Der Pfad der Kachel auf der Platte, wenn sie fuer genau diesen Stand der Datei
         ''' schon da ist, sonst "". Liest nichts und legt nichts an; fuer Wege, die nur ein kleines
-        ''' Bild brauchen (SimilarityService). Derselbe Name wie in LoadCached, ohne Suchlisten-Bereich.</summary>
+        ''' Bild brauchen (SimilarityService). Derselbe Name wie in LoadCached, ohne Suchlisten-Bereich.
+        ''' <paramref name="filePath"/> darf der Schluessel einer zusaetzlichen Variante sein.</summary>
         Friend Shared Function FindExactCachedThumbnail(filePath As String, lastWriteTime As DateTime, fileSize As Long) As String
+            Return WithVariantOf(filePath, Function(file) FindExactCachedThumbnailCore(file, lastWriteTime, fileSize))
+        End Function
+
+        Private Shared Function FindExactCachedThumbnailCore(filePath As String, lastWriteTime As DateTime, fileSize As Long) As String
             If String.IsNullOrEmpty(filePath) OrElse ShouldSkipCache(filePath) Then Return ""
             Dim enabled As Boolean
             Dim quality As Integer
@@ -636,6 +663,56 @@ Namespace Services
             Catch
                 Return ""
             End Try
+        End Function
+
+        ''' <summary>Wie <see cref="FindExactCachedThumbnail"/>, nimmt aber auch eine Kachel
+        ''' DESSELBEN Dateistands, die unter einer anderen Qualitaet, Breite, Fassung des
+        ''' Speicherformats oder des Video-Standbilds abgelegt wurde. Die Galerie zeigt eine solche
+        ''' Kachel ebenso (LoadCached mit allowStale) und rechnet sie erst neu, wenn sie sie selbst
+        ''' anzeigt. Aenderungszeit, Groesse, Drehung und Rezeptstand muessen dagegen stimmen: sonst
+        ''' zeigte die Kachel ein anderes Bild als die Datei. <paramref name="isExact"/> sagt, ob es
+        ''' der genaue Name war. <paramref name="filePath"/> darf der Schluessel einer zusaetzlichen
+        ''' Variante sein.</summary>
+        Friend Shared Function FindReusableCachedThumbnail(filePath As String, lastWriteTime As DateTime, fileSize As Long, ByRef isExact As Boolean) As String
+            Dim exact = False
+            Dim found = WithVariantOf(filePath, Function(file) FindReusableCachedThumbnailCore(file, lastWriteTime, fileSize, exact))
+            isExact = exact
+            Return found
+        End Function
+
+        Private Shared Function FindReusableCachedThumbnailCore(filePath As String, lastWriteTime As DateTime, fileSize As Long, ByRef isExact As Boolean) As String
+            isExact = False
+            If String.IsNullOrEmpty(filePath) OrElse ShouldSkipCache(filePath) Then Return ""
+            Dim enabled As Boolean
+            Dim quality As Integer
+            GetCachedSettings(enabled, quality)
+            Dim width = CurrentCacheWidth()
+            If Not enabled Then Return ""
+            Try
+                Dim folderId = ResolveCacheId(IO.Path.GetDirectoryName(filePath), Nothing)
+                Dim folderCachePath = GetFolderCachePathById(folderId)
+                Dim imageHash = ImageHashFor(filePath)
+                Dim wanted = BuildCacheFileName(filePath, imageHash, lastWriteTime, fileSize, quality, width)
+                Dim exactPath = IO.Path.Combine(folderCachePath, wanted)
+                If File.Exists(exactPath) Then
+                    isExact = True
+                    Return exactPath
+                End If
+                Dim key = ReusableTileKey(wanted)
+                For Each name In GetFolderFileIndex(folderId).GetNames(folderCachePath, imageHash)
+                    If Not String.Equals(ReusableTileKey(name), key, StringComparison.Ordinal) Then Continue For
+                    Dim candidate = IO.Path.Combine(folderCachePath, name)
+                    If File.Exists(candidate) Then Return candidate
+                Next
+            Catch
+            End Try
+            Return ""
+        End Function
+
+        ''' <summary>Der Name einer Kachel ohne die Teile, die nur die Ablage betreffen und nicht den
+        ''' Stand des Bildes: Qualitaet und Breite, Fassung des Video-Standbilds und des Formats.</summary>
+        Private Shared Function ReusableTileKey(name As String) As String
+            Return System.Text.RegularExpressions.Regex.Replace(name, "_q\d+_w\d+|_vid\d+|_v\d+\.jpg$", "")
         End Function
 
         Private Shared Function LoadCachedCore(filePath As String,
@@ -720,6 +797,10 @@ Namespace Services
         ''' <summary>Der Pfad der Kachel, die <see cref="LoadCachedOffline"/> laden wuerde, oder "".
         ''' Getrennt, damit der Pruefstand die Wahl messen kann, ohne ein Bitmap zu bauen.</summary>
         Friend Shared Function FindCachedTileOffline(filePath As String, Optional cacheScopeId As String = Nothing) As String
+            Return WithVariantOf(filePath, Function(file) FindCachedTileOfflineCore(file, cacheScopeId))
+        End Function
+
+        Private Shared Function FindCachedTileOfflineCore(filePath As String, cacheScopeId As String) As String
             If String.IsNullOrEmpty(filePath) OrElse ShouldSkipCache(filePath) Then Return ""
             Try
                 Dim folderId = ResolveCacheId(IO.Path.GetDirectoryName(filePath), cacheScopeId)
@@ -1560,6 +1641,15 @@ Namespace Services
             End Try
             Dim suffix = If(algorithm = AppSettingsService.RawDemosaicDefault, "", $"_d{algorithm}")
             Return suffix
+        End Function
+
+        ''' <summary>Die Kachel, wie die Galerie sie ohne Kachelspeicher zeigt (SVG, ICO, fluechtige
+        ''' Pfade, Speicher abgeschaltet oder Schreiben gescheitert): gerechnet, nicht abgelegt.
+        ''' <paramref name="filePath"/> darf der Schluessel einer zusaetzlichen Variante sein.
+        ''' Nothing, wenn die Datei nicht lesbar ist.</summary>
+        Friend Shared Function RenderTileWithoutCache(filePath As String) As Bitmap
+            If String.IsNullOrEmpty(filePath) Then Return Nothing
+            Return WithVariantOf(filePath, Function(source) If(File.Exists(source), DecodeDirect(source, CancellationToken.None), Nothing))
         End Function
 
         Private Shared Function DecodeDirect(filePath As String, cancellationToken As CancellationToken) As Bitmap

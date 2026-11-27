@@ -1,28 +1,39 @@
-# FerrumPix in the browser for other devices: the app with Caddy in front as a reverse proxy with
-# HTTPS, both in a network of their own. A template to copy; see README.md next to it.
+# FerrumPix in the browser for all your devices: the app with Caddy in front as a reverse proxy
+# with HTTPS, both in a network of their own. A template to copy; README.md next to it explains
+# every step.
 #
+# SETUP
 # 1. Put next to this file:
-#      Caddyfile                 (included next to this file)
-#      ferrumpix-password.txt    the password in the first line, readable for user id 1000
-#                                (chown 1000 ferrumpix-password.txt; chmod 600 ferrumpix-password.txt):
-#                                at least 8 characters with an uppercase and a lowercase letter,
-#                                a digit and a special character (a space counts), otherwise
-#                                FerrumPix does not start
-#      .env                      FERRUMPIX_DOMAIN=photos.example.org
-#                                FERRUMPIX_PHOTOS=/path/to/photos
-#                                FERRUMPIX_USER=anna         (optional)
-#      data/                     an empty folder for everything FerrumPix keeps, owned by user
-#                                id 1000 (mkdir data; sudo chown 1000 data)
+#      Caddyfile    included next to this file
+#      .env         FERRUMPIX_DOMAIN=photos.example.org
+#                   FERRUMPIX_PHOTOS=/path/to/photos
+#      data/        an empty folder for everything FerrumPix keeps, owned by user id 1000:
+#                   mkdir data; sudo chown 1000 data
 # 2. docker compose up -d
-# 3. Open https://<FERRUMPIX_DOMAIN> in the browser.
+# 3. Open https://<FERRUMPIX_DOMAIN> yourself right after the start. The first visit is the setup:
+#    a user name, an email address if you like (for Forgot your password) and the password twice,
+#    at least 8 characters with an uppercase and a lowercase letter, a digit and a special
+#    character. Whoever opens the page first becomes the administrator. There is no password in
+#    this file or in .env.
+#
+# AFTERWARDS
+# - Further users, their rights per folder, the mail server for Forgot your password and the
+#   public address for links: Settings, User management, in the full desktop interface.
+# - Photo folders: one line per folder under "volumes", each below /photos. FerrumPix shows only
+#   /photos; FERRUMPIX_FOLDER_ROOTS below changes that.
+# - Update: docker compose pull, then docker compose up -d. The image follows :latest; for a fixed
+#   version put FERRUMPIX_IMAGE=ghcr.io/bitpainter75/ferrumpix:<version> into .env.
+# - The image checks its own health, so "docker compose ps" shows "healthy" once it is up.
+# - Language and date format of the first start: FERRUMPIX_LANG in .env, for example
+#   de_DE.UTF-8; later it can be changed in Settings.
+# - Local time: the image runs on UTC. Uncomment TZ under "environment" and set your time zone,
+#   for example Europe/Berlin.
 #
 # WHAT THIS TEMPLATE MAKES SURE OF:
 # - FerrumPix publishes NO port. It is only reachable in the network "ferrumpix", and there it
 #   only accepts what comes from the fixed address of the proxy (FERRUMPIX_BROWSER_PROXY_ADDRESS)
 #   and is marked as encrypted by it. Whoever talks to FerrumPix past the proxy, even from this
-#   computer over its address in the network, gets 403 and is never asked for the password.
-# - A password is mandatory and is NOT in this file: Compose hands it in as a secret under
-#   /run/secrets, and the container reads it from there.
+#   computer over its address in the network, gets 403 and never sees the sign-in page.
 # - FERRUMPIX_BROWSER_LOCAL_FORWARD is deliberately missing here. It promises "the port is only
 #   open on this computer" and switches off the check of the sender; it belongs to the local
 #   template only (docker-compose.local.yml).
@@ -40,19 +51,20 @@ services:
     environment:
       FERRUMPIX_BROWSER_TLS_PROXY: "1"
       FERRUMPIX_BROWSER_PROXY_ADDRESS: "172.30.145.2"
-      FERRUMPIX_BROWSER_USER: "${FERRUMPIX_USER:-}"
-      FERRUMPIX_BROWSER_PASSWORD_FILE: /run/secrets/ferrumpix_password
       LANG: "${FERRUMPIX_LANG:-C.UTF-8}"
+      # Local time (the image runs on UTC):
+      # TZ: "Europe/Berlin"
+      # The image sets /photos. Only for folders outside it, several separated by ":":
+      # FERRUMPIX_FOLDER_ROOTS: "/photos:/archive"
       # NVIDIA only, together with the NVIDIA block below:
       # NVIDIA_DRIVER_CAPABILITIES: graphics,compute,utility
-    secrets:
-      - ferrumpix_password
     volumes:
       # Settings, catalog, thumbnails and downloaded models. Own fonts go to
       # ./data/share/FerrumPix/Fonts, there is no separate folder for them.
       - ./data:/data
-      # Every photo folder under /photos/<name>; add lines in the same pattern.
+      # Every photo folder below /photos, one line each, for example:
       - "${FERRUMPIX_PHOTOS:?FERRUMPIX_PHOTOS is missing in .env}:/photos/Pictures"
+      # - /srv/archive:/photos/Archive
     # GRAPHICS CARD FOR THE MODELS (optional; without it the models run on the processor).
     # Intel or AMD: uncomment these lines. FERRUMPIX_RENDER_GID is the group of the render device
     # on this computer: stat -c %g /dev/dri/renderD128
@@ -98,10 +110,6 @@ networks:
     ipam:
       config:
         - subnet: 172.30.145.0/24
-
-secrets:
-  ferrumpix_password:
-    file: ./ferrumpix-password.txt
 
 volumes:
   caddy-data:

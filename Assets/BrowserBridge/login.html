@@ -2,100 +2,432 @@
 <html lang="__FERRUMPIX_LANG__">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
 <title>FerrumPix</title>
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<!-- Das Anmeldefenster im Browser, die Gegenstelle zu Services/BrowserBridgeSessions.vb. Es sieht
-     aus wie das Anmeldefenster der Anwendung (Views/LockScreenView.axaml): Welcome.jpg als
-     Hintergrund der Karte, unten ein Schleier in der Kartenfarbe, darauf Feld und Knopf. Farben
-     und Texte setzt der Server beim Ausliefern ein, aus dem Erscheinungsbild und der Sprache der
-     Anwendung. Alles steht in dieser Datei; nachgeladen wird nur das Bild, von demselben Server.
-     Skript und Stil tragen eine Kennung je Auslieferung (nonce), der Kopf Content-Security-Policy
-     laesst nichts anderes zu. -->
+<!-- Das Anmeldefenster im Browser, die Gegenstelle zu Services/BrowserBridgeSessions.vb. Ohne
+     gesetztes Kennwort zeigt dieselbe Seite die Einrichtung (Modus "setup"), mit Kennwort, aber
+     ohne gespeicherten Benutzernamen eine Anmeldung, die den Namen einmal festlegt ("claim").
+     Der Hintergrund der Seite ist ruhig und dunkel; Welcome.jpg steht IN der Karte, oben ueber die
+     ganze Breite wie im Anmeldefenster der App, das Formular darunter auf dem auslaufenden Bild.
+     Die Karte ist nie breiter als der Schirm minus Rand und nie hoeher als die sichtbare Hoehe
+     (dvh); reicht der Platz nicht, rollt das Formular. Sichere Bereiche und Tastatur des Telefons
+     wie zuvor.
+     Farben und Texte setzt der Server beim Ausliefern ein, aus dem Erscheinungsbild und der
+     Sprache der Anwendung. Alles steht in dieser Datei; nachgeladen werden nur das Bild und das
+     Symbol, von demselben Server. Skript und Stil tragen eine Kennung je Auslieferung (nonce),
+     der Kopf Content-Security-Policy laesst nichts anderes zu. -->
 <style nonce="__FERRUMPIX_NONCE__">
   :root { __FERRUMPIX_COLORS__ }
-  html, body { margin: 0; height: 100%; }
-  body { background: var(--root); color: var(--text); font: 14px/1.4 system-ui, "Segoe UI", Cantarell, sans-serif;
-         display: flex; align-items: center; justify-content: center; }
-  .card { position: relative; width: min(600px, calc(100vw - 32px)); height: 440px; border-radius: 16px; overflow: hidden;
-          background: var(--elevated) url("/login/welcome.jpg") center / cover no-repeat;
-          box-shadow: 0 24px 70px rgba(0, 0, 0, 0.69); border: 1px solid var(--border); box-sizing: border-box; }
-  .veil { position: absolute; inset: 0; background: var(--elevated); opacity: 0.9;
-          -webkit-mask-image: linear-gradient(to bottom, transparent 0%, transparent 50%, #000 64%, #000 100%);
-          mask-image: linear-gradient(to bottom, transparent 0%, transparent 50%, #000 64%, #000 100%); }
-  form { position: absolute; left: 56px; right: 56px; bottom: 30px; display: flex; flex-direction: column; gap: 12px; margin: 0; }
-  h1 { margin: 0; font-size: 15px; font-weight: 600; text-align: center; }
-  input { font: inherit; color: var(--text); background: var(--input); border: 1px solid var(--border-normal); border-radius: 8px;
-          padding: 7px 12px; outline: none; caret-color: var(--accent); }
+  * { box-sizing: border-box; }
+  html { height: 100%; -webkit-text-size-adjust: 100%; }
+  body { margin: 0; height: 100vh; height: 100dvh; background: #0B0E11; color: var(--text);
+         font: 15px/1.4 system-ui, "Segoe UI", Cantarell, sans-serif;
+         display: flex; align-items: center; justify-content: center; overflow: hidden;
+         padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+                  max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  /* Die Karte wie das Anmeldefenster der App: das Bild oben ueber die ganze Breite, mit dem
+     Schriftzug vollstaendig sichtbar, unten weich in die Karte auslaufend; das Formular beginnt
+     auf dem unteren, dunklen Teil des Bildes. --w ist die Breite der Karte, --top die Hoehe bis
+     zum Formular: 42 % der Breite (dort endet der Schriftzug im Bild), bei wenig Hoehe hoechstens
+     ein Drittel des Schirms. Das Bild ist so hoch wie bei voller Breite (941/1672), bei wenig
+     Hoehe entsprechend kleiner und an den Seiten beschnitten, nie verzerrt. Reicht der Platz
+     nicht, rollt das Formular. */
+  .card { --w: min(900px, calc(100vw - 32px)); --top: min(calc(var(--w) * 0.42), 34vh);
+          --top: min(calc(var(--w) * 0.42), 34dvh);
+          position: relative; display: flex; flex-direction: column; width: var(--w); max-height: 100%;
+          background: var(--elevated); border: 1px solid var(--border); border-radius: 18px;
+          box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6); overflow: hidden; }
+  .visual { position: absolute; top: 0; left: 0; right: 0; height: calc(var(--top) + var(--w) * 0.143);
+            overflow: hidden; background: var(--root); }
+  .visual img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 45%; }
+  .visual::after { content: ""; position: absolute; inset: 0;
+                   background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 55%, var(--elevated) 100%); }
+  .panel { position: relative; flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+           padding: var(--top) 28px 22px; }
+  .panel > * { width: 100%; max-width: 560px; margin-left: auto; margin-right: auto; }
+  .brand { display: none; }
+  .brand img { width: 48px; height: 48px; }
+  .brand span { font-size: 22px; font-weight: 600; letter-spacing: 0.2px; }
+  form { display: flex; flex-direction: column; gap: 12px; margin: 0; }
+  h1 { margin: 0 0 4px; font-size: 15px; font-weight: 600; text-align: center; }
+  input { font: inherit; font-size: 16px; color: var(--text); background: var(--input); border: 1px solid var(--border-normal);
+          border-radius: 8px; padding: 10px 12px; outline: none; caret-color: var(--accent); width: 100%; }
   input:focus { border-color: var(--accent); }
-  button { font: inherit; font-weight: 600; color: var(--accent); background: transparent; border: 1.5px solid var(--accent);
-           border-radius: 6px; padding: 8px 12px; cursor: pointer; }
-  button:hover { background: var(--elevated); }
-  button:disabled { opacity: 0.6; cursor: default; }
-  #error { min-height: 18px; color: var(--danger); text-align: center; font-size: 12px; }
+  .hint { margin: -4px 0 0; font-size: 12px; opacity: 0.8; }
+  .variants { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+  .variant { font: inherit; color: var(--text); background: var(--input); border: 1.5px solid var(--border-normal);
+             border-radius: 10px; padding: 10px 8px; min-height: 56px; cursor: pointer; text-align: center; }
+  .variant strong { display: block; font-size: 15px; }
+  .variant small { display: block; font-size: 12px; opacity: 0.75; }
+  .variant[aria-checked="true"] { border-color: var(--accent); color: var(--accent); }
+  .variant:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #submit, .submit { font: inherit; font-weight: 600; color: var(--accent); background: transparent; border: 1.5px solid var(--accent);
+            border-radius: 8px; padding: 11px 12px; min-height: 46px; cursor: pointer; margin-top: 4px; }
+  #submit:hover, .submit:hover { background: var(--input); }
+  #submit:disabled, .submit:disabled { opacity: 0.6; cursor: default; }
+  #error, #second-error { min-height: 18px; color: var(--danger); text-align: center; font-size: 13px; }
+  #code { letter-spacing: 0.3em; text-align: center; font-variant-numeric: tabular-nums; }
+  .note { min-height: 18px; text-align: center; font-size: 13px; }
+  .link { font: inherit; font-size: 13px; color: var(--text); opacity: 0.8; background: none; border: none; padding: 6px;
+          cursor: pointer; text-decoration: underline; align-self: center; min-height: 32px; }
+  .link:hover { opacity: 1; }
+  input[readonly] { opacity: 0.7; }
+  [hidden] { display: none !important; }
+  @media (max-width: 420px) {
+    .card { border-radius: 14px; }
+    .panel { padding: var(--top) 16px 16px; }
+  }
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="veil"></div>
-  <form id="login" autocomplete="on">
+<main class="card">
+  <div class="visual" aria-hidden="true"><img src="/login/welcome.jpg" alt=""></div>
+  <div class="panel">
+  <div class="brand"><img src="/icon-192.png" alt=""><span>FerrumPix</span></div>
+  <form id="login" autocomplete="on" novalidate>
     <h1 id="title"></h1>
-    <input id="password" type="password" name="password" autocomplete="current-password" required autofocus>
-    <button id="unlock" type="submit"></button>
+    <input id="user" type="text" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="64">
+    <input id="email" type="email" name="email" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="254" hidden>
+    <input id="password" type="password" name="password">
+    <input id="repeat" type="password" name="repeat" autocomplete="new-password" hidden>
+    <p id="rules" class="hint" hidden></p>
+    <div id="variants" class="variants" role="radiogroup">
+      <button type="button" class="variant" id="variant-desktop" role="radio" data-variant="desktop"><strong></strong><small></small></button>
+      <button type="button" class="variant" id="variant-mobile" role="radio" data-variant="mobile"><strong></strong><small></small></button>
+    </div>
+    <button id="submit" type="submit"></button>
     <div id="error" role="alert"></div>
+    <button id="forgot" class="link" type="button" hidden></button>
   </form>
-</div>
+  <form id="recover" novalidate hidden>
+    <h1 id="recover-title"></h1>
+    <input id="who" type="text" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="254">
+    <button id="recover-submit" class="submit" type="submit"></button>
+    <div id="recover-note" class="note" role="status"></div>
+    <button id="recover-back" class="link" type="button"></button>
+  </form>
+  <!-- Der zweite Schritt fuer Konten mit zweitem Faktor: erst nach richtigem Namen und Kennwort. -->
+  <form id="second" novalidate hidden>
+    <h1 id="second-title"></h1>
+    <input id="code" type="text" name="one-time-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" autocorrect="off" spellcheck="false">
+    <input id="recovery" type="text" name="recovery" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="32" hidden>
+    <button id="second-submit" class="submit" type="submit"></button>
+    <div id="second-error" role="alert"></div>
+    <button id="second-toggle" class="link" type="button"></button>
+    <button id="second-back" class="link" type="button"></button>
+  </form>
+  </div>
+</main>
 <script nonce="__FERRUMPIX_NONCE__">
 'use strict';
 const texts = __FERRUMPIX_LOGIN_TEXTS__;
+// "setup": noch kein Kennwort, "claim": Kennwort ohne gespeicherten Namen, "reset": neues
+// Kennwort ueber den Verweis aus der Nachricht, "resetInvalid": der Verweis gilt nicht (mehr),
+// sonst "login".
+const mode = '__FERRUMPIX_MODE__';
+// "mobile", wenn die Seite ueber /m/ aufgerufen wurde; sonst leer.
+const requested = '__FERRUMPIX_VARIANT__';
+// "1", wenn ein Mailserver eingerichtet ist und "Kennwort vergessen" eine Nachricht schicken kann.
+const mailReady = '__FERRUMPIX_MAIL__' === '1';
+// Der Name des Eigentuemers, wenn die Einrichtung nach dem Notweg fuer sein Kennwort kommt.
+const keptUser = __FERRUMPIX_KEPT_USER__;
+const setup = mode === 'setup';
+const reset = mode === 'reset';
+const newPassword = setup || reset;
 const form = document.getElementById('login');
+const user = document.getElementById('user');
+const email = document.getElementById('email');
 const password = document.getElementById('password');
-const unlock = document.getElementById('unlock');
+const repeat = document.getElementById('repeat');
+const rules = document.getElementById('rules');
+const submit = document.getElementById('submit');
 const error = document.getElementById('error');
-document.getElementById('title').textContent = texts.title;
-password.placeholder = texts.password;
-password.setAttribute('aria-label', texts.password);
-unlock.textContent = texts.unlock;
+const forgot = document.getElementById('forgot');
+const recover = document.getElementById('recover');
+const who = document.getElementById('who');
+const recoverSubmit = document.getElementById('recover-submit');
+const recoverNote = document.getElementById('recover-note');
+// Das Token des Verweises steht nur in der Adresse; es geht mit dem neuen Kennwort zurueck.
+const resetToken = new URLSearchParams(location.search).get('t') || '';
 
-// Angemeldet wird mit einer eigenen Anfrage und JSON: eine fremde Seite kann so keinen Versuch
-// abschicken, ohne dass der Browser vorher beim Server nachfragt, und der Server prueft die
-// Herkunft ausserdem selbst. Bei Erfolg setzt der Server das Sitzungs-Cookie, und die Seite laedt
-// neu: dann kommt die Anwendung.
+// Der Speicher des Browsers merkt sich die zuletzt gewaehlte Seite und den zuletzt erfolgreich
+// benutzten Namen. Dieselben Schluessel liest und schreibt die Seite der Anwendung beim Wechsel.
+const variantKey = 'ferrumpix.variant';
+const userKey = 'ferrumpix.user';
+function readStored(key) { try { return localStorage.getItem(key) || ''; } catch (ignored) { return ''; } }
+function store(key, value) { try { localStorage.setItem(key, value); } catch (ignored) { } }
+
+document.getElementById('title').textContent = setup ? texts.setupTitle : reset ? texts.resetTitle :
+  mode === 'resetInvalid' ? texts.resetInvalid : (mode === 'claim' ? texts.claim : texts.title);
+user.placeholder = texts.user;
+user.setAttribute('aria-label', texts.user);
+password.placeholder = newPassword ? texts.newPassword : texts.password;
+password.setAttribute('aria-label', password.placeholder);
+password.autocomplete = newPassword ? 'new-password' : 'current-password';
+submit.textContent = setup ? texts.setup : reset ? texts.resetTitle : texts.unlock;
+document.getElementById('variants').setAttribute('aria-label', texts.view);
+if (newPassword) {
+  repeat.hidden = false;
+  repeat.placeholder = texts.repeat;
+  repeat.setAttribute('aria-label', texts.repeat);
+  rules.hidden = false;
+  rules.textContent = texts.rules;
+} else {
+  user.value = readStored(userKey);
+}
+if (setup) {
+  // Die E-Mail-Adresse ist freiwillig; ohne sie hilft bei einem vergessenen Kennwort nur der
+  // Notweg beim Start. Nach dem Notweg steht der Name schon fest.
+  email.hidden = false;
+  email.placeholder = texts.email;
+  email.setAttribute('aria-label', texts.email);
+  if (keptUser) { user.value = keptUser; user.readOnly = true; }
+}
+// Beim neuen Kennwort ueber den Verweis gibt es keinen Namen zu tippen.
+if (reset) user.hidden = true;
+// Ein ungueltiger Verweis zeigt nur den Satz und den Weg zur Anmeldung.
+if (mode === 'resetInvalid') {
+  for (const node of [user, password, document.getElementById('variants'), submit]) node.hidden = true;
+}
+// "Kennwort vergessen?" nur bei der Anmeldung. Ohne Mailserver sagt die Seite gleich, wer hilft.
+if (mode === 'login' || mode === 'claim' || mode === 'resetInvalid') {
+  forgot.hidden = false;
+  forgot.textContent = mode === 'resetInvalid' ? texts.backToLogin : texts.forgot;
+  forgot.addEventListener('click', () => {
+    if (mode === 'resetInvalid') { location.replace('/'); return; }
+    if (!mailReady) { error.textContent = texts.admin; return; }
+    form.hidden = true;
+    recover.hidden = false;
+    who.value = user.value;
+    who.focus();
+  });
+}
+document.getElementById('recover-title').textContent = texts.forgotTitle;
+who.placeholder = texts.forgotField;
+who.setAttribute('aria-label', texts.forgotField);
+recoverSubmit.textContent = texts.forgotSend;
+document.getElementById('recover-back').textContent = texts.backToLogin;
+document.getElementById('recover-back').addEventListener('click', () => {
+  recover.hidden = true;
+  form.hidden = false;
+  recoverNote.textContent = '';
+  focusFirstEmpty();
+});
+// Die Antwort ist fuer jedes Konto dieselbe; die Seite zeigt sie nur an.
+recover.addEventListener('submit', async event => {
+  event.preventDefault();
+  if (who.value.trim().length === 0) { who.focus(); return; }
+  recoverSubmit.disabled = true;
+  recoverNote.textContent = '';
+  try {
+    const response = await fetch('/forgot', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ who: who.value.trim() }), credentials: 'same-origin', cache: 'no-store'
+    });
+    let answer = {};
+    try { answer = await response.json(); } catch (ignored) { }
+    recoverNote.textContent = answer.message || answer.error || texts.failed;
+  } catch (ignored) {
+    recoverNote.textContent = texts.failed;
+  } finally {
+    recoverSubmit.disabled = false;
+  }
+});
+
+// Die Wahl der Seite: Desktop (die volle Oberflaeche, /) oder Mobil (die vereinfachte Seite,
+// /m/). Vorgewaehlt ist, was ueber /m/ verlangt wurde, sonst die letzte Wahl, sonst nach dem
+// Geraet: schmaler Bildschirm oder Bedienung mit dem Finger heisst Mobil.
+const buttons = Array.from(document.querySelectorAll('.variant'));
+for (const button of buttons) {
+  const kind = button.dataset.variant;
+  button.querySelector('strong').textContent = texts[kind];
+  button.querySelector('small').textContent = texts[kind + 'Hint'];
+  button.addEventListener('click', () => choose(kind));
+}
+function deviceVariant() {
+  const narrow = window.matchMedia('(max-width: 760px)').matches;
+  const touch = window.matchMedia('(pointer: coarse)').matches;
+  return narrow || touch ? 'mobile' : 'desktop';
+}
+let variant = requested === 'mobile' ? 'mobile' : (readStored(variantKey) || deviceVariant());
+if (variant !== 'mobile' && variant !== 'desktop') variant = deviceVariant();
+function choose(kind) {
+  variant = kind;
+  for (const button of buttons) button.setAttribute('aria-checked', button.dataset.variant === kind ? 'true' : 'false');
+}
+choose(variant);
+
+function focusFirstEmpty() {
+  const field = [user, email, password, repeat].find(f => !f.hidden && !f.readOnly && f.value.length === 0 && f !== email) || password;
+  field.focus();
+}
+
+// Angemeldet und eingerichtet wird mit einer eigenen Anfrage und JSON: eine fremde Seite kann so
+// keinen Versuch abschicken, ohne dass der Browser vorher beim Server nachfragt, und der Server
+// prueft die Herkunft ausserdem selbst. Bei Erfolg setzt der Server das Sitzungs-Cookie, und die
+// Seite geht auf die gewaehlte Variante.
 form.addEventListener('submit', async event => {
   event.preventDefault();
-  if (password.value.length === 0) {
-    error.textContent = texts.empty;
+  if (!reset && user.value.trim().length === 0) {
+    error.textContent = texts.userEmpty;
+    user.focus();
     return;
   }
-  unlock.disabled = true;
+  if (password.value.length === 0) {
+    error.textContent = newPassword ? texts.setupEmpty : texts.empty;
+    password.focus();
+    return;
+  }
+  if (newPassword && password.value !== repeat.value) {
+    error.textContent = texts.mismatch;
+    repeat.focus();
+    return;
+  }
+  submit.disabled = true;
   error.textContent = '';
+  let reload = false;
   try {
-    const response = await fetch('/login', {
+    const body = reset ? { token: resetToken, password: password.value, repeat: repeat.value }
+                       : { user: user.value, password: password.value };
+    if (setup) { body.repeat = repeat.value; body.email = email.value.trim(); }
+    const response = await fetch(setup ? '/setup' : reset ? '/reset' : '/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: password.value }),
+      body: JSON.stringify(body),
       credentials: 'same-origin',
       cache: 'no-store'
     });
     let answer = {};
     try { answer = await response.json(); } catch (ignored) { }
-    if (response.ok && answer.ok) {
-      location.replace('/');
+    // Konto mit zweitem Faktor: Name und Kennwort stimmen, jetzt der Code. Eine Sitzung gibt
+    // es erst danach.
+    if (response.ok && answer.second) {
+      if (!reset) store(userKey, user.value.trim());
+      showSecond();
       return;
     }
-    error.textContent = answer.error || texts.failed;
+    if (response.ok && answer.ok) {
+      if (!reset) store(userKey, user.value.trim());
+      go(answer, error);
+      return;
+    }
+    // 409: die Einrichtung ist inzwischen erledigt oder die Anmeldung braucht erst eine. Die
+    // Seite laedt neu und zeigt, was jetzt gilt.
+    reload = response.status === 409;
+    error.textContent = answer.setup ? '' : (answer.error || texts.failed);
   } catch (ignored) {
     error.textContent = texts.failed;
   } finally {
     password.value = '';
-    unlock.disabled = false;
-    password.focus();
+    repeat.value = '';
+    submit.disabled = false;
   }
+  if (reload) {
+    setTimeout(() => location.reload(), error.textContent ? 2000 : 0);
+    return;
+  }
+  focusFirstEmpty();
 });
-password.focus();
+
+// Nach der Anmeldung: wohin es geht, entscheidet der Server, die volle Oberflaeche nur fuer
+// Administratoren. Wer sie gewaehlt hat und nicht bekommt, liest kurz den Grund und landet auf
+// der mobilen Seite.
+function go(answer, line) {
+  const target = answer.target === '/' ? (variant === 'mobile' ? '/m/' : '/') : '/m/';
+  store(variantKey, target === '/' ? 'desktop' : 'mobile');
+  if (variant === 'desktop' && target !== '/' && !reset) {
+    line.textContent = texts.mobileOnly;
+    setTimeout(() => location.replace(target), 2500);
+    return;
+  }
+  location.replace(target);
+}
+
+// Der zweite Schritt: Code aus der App (sechs Ziffern) oder ein Wiederherstellungscode. Der
+// Zwischenstand haengt an einem Cookie dieses Browsers und gilt fuenf Minuten; ist er weg, geht
+// es zurueck zum ersten Schritt.
+const second = document.getElementById('second');
+const code = document.getElementById('code');
+const recovery = document.getElementById('recovery');
+const secondSubmit = document.getElementById('second-submit');
+const secondError = document.getElementById('second-error');
+const secondToggle = document.getElementById('second-toggle');
+let useRecovery = false;
+document.getElementById('second-title').textContent = texts.secondTitle;
+code.placeholder = texts.code;
+code.setAttribute('aria-label', texts.code);
+recovery.placeholder = texts.recoveryCode;
+recovery.setAttribute('aria-label', texts.recoveryCode);
+secondSubmit.textContent = texts.confirm;
+secondToggle.textContent = texts.useRecovery;
+document.getElementById('second-back').textContent = texts.backToLogin;
+function showSecond() {
+  form.hidden = true;
+  recover.hidden = true;
+  second.hidden = false;
+  secondError.textContent = '';
+  code.value = '';
+  recovery.value = '';
+  setRecovery(false);
+}
+function setRecovery(on) {
+  useRecovery = on;
+  code.hidden = on;
+  recovery.hidden = !on;
+  secondToggle.textContent = on ? texts.useCode : texts.useRecovery;
+  (on ? recovery : code).focus();
+}
+function backToFirst(message) {
+  second.hidden = true;
+  form.hidden = false;
+  error.textContent = message || '';
+  if (reset) { location.replace('/'); return; }
+  focusFirstEmpty();
+}
+secondToggle.addEventListener('click', () => { secondError.textContent = ''; setRecovery(!useRecovery); });
+document.getElementById('second-back').addEventListener('click', () => backToFirst(''));
+// Sechs Ziffern abgeschickt, sobald sie da sind; was die App mit Leerzeichen anzeigt, zaehlt auch.
+code.addEventListener('input', () => {
+  const digits = code.value.replace(/\D/g, '').slice(0, 6);
+  if (digits !== code.value) code.value = digits;
+  if (digits.length === 6 && !secondSubmit.disabled) second.requestSubmit();
+});
+second.addEventListener('submit', async event => {
+  event.preventDefault();
+  const value = (useRecovery ? recovery : code).value.trim();
+  if (value.length === 0) { secondError.textContent = texts.codeEmpty; (useRecovery ? recovery : code).focus(); return; }
+  secondSubmit.disabled = true;
+  secondError.textContent = '';
+  try {
+    const response = await fetch('/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(useRecovery ? { recovery: value } : { code: value }),
+      credentials: 'same-origin', cache: 'no-store'
+    });
+    let answer = {};
+    try { answer = await response.json(); } catch (ignored) { }
+    if (response.ok && answer.ok) { go(answer, secondError); return; }
+    if (answer.restart) { backToFirst(answer.error || texts.failed); return; }
+    secondError.textContent = answer.error || texts.failed;
+  } catch (ignored) {
+    secondError.textContent = texts.failed;
+  } finally {
+    secondSubmit.disabled = false;
+  }
+  code.value = '';
+  recovery.value = '';
+  (useRecovery ? recovery : code).focus();
+});
+
+// Ein Feld, das den Fokus bekommt, bleibt ueber der Tastatur des Telefons sichtbar.
+for (const field of [user, password, repeat, code, recovery]) {
+  field.addEventListener('focus', () => setTimeout(() => field.scrollIntoView({ block: 'center', behavior: 'smooth' }), 250));
+}
+focusFirstEmpty();
 </script>
 </body>
 </html>

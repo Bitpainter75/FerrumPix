@@ -169,6 +169,7 @@ Namespace Services
             End If
             ' Einen Knopf zum Abmelden hat die Seite nicht mehr: abgemeldet wird ueber "Sperren" in
             ' der Galerie, das beendet alle Sitzungen. Den Weg /logout gibt es weiter.
+            AddClipboardPageTexts(texts)
             Return texts
         End Function
 
@@ -199,6 +200,13 @@ Namespace Services
                 context.Response.Close()
                 Return
             End If
+            ' Der Weg der vollen Oberflaeche: nur fuer Administratoren (CanUseDesktop). Weitere
+            ' Benutzer laden ueber die mobile Seite hoch, mit den Rechten je Ordner.
+            If Not IsSignedInForDesktop(context) Then
+                context.Response.StatusCode = 403
+                context.Response.Close()
+                Return
+            End If
             If Not IsOwnOrigin(request) OrElse Not IsKnownToken(request.Headers("X-FerrumPix-Token")) Then
                 Await WriteResultAsync(context, 403, Nothing, LocalizationService.T("Die Seite ist veraltet. Bitte neu laden."))
                 Return
@@ -220,8 +228,17 @@ Namespace Services
             ' Jedes Bild eines Ablegens wird vermerkt, auch eines, das nicht ankommt: seine
             ' Beistelldatei darf dann nicht neben einem gleichnamigen anderen Bild im Ordner landen.
             Dim storedPath As String = Nothing
+            ' Vor dem Empfang: nach der Antwort ist die Verbindung zu (KeepAlive aus), und ihre
+            ' Adresse laesst sich nicht mehr lesen.
+            Dim from = LogAddress(request)
+            Dim userName = SecurityLog.UserNameOf(SignedInUser(context))
+            ' Eine Zeile je Ablegen, nicht je Datei (SecurityLog.NoteUpload); vermerkt, bevor die
+            ' Antwort hinausgeht.
+            Dim noteStored As Action(Of String) =
+                Sub(stored) SecurityLog.NoteUpload(batch, userName, from,
+                                                   SecurityLog.ShownPath(Path.GetDirectoryName(stored), LogRoots()), "desktop")
             Try
-                storedPath = Await ReceiveUploadAsync(context, fileName, batch)
+                storedPath = Await ReceiveUploadAsync(context, fileName, batch, noteStored)
             Finally
                 If Not IsSidecarName(fileName) Then
                     RememberBatchImage(batch, fileName, If(storedPath Is Nothing, Nothing, Path.GetFileName(storedPath)))
@@ -232,7 +249,8 @@ Namespace Services
         ''' <summary>Der Rest des Hochladens, nach Anmeldung und Name. Liefert den Pfad der
         ''' angekommenen Datei, Nothing, wenn sie abgewiesen ist oder nicht ankam (die Antwort an
         ''' die Seite ist dann schon geschrieben).</summary>
-        Private Shared Async Function ReceiveUploadAsync(context As HttpListenerContext, fileName As String, batch As String) As Task(Of String)
+        Private Shared Async Function ReceiveUploadAsync(context As HttpListenerContext, fileName As String, batch As String,
+                                                         noteStored As Action(Of String)) As Task(Of String)
             Dim request = context.Request
             ' Erst als "nicht angekommen" vermerken: jede Abweisung unten schreibt ihre Antwort, bevor
             ' der Aufrufer vermerkt, und eine gleich danach geschickte Beistelldatei saehe ihr Bild
@@ -347,6 +365,7 @@ Namespace Services
             ' ist, und faende das Bild sonst noch nicht im Ablegen (der Vermerk im Finally des
             ' Aufrufers kaeme zu spaet; er bleibt fuer Ausnahmen).
             If Not IsSidecarName(fileName) Then RememberBatchImage(batch, fileName, Path.GetFileName(finalPath))
+            noteStored?.Invoke(finalPath)
             Await WriteResultAsync(context, 200, Path.GetFileName(finalPath), Nothing)
             Return finalPath
         End Function
@@ -459,6 +478,16 @@ Namespace Services
             Dim extension = Path.GetExtension(If(fileName, ""))
             Return String.Equals(extension, ".xmp", StringComparison.OrdinalIgnoreCase) OrElse
                    String.Equals(extension, RawSidecarService.Extension, StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <summary>Traegt die Datei eine Bearbeitung, die beim Rechnen weitere Dateien nach ihrem
+        ''' Pfad liest (Objektbilder, LUT)? Die Beistelldateien (.xmp, .fpxmp) und das Projekt
+        ''' (.fpx). Solche Dateien nimmt die Bruecke nur von einem Administrator an: mit ihnen
+        ''' liesse sich sonst ein Bild aus einem Ordner ohne Recht in ein eigenes Bild rechnen oder
+        ''' die Bearbeitung eines fremden Bildes ersetzen (RecipeReferences ist die zweite Linie).</summary>
+        Friend Shared Function CarriesRecipe(fileName As String) As Boolean
+            Return IsSidecarName(fileName) OrElse
+                   String.Equals(Path.GetExtension(If(fileName, "")), FpxService.Extension, StringComparison.OrdinalIgnoreCase)
         End Function
 
         ''' <summary>Der Name einer Beistelldatei, wenn ihr Bild einen anderen Namen bekommen hat.
@@ -703,6 +732,12 @@ Namespace Services
             Dim request = context.Request
             If Not IsSignedIn(context) Then
                 context.Response.StatusCode = 401
+                context.Response.Close()
+                Return
+            End If
+            ' Nur fuer Administratoren, wie die volle Oberflaeche, die das Angebot gemacht hat.
+            If Not IsSignedInForDesktop(context) Then
+                context.Response.StatusCode = 403
                 context.Response.Close()
                 Return
             End If

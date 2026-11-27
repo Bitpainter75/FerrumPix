@@ -57,11 +57,19 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Kam das Kennwort beim Start mit (Behaelter)? Dann laesst es sich hier weder
-        ''' aendern noch abschalten.</summary>
-        Public ReadOnly Property AccessPasswordFromStart As Boolean
+        ''' <summary>Laeuft FerrumPix im Browser? Dann ist das Kennwort Pflicht: der Schalter ist
+        ''' gesperrt, aendern laesst es sich weiter.</summary>
+        Public ReadOnly Property AccessPasswordRequired As Boolean
             Get
-                Return AppLockService.IsPasswordFromStart
+                Return BrowserBridge.RequiresPassword
+            End Get
+        End Property
+
+        ''' <summary>Der Schalter "Mit Kennwort schuetzen" laesst sich nur ausserhalb des Browsers
+        ''' umlegen.</summary>
+        Public ReadOnly Property AccessProtectionToggleEnabled As Boolean
+            Get
+                Return Not AccessPasswordRequired
             End Get
         End Property
 
@@ -167,7 +175,7 @@ Namespace ViewModels
 
         Public ReadOnly Property AccessShowsNewPassword As Boolean
             Get
-                Return _accessProtectionWanted AndAlso Not AccessPasswordFromStart
+                Return _accessProtectionWanted
             End Get
         End Property
 
@@ -285,24 +293,26 @@ Namespace ViewModels
                 End If
 
                 Dim wantsNewPassword = AccessNewPassword.Length > 0 OrElse AccessNewPasswordRepeat.Length > 0
-                If (Not _accessProtectionWanted OrElse wantsNewPassword) AndAlso AccessPasswordFromStart Then
-                    ReportAccess(LocalizationService.T("Das Kennwort kommt aus der Angabe beim Start und lässt sich nur dort ändern."), True)
-                    Return False
-                End If
 
                 If Not _accessProtectionWanted Then
                     If Not wasProtected Then
                         ReportAccess("", False)
                         Return False
                     End If
-                    If BrowserBridge.IsActive AndAlso BrowserBridge.RequiresPassword Then
-                        ReportAccess(LocalizationService.T("Über das Netz braucht FerrumPix ein Kennwort. Der Schutz bleibt eingeschaltet."), True)
+                    ' Im Browser ist das Kennwort Pflicht; der Schalter ist dort gesperrt, und
+                    ' diese Zeile haelt auch einen anderen Weg dorthin auf.
+                    If AccessPasswordRequired Then
+                        _accessProtectionWanted = True
+                        Me.RaisePropertyChanged(NameOf(AccessProtectionWanted))
+                        ReportAccess(LocalizationService.T("Im Browser braucht FerrumPix immer ein Kennwort. Ändern lässt es sich, abschalten nicht."), True)
                         Return False
                     End If
                     AppSettingsService.Update(Sub(s) s.AppLockPasswordHash = "")
                     ' Sonst gaelten die alten Sitzungen nach einem spaeteren Einschalten wieder.
                     BrowserBridge.EndOtherSessions()
-                    AppLockService.Unlock()
+                    PasswordResetService.Forget(AppLockService.OwnerUserId)
+                    SecurityLog.PasswordRemoved()
+                    AppLockService.UnlockBy("settings")
                     ClearAccessFields()
                     ReportAccess(LocalizationService.T("Der Schutz mit Kennwort ist ausgeschaltet."), False)
                     AfterAccessChanged()
@@ -334,8 +344,13 @@ Namespace ViewModels
                         s.AppLockIdleMinutes = minutes
                     End Sub)
                 ' Ein neues Kennwort beendet jede Sitzung, die mit dem alten entstand, bis auf die
-                ' des Browsers, in dem es eben geaendert wurde.
-                If newHash IsNot Nothing Then BrowserBridge.EndOtherSessions()
+                ' des Browsers, in dem es eben geaendert wurde. Ein offener Verweis zum
+                ' Zuruecksetzen (Kennwort vergessen) gilt danach ebenso wenig.
+                If newHash IsNot Nothing Then
+                    BrowserBridge.EndOtherSessions()
+                    PasswordResetService.Forget(AppLockService.OwnerUserId)
+                    SecurityLog.PasswordChanged(AppLockService.OwnerUserId, "settings")
+                End If
                 AppLockService.NoteActivity()
                 ClearAccessFields()
                 ReportAccess(If(newHash Is Nothing, LocalizationService.T("Gespeichert."),

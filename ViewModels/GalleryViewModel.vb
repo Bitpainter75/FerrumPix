@@ -2595,6 +2595,9 @@ Namespace ViewModels
             ' Die Galerie lebt so lange wie das Fenster; die Anmeldung haelt sie also nicht
             ' ungebuehrlich am Leben (siehe InfoPanelRowSettings, dasselbe Muster).
             AddHandler TileCaptionSettings.Changed, AddressOf OnTileCaptionSettingsChanged
+            ' Der Wortvorrat der Suche laedt fuer den Anzeigefaden im Hintergrund; steht er neu
+            ' bereit, siebt ein stehender Suchtext noch einmal (KI-Begriffe, Personennamen).
+            AddHandler SearchVocabulary.Reloaded, AddressOf OnSearchVocabularyReloaded
             Items = New BulkObservableCollection(Of ImageItem)()
             ' Die Gruppen haengen an Items. Statt an jedem der vielen Wege, die die Liste anfassen, einen
             ' Aufruf nachzutragen (einer wird immer vergessen), horcht die Gruppenansicht an der Sammlung
@@ -9081,6 +9084,7 @@ Namespace ViewModels
         ''' <summary>Vor jedem Durchlauf leeren, damit frisch benannte Personen sofort greifen.</summary>
         Private Shared Sub ResetPersonNameCache()
             _personNamesByPath = Nothing
+            SearchVocabulary.Forget()
         End Sub
 
         ''' <summary>Ein Immich-Asset als Suchzeile, damit eine Suchliste dieselben Bedingungen
@@ -9384,187 +9388,55 @@ Namespace ViewModels
                                           String.Equals(meta.Country, w, StringComparison.OrdinalIgnoreCase))
         End Function
 
-        ''' <summary>Die kanonischen KI-Begriffe je Bildpfad, EINMAL je Durchlauf geholt.
-        '''
-        ''' Dieselbe Ueberlegung wie bei <see cref="_personNamesByPath"/>: der freie Suchtext laeuft
-        ''' ueber jedes Bild des durchsuchten Bestands, und eine eigene Abfrage je Bild liess bei
-        ''' zehntausenden Fotos die Oberflaeche stehen. Der Zwischenspeicher gilt fuer einen
-        ''' Durchlauf, nicht laenger - danach kann eine neue Analyse ihn ueberholt haben.</summary>
-        Private Shared _aiTagsByPath As Dictionary(Of String, List(Of String))
-
-        Private Shared Function AiSearchTermsFor(filePath As String) As IEnumerable(Of String)
-            If String.IsNullOrWhiteSpace(filePath) Then Return Enumerable.Empty(Of String)()
-            ' Serverbilder tragen einen Pseudo-Pfad und stehen in einem eigenen Index; fuer sie
-            ' bleibt es beim gezielten Einzelzugriff, der den richtigen Katalog waehlt.
-            If _aiTagsByPath Is Nothing AndAlso Not IsServerPseudoSearchPath(filePath) Then
-                _aiTagsByPath = LibraryService.Instance.GetAiTagsByPath()
-            End If
-            Dim canonicals As List(Of String) = Nothing
-            If _aiTagsByPath IsNot Nothing AndAlso Not IsServerPseudoSearchPath(filePath) Then
-                If Not _aiTagsByPath.TryGetValue(filePath, canonicals) OrElse canonicals Is Nothing Then
-                    Return Enumerable.Empty(Of String)()
-                End If
-            Else
-                canonicals = LibraryService.Instance.GetAiTags(filePath).Select(Function(t) t.Canonical).ToList()
-            End If
-            Return canonicals.
-                SelectMany(Function(canonical) New String() {canonical, AiTagLocalizationService.Display(canonical)}).
-                Where(Function(term) Not String.IsNullOrWhiteSpace(term)).
-                Distinct(StringComparer.OrdinalIgnoreCase)
-        End Function
-
-        Private Shared Function IsServerPseudoSearchPath(filePath As String) As Boolean
-            Return filePath.StartsWith("immich://", StringComparison.OrdinalIgnoreCase) OrElse
-                   filePath.StartsWith("nextcloud://", StringComparison.OrdinalIgnoreCase)
-        End Function
-
-        ''' <summary>Vor jedem Durchlauf leeren, damit eine frische Analyse sofort greift.</summary>
+        ''' <summary>Vor jedem Durchlauf leeren, damit eine frische Analyse oder Benennung sofort
+        ''' greift. Die Zuordnungen selbst haelt der gemeinsame Wortvorrat (SearchVocabulary).</summary>
         Private Shared Sub ResetAiTagCache()
-            _aiTagsByPath = Nothing
+            SearchVocabulary.Forget()
         End Sub
 
         ''' <summary>Was der Suchtext aus dem Katalog über Dateiname und Stichwörter hinaus
         ''' durchsucht: Titel, Überschrift, Beschreibung, Urheber, Quellenangabe, Copyright
-        ''' (LibraryImageMeta.CatalogSearchText) und den Ort, als Ortsname, Land aus Datei oder Tabelle
-        ''' und übersetzter Landesname. Dieselben Teile wie ImageItem.SearchText in der Volltextsuche.
-        ''' Ein Platzhalter-Muster ("IMG_*") bleibt davon unberührt: es meint den Dateinamen, siehe
-        ''' MatchesSingleSearchTerm.</summary>
+        ''' (LibraryImageMeta.CatalogSearchText), den Ort (wie angezeigt und wie in der Datei) und
+        ''' Bewertung und Favorit als Woerter. Dieselben Teile wie ImageItem.SearchText, aus
+        ''' derselben Stelle (SearchVocabulary). Ein Platzhalter-Muster ("IMG_*") bleibt davon
+        ''' unberührt: es meint den Dateinamen.</summary>
         Private Shared Function CatalogSearchText(meta As LibraryImageMeta) As String
             If meta Is Nothing Then Return ""
-            Return ImageDescriptionService.JoinForSearch(meta.CatalogSearchText, meta.City, meta.Country,
-                                                         PlaceLookupService.LocalizedCountry(meta.CountryCode, meta.Country))
+            Return ImageDescriptionService.JoinForSearch(meta.CatalogSearchText,
+                                                         SearchVocabulary.PlaceWords(meta.City, meta.Country, meta.CountryCode),
+                                                         SearchVocabulary.RatingWords(meta.Rating, meta.IsFavorite))
         End Function
 
-        ''' <summary>Prüft den freien Text einer gespeicherten Suche gegen Dateiname, manuelle und
-        ''' KI-Stichwörter und die Katalogtexte (<see cref="CatalogSearchText"/>). KI-Tags liegen
-        ''' absichtlich nicht in <c>ImageMeta.Tags</c>, damit ihre
-        ''' Herkunft im Infopanel erhalten bleibt; für die Suche gehören sie aber in denselben
-        ''' Wortvorrat. Neben dem kanonischen englischen Modellbegriff kommt die Anzeigeform dazu,
-        ''' damit beispielsweise sowohl "dog" als auch "Hund" denselben Treffer finden.
+        ''' <summary>Prüft den freien Text einer gespeicherten Suche gegen den gemeinsamen
+        ''' Wortvorrat: Dateiname, Stichwörter, die Katalogtexte (<see cref="CatalogSearchText"/>)
+        ''' und was der Katalog in eigenen Tabellen traegt, KI-Begriffe und Personennamen
+        ''' (SearchVocabulary.CatalogWordsFor). KI-Tags liegen absichtlich nicht in
+        ''' <c>ImageMeta.Tags</c>, damit ihre Herkunft im Infopanel erhalten bleibt; für die Suche
+        ''' gehören sie aber in denselben Wortvorrat.
         '''
-        ''' Die Regeln des Suchtexts stehen bei <see cref="ParseSearchText"/>.</summary>
+        ''' Die Regeln des Suchtexts stehen bei SearchTextQuery.ParseSearchText.</summary>
         Private Shared Function MatchesSavedSearchText(filePath As String, tags As IEnumerable(Of String),
                                                        describingText As String, textQuery As String) As Boolean
             If String.IsNullOrWhiteSpace(textQuery) Then Return True
             Dim fileName = IO.Path.GetFileName(filePath)
             Dim haystack = fileName & " " & String.Join(" ", If(tags, Enumerable.Empty(Of String)())) &
-                           " " & String.Join(" ", AiSearchTermsFor(filePath)) &
+                           " " & SearchVocabulary.CatalogWordsFor(filePath) &
                            " " & If(describingText, "")
             Return MatchesParsedSearchText(ParseSearchText(textQuery), fileName, haystack)
         End Function
 
-        ''' <summary>Ein Suchbegriff samt Vorzeichen: 1 heisst "muss vorkommen" (<c>+Wort</c>), -1
-        ''' "darf nicht vorkommen" (<c>-Wort</c>), 0 ein freies Wort ohne Zeichen.</summary>
-        Private Structure SearchTerm
-            Public Text As String
-            Public Sign As Integer
-        End Structure
-
-        ''' <summary>Der zerlegte Suchtext: eine Gruppe, oder mehrere, wenn ein ausdrueckliches
-        ''' OR/ODER darin steht.</summary>
-        Private NotInheritable Class ParsedSearchText
-            Public ReadOnly Groups As New List(Of List(Of SearchTerm))()
-            Public HasExplicitOr As Boolean
-
-            Public ReadOnly Property IsEmpty As Boolean
-                Get
-                    Return Groups.All(Function(group) group.Count = 0)
-                End Get
-            End Property
-        End Class
-
-        Private Shared ReadOnly ExplicitOrPattern As New Regex("\s+(?:OR|ODER)\s+", RegexOptions.IgnoreCase)
-
-        ''' <summary>Zerlegt den freien Suchtext. Er gilt gegen Dateiname, Stichwoerter, KI-Begriffe
-        ''' und Katalogtexte, in dieser Reihenfolge der Regeln:
-        '''
-        ''' - <c>+Wort</c> muss vorkommen, <c>-Wort</c> darf nicht vorkommen. So sucht man Bilder mit
-        '''   ALLEN Stichwoertern: <c>+Urlaub +Strand -Regen</c>.
-        ''' - Freie Woerter ohne Zeichen sind eine ODER-Liste: "Meer Strand" findet Meer ODER Strand.
-        '''   Stehen sie neben Woertern mit Zeichen, muss zusaetzlich mindestens eines treffen.
-        ''' - Ein ausdrueckliches OR/ODER trennt Gruppen, von denen eine zutreffen muss; innerhalb einer
-        '''   Gruppe muessen dann ALLE freien Woerter treffen.
-        '''
-        ''' Ein Ausdruck in Anfuehrungszeichen bleibt zusammen, auch mit Zeichen davor
-        ''' (<c>+"New York"</c>). Ein einzelnes + oder - ist kein Zeichen, sondern Text, und ein
-        ''' Bindestrich mitten im Wort ebenso. Platzhalter (* und ?) gelten je Wort und nur fuer den
-        ''' Dateinamen, auch mit Zeichen (<c>-*.png</c>).</summary>
+        ''' <summary>Was der Suchtext bedeutet, steht an EINER Stelle (SearchTextQuery), fuer jeden
+        ''' Suchweg samt der mobilen Seite. Diese drei leiten nur weiter.</summary>
         Private Shared Function ParseSearchText(textQuery As String) As ParsedSearchText
-            Dim result As New ParsedSearchText()
-            Dim text = If(textQuery, "").Trim()
-            result.HasExplicitOr = ExplicitOrPattern.IsMatch(text)
-            If result.HasExplicitOr Then
-                For Each group In ExplicitOrPattern.Split(text)
-                    result.Groups.Add(SplitSearchTerms(group))
-                Next
-            Else
-                result.Groups.Add(SplitSearchTerms(text))
-            End If
-            Return result
-        End Function
-
-        ''' <summary>Zerlegt eine Eingabe in ihre Suchbegriffe. Ein Ausdruck in Anfuehrungszeichen
-        ''' bleibt zusammen, sonst trennen Leerzeichen. EINE Stelle fuer alle Aufrufer: mit einer
-        ''' eigenen Fassung je Stelle zerfaellt derselbe Text irgendwann verschieden, und dann findet
-        ''' die Vorauswahl der Dateien etwas anderes als der Vergleich je Bild.</summary>
-        Private Shared Function SplitSearchTerms(textQuery As String) As List(Of SearchTerm)
-            Dim terms As New List(Of SearchTerm)()
-            For Each match As Match In Regex.Matches(If(textQuery, "").Trim(), "[+-]?""[^""]*""|\S+")
-                Dim value = match.Value
-                Dim sign = 0
-                If value.Length > 1 AndAlso (value(0) = "+"c OrElse value(0) = "-"c) Then
-                    sign = If(value(0) = "+"c, 1, -1)
-                    value = value.Substring(1)
-                End If
-                value = value.Trim(""""c)
-                If String.IsNullOrWhiteSpace(value) Then Continue For
-                terms.Add(New SearchTerm With {.Text = value, .Sign = sign})
-            Next
-            Return terms
+            Return SearchTextQuery.ParseSearchText(textQuery)
         End Function
 
         Private Shared Function IsWildcardTerm(term As String) As Boolean
-            Return term.IndexOf("*"c) >= 0 OrElse term.IndexOf("?"c) >= 0
+            Return SearchTextQuery.IsWildcardTerm(term)
         End Function
 
         Private Shared Function MatchesParsedSearchText(query As ParsedSearchText, fileName As String, haystack As String) As Boolean
-            If query.IsEmpty Then Return True
-            Dim freeTermsAsAny = Not query.HasExplicitOr
-            Return query.Groups.Any(Function(group) MatchesSearchGroup(group, fileName, haystack, freeTermsAsAny))
-        End Function
-
-        ''' <summary>Eine Gruppe trifft, wenn jedes Plus-Wort vorkommt, kein Minus-Wort, und von den
-        ''' freien Woertern eines (<paramref name="freeTermsAsAny"/>) oder alle.</summary>
-        Private Shared Function MatchesSearchGroup(group As List(Of SearchTerm), fileName As String, haystack As String,
-                                                   freeTermsAsAny As Boolean) As Boolean
-            Dim hasFree = False
-            Dim freeHit = False
-            For Each term In group
-                Dim hit = MatchesSingleSearchTerm(term.Text, fileName, haystack)
-                If term.Sign > 0 Then
-                    If Not hit Then Return False
-                ElseIf term.Sign < 0 Then
-                    If hit Then Return False
-                Else
-                    hasFree = True
-                    If hit Then
-                        freeHit = True
-                    ElseIf Not freeTermsAsAny Then
-                        Return False
-                    End If
-                End If
-            Next
-            Return Not hasFree OrElse freeHit OrElse Not freeTermsAsAny
-        End Function
-
-        Private Shared Function MatchesSingleSearchTerm(term As String, fileName As String, haystack As String) As Boolean
-            If term.IndexOf("*"c) >= 0 OrElse term.IndexOf("?"c) >= 0 Then
-                Dim pattern = "^" & Regex.Escape(term).
-                    Replace("\*", ".*").
-                    Replace("\?", ".") & "$"
-                Return Regex.IsMatch(fileName, pattern, RegexOptions.IgnoreCase Or RegexOptions.CultureInvariant)
-            End If
-            Return haystack.Contains(term, StringComparison.OrdinalIgnoreCase)
+            Return SearchTextQuery.MatchesParsedSearchText(query, fileName, haystack)
         End Function
 
         Private Shared Function NormalizeRatings(ratings As IEnumerable(Of Integer)) As HashSet(Of Integer)
@@ -11963,7 +11835,10 @@ Namespace ViewModels
             ' +Wort muss vorkommen, -Wort darf nicht. Zerlegt wird einmal, nicht je Bild.
             If Not String.IsNullOrWhiteSpace(_searchText) AndAlso _catalogTextQuery.Length = 0 Then
                 Dim parsedSearch = ParseSearchText(_searchText)
-                filtered = filtered.Where(Function(i) MatchesParsedSearchText(parsedSearch, i.FileName, i.SearchText))
+                ' Der Wortvorrat wie bei jedem Suchweg (SearchVocabulary): was das Element selbst
+                ' traegt, dazu KI-Begriffe und Personennamen aus dem Katalog.
+                filtered = filtered.Where(Function(i) MatchesParsedSearchText(parsedSearch, i.FileName,
+                                                                              i.SearchText & " " & SearchVocabulary.CatalogWordsFor(i.FilePath, allowSingleLookups:=False)))
             End If
 
             If _filterFavorite = "Only" Then
@@ -18134,6 +18009,16 @@ Namespace ViewModels
         ''' <summary>Eine neue Wahl kann Zeilen dazunehmen oder wegnehmen, und damit aendert sich
         ''' die Hoehe jeder Kachel. Deshalb auch alles, was an der Hoehe haengt, wie beim
         ''' Kachelabstand.</summary>
+        ''' <summary>Kommt auf einem Hintergrundfaden (SearchVocabulary.Reloaded). Nur mit einem
+        ''' Suchtext, der als Filter der Liste wirkt; eine Katalogsuche hat schon gesiebt.</summary>
+        Private Sub OnSearchVocabularyReloaded(sender As Object, e As EventArgs)
+            Dispatcher.UIThread.Post(
+                Sub()
+                    If String.IsNullOrWhiteSpace(_searchText) OrElse _catalogTextQuery.Length > 0 Then Return
+                    FilterAndSortInteractive()
+                End Sub)
+        End Sub
+
         Private Sub OnTileCaptionSettingsChanged()
             Me.RaisePropertyChanged(NameOf(IsTileCaptionRow1Visible))
             Me.RaisePropertyChanged(NameOf(IsTileCaptionRow2Visible))

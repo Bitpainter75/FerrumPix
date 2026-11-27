@@ -183,6 +183,11 @@ Namespace ViewModels
                                        End Sub)
         End Function
 
+        ''' <summary>Einen Link zum Teilen erstellen (Freigabe per Link, BrowserBridgeShares.vb). Nur
+        ''' die Galerie setzt es, und nur im Browser: ein Link nuetzt nur, wenn die Seite erreichbar
+        ''' ist.</summary>
+        Public Property ShareLink As ICommand
+
         ''' <summary>"Öffnen mit": das Kommando bekommt die Kennung des Programms als Parameter.
         ''' Die Programme stehen daneben, damit der Bauplan ohne Blick in die Einstellungen
         ''' auskommt. Keine Programme heisst: das Untermenue faellt weg.</summary>

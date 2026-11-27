@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="FerrumPix.Views.Settings.SharesAdminPanel">
+                    <!-- FREIGABEN: alle Links zum Teilen aller Benutzer (SettingsViewModelShares.vb),
+                         Widerrufen und Pausieren. Ein Bereich im Abschnitt der Benutzerverwaltung,
+                         kein eigener Abschnitt. Angelegt wird in der mobilen Seite oder ueber das
+                         Kontextmenue der Galerie im Browser. -->
+                    <StackPanel Spacing="14">
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,8,0,0"/>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Freigaben" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Links zum Teilen von Bildern mit Menschen ohne Konto, von allen Benutzern. Ein Link gilt auch, wenn FerrumPix gesperrt ist; zum Anhalten aller Links dient der Schalter darunter." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="560" Margin="0,0,24,0">
+                                <TextBlock Text="Alle Freigaben pausieren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Jeder Link antwortet dann wie ein unbekannter, bis der Schalter wieder aus ist." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding SharesPaused}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <TextBlock Text="Noch keine Freigaben" IsVisible="{Binding HasNoShares}"
+                                   Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}"/>
+                        <ItemsControl ItemsSource="{Binding ShareRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="*,Auto" Margin="0,4" AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
+                                        <StackPanel Spacing="2" Margin="0,0,12,0">
+                                            <TextBlock Classes="no-translate" Text="{Binding Title}" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Classes="no-translate" Text="{Binding Details}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <Button Grid.Column="1" Classes="ghost" Padding="10,6" VerticalAlignment="Center" Command="{Binding RevokeCommand}">Widerrufen</Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+</UserControl>

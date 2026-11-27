@@ -3804,8 +3804,8 @@
   <data name="MetadataExtractor_2_9_b4b4b16f" xml:space="preserve">
     <value>MetadataExtractor 2.9</value>
   </data>
-  <data name="QRCoder_1_8_9fe99238" xml:space="preserve">
-    <value>QRCoder 1.8</value>
+  <data name="QRCoder_1_9_5a734f90" xml:space="preserve">
+    <value>QRCoder 1.9</value>
   </data>
   <data name="Phosphor_Icons_db78df19" xml:space="preserve">
     <value>Phosphor Icons</value>
@@ -13135,5 +13135,635 @@
   </data>
   <data name="Der_Ordner_0_ist_f_r_FerrumPix_als_Flatpak_nur_z_a9f4527b" xml:space="preserve">
     <value>{0} klasörü Flatpak olarak FerrumPix ile yalnızca okuma için paylaşılmış, oraya yazılamaz. Çözüm: başka bir klasör seçin ya da izni Flatseal ile veya terminalde {1} komutuyla genişletin, ardından FerrumPix'i yeniden başlatın.</value>
+  </data>
+  <data name="Das_Kennwort_wurde_inzwischen_schon_festgelegt_B_865e7576" xml:space="preserve">
+    <value>Parola bu arada zaten belirlendi. Lütfen oturum açın.</value>
+  </data>
+  <data name="Bitte_einen_Benutzernamen_eingeben_h_chstens_64__9e0430a1" xml:space="preserve">
+    <value>Bir kullanıcı adı girin, en fazla 64 karakter.</value>
+  </data>
+  <data name="Benutzername_oder_Kennwort_ist_falsch_3a7298b4" xml:space="preserve">
+    <value>Kullanıcı adı veya parola yanlış.</value>
+  </data>
+  <data name="Bitte_den_Benutzernamen_eingeben_689acf9a" xml:space="preserve">
+    <value>Kullanıcı adını girin.</value>
+  </data>
+  <data name="Bitte_einmal_einen_Benutzernamen_festlegen_Er_gi_dcd39d83" xml:space="preserve">
+    <value>Bir kez kullanıcı adı belirleyin. Bundan sonra parolayla birlikte geçerlidir.</value>
+  </data>
+  <data name="Willkommen_bei_FerrumPix_Bitte_zuerst_Benutzerna_996d65a2" xml:space="preserve">
+    <value>FerrumPix'e hoş geldiniz. Önce kullanıcı adı ve parola belirleyin.</value>
+  </data>
+  <data name="Mindestens_8_Zeichen_mit_Gro_buchstaben_Kleinbuc_d7ecebc7" xml:space="preserve">
+    <value>Büyük ve küçük harf, rakam ve özel karakter içeren en az 8 karakter; boşluk özel karakter sayılır.</value>
+  </data>
+  <data name="Kennwort_festlegen_35c49577" xml:space="preserve">
+    <value>Parolayı belirle</value>
+  </data>
+  <data name="Desktop_532c67fe" xml:space="preserve">
+    <value>Masaüstü</value>
+  </data>
+  <data name="Volle_Oberfl_che_e64e07e3" xml:space="preserve">
+    <value>Tam arayüz</value>
+  </data>
+  <data name="Mobil_6e1dffe9" xml:space="preserve">
+    <value>Mobil</value>
+  </data>
+  <data name="Vereinfachte_Seite_46198397" xml:space="preserve">
+    <value>Basitleştirilmiş sayfa</value>
+  </data>
+  <data name="Im_Browser_braucht_FerrumPix_immer_ein_Kennwort__de71c557" xml:space="preserve">
+    <value>Tarayıcıda FerrumPix her zaman bir parola gerektirir. Değiştirilebilir, ancak kapatılamaz.</value>
+  </data>
+  <data name="Zur_vereinfachten_Seite_f_r_Telefon_und_Tablet_w_320f4a9d" xml:space="preserve">
+    <value>Telefon ve tablet için basitleştirilmiş sayfaya geç</value>
+  </data>
+  <data name="Mobile_Ansicht_bab7686a" xml:space="preserve">
+    <value>Mobil görünüm</value>
+  </data>
+  <data name="0_ausgew_hlt_0c3edf50" xml:space="preserve">
+    <value>{0} seçildi</value>
+  </data>
+  <data name="Als_JPEG_mit_Bearbeitung_ea4e5fa6" xml:space="preserve">
+    <value>Düzenlemeyle JPEG olarak</value>
+  </data>
+  <data name="Als_ZIP_herunterladen_805a899a" xml:space="preserve">
+    <value>ZIP olarak indir</value>
+  </data>
+  <data name="Das_Bild_konnte_nicht_geladen_werden_e226829e" xml:space="preserve">
+    <value>Görüntü yüklenemedi</value>
+  </data>
+  <data name="Die_nderung_konnte_nicht_gespeichert_werden_9b35374b" xml:space="preserve">
+    <value>Değişiklik kaydedilemedi</value>
+  </data>
+  <data name="Erneut_versuchen_3234b7ec" xml:space="preserve">
+    <value>Yeniden dene</value>
+  </data>
+  <data name="Fotos_69daa51e" xml:space="preserve">
+    <value>Fotoğraflar</value>
+  </data>
+  <data name="Hier_gibt_es_keine_Fotos_46e7063a" xml:space="preserve">
+    <value>Burada fotoğraf yok</value>
+  </data>
+  <data name="Hierher_hochladen_962952b3" xml:space="preserve">
+    <value>Buraya yükle</value>
+  </data>
+  <data name="In_diesem_Ordner_liegen_keine_Fotos_4697a322" xml:space="preserve">
+    <value>Bu klasörde fotoğraf yok</value>
+  </data>
+  <data name="Informationen_bc3bc55d" xml:space="preserve">
+    <value>Bilgiler</value>
+  </data>
+  <data name="Keine_Verbindung_zu_FerrumPix_79bb9eb5" xml:space="preserve">
+    <value>FerrumPix ile bağlantı yok</value>
+  </data>
+  <data name="Mehr_dfc8541c" xml:space="preserve">
+    <value>Daha fazla</value>
+  </data>
+  <data name="Stichwort_Kamera_oder_Dateiname_23be4ec1" xml:space="preserve">
+    <value>Anahtar sözcük, kamera veya dosya adı</value>
+  </data>
+  <data name="Teilen_b1cfc831" xml:space="preserve">
+    <value>Paylaş</value>
+  </data>
+  <data name="Wird_hochgeladen_527eb12c" xml:space="preserve">
+    <value>Yükleniyor</value>
+  </data>
+  <data name="Zur_Desktop_Ansicht_5a522d33" xml:space="preserve">
+    <value>Masaüstü görünümüne geç</value>
+  </data>
+  <data name="Bitte_wenden_Sie_sich_an_den_Administrator_787b0090" xml:space="preserve">
+    <value>Lütfen yöneticiye başvurun.</value>
+  </data>
+  <data name="FerrumPix_neues_Kennwort_festlegen_cb826349" xml:space="preserve">
+    <value>FerrumPix: yeni parola belirleyin</value>
+  </data>
+  <data name="Hallo_0_41ce0990" xml:space="preserve">
+    <value>Merhaba {0},</value>
+  </data>
+  <data name="f_r_Ihr_Konto_bei_FerrumPix_wurde_ein_neues_Kenn_d48b8bd7" xml:space="preserve">
+    <value>FerrumPix hesabınız için yeni bir parola istendi. Bu bağlantıyla belirleyin; 30 dakika ve yalnızca bir kez geçerlidir:</value>
+  </data>
+  <data name="Wenn_Sie_das_nicht_angefordert_haben_k_nnen_Sie__c9cefc15" xml:space="preserve">
+    <value>Bunu siz istemediyseniz bu iletiyi silebilirsiniz.</value>
+  </data>
+  <data name="Zu_viele_Anfragen_Bitte_sp_ter_noch_einmal_versu_6f483281" xml:space="preserve">
+    <value>Çok fazla istek. Lütfen daha sonra yeniden deneyin.</value>
+  </data>
+  <data name="Wenn_es_dazu_ein_Konto_mit_E_Mail_Adresse_gibt_i_26756489" xml:space="preserve">
+    <value>E-posta adresli bir hesap varsa ileti yolda. Yoksa yöneticiye başvurun.</value>
+  </data>
+  <data name="Der_Verweis_ist_abgelaufen_oder_wurde_schon_benu_de2b66bd" xml:space="preserve">
+    <value>Bağlantının süresi doldu veya zaten kullanıldı.</value>
+  </data>
+  <data name="Kennwort_vergessen_b45939e9" xml:space="preserve">
+    <value>Parolanızı mı unuttunuz?</value>
+  </data>
+  <data name="Benutzername_oder_E_Mail_Adresse_eingeben_Gibt_e_08194606" xml:space="preserve">
+    <value>Kullanıcı adını veya e-posta adresini girin. E-posta adresli bir hesap varsa yeni parola için bir bağlantı gelir.</value>
+  </data>
+  <data name="Benutzername_oder_E_Mail_Adresse_73d23074" xml:space="preserve">
+    <value>Kullanıcı adı veya e-posta adresi</value>
+  </data>
+  <data name="Verweis_senden_37c4aead" xml:space="preserve">
+    <value>Bağlantı gönder</value>
+  </data>
+  <data name="Zur_ck_zur_Anmeldung_887f2648" xml:space="preserve">
+    <value>Girişe dön</value>
+  </data>
+  <data name="Neues_Kennwort_festlegen_144cb35b" xml:space="preserve">
+    <value>Yeni parola belirle</value>
+  </data>
+  <data name="Die_volle_Oberfl_che_gibt_es_nur_f_r_Administrat_546010d4" xml:space="preserve">
+    <value>Tam arayüz yalnızca yöneticiler içindir. Mobil sayfaya geçiliyor.</value>
+  </data>
+  <data name="0_l_schen_a66ed0e0" xml:space="preserve">
+    <value>{0} silinsin mi?</value>
+  </data>
+  <data name="Ansehen_97d7cee1" xml:space="preserve">
+    <value>Görüntüleme</value>
+  </data>
+  <data name="Mitarbeiten_df833ab8" xml:space="preserve">
+    <value>Katkı</value>
+  </data>
+  <data name="Kein_Zugriff_aa31bf98" xml:space="preserve">
+    <value>Erişim yok</value>
+  </data>
+  <data name="Ohne_Verschl_sselung_1cc9b2c4" xml:space="preserve">
+    <value>Şifrelemesiz</value>
+  </data>
+  <data name="Eigent_mer_2843ee90" xml:space="preserve">
+    <value>Sahip</value>
+  </data>
+  <data name="Administrator_1eda2375" xml:space="preserve">
+    <value>Yönetici</value>
+  </data>
+  <data name="Benutzer_bd26f3d2" xml:space="preserve">
+    <value>Kullanıcılar</value>
+  </data>
+  <data name="Gesperrt_b1432218" xml:space="preserve">
+    <value>Engelli</value>
+  </data>
+  <data name="Diesen_Benutzernamen_gibt_es_schon_ae86e156" xml:space="preserve">
+    <value>Bu kullanıcı adı zaten var.</value>
+  </data>
+  <data name="Die_E_Mail_Adresse_ist_ung_ltig_d8df6232" xml:space="preserve">
+    <value>E-posta adresi geçersiz.</value>
+  </data>
+  <data name="Diese_E_Mail_Adresse_geh_rt_schon_einem_anderen__a9e51850" xml:space="preserve">
+    <value>Bu e-posta adresi başka bir kullanıcıya ait.</value>
+  </data>
+  <data name="Das_Kennwort_erf_llt_die_Regeln_nicht_aa122aaf" xml:space="preserve">
+    <value>Parola kurallara uymuyor.</value>
+  </data>
+  <data name="Der_Eigent_mer_bleibt_immer_Administrator_und_l__5a284448" xml:space="preserve">
+    <value>Sahip her zaman yöneticidir; engellenemez ve silinemez.</value>
+  </data>
+  <data name="Diesen_Benutzer_gibt_es_nicht_mehr_d4df6788" xml:space="preserve">
+    <value>Bu kullanıcı artık yok.</value>
+  </data>
+  <data name="Administratoren_sehen_alles_und_brauchen_keine_R_340bea53" xml:space="preserve">
+    <value>Yöneticiler her şeyi görür ve kurala ihtiyaç duymaz.</value>
+  </data>
+  <data name="Ohne_Regel_sieht_dieser_Benutzer_nichts_dfc85d80" xml:space="preserve">
+    <value>Kural olmadan bu kullanıcı hiçbir şey görmez.</value>
+  </data>
+  <data name="Keine_Regel_gibt_einen_Ordner_zum_Ansehen_frei_ff196fc4" xml:space="preserve">
+    <value>Hiçbir kural bir klasörü görüntülemeye izin vermiyor.</value>
+  </data>
+  <data name="Auf_der_mobilen_Seite_beginnt_er_hier_40ac6711" xml:space="preserve">
+    <value>Mobil sayfada buradan başlar:</value>
+  </data>
+  <data name="Die_n_chstliegende_Regel_gewinnt_auch_eine_enger_a8ebe4d4" xml:space="preserve">
+    <value>En yakın kural geçerlidir, alt klasördeki daha dar bir kural da dahil.</value>
+  </data>
+  <data name="Das_neue_Kennwort_gilt_ab_sofort_Offene_Anmeldun_c8a9e134" xml:space="preserve">
+    <value>Yeni parola hemen geçerlidir. Bu kullanıcının açık oturumları sonlandırıldı.</value>
+  </data>
+  <data name="0_kann_sich_danach_nicht_mehr_anmelden_und_seine_b063d31d" xml:space="preserve">
+    <value>{0} artık giriş yapamaz ve klasör kuralları kaldırılır. Fotoğraflar ve puanlar kalır.</value>
+  </data>
+  <data name="Der_Port_muss_eine_Zahl_von_1_bis_65535_sein_63e44f66" xml:space="preserve">
+    <value>Bağlantı noktası 1 ile 65535 arasında bir sayı olmalıdır.</value>
+  </data>
+  <data name="Die_ffentliche_Adresse_braucht_die_Form_https_na_ef72da9c" xml:space="preserve">
+    <value>Genel adres yolsuz https://name.example biçiminde olmalıdır.</value>
+  </data>
+  <data name="Bitte_eine_g_ltige_Adresse_f_r_die_Test_E_Mail_e_cb67ff6c" xml:space="preserve">
+    <value>Test e-postası için geçerli bir adres girin.</value>
+  </data>
+  <data name="Bitte_Server_und_Absender_eintragen_676a1249" xml:space="preserve">
+    <value>Sunucu ve göndereni girin.</value>
+  </data>
+  <data name="Wird_gesendet_bfe4a609" xml:space="preserve">
+    <value>Gönderiliyor ...</value>
+  </data>
+  <data name="FerrumPix_Test_E_Mail_6bec34a9" xml:space="preserve">
+    <value>FerrumPix: test e-postası</value>
+  </data>
+  <data name="Diese_Nachricht_kommt_von_FerrumPix_Der_Mailvers_8e971cfd" xml:space="preserve">
+    <value>Bu ileti FerrumPix'ten geliyor. Unutulan parola için e-posta gönderimi çalışıyor.</value>
+  </data>
+  <data name="Die_Test_E_Mail_an_0_ist_versendet_ad16c6ef" xml:space="preserve">
+    <value>{0} adresine test e-postası gönderildi.</value>
+  </data>
+  <data name="Die_Test_E_Mail_lie_sich_nicht_senden_0_b5e3e762" xml:space="preserve">
+    <value>Test e-postası gönderilemedi: {0}</value>
+  </data>
+  <data name="Ordner_f_r_die_Regel_w_hlen_0fb8b613" xml:space="preserve">
+    <value>Kural için klasörleri seç</value>
+  </data>
+  <data name="Wer_FerrumPix_im_Browser_benutzen_darf_Der_Eigen_e0d7be8a" xml:space="preserve">
+    <value>FerrumPix'i tarayıcıda kimlerin kullanabileceği. Kurulumdaki sahip yöneticidir ve her şeyi görür. Diğer kullanıcılar yalnızca mobil sayfayı alır ve yalnızca kurallarının izin verdiği klasörleri görür. Puanlar ve işaretler herkes için ortaktır.</value>
+  </data>
+  <data name="E_Mail_Adresse_ce8fdbcb" xml:space="preserve">
+    <value>E-posta adresi</value>
+  </data>
+  <data name="F_r_ein_vergessenes_Kennwort_Angemeldet_wird_wei_1483249b" xml:space="preserve">
+    <value>Unutulan parola için. Giriş yine adla yapılır.</value>
+  </data>
+  <data name="Darf_in_die_volle_Oberfl_che_und_in_die_Einstell_3fb7f312" xml:space="preserve">
+    <value>Tam arayüzü ve ayarları kullanabilir, her şeyi görür.</value>
+  </data>
+  <data name="Kann_sich_nicht_anmelden_offene_Anmeldungen_ende_ad4e11c4" xml:space="preserve">
+    <value>Giriş yapamaz; açık oturumlar hemen sona erer.</value>
+  </data>
+  <data name="Kennwort_zur_cksetzen_f2e37733" xml:space="preserve">
+    <value>Parolayı sıfırla</value>
+  </data>
+  <data name="Kennwort_setzen_55eb847e" xml:space="preserve">
+    <value>Parolayı belirle</value>
+  </data>
+  <data name="Rechte_je_Ordner_bb6f13e0" xml:space="preserve">
+    <value>Klasör başına izinler</value>
+  </data>
+  <data name="Ansehen_hei_t_sehen_und_herunterladen_Mitarbeite_283f34b3" xml:space="preserve">
+    <value>Görüntüleme görmek ve indirmek demektir, Katkı buna puanlama, işaretleme ve yüklemeyi, Yönetme yeniden adlandırma ve silmeyi ekler. Kural klasör ve altındaki her şey için geçerlidir.</value>
+  </data>
+  <data name="Benutzer_l_schen_18102426" xml:space="preserve">
+    <value>Kullanıcıyı sil</value>
+  </data>
+  <data name="Neuer_Benutzer_93017c9b" xml:space="preserve">
+    <value>Yeni kullanıcı</value>
+  </data>
+  <data name="Name_ohne_Gro_und_Kleinschreibung_eindeutig_E_Ma_4dabb81c" xml:space="preserve">
+    <value>Ad büyük küçük harften bağımsız olarak benzersiz olmalı, e-posta adresi isteğe bağlıdır. Yönetici rolü olmadan klasör kuralları gelene kadar hiçbir şey görmez.</value>
+  </data>
+  <data name="Benutzer_anlegen_1614f4af" xml:space="preserve">
+    <value>Kullanıcı oluştur</value>
+  </data>
+  <data name="E_Mail_f_r_vergessene_Kennw_rter_b66373bf" xml:space="preserve">
+    <value>Unutulan parolalar için e-posta</value>
+  </data>
+  <data name="Mit_einem_Mailserver_schickt_die_Anmeldung_im_Br_528bb2f3" xml:space="preserve">
+    <value>Bir e-posta sunucusuyla tarayıcıdaki giriş, parola unutulduğunda kullanıcının e-posta adresine bir bağlantı gönderir. Sunucu yoksa yalnızca yönetici yardım edebilir.</value>
+  </data>
+  <data name="Server_cb0cb170" xml:space="preserve">
+    <value>Sunucu</value>
+  </data>
+  <data name="Port_fe035157" xml:space="preserve">
+    <value>Bağlantı noktası</value>
+  </data>
+  <data name="Verschl_sselung_3be4a22c" xml:space="preserve">
+    <value>Şifreleme</value>
+  </data>
+  <data name="Absender_4bc8195c" xml:space="preserve">
+    <value>Gönderen</value>
+  </data>
+  <data name="ffentliche_Adresse_a088db22" xml:space="preserve">
+    <value>Genel adres</value>
+  </data>
+  <data name="Test_E_Mail_an_cb64f2fe" xml:space="preserve">
+    <value>Test e-postası alıcısı</value>
+  </data>
+  <data name="Die_ffentliche_Adresse_bildet_den_Verweis_in_der_86dac91d" xml:space="preserve">
+    <value>Genel adres iletideki bağlantıyı oluşturur. Boşsa tarayıcının kullandığı adres geçerlidir; ev ağında güvenmediğiniz cihazlar varsa ayarlanmalıdır.</value>
+  </data>
+  <data name="Test_E_Mail_senden_c79d6b3b" xml:space="preserve">
+    <value>Test e-postası gönder</value>
+  </data>
+  <data name="Mit_den_Zugangsdaten_Immich_Nextcloud_Mailversan_38be27bf" xml:space="preserve">
+    <value>Kimlik bilgileriyle: Immich, Nextcloud, e-posta gönderimi ve giriş parolaları</value>
+  </data>
+  <data name="Automatisch_Sprache_des_Browsers_cac03e47" xml:space="preserve">
+    <value>Otomatik (tarayıcı dili)</value>
+  </data>
+  <data name="F_r_die_mobile_Seite_Meldungen_und_Nachrichten_a_397aed2f" xml:space="preserve">
+    <value>Mobil sayfa, bildirimler ve bu kullanıcıya gönderilen iletiler için. Tam arayüz uygulamanın dilinde kalır.</value>
+  </data>
+  <data name="Benutzerverwaltung_b05aadc9" xml:space="preserve">
+    <value>Kullanıcı yönetimi</value>
+  </data>
+  <data name="Browser_und_mobile_Ansicht_0b4f1ff5" xml:space="preserve">
+    <value>Tarayıcı ve mobil görünüm</value>
+  </data>
+  <data name="Sperren_und_das_Anmeldefenster_zeigen_nur_mit_Ke_f06c516d" xml:space="preserve">
+    <value>Kilitle ve oturum açma penceresini göster (yalnızca parolayla, bkz. Ayarlar, Kullanıcı yönetimi)</value>
+  </data>
+  <data name="Diese_Freigabe_ist_mit_einem_Kennwort_gesch_tzt_7f79b00d" xml:space="preserve">
+    <value>Bu paylaşım bir parolayla korunuyor.</value>
+  </data>
+  <data name="Dieser_Link_ist_ung_ltig_abgelaufen_oder_wurde_w_11b25b49" xml:space="preserve">
+    <value>Bu bağlantı geçersiz, süresi dolmuş ya da kaldırılmış.</value>
+  </data>
+  <data name="Verf_gbar_bis_0_6c43116a" xml:space="preserve">
+    <value>{0} tarihine kadar kullanılabilir</value>
+  </data>
+  <data name="Geteilt_mit_FerrumPix_174ceb7d" xml:space="preserve">
+    <value>FerrumPix ile paylaşıldı</value>
+  </data>
+  <data name="Link_zum_Teilen_erstellen_dd8da631" xml:space="preserve">
+    <value>Paylaşım bağlantısı oluştur</value>
+  </data>
+  <data name="An_App_senden_c549c6d8" xml:space="preserve">
+    <value>Uygulamaya gönder</value>
+  </data>
+  <data name="Meine_Freigaben_efe0316c" xml:space="preserve">
+    <value>Paylaşımlarım</value>
+  </data>
+  <data name="G_ltig_17770e6b" xml:space="preserve">
+    <value>Geçerlilik</value>
+  </data>
+  <data name="0_Tage_f5c5232d" xml:space="preserve">
+    <value>{0} gün</value>
+  </data>
+  <data name="1_Jahr_d0e3da3e" xml:space="preserve">
+    <value>1 yıl</value>
+  </data>
+  <data name="Leer_lassen_um_das_Kennwort_zu_behalten_80f311ac" xml:space="preserve">
+    <value>Parolayı korumak için boş bırakın</value>
+  </data>
+  <data name="Herunterladen_erlauben_4a950b96" xml:space="preserve">
+    <value>İndirmeye izin ver</value>
+  </data>
+  <data name="Ort_mitgeben_896c2f86" xml:space="preserve">
+    <value>Konumu ekle</value>
+  </data>
+  <data name="Personen_mitgeben_54d892b8" xml:space="preserve">
+    <value>Kişileri ekle</value>
+  </data>
+  <data name="Kamera_und_Belichtung_mitgeben_ae1cae53" xml:space="preserve">
+    <value>Kamera ve pozlamayı ekle</value>
+  </data>
+  <data name="Link_erstellen_bd3ee5c1" xml:space="preserve">
+    <value>Bağlantı oluştur</value>
+  </data>
+  <data name="Link_kopieren_e8b631dd" xml:space="preserve">
+    <value>Bağlantıyı kopyala</value>
+  </data>
+  <data name="Link_kopiert_3498023f" xml:space="preserve">
+    <value>Bağlantı kopyalandı</value>
+  </data>
+  <data name="Widerrufen_2c7ccedb" xml:space="preserve">
+    <value>Paylaşımı kaldır</value>
+  </data>
+  <data name="Diese_Freigabe_widerrufen_Der_Link_funktioniert__7303b0c3" xml:space="preserve">
+    <value>Bu paylaşım kaldırılsın mı? Bağlantı artık çalışmayacak.</value>
+  </data>
+  <data name="Der_Link_steht_nur_auf_dem_Ger_t_auf_dem_er_erst_2751921a" xml:space="preserve">
+    <value>Bağlantı yalnızca oluşturulduğu cihazda saklanıyor. Yeni bir bağlantı oluşturulsun mu? Önceki bağlantı artık çalışmayacak.</value>
+  </data>
+  <data name="0_Aufrufe_3632decf" xml:space="preserve">
+    <value>{0} görüntülenme</value>
+  </data>
+  <data name="Abgelaufen_d16b8321" xml:space="preserve">
+    <value>Süresi doldu</value>
+  </data>
+  <data name="Ohne_Wirkung_c307d548" xml:space="preserve">
+    <value>Etkisiz</value>
+  </data>
+  <data name="Noch_keine_Freigaben_316a0d7a" xml:space="preserve">
+    <value>Henüz paylaşım yok</value>
+  </data>
+  <data name="Alle_Freigaben_pausieren_06081b34" xml:space="preserve">
+    <value>Tüm paylaşımları duraklat</value>
+  </data>
+  <data name="Alle_Freigaben_sind_pausiert_975f19e3" xml:space="preserve">
+    <value>Tüm paylaşımlar duraklatıldı.</value>
+  </data>
+  <data name="Link_erstellt_0dce5571" xml:space="preserve">
+    <value>Bağlantı oluşturuldu</value>
+  </data>
+  <data name="Das_Kennwort_braucht_mindestens_8_Zeichen_bbe2b0a9" xml:space="preserve">
+    <value>Parola en az 8 karakter olmalıdır.</value>
+  </data>
+  <data name="Zum_Teilen_braucht_es_auf_jedem_Bild_mindestens__50b502ff" xml:space="preserve">
+    <value>Paylaşmak için her resimde en az Katkı izni gerekir.</value>
+  </data>
+  <data name="Dieser_Ordner_l_sst_sich_nicht_teilen_7fe992a4" xml:space="preserve">
+    <value>Bu klasör paylaşılamaz.</value>
+  </data>
+  <data name="Der_Link_gilt_30_Tage_ohne_Kennwort_mit_Herunter_d7d1cd50" xml:space="preserve">
+    <value>Bağlantı 30 gün geçerlidir; parolasız, indirme açık, konum ve kişiler olmadan. Mobil görünümde Paylaşımlarım altında ve ayarlarda Paylaşımlar altında değiştirebilir ya da kaldırabilirsiniz.</value>
+  </data>
+  <data name="Gel_schter_Benutzer_85498453" xml:space="preserve">
+    <value>Silinmiş kullanıcı</value>
+  </data>
+  <data name="Geteilt_von_0_38359dff" xml:space="preserve">
+    <value>Paylaşan: {0}</value>
+  </data>
+  <data name="Ordner_0_bb112d04" xml:space="preserve">
+    <value>Klasör {0}</value>
+  </data>
+  <data name="Freigaben_e7f62fb4" xml:space="preserve">
+    <value>Paylaşımlar</value>
+  </data>
+  <data name="Links_zum_Teilen_von_Bildern_mit_Menschen_ohne_K_28e9e123" xml:space="preserve">
+    <value>Hesabı olmayan kişilerle resim paylaşmak için tüm kullanıcıların bağlantıları. FerrumPix kilitliyken de bağlantı çalışır; alttaki anahtar tüm bağlantıları durdurur.</value>
+  </data>
+  <data name="Jeder_Link_antwortet_dann_wie_ein_unbekannter_bi_1c93e83b" xml:space="preserve">
+    <value>Anahtar yeniden kapatılana kadar her bağlantı bilinmeyen bir bağlantı gibi yanıt verir.</value>
+  </data>
+  <data name="In_FerrumPix_kopiert_0551df0f" xml:space="preserve">
+    <value>FerrumPix'te kopyalandı</value>
+  </data>
+  <data name="Die_Zwischenablage_dieses_Ger_ts_hat_den_Inhalt__e94c6e81" xml:space="preserve">
+    <value>Bu cihazın panosu içeriği kabul etmedi</value>
+  </data>
+  <data name="Bilder_kommen_nur_ber_HTTPS_in_die_Zwischenablag_99058706" xml:space="preserve">
+    <value>Resimler bu cihazın panosuna yalnızca HTTPS üzerinden ulaşır</value>
+  </data>
+  <data name="Zu_gro_f_r_die_Zwischenablage_3a2a973c" xml:space="preserve">
+    <value>Pano için çok büyük</value>
+  </data>
+  <data name="Absender_E_Mail_Adresse_b8998ec0" xml:space="preserve">
+    <value>Gönderen (e-posta adresi)</value>
+  </data>
+  <data name="Von_dieser_Adresse_kommen_die_Mails_etwa_fotos_e_fb2fa752" xml:space="preserve">
+    <value>E-postalar bu adresten gönderilir, örneğin fotos@example.org. Boş: posta hesabının kullanıcı adı.</value>
+  </data>
+  <data name="Adresse_von_FerrumPix_im_Browser_b2175d85" xml:space="preserve">
+    <value>FerrumPix'in tarayıcıdaki adresi</value>
+  </data>
+  <data name="Unter_dieser_Webadresse_URL_erreichen_andere_Fer_69dfdf58" xml:space="preserve">
+    <value>Başkaları FerrumPix'e bu web adresinden (URL) ulaşır, örneğin https://fotos.example.org. E-postalardaki ve paylaşımlardaki bağlantılarda yer alır. Bu adres olmadan FerrumPix unutulan parola için e-posta göndermez ve paylaşımlar tarayıcının şu anda geldiği adresi kullanır.</value>
+  </data>
+  <data name="Gespeichert_F_r_ein_vergessenes_Kennwort_fehlt_n_a06be747" xml:space="preserve">
+    <value>Kaydedildi. Unutulan parola için FerrumPix'in tarayıcıdaki adresi hâlâ eksik; bu adres olmadan e-posta gönderilmez.</value>
+  </data>
+  <data name="smtp_example_org_b4c0fa4b" xml:space="preserve">
+    <value>smtp.example.org</value>
+  </data>
+  <data name="fotos_example_org_oder_Name_fotos_example_org_e3bae05e" xml:space="preserve">
+    <value>fotos@example.org veya Ad &lt;fotos@example.org&gt;</value>
+  </data>
+  <data name="https_fotos_example_org_e099205f" xml:space="preserve">
+    <value>https://fotos.example.org</value>
+  </data>
+  <data name="Bitte_den_Server_f_r_den_Mailversand_eintragen_3a4ec116" xml:space="preserve">
+    <value>Lütfen e-posta gönderimi için sunucuyu girin.</value>
+  </data>
+  <data name="Gespeichert_Ohne_Server_geht_keine_E_Mail_hinaus_d0b913e3" xml:space="preserve">
+    <value>Kaydedildi. Sunucu olmadan hiçbir e-posta gönderilmez.</value>
+  </data>
+  <data name="Bitte_einen_Absender_eintragen_Der_Benutzername__251420c7" xml:space="preserve">
+    <value>Lütfen bir gönderen girin. Posta hesabının kullanıcı adı bir e-posta adresi değildir ve onun yerine geçemez.</value>
+  </data>
+  <data name="Der_Absender_0_ist_keine_g_ltige_E_Mail_Adresse__77648712" xml:space="preserve">
+    <value>Gönderen "{0}" geçerli bir e-posta adresi değil. İzin verilenler: fotos@example.org veya Ad &lt;fotos@example.org&gt;.</value>
+  </data>
+  <data name="Die_Adresse_braucht_die_Form_https_fotos_example_64db9b5a" xml:space="preserve">
+    <value>Adres yol olmadan https://fotos.example.org biçiminde olmalıdır.</value>
+  </data>
+  <data name="F_r_dein_Konto_bei_FerrumPix_wurde_ein_neues_Ken_eaadd7c0" xml:space="preserve">
+    <value>FerrumPix hesabınız için yeni bir parola istendi. Düğmeyle belirleyebilirsiniz.</value>
+  </data>
+  <data name="Falls_der_Knopf_nicht_geht_kopiere_diesen_Link_i_7085d575" xml:space="preserve">
+    <value>Düğme çalışmazsa bu bağlantıyı tarayıcıya kopyalayın:</value>
+  </data>
+  <data name="Der_Link_gilt_30_Minuten_und_nur_einmal_c20758b4" xml:space="preserve">
+    <value>Bağlantı 30 dakika ve yalnızca bir kez geçerlidir.</value>
+  </data>
+  <data name="Wenn_du_das_nicht_angefordert_hast_kannst_du_die_62edf257" xml:space="preserve">
+    <value>Bunu siz istemediyseniz bu e-postayı yok sayabilirsiniz.</value>
+  </data>
+  <data name="Der_Mailversand_funktioniert_14b78fdc" xml:space="preserve">
+    <value>E-posta gönderimi çalışıyor</value>
+  </data>
+  <data name="FerrumPix_ffnen_367a5059" xml:space="preserve">
+    <value>FerrumPix'i aç</value>
+  </data>
+  <data name="Datei_fehlt_3b100e31" xml:space="preserve">
+    <value>Dosya eksik</value>
+  </data>
+  <data name="Format_nicht_lesbar_98c7af8b" xml:space="preserve">
+    <value>Biçim okunamıyor</value>
+  </data>
+  <data name="Es_gibt_schon_0_Freigaben_von_Ihnen_Bitte_zuerst_2d3e153d" xml:space="preserve">
+    <value>Zaten {0} paylaşımınız var. Lütfen önce eski birini iptal edin.</value>
+  </data>
+  <data name="Es_gibt_schon_0_Freigaben_mehr_nimmt_FerrumPix_n_dd769fe6" xml:space="preserve">
+    <value>Zaten {0} paylaşım var, FerrumPix daha fazlasını kabul etmiyor.</value>
+  </data>
+  <data name="Eine_Freigabe_nimmt_h_chstens_0_Bilder_auf_ca9697b4" xml:space="preserve">
+    <value>Bir paylaşım en fazla {0} resim alır.</value>
+  </data>
+  <data name="Bearbeitungen_und_Beistelldateien_darf_nur_ein_A_fc93eebc" xml:space="preserve">
+    <value>Düzenlemeleri ve yan dosyaları yalnızca bir yönetici yükleyebilir</value>
+  </data>
+  <data name="0_endg_ltig_l_schen_Der_Papierkorb_ist_abgeschal_14cfda0b" xml:space="preserve">
+    <value>{0} kalıcı olarak silinsin mi? Çöp kutusu kapalı, bu işlem geri alınamaz.</value>
+  </data>
+  <data name="Der_Code_ist_falsch_3697f932" xml:space="preserve">
+    <value>Kod yanlış.</value>
+  </data>
+  <data name="Die_Anmeldung_ist_abgelaufen_Bitte_noch_einmal_a_5d263fbe" xml:space="preserve">
+    <value>Oturum açma süresi doldu. Lütfen yeniden oturum açın.</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_schon_eingerichtet_b3108a5c" xml:space="preserve">
+    <value>İkinci faktör zaten ayarlanmış.</value>
+  </data>
+  <data name="Das_Einrichten_ist_abgelaufen_Bitte_neu_beginnen_928161cf" xml:space="preserve">
+    <value>Kurulumun süresi doldu. Lütfen yeniden başlayın.</value>
+  </data>
+  <data name="Kennwort_oder_Code_ist_falsch_10de6e3e" xml:space="preserve">
+    <value>Parola veya kod yanlış.</value>
+  </data>
+  <data name="Zweiter_Faktor_cfbf71b5" xml:space="preserve">
+    <value>İkinci faktör</value>
+  </data>
+  <data name="Mit_einem_zweiten_Faktor_fragt_die_Anmeldung_im__34721313" xml:space="preserve">
+    <value>İkinci faktörle, tarayıcıda oturum açarken paroladan başka bir kimlik doğrulama uygulamasından kod da istenir.</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_eingerichtet_brige_Wiederh_bcab83f0" xml:space="preserve">
+    <value>İkinci faktör ayarlandı. Kalan kurtarma kodları: {0}</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_nicht_eingerichtet_d3eef3aa" xml:space="preserve">
+    <value>İkinci faktör ayarlanmadı.</value>
+  </data>
+  <data name="Einrichten_34be1cd4" xml:space="preserve">
+    <value>Ayarla</value>
+  </data>
+  <data name="Den_QR_Code_mit_der_Authenticator_App_scannen_od_6bc2623a" xml:space="preserve">
+    <value>QR kodunu kimlik doğrulama uygulamasıyla tarayın veya anahtarı elle girin. Ardından uygulamadaki kodu girin.</value>
+  </data>
+  <data name="Schl_ssel_1ac83286" xml:space="preserve">
+    <value>Anahtar</value>
+  </data>
+  <data name="Code_adac6937" xml:space="preserve">
+    <value>Kod</value>
+  </data>
+  <data name="Best_tigen_2019ffd2" xml:space="preserve">
+    <value>Onayla</value>
+  </data>
+  <data name="Wiederherstellungscodes_4833ba4c" xml:space="preserve">
+    <value>Kurtarma kodları</value>
+  </data>
+  <data name="Jeder_Code_gilt_einmal_falls_die_App_nicht_zur_H_ef4d94e4" xml:space="preserve">
+    <value>Her kod, uygulama elinizin altında değilse bir kez geçerlidir. Yalnızca şimdi gösterilirler; güvenli bir yerde saklayın.</value>
+  </data>
+  <data name="Abschalten_a10c1e28" xml:space="preserve">
+    <value>Kapat</value>
+  </data>
+  <data name="Zum_Abschalten_das_aktuelle_Kennwort_und_einen_C_6f049c60" xml:space="preserve">
+    <value>Kapatmak için geçerli parolayı ve uygulamadan bir kod girin.</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_eingerichtet_04aa51ea" xml:space="preserve">
+    <value>İkinci faktör ayarlandı.</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_abgeschaltet_cd4eb77f" xml:space="preserve">
+    <value>İkinci faktör kapatıldı.</value>
+  </data>
+  <data name="Bitte_den_Code_eingeben_1bf3f2b2" xml:space="preserve">
+    <value>Lütfen kodu girin.</value>
+  </data>
+  <data name="Bitte_den_Code_aus_der_Authenticator_App_eingebe_cda91f15" xml:space="preserve">
+    <value>Lütfen kimlik doğrulama uygulamasındaki kodu girin.</value>
+  </data>
+  <data name="Wiederherstellungscode_verwenden_71e32ac1" xml:space="preserve">
+    <value>Kurtarma kodu kullan</value>
+  </data>
+  <data name="Code_aus_der_App_verwenden_63a6c9a7" xml:space="preserve">
+    <value>Uygulamadaki kodu kullan</value>
+  </data>
+  <data name="Wiederherstellungscode_7e05d9a1" xml:space="preserve">
+    <value>Kurtarma kodu</value>
+  </data>
+  <data name="Konto_0_364126d0" xml:space="preserve">
+    <value>Hesap: {0}</value>
+  </data>
+  <data name="Zweiten_Faktor_zur_cksetzen_dd1eed1c" xml:space="preserve">
+    <value>İkinci faktörü sıfırla</value>
+  </data>
+  <data name="0_meldet_sich_danach_nur_mit_dem_Kennwort_an_und_69c02882" xml:space="preserve">
+    <value>{0} bundan sonra yalnızca parolayla oturum açar ve ikinci faktörü yeniden ayarlayabilir. Bu kullanıcının açık oturumları sona erer.</value>
+  </data>
+  <data name="Der_zweite_Faktor_ist_zur_ckgesetzt_Offene_Anmel_b08ae6d1" xml:space="preserve">
+    <value>İkinci faktör sıfırlandı. Bu kullanıcının açık oturumları sona erdi.</value>
+  </data>
+  <data name="Textdatei_7704451c" xml:space="preserve">
+    <value>Metin dosyası</value>
+  </data>
+  <data name="F_r_einen_Benutzer_der_seine_Authenticator_App_v_82ff0a19" xml:space="preserve">
+    <value>Kimlik doğrulama uygulamasını kaybeden bir kullanıcı için. Ardından yalnızca parolayla oturum açar; açık oturumlar sona erer.</value>
+  </data>
+  <data name="Zweiter_Faktor_f_r_dein_Konto_2fae6464" xml:space="preserve">
+    <value>Hesabınız için ikinci faktör</value>
+  </data>
+  <data name="Die_Anmeldung_im_Browser_fragt_nach_dem_Kennwort_0fdc9ba5" xml:space="preserve">
+    <value>Tarayıcıda oturum açarken paroladan başka bir kimlik doğrulama uygulamasından kod istenir. Bilgisayarın kendisinde oturum açma kodsuz kalır.</value>
+  </data>
+  <data name="Als_Textdatei_speichern_288a3137" xml:space="preserve">
+    <value>Metin dosyası olarak kaydet</value>
   </data>
 </root>

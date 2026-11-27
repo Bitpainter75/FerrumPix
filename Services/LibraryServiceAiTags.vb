@@ -82,6 +82,9 @@ Namespace Services
             SyncLock _anyAiTagsLock
                 _anyAiTags = Nothing
             End SyncLock
+            ' Gerufen nach jedem Schreiben der KI-Begriffe und beim Verschieben, Kopieren und
+            ' Loeschen von Katalogzeilen: auch der Wortvorrat der Suche stimmt dann nicht mehr.
+            SearchVocabulary.Invalidate()
         End Sub
 
         ''' <summary>Eine eigene Tabelle statt einer JSON-Spalte: die Suche braucht kanonische

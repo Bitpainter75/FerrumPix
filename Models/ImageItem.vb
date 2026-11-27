@@ -681,20 +681,17 @@ Namespace Models
         Public ReadOnly Property SearchText As String
             Get
                 If _searchTextCache Is Nothing Then
-                    Dim ratingToken = $"{Rating} Sterne {Rating} Stern rating:{Rating} bewertung:{Rating} {New String("★"c, Math.Max(0, Math.Min(5, Rating)))}"
-                    Dim favoriteToken = If(IsFavorite, "favorit favorite fav is:favorite", "")
+                    ' Bewertung, Favorit und Ort aus derselben Stelle wie bei jedem anderen Suchweg
+                    ' (SearchVocabulary); KI-Begriffe und Personen haengt die Galerie beim Filtern an.
+                    Dim ratingWords = SearchVocabulary.RatingWords(Rating, IsFavorite)
                     If Tags Is Nothing OrElse Tags.Count = 0 Then
-                        _searchTextCache = FileName & " " & ratingToken & " " & favoriteToken
+                        _searchTextCache = FileName & " " & ratingWords
                     Else
-                        _searchTextCache = FileName & " " & String.Join(" ", Tags) & " " & ratingToken & " " & favoriteToken
+                        _searchTextCache = FileName & " " & String.Join(" ", Tags) & " " & ratingWords
                     End If
                     If _catalogSearchText.Length > 0 Then _searchTextCache &= " " & _catalogSearchText
-                    ' Der Ort so, wie er angezeigt wird (Landesname uebersetzt), UND der Landesname
-                    ' der Datei bzw. Tabelle: wer "Germany" tippt, soll ihn genauso finden wie wer
-                    ' "Deutschland" tippt.
-                    Dim place = CatalogPlace
-                    If Not String.IsNullOrEmpty(place) Then _searchTextCache &= " " & place
-                    If _catalogCountry.Length > 0 Then _searchTextCache &= " " & _catalogCountry
+                    Dim place = SearchVocabulary.PlaceWords(_catalogCity, _catalogCountry, _catalogCountryCode)
+                    If place.Length > 0 Then _searchTextCache &= " " & place
                 End If
                 Return _searchTextCache
             End Get

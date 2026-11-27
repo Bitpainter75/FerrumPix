@@ -1,19 +1,31 @@
 # FerrumPix in the browser ON THIS COMPUTER ONLY: the port is published on 127.0.0.1 alone. For
-# other devices use docker-compose.yml with the proxy.
+# other devices use docker-compose.yml with the proxy. A template to copy; README.md next to it
+# explains every step.
 #
-#   mkdir data; sudo chown 1000 data
-#   FERRUMPIX_PHOTOS=/path/to/photos docker compose -f docker-compose.local.yml up -d
+# SETUP
+# 1. Next to this file, create the folder data for everything FerrumPix keeps (settings, catalog,
+#    thumbnails, models), owned by user id 1000:
+#      mkdir data; sudo chown 1000 data
+# 2. Start it with your photo folder, or put FERRUMPIX_PHOTOS=/path/to/photos into an .env:
+#      FERRUMPIX_PHOTOS=/path/to/photos docker compose -f docker-compose.local.yml up -d
+# 3. Open http://127.0.0.1:14501. The first visit is the setup: a user name, an email address if
+#    you like (for Forgot your password) and the password twice, at least 8 characters with an
+#    uppercase and a lowercase letter, a digit and a special character. You become the
+#    administrator. There is no password in this file or in .env.
 #
-# The folder data next to this file holds everything FerrumPix keeps (settings, catalog,
-# thumbnails, models); it has to belong to user id 1000.
-#
-# Then open http://127.0.0.1:14501. A password is optional and comes from the environment
-# (FERRUMPIX_PASSWORD, likewise FERRUMPIX_USER), not from this file. If one is set, it needs at
-# least 8 characters with an uppercase and a lowercase letter, a digit and a special character
-# (a space counts), otherwise FerrumPix does not start; it becomes the password of the sign-in
-# window.
-#
-# Own fonts go to ./data/share/FerrumPix/Fonts, there is no separate folder for them.
+# AFTERWARDS
+# - Further users, their rights per folder and the mail server for Forgot your password:
+#   Settings, User management, in the full desktop interface.
+# - Photo folders: one line per folder under "volumes", each below /photos. FerrumPix shows only
+#   /photos; FERRUMPIX_FOLDER_ROOTS below changes that.
+# - Update: docker compose -f docker-compose.local.yml pull, then the same with up -d. The image
+#   follows :latest; for a fixed version set FERRUMPIX_IMAGE=ghcr.io/bitpainter75/ferrumpix:<version>.
+# - The image checks its own health, so "docker compose ps" shows "healthy" once it is up.
+# - Language and date format of the first start: FERRUMPIX_LANG, for example de_DE.UTF-8; later
+#   it can be changed in Settings.
+# - Local time: the image runs on UTC. Uncomment TZ under "environment" and set your time zone,
+#   for example Europe/Berlin.
+# - The page for phones cannot be added to the home screen here, that needs HTTPS.
 #
 # THE LINE UNDER "ports" STAYS ON 127.0.0.1. FERRUMPIX_BROWSER_LOCAL_FORWARD tells FerrumPix that
 # the port is only open on this computer; it then only checks that the browser called 127.0.0.1
@@ -27,16 +39,22 @@ services:
     restart: unless-stopped
     environment:
       FERRUMPIX_BROWSER_LOCAL_FORWARD: "1"
-      FERRUMPIX_BROWSER_USER: "${FERRUMPIX_USER:-}"
-      FERRUMPIX_BROWSER_PASSWORD: "${FERRUMPIX_PASSWORD:-}"
       LANG: "${FERRUMPIX_LANG:-C.UTF-8}"
+      # Local time (the image runs on UTC):
+      # TZ: "Europe/Berlin"
+      # The image sets /photos. Only for folders outside it, several separated by ":":
+      # FERRUMPIX_FOLDER_ROOTS: "/photos:/archive"
       # NVIDIA only, together with the NVIDIA block below:
       # NVIDIA_DRIVER_CAPABILITIES: graphics,compute,utility
     ports:
       - "127.0.0.1:14501:14500"
     volumes:
+      # Settings, catalog, thumbnails and downloaded models. Own fonts go to
+      # ./data/share/FerrumPix/Fonts, there is no separate folder for them.
       - ./data:/data
+      # Every photo folder below /photos, one line each, for example:
       - "${FERRUMPIX_PHOTOS:?FERRUMPIX_PHOTOS is missing}:/photos/Pictures"
+      # - /srv/archive:/photos/Archive
     # GRAPHICS CARD FOR THE MODELS (optional; without it the models run on the processor).
     # Intel or AMD: uncomment these lines. FERRUMPIX_RENDER_GID is the group of the render device
     # on this computer: stat -c %g /dev/dri/renderD128

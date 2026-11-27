@@ -403,6 +403,26 @@
                                    FontSize="{DynamicResource FP.Font.Small}"/>
                     </Border>
 
+                    <!-- BEWEGTBILD: der grosse Knopf mitten auf dem Bild, in der Optik des Knopfs auf
+                         einer Videokachel. Spielt den Film einmal ab, danach steht wieder das Bild;
+                         solange er laeuft, liegt die Videoflaeche darueber und der Knopf ist weg
+                         (ShowsMotionPlayOverlay). Ausserhalb des Rollbereichs: er bleibt beim Zoomen
+                         in der Mitte. Der Hinweis kommt uebersetzt aus dem ViewModel. -->
+                    <Button Classes="video-play-badge"
+                            Width="64" Height="64" CornerRadius="32"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            IsVisible="{Binding ShowsMotionPlayOverlay}"
+                            Command="{Binding PlayMotionCommand}"
+                            ToolTip.Tip="{Binding MotionButtonTip}">
+                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/play.svg"
+                                               Shadow="Rim"
+                                               ShadowOnlyWhenLight="True"
+                                               Width="30" Height="30"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               IconBrush="{DynamicResource FP.OnAccent}"/>
+                    </Button>
+
                 </Grid>
             </Border>
 
@@ -861,6 +881,23 @@
                 <TextBlock Text="Videowiedergabe nicht verfügbar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Subtitle}" HorizontalAlignment="Center"/>
                 <TextBlock Text="mpv ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
             </StackPanel>
+
+            <!-- Bewegtbild im Vollbild: derselbe grosse Knopf wie im Fenster. Ein Knopf nimmt
+                 den Druck selbst an, das Verschieben des gezoomten Bilds beginnt darauf nicht. -->
+            <Button Classes="video-play-badge"
+                    Width="64" Height="64" CornerRadius="32"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    IsVisible="{Binding ShowsMotionPlayOverlay}"
+                    Command="{Binding PlayMotionCommand}"
+                    ToolTip.Tip="{Binding MotionButtonTip}">
+                <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/play.svg"
+                                       Shadow="Rim"
+                                       ShadowOnlyWhenLight="True"
+                                       Width="30" Height="30"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       IconBrush="{DynamicResource FP.OnAccent}"/>
+            </Button>
 
             <!-- Der Filmstreifen im Vollbild: erscheint an der eingestellten Seite
                  (FullscreenFilmstripPosition), wenn die Maus diesen Rand beruehrt oder der Knopf der

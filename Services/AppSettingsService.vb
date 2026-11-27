@@ -1006,6 +1006,63 @@ Namespace Services
         ''' nicht geschuetzt. Das Kennwort selbst steht nirgends. Wer es vergessen hat, loescht
         ''' diesen Eintrag, solange die Anwendung nicht laeuft.</summary>
         Public Property AppLockPasswordHash As String = ""
+        ''' <summary>Der Benutzername des Eigentuemers fuer die Anmeldung im Browser, festgelegt in
+        ''' der Ersteinrichtung zusammen mit dem Kennwort. Leer bei einer Installation, deren
+        ''' Kennwort aus den Einstellungen stammt: dann legt die naechste Anmeldung im Browser ihn
+        ''' einmal fest. Das Anmeldefenster am Rechner fragt nicht danach.</summary>
+        Public Property AppLockUserName As String = ""
+        ''' <summary>Die E-Mail-Adresse des Eigentuemers, fuer "Kennwort vergessen" im Browser. Leer
+        ''' heisst: es geht keine Nachricht an ihn. Eindeutig unter allen Benutzern
+        ''' (UserAccountService).</summary>
+        Public Property AppLockUserEmail As String = ""
+        ''' <summary>Die Sprache des Eigentuemers auf der mobilen Seite und in Nachrichten, leer heisst
+        ''' automatisch (Accept-Language). Die volle Oberflaeche bleibt in der Sprache der Anwendung.</summary>
+        Public Property AppLockUserLanguage As String = ""
+        ''' <summary>Die weiteren Benutzer des Browsers neben dem Eigentuemer (UserAccountService).
+        ''' Ohne Kennwort: die Hashes stehen getrennt in <see cref="BrowserUserPasswordHashes"/>,
+        ''' damit eine Sicherung sie ohne Zustimmung weglassen kann und die Benutzer trotzdem
+        ''' mitnimmt.</summary>
+        Public Property BrowserUsers As New List(Of BrowserUserSettings)()
+        ''' <summary>Die Rechte der Benutzer je Ordner, vererbt auf Unterordner; die naechstliegende
+        ''' Regel gewinnt (UserAccountService.LevelFor).</summary>
+        Public Property BrowserFolderRules As New List(Of BrowserFolderRuleSettings)()
+        ''' <summary>Je Benutzerkennung der Hash seines Kennworts, im selben Format wie
+        ''' <see cref="AppLockPasswordHash"/>. Gehoert zu den Zugangsdaten einer Sicherung.</summary>
+        Public Property BrowserUserPasswordHashes As New Dictionary(Of String, String)()
+        ''' <summary>Je Benutzerkennung (auch "owner" fuer den Eigentuemer) das Geheimnis seines
+        ''' zweiten Faktors in Base32 (TwoFactorService). In der Datei verschluesselt wie
+        ''' <see cref="MailSmtpPassword"/>; gehoert zu den Zugangsdaten einer Sicherung.</summary>
+        Public Property TwoFactorSecrets As New Dictionary(Of String, String)()
+        ''' <summary>Je Benutzerkennung die SHA-256 seiner unbenutzten Wiederherstellungscodes, mit
+        ''' Komma getrennt. Gehoert zu den Zugangsdaten einer Sicherung.</summary>
+        Public Property TwoFactorRecoveryHashes As New Dictionary(Of String, String)()
+        ''' <summary>Je Benutzerkennung der zuletzt benutzte Zeitschritt des zweiten Faktors; ein
+        ''' Code dieses oder eines frueheren Schritts gilt nicht noch einmal.</summary>
+        Public Property TwoFactorLastSteps As New Dictionary(Of String, Long)()
+        ''' <summary>Der Server fuer den Mailversand ("Kennwort vergessen"), leer heisst: es geht
+        ''' keine Nachricht hinaus (MailService).</summary>
+        Public Property MailSmtpHost As String = ""
+        Public Property MailSmtpPort As Integer = 587
+        ''' <summary>"StartTls", "Ssl" oder "None".</summary>
+        Public Property MailSmtpSecurity As String = "StartTls"
+        Public Property MailSmtpUserName As String = ""
+        ''' <summary>Das Kennwort des Mailservers. In der Datei verschluesselt wie der
+        ''' Immich-Schluessel (SecretProtectionService), in einer Sicherung nur mit den
+        ''' Zugangsdaten.</summary>
+        Public Property MailSmtpPassword As String = ""
+        ''' <summary>Der Absender der Nachrichten, wie eingetragen: eine Adresse oder
+        ''' "Name &lt;adresse&gt;" (MailSettings.TryParseSender zerlegt ihn). Leer gilt der
+        ''' Benutzername, wenn er eine E-Mail-Adresse ist; ohne eigenen Namen heisst der Absender
+        ''' FerrumPix.</summary>
+        Public Property MailSenderAddress As String = ""
+        ''' <summary>Die Adresse, unter der FerrumPix von aussen erreichbar ist, etwa
+        ''' https://fotos.example.org. Gesetzt, bildet sie den Verweis in der Nachricht zum
+        ''' Zuruecksetzen; leer gilt die Adresse, ueber die der Browser gerade kam.</summary>
+        Public Property BrowserPublicAddress As String = ""
+        ''' <summary>Der Notweg fuer das Kennwort des Eigentuemers (BrowserBridge.ResetAdminSwitch)
+        ''' hat schon gewirkt, solange die Angabe gesetzt bleibt. Faellt sie beim Start weg, wird
+        ''' der Vermerk geloescht, und ein spaeteres Setzen wirkt wieder einmal.</summary>
+        Public Property AdminPasswordResetConsumed As Boolean = False
         ''' <summary>Nach so vielen Minuten ohne Eingabe sperrt sich die Anwendung; 0 heisst nie.
         ''' Erlaubt sind 0, 5, 15, 30 und 60 (AppLockService.NormalizeIdleMinutes).</summary>
         Public Property AppLockIdleMinutes As Integer = 0
@@ -1787,7 +1844,11 @@ Namespace Services
         ' Was das ist und was nicht, steht im SecretProtectionService: eine Huerde, keine Sicherheit
         ' gegen jemanden mit Zugriff auf das Benutzerkonto.
 
-        Private Shared ReadOnly SecretFieldNames As String() = {"ImmichApiKey", "NextcloudAppPassword"}
+        Private Shared ReadOnly SecretFieldNames As String() = {"ImmichApiKey", "NextcloudAppPassword", "MailSmtpPassword"}
+
+        ''' <summary>Woerterbuecher, deren Werte je ein Geheimnis sind: das des zweiten Faktors je
+        ''' Benutzer (TwoFactorService).</summary>
+        Private Shared ReadOnly SecretMapFieldNames As String() = {NameOf(AppSettings.TwoFactorSecrets)}
 
         ''' <summary>Die Geheimnisse im JSON verschluesseln. Ueber den Knotenbaum und nicht ueber
         ''' Textersetzung: ein Wert kann Anfuehrungszeichen und Zeilenumbrueche enthalten, und eine
@@ -1815,6 +1876,21 @@ Namespace Services
                     If String.Equals(newValue, oldValue, StringComparison.Ordinal) Then Continue For
                     root(fieldName) = newValue
                     changed = True
+                Next
+                ' Woerterbuecher mit einem Geheimnis je Eintrag: jeder Wert fuer sich.
+                For Each fieldName In SecretMapFieldNames
+                    Dim node As Nodes.JsonNode = Nothing
+                    If Not root.TryGetPropertyValue(fieldName, node) Then Continue For
+                    Dim map = TryCast(node, Nodes.JsonObject)
+                    If map Is Nothing Then Continue For
+                    For Each key In map.Select(Function(pair) pair.Key).ToList()
+                        Dim oldValue = TryCast(map(key), Nodes.JsonValue)?.GetValue(Of String)()
+                        If String.IsNullOrEmpty(oldValue) Then Continue For
+                        Dim newValue = convert(oldValue)
+                        If String.Equals(newValue, oldValue, StringComparison.Ordinal) Then Continue For
+                        map(key) = newValue
+                        changed = True
+                    Next
                 Next
                 If Not changed Then Return json
                 Return root.ToJsonString(New JsonSerializerOptions With {.WriteIndented = True})

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="__FERRUMPIX_LANG__">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0B0E11">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FerrumPix">
+<title>FerrumPix</title>
+<link rel="manifest" href="/m/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/m/icon-192.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/m/app.css?v=__FERRUMPIX_VERSION__">
+<link rel="stylesheet" href="/m/shares.css?v=__FERRUMPIX_VERSION__">
+<!-- Die mobile Seite, die Gegenstelle zu Services/BrowserBridgeMobile*.vb. Eigene Oberflaeche aus
+     HTML, CSS und JavaScript ohne fremde Bibliotheken; Skript und Stil kommen vom eigenen Server,
+     die Texte setzt der Server beim Ausliefern als JSON ein (der Block wird nicht ausgefuehrt). -->
+<script type="application/json" id="fp-texts">__FERRUMPIX_MOBILE_TEXTS__</script>
+<script src="/m/app.js?v=__FERRUMPIX_VERSION__" defer></script>
+<!-- Freigaben per Link (Services/BrowserBridgeShares.vb), nach app.js, dessen Helfer es nutzt. -->
+<script src="/m/shares.js?v=__FERRUMPIX_VERSION__" defer></script>
+</head>
+<body>
+<div id="app">
+  <section class="view" id="view-photos" data-tab="photos">
+    <header class="bar"><h1 class="title" id="photos-title"></h1><div class="actions"></div></header>
+    <div class="scroller"><div class="grid-host"></div></div>
+  </section>
+  <section class="view" id="view-folders" data-tab="folders" hidden>
+    <header class="bar"><button class="icon back" type="button"></button><h1 class="title"></h1><div class="actions"></div></header>
+    <div class="scroller"><div class="folder-list"></div><div class="grid-host"></div></div>
+  </section>
+  <section class="view" id="view-search" data-tab="search" hidden>
+    <header class="bar"><button class="icon back" type="button" hidden></button><h1 class="title"></h1><div class="actions"></div></header>
+    <div class="scroller">
+      <form class="search-form" id="search-form" role="search"><input id="search-input" type="search" enterkeyhint="search" autocomplete="off"><div class="search-syntax" id="search-syntax"></div><div class="chips suggestions" id="search-suggestions"></div></form>
+      <div class="search-home">
+        <h2 class="section-title" id="people-title"></h2><div class="people" id="people"></div>
+        <h2 class="section-title" id="places-title"></h2><div class="places" id="places"></div>
+      </div>
+      <div class="grid-host"></div>
+    </div>
+  </section>
+  <section class="view" id="view-more" data-tab="more" hidden>
+    <header class="bar"><h1 class="title" id="more-title"></h1></header>
+    <div class="scroller"><nav class="menu" id="menu"></nav></div>
+  </section>
+  <nav class="tabs" id="tabs"></nav>
+</div>
+<div id="viewer" class="viewer" hidden>
+  <div class="stage" id="stage"></div>
+  <button class="icon viewer-nav prev" type="button" id="viewer-prev"></button><button class="icon viewer-nav next" type="button" id="viewer-next"></button>
+  <header class="viewer-top"><button class="icon" type="button" id="viewer-close"></button><div class="viewer-title" id="viewer-title"></div>
+    <button class="icon" type="button" id="viewer-sound" hidden></button><button class="icon live" type="button" id="viewer-live" hidden></button><button class="icon" type="button" id="viewer-share" hidden></button><button class="icon" type="button" id="viewer-download"></button><button class="icon" type="button" id="viewer-manage" hidden></button><button class="icon" type="button" id="viewer-info"></button></header>
+  <footer class="viewer-bottom" id="viewer-bottom">
+    <div class="stars" id="stars"></div>
+    <div class="marks"><button class="icon" type="button" id="mark-favorite"></button><button class="icon" type="button" id="mark-keep"></button><button class="icon" type="button" id="mark-reject"></button><button class="label-dot" type="button" id="mark-label"></button></div>
+  </footer>
+  <div class="sheet" id="info-sheet" hidden><div class="grip"></div><div class="sheet-body" id="info-body"></div></div>
+</div>
+<div class="sheet modal" id="action-sheet" hidden><div class="sheet-body" id="action-body"></div></div>
+<div class="toast" id="toast" hidden></div>
+<input type="file" id="upload-input" multiple accept="image/*,video/*" hidden>
+</body>
+</html>

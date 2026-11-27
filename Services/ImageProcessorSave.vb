@@ -1619,6 +1619,7 @@ Namespace Services
             While True
                 Try
                     File.Copy(writtenPath, originalPath, True)
+                    ShareStore.NoteFileWritten(originalPath)
                     Return
                 Catch ex As IOException When Environment.TickCount64 < deadline AndAlso
                                              File.Exists(writtenPath) AndAlso File.Exists(originalPath)
@@ -1740,6 +1741,7 @@ Namespace Services
         ''' </summary>
         Friend Shared Function WriteFileAtomic(targetPath As String, writer As Action(Of Stream)) As Boolean
             If String.IsNullOrWhiteSpace(targetPath) OrElse writer Is Nothing Then Return False
+            Dim requestedPath = targetPath
             targetPath = ResolveWriteTarget(targetPath)
             Dim targetDirectory = IO.Path.GetDirectoryName(targetPath)
             If Not String.IsNullOrEmpty(targetDirectory) Then Directory.CreateDirectory(targetDirectory)
@@ -1757,6 +1759,9 @@ Namespace Services
                 End Using
                 CarryOverFileMode(targetPath, tempPath)
                 File.Move(tempPath, targetPath, overwrite:=True)
+                ' Eine Freigabe per Link, die diese Datei zeigt, zeigt sie weiter (ShareStore).
+                ShareStore.NoteFileWritten(requestedPath)
+                If Not String.Equals(requestedPath, targetPath, StringComparison.Ordinal) Then ShareStore.NoteFileWritten(targetPath)
                 Return True
             Catch
                 Try
