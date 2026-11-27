@@ -11,8 +11,8 @@ Namespace Services
     ''' <para>WEG fallen: APP1 (EXIF mit GPS und Kamera, XMP mit Gesichtsbereichen und Namen),
     ''' APP13 (IPTC mit Ortsnamen), APP3 bis APP13 und APP15 (Herstellerdaten), das MPF in APP2 samt
     ''' der Bilder hinter dem Ende (Telefone haengen dort Tiefenkarten und Vorschauen an, jede mit
-    ''' eigenem EXIF) und Kommentare. BLEIBEN: APP0 (JFIF), das ICC-Profil in APP2 und APP14 (Adobe,
-    ''' bestimmt die Farbumrechnung) und alle Segmente, die das Bild selbst beschreiben.</para>
+    ''' eigenem EXIF) und Kommentare. BLEIBEN: APP0 (JFIF), das ICC-Profil in APP2 und APP14 (die
+    ''' Farbtransformation, bestimmt die Farbumrechnung) und alle Segmente, die das Bild selbst beschreiben.</para>
     '''
     ''' <para>DIE AUSRICHTUNG BLEIBT: sie steht im EXIF, und ohne sie laege ein Hochformat quer. An
     ''' die Stelle des EXIF tritt deshalb ein kleines EXIF mit nur dieser einen Angabe, gelesen

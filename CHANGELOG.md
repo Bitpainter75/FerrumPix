@@ -103,7 +103,7 @@
 
 - While FerrumPix is locked, the window bar now stays at the top, so the window can still be
   moved, resized, minimized, maximized and closed. It shows only the logo and the window buttons,
-  no file name. With unsaved changes, closing waits until you unlock.
+  no file name. With unsaved changes the window stays open and asks you to unlock first.
 
 - In the browser, users without the administrator role can no longer upload sidecar files or
   projects, and pictures from folders they may not open no longer appear inside other pictures on

@@ -37,8 +37,9 @@ Namespace Services
     '''
     ''' <para>ABGELAUFEN, WIDERRUFEN, PAUSIERT oder ohne Recht antwortet ein Link wie ein unbekannter
     ''' (404). Gegen Durchprobieren zaehlt jedes unbekannte Token als Fehlversuch der Absenderadresse,
-    ''' mit derselben Bremse wie die Anmeldung, aber einem eigenen Zaehler ("share ..."), damit sich
-    ''' Raten an Links und Raten am Anmeldefenster nicht gegenseitig sperren.</para>
+    ''' mit derselben Bremse wie die Anmeldung, aber einem eigenen Zaehler ("share ...") in einer
+    ''' eigenen Liste, damit sich Raten an Links und Raten am Anmeldefenster nicht gegenseitig
+    ''' sperren oder verdraengen.</para>
     '''
     ''' <para>WAS HINAUSGEHT: Kachel und Vorschau immer mit Bearbeitung und ohne Metadaten (wie die
     ''' mobile Seite, durch dieselbe Warteschlange und DecodeGate), nie eine Beistelldatei.
@@ -489,7 +490,7 @@ Namespace Services
                 Dim isPage = action.Length = 0
 
                 ' Bremse gegen Raten: je Absenderadresse, eigener Zaehler.
-                Dim guessCounter = "share " & SenderKey(request)
+                Dim guessCounter = AppLockService.ShareCounterPrefix & SenderKey(request)
                 Dim wait = AppLockService.RetryAfter(guessCounter)
                 If wait > TimeSpan.Zero Then
                     context.Response.Headers("Retry-After") = CInt(Math.Ceiling(wait.TotalSeconds)).ToString(CultureInfo.InvariantCulture)
@@ -710,7 +711,7 @@ Namespace Services
                 Await WriteMobileJsonAsync(context, 200, New Dictionary(Of String, Object) From {{"ok", True}})
                 Return
             End If
-            Dim counter = "share password " & record.Id & " " & SenderKey(request)
+            Dim counter = AppLockService.ShareCounterPrefix & "password " & record.Id & " " & SenderKey(request)
             Dim outcome = Await Task.Run(
                 Function()
                     SyncLock ShareVerifyGate

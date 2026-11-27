@@ -849,8 +849,9 @@ Namespace Services
 
         ''' <summary>Die Eintraege des ZIP: jede Datei unter ihrem Namen, gleiche Namen aus
         ''' verschiedenen Ordnern mit " (1)", " (2)", und hinter jeder ihre Beistelldateien (.xmp und
-        ''' .fpxmp), die einem umbenannten Bild im Namen folgen.</summary>
-        Friend Shared Function PlanDownloadEntries(paths As IList(Of String)) As List(Of ZipEntryPlan)
+        ''' .fpxmp), die einem umbenannten Bild im Namen folgen. Ohne <paramref name="includeSidecars"/>
+        ''' (mobile Seite) nur die Dateien selbst; die Desktop-Seite nimmt sie mit.</summary>
+        Friend Shared Function PlanDownloadEntries(paths As IList(Of String), Optional includeSidecars As Boolean = True) As List(Of ZipEntryPlan)
             Dim result As New List(Of ZipEntryPlan)()
             Dim usedNames As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
             Dim seenSources As New HashSet(Of String)(PathIdentity.Comparer)
@@ -859,6 +860,7 @@ Namespace Services
                 Dim original = Path.GetFileName(source)
                 Dim entryName = UniqueEntryName(original, usedNames)
                 result.Add(StreamingZipWriter.PlanFile(source, entryName))
+                If Not includeSidecars Then Continue For
                 For Each sidecar In SidecarsOf(source)
                     If Not seenSources.Add(sidecar) Then Continue For
                     Dim sidecarName = Path.GetFileName(sidecar)

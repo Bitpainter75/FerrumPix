@@ -172,6 +172,12 @@ Namespace ViewModels
         Private _publicAddressStatusText As String = ""
         Private _publicAddressStatusIsError As Boolean
         Private _usersLoaded As Boolean
+        Private _usersHooked As Boolean
+
+        ''' <summary>Stand der Benutzerverwaltung (UserAccountService.Version), aus dem die Liste
+        ''' zuletzt gebaut wurde. Eine Aenderung von hier baut sie selbst neu; die Meldung danach
+        ''' findet dann denselben Stand und laesst die Liste stehen.</summary>
+        Private _userRowsVersion As Integer = -1
 
         Public ReadOnly Property UserRows As ObservableCollection(Of UserAccountRow)
             Get
@@ -193,6 +199,7 @@ Namespace ViewModels
             If _usersLoaded Then Return
             _usersLoaded = True
             ReloadUserRows(Nothing)
+            HookUserAccounts()
             Dim settings = AppSettingsService.Load()
             Dim mail = MailSettings.FromAppSettings(settings)
             _mailHost = mail.Host
@@ -206,11 +213,59 @@ Namespace ViewModels
         End Sub
 
         Private Sub ReloadUserRows(selectId As String)
+            ' Der Stand VOR dem Lesen: eine Aenderung waehrenddessen meldet sich danach und wird
+            ' nachgeholt, statt verloren zu gehen.
+            _userRowsVersion = UserAccountService.Version
             _userRows.Clear()
             For Each account In UserAccountService.All()
                 _userRows.Add(New UserAccountRow With {.Account = account})
             Next
             SelectedUserRow = _userRows.FirstOrDefault(Function(r) r.Account.Id = selectId)
+        End Sub
+
+        ''' <summary>Folgt jeder Aenderung an Benutzern und Regeln, auch von ausserhalb dieses
+        ''' Abschnitts (mobile Seite, Kennwort vergessen, zweiter Faktor). Die Meldung kann von jedem
+        ''' Faden kommen und wird auf den Anzeigefaden gereicht. Schwach gehalten wie die
+        ''' Schriftbibliothek (<see cref="HookFontLibrary"/>): ist das Modell weg, meldet sich der
+        ''' Empfaenger beim naechsten Mal selbst ab.</summary>
+        Private Sub HookUserAccounts()
+            If _usersHooked Then Return
+            _usersHooked = True
+            Dim weakSelf As New WeakReference(Of SettingsViewModel)(Me)
+            Dim handler As EventHandler = Nothing
+            handler = Sub(sender, e)
+                          Dim alive As SettingsViewModel = Nothing
+                          If Not weakSelf.TryGetTarget(alive) Then
+                              RemoveHandler UserAccountService.Changed, handler
+                              Return
+                          End If
+                          Try
+                              Avalonia.Threading.Dispatcher.UIThread.Post(AddressOf alive.RefreshUserRowsFromService)
+                          Catch ex As Exception
+                              DiagnosticLogService.LogException("Settings.UserAccountsChanged", ex)
+                          End Try
+                      End Sub
+            AddHandler UserAccountService.Changed, handler
+        End Sub
+
+        ''' <summary>Baut die Liste nach einer Aenderung von ausserhalb neu. Die Wahl bleibt; was im
+        ''' gewaehlten Benutzer gerade getippt und noch nicht gespeichert ist (Name, E-Mail, neues
+        ''' Kennwort), bleibt stehen, Unveraendertes folgt dem neuen Stand.</summary>
+        Private Sub RefreshUserRowsFromService()
+            If Not _usersLoaded OrElse UserAccountService.Version = _userRowsVersion Then Return
+            Dim previous = _selectedUserRow
+            Dim typedName = previous IsNot Nothing AndAlso _selectedUserName <> If(previous.Account.Name, "")
+            Dim typedEmail = previous IsNot Nothing AndAlso _selectedUserEmail <> If(previous.Account.Email, "")
+            Dim keepName = _selectedUserName
+            Dim keepEmail = _selectedUserEmail
+            Dim keepPassword = _selectedUserNewPassword
+            Dim keepRepeat = _selectedUserNewPasswordRepeat
+            ReloadUserRows(previous?.Account.Id)
+            If previous Is Nothing OrElse _selectedUserRow Is Nothing Then Return
+            If typedName Then SelectedUserName = keepName
+            If typedEmail Then SelectedUserEmail = keepEmail
+            SelectedUserNewPassword = keepPassword
+            SelectedUserNewPasswordRepeat = keepRepeat
         End Sub
 
         Public Property SelectedUserRow As UserAccountRow

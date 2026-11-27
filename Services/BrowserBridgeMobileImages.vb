@@ -1138,8 +1138,8 @@ Namespace Services
 
         ''' <summary>POST /api/m/zip mit {"ids": [...]} legt einen Abholschein an und nennt seine
         ''' Adresse; GET /api/m/zip?t= liefert das ZIP ueber den Weg der Desktop-Seite
-        ''' (PlanDownloadEntries, StreamingZipWriter): je Bild seine Beistelldateien, gleiche Namen
-        ''' eindeutig. Zwei Schritte, weil ein Download ueber einen Verweis keinen Rumpf schicken kann.
+        ''' (PlanDownloadEntries, StreamingZipWriter), gleiche Namen eindeutig; was als Original
+        ''' hinausgeht und was gerechnet, steht bei <see cref="MobileZipEntries"/>. Zwei Schritte, weil ein Download ueber einen Verweis keinen Rumpf schicken kann.
         ''' Der Schein gilt zehn Minuten und nur fuer die Sitzung, die ihn bekam.</summary>
         Private Shared Async Function HandleMobileZipAsync(context As HttpListenerContext, mobile As MobileContext, isPost As Boolean) As Task
             If isPost Then
@@ -1159,7 +1159,7 @@ Namespace Services
                             paths.Add(key)
                             Continue For
                         End If
-                        ' Ein RAW-Paar gibt EIN JPEG: unbearbeitet das der Kamera (samt seinen
+                        ' Ein RAW-Paar gibt EIN JPEG: unbearbeitet das der Kamera (ohne seine
                         ' Beistelldateien), bearbeitet das gerechnete der RAW (PairJpegFor).
                         paths.Add(If(PairJpegFor(path, AddressOf mobile.CanDownload), path))
                     Next
@@ -1226,16 +1226,18 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Die Eintraege des ZIP der mobilen Seite. JPEG, PNG, WebP, Videos und alles, was
-        ''' keine Bilddatei ist, wie auf der Desktop-Seite (PlanDownloadEntries, mit Beistelldateien).
-        ''' Jedes andere Bildformat (RAW, HEIC, TIFF, PSD, ...) und jede Variante als JPEG mit
-        ''' Bearbeitung in voller Groesse (Name.jpg, ohne Beistelldateien): aus der mobilen Seite geht
-        ''' keine solche Datei als Original hinaus (IsPortableImageFormat). Gerechnet wird erst beim
-        ''' Schreiben, eines zur Zeit durch die Schleuse; misslingt es, fehlt nur dieses Bild.</summary>
+        ''' <summary>Die Eintraege des ZIP der mobilen Seite, nie mit Beistelldateien (.xmp, .fpxmp):
+        ''' sie tragen Bewertung, Stichwoerter und Rezept mit Pfaden und gehoeren nicht zum Bild.
+        ''' JPEG, PNG und WebP, Videos und alles, was keine Bilddatei ist, als Original
+        ''' (PlanDownloadEntries ohne Beistelldateien). Jedes andere Bildformat
+        ''' (RAW, HEIC, TIFF, PSD, ...) und jede Variante als JPEG mit Bearbeitung in voller Groesse
+        ''' (Name.jpg, ohne Beistelldateien): aus der mobilen Seite geht keine solche Datei als
+        ''' Original hinaus (IsPortableImageFormat). Gerechnet wird erst beim Schreiben, eines zur
+        ''' Zeit durch die Schleuse; misslingt es, fehlt nur dieses Bild.</summary>
         Friend Shared Function MobileZipEntries(keys As IList(Of String), canRead As Func(Of String, Boolean)) As List(Of ZipEntryPlan)
             Dim rendered = Function(key As String) VariantKey.IsVariant(key) OrElse
                                                    (MediaFileTypes.IsDisplayable(key) AndAlso Not MediaFileTypes.IsVideo(key) AndAlso Not IsPortableImageFormat(key))
-            Dim result = PlanDownloadEntries(keys.Where(Function(k) Not rendered(k)).ToList())
+            Dim result = PlanDownloadEntries(keys.Where(Function(k) Not rendered(k)).ToList(), includeSidecars:=False)
             Dim used As New HashSet(Of String)(result.Select(Function(e) e.EntryName), StringComparer.OrdinalIgnoreCase)
             For Each key In keys.Where(rendered).Distinct(PathIdentity.Comparer)
                 Dim filePath = VariantKey.FileOf(key)

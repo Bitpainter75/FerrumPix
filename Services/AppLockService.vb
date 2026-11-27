@@ -164,21 +164,39 @@ Namespace Services
         ''' Wartezeit. Laeuft die Liste ueber, faellt zuerst ein ungebremster heraus.</summary>
         Private Const MaxTrackedBrowsers As Integer = 256
 
-        ''' <summary>Hoechstens so viele Zaehler je Adresse (und alle uebrigen ausser den Konten).
-        ''' Laeuft die Liste ueber, faellt nur ein UNGEBREMSTER heraus, der am laengsten keinen
-        ''' Fehlversuch hatte; sind alle gebremst, wartet ein neuer Absender, bis der erste frei
-        ''' wird (<see cref="RetryAfter"/>).</summary>
+        ''' <summary>Hoechstens so viele Zaehler je Adresse (und alle uebrigen ausser Konten,
+        ''' Freigaben und dem Rechner selbst). Laeuft die Liste ueber, faellt nur ein UNGEBREMSTER
+        ''' heraus, der am laengsten keinen Fehlversuch hatte; sind alle gebremst, wird ein neuer
+        ''' Absender durchgelassen, ohne zu zaehlen (<see cref="RegisterFailure"/>).</summary>
         Private Const MaxTrackedAddresses As Integer = 1024
 
         ''' <summary>Hoechstens so viele Zaehler je Konto. Konten gibt es nur so viele, wie es Benutzer
         ''' gibt; die Grenze faengt nur einen Fehler ab, gemerkt wird wie bei den Adressen.</summary>
         Private Const MaxTrackedAccounts As Integer = 4096
 
+        ''' <summary>Hoechstens so viele Zaehler fuer das Kennwort von Freigabelinks. Eigene Liste,
+        ''' damit Raten an Freigaben die Anmeldung nicht verdraengt; gemerkt wird wie bei den
+        ''' Adressen.</summary>
+        Private Const MaxTrackedShares As Integer = 1024
+
         ''' <summary>So beginnt der Zaehler eines Browsers (BrowserBridge.LoginCounterKeys).</summary>
         Friend Const BrowserCounterPrefix As String = "login "
 
         ''' <summary>So beginnt der Zaehler eines Kontos (BrowserBridge.SecondFactorCounters).</summary>
         Friend Const AccountCounterPrefix As String = "code account "
+
+        ''' <summary>So beginnt der Zaehler einer Freigabe (BrowserBridge, Kennwort und Raten von
+        ''' Freigabelinks).</summary>
+        Friend Const ShareCounterPrefix As String = "share "
+
+        ''' <summary>Die Liste, in der ein Zaehler gefuehrt wird; jede hat ihre eigene Grenze.</summary>
+        Private Enum CounterKind
+            Local
+            Browser
+            Account
+            Share
+            Address
+        End Enum
 
         ''' <summary>Die erlaubten Zeiten ohne Eingabe in Minuten; 0 heisst nie.</summary>
         Public Shared ReadOnly IdleChoices As Integer() = {0, 5, 15, 30, 60}
@@ -556,11 +574,9 @@ Namespace Services
             Next
         End Sub
 
-        ''' <summary>Wie lange noch gewartet werden muss: die laengste Wartezeit der Zaehler.</summary>
-        ''' <summary>Wie lange noch gewartet werden muss: die laengste Wartezeit der Zaehler. Ist die
-        ''' Liste der Adressen (oder Konten) voll und jeder darin gebremst, wartet ein Zaehler, den
-        ''' es darin noch nicht gibt, bis der erste frei wird: sonst verdraengte eine Flut aus neuen
-        ''' Absendern die gebremsten (<see cref="RegisterFailure"/>).</summary>
+        ''' <summary>Wie lange noch gewartet werden muss: die laengste Wartezeit der Zaehler. Ein
+        ''' Zaehler ohne Eintrag wartet nie, auch nicht bei voller Liste: sonst koennte, wer mit
+        ''' vielen Adressen flutet, alle Anmeldungen warten lassen (<see cref="RegisterFailure"/>).</summary>
         Public Shared Function RetryAfter(ParamArray counters As String()) As TimeSpan
             Dim now = Clock()
             Dim until = DateTime.MinValue
@@ -568,72 +584,58 @@ Namespace Services
                 For Each key In If(counters, Array.Empty(Of String)())
                     If key Is Nothing Then Continue For
                     Dim record As FailureRecord = Nothing
-                    If Failures.TryGetValue(key, record) Then
-                        If record.BlockedUntilUtc > until Then until = record.BlockedUntilUtc
-                    Else
-                        Dim full = FullUntil(key, now)
-                        If full > until Then until = full
-                    End If
+                    If Failures.TryGetValue(key, record) AndAlso record.BlockedUntilUtc > until Then until = record.BlockedUntilUtc
                 Next
             End SyncLock
             Return If(until > now, until - now, TimeSpan.Zero)
         End Function
 
-        ''' <summary>Die Art eines Zaehlers: 0 Browser, 1 Konto, 2 Adresse und alles Uebrige.</summary>
-        Private Shared Function KindOf(key As String) As Integer
-            If key.StartsWith(BrowserCounterPrefix, StringComparison.Ordinal) Then Return 0
-            If key.StartsWith(AccountCounterPrefix, StringComparison.Ordinal) Then Return 1
-            Return 2
+        ''' <summary>Die Liste, in der ein Zaehler gefuehrt wird.</summary>
+        Private Shared Function KindOf(key As String) As CounterKind
+            If String.Equals(key, LocalKey, StringComparison.Ordinal) Then Return CounterKind.Local
+            If key.StartsWith(BrowserCounterPrefix, StringComparison.Ordinal) Then Return CounterKind.Browser
+            If key.StartsWith(AccountCounterPrefix, StringComparison.Ordinal) Then Return CounterKind.Account
+            If key.StartsWith(ShareCounterPrefix, StringComparison.Ordinal) Then Return CounterKind.Share
+            Return CounterKind.Address
         End Function
 
-        Private Shared Function LimitOf(kind As Integer) As Integer
+        ''' <summary>Die Grenze einer Liste. Der Rechner selbst hat keine: sein Zaehler ist einer.</summary>
+        Private Shared Function LimitOf(kind As CounterKind) As Integer
             Select Case kind
-                Case 0 : Return MaxTrackedBrowsers
-                Case 1 : Return MaxTrackedAccounts
+                Case CounterKind.Local : Return Integer.MaxValue
+                Case CounterKind.Browser : Return MaxTrackedBrowsers
+                Case CounterKind.Account : Return MaxTrackedAccounts
+                Case CounterKind.Share : Return MaxTrackedShares
                 Case Else : Return MaxTrackedAddresses
             End Select
         End Function
 
-        ''' <summary>Unter StateLock: ist die Liste dieser Art voll und kein Eintrag darin frei
-        ''' (alle gebremst), bis wann der erste frei wird; sonst DateTime.MinValue. Fuer Browser nie:
-        ''' dort darf ein neuer jeden alten verdraengen, die Adresse bremst weiter.</summary>
-        Private Shared Function FullUntil(key As String, now As DateTime) As DateTime
-            Dim kind = KindOf(key)
-            If kind = 0 Then Return DateTime.MinValue
-            Dim limit = LimitOf(kind)
-            Dim count = 0
-            Dim earliest = DateTime.MaxValue
-            For Each pair In Failures
-                If KindOf(pair.Key) <> kind Then Continue For
-                count += 1
-                If pair.Value.BlockedUntilUtc <= now Then Return DateTime.MinValue
-                If pair.Value.BlockedUntilUtc < earliest Then earliest = pair.Value.BlockedUntilUtc
-            Next
-            Return If(count >= limit, earliest, DateTime.MinValue)
-        End Function
-
         ''' <summary>Zaehlt einen Fehlversuch.
         '''
-        ''' <para>DREI LISTEN MIT EIGENER GRENZE (Browser, Konten, Adressen samt allem Uebrigen), damit
-        ''' eine Flut der einen Art die andere nicht verdraengt. Laeuft eine Liste ueber, faellt der
-        ''' UNGEBREMSTE Eintrag heraus, der am laengsten keinen Fehlversuch hatte; ein gebremster
-        ''' faellt nie heraus. Wer mit vielen neuen Absendern flutet, verdraengt also nur
-        ''' ungebremste Zaehler und loest damit nicht seine eigene Bremse. Sind alle gebremst, wird
-        ''' kein neuer angelegt, und <see cref="RetryAfter"/> laesst den neuen warten, bis der erste
-        ''' frei wird. Nur Browser duerfen auch gebremste verdraengen: ihr Zaehler steht nie allein,
-        ''' die Adresse bremst weiter.</para></summary>
+        ''' <para>VIER LISTEN MIT EIGENER GRENZE (Browser, Konten, Freigaben, Adressen samt allem
+        ''' Uebrigen), damit eine Flut der einen Art die andere nicht verdraengt. Der Zaehler des
+        ''' Rechners (<see cref="LocalKey"/>) steht in keiner: er wird nie verdraengt und nie von
+        ''' einer vollen Liste aufgehalten.</para>
+        '''
+        ''' <para>Laeuft eine Liste ueber, faellt der UNGEBREMSTE Eintrag heraus, der am laengsten
+        ''' keinen Fehlversuch hatte; ein gebremster faellt nie heraus. Wer mit vielen neuen
+        ''' Absendern flutet, verdraengt also nur ungebremste Zaehler und loest damit nicht seine
+        ''' eigene Bremse. Sind alle gebremst, wird der neue Absender durchgelassen, ohne zu zaehlen:
+        ''' liesse man ihn warten, koennte eine Flut aus vielen Adressen alle Anmeldungen aussperren.
+        ''' Nur Browser duerfen auch gebremste verdraengen: ihr Zaehler steht nie allein, die Adresse
+        ''' bremst weiter.</para></summary>
         Private Shared Sub RegisterFailure(key As String)
             Dim now = Clock()
             SyncLock StateLock
                 Dim record As FailureRecord = Nothing
                 If Not Failures.TryGetValue(key, record) Then
                     Dim kind = KindOf(key)
-                    Dim same = Failures.Where(Function(pair) KindOf(pair.Key) = kind).ToList()
-                    If same.Count >= LimitOf(kind) Then
+                    Dim same = If(kind = CounterKind.Local, Nothing, Failures.Where(Function(pair) KindOf(pair.Key) = kind).ToList())
+                    If same IsNot Nothing AndAlso same.Count >= LimitOf(kind) Then
                         Dim free = same.Where(Function(pair) pair.Value.BlockedUntilUtc <= now).ToList()
                         If free.Count > 0 Then
                             Failures.Remove(free.OrderBy(Function(pair) pair.Value.LastUtc).First().Key)
-                        ElseIf kind = 0 Then
+                        ElseIf kind = CounterKind.Browser Then
                             Failures.Remove(same.OrderBy(Function(pair) pair.Value.LastUtc).First().Key)
                         Else
                             Return
