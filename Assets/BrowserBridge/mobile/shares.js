@@ -58,21 +58,24 @@
     label.appendChild(el('span', null, text));
     return { label, box };
   }
-  function dayChoices(current) {
+  // Die Laufzeit. Beim Bearbeiten steht zuerst das jetzige Ende ("Verfuegbar bis ..." oder
+  // "Abgelaufen") als eigener Eintrag: nur eine ausdrueckliche andere Wahl aendert das Ende (ab
+  // jetzt), ein Speichern ohne sie laesst es stehen, und eine abgelaufene Freigabe bleibt aus.
+  function dayChoices(current, share) {
     const select = el('select', 'share-field');
+    if (share && share.expires) {
+      const keep = el('option', null, share.expired ? S.expired : fmt(S.until, dateFormat.format(new Date(share.expires))));
+      keep.value = 'keep';
+      keep.selected = true;
+      select.appendChild(keep);
+    }
     for (const days of [7, 30, 90, 365, 0]) {
       const option = el('option', null, days === 0 ? S.never : days === 365 ? S.oneYear : fmt(S.days, days));
       option.value = String(days);
-      if (days === current) option.selected = true;
+      if (!(share && share.expires) && days === current) option.selected = true;
       select.appendChild(option);
     }
     return select;
-  }
-  function daysLeft(share) {
-    if (!share.expires) return 0;
-    const left = (new Date(share.expires) - Date.now()) / 86400000;
-    const choices = [7, 30, 90, 365];
-    return choices.find(days => days >= left) || 365;
   }
 
   // Ein Formular fuer Neu und Bearbeiten. target: was geteilt wird; share: die bestehende Freigabe.
@@ -88,7 +91,8 @@
       title.setAttribute('aria-label', S.title);
       body.appendChild(title);
       const expiryLabel = el('label', 'share-label', S.expiry);
-      const days = dayChoices(share ? (share.expires ? daysLeft(share) : 0) : 30);
+      const days = dayChoices(share ? 0 : 30, share);
+      const initialDays = days.value;
       expiryLabel.appendChild(days);
       body.appendChild(expiryLabel);
       const sub = target && target.kind === 'folder' ? checkRow(S.subfolders, false) : null;
@@ -122,9 +126,11 @@
         if (secret && secret.length < 8) { toast(S.tooShort); return; }
         if (locked.box.checked && !secret && !(share && share.password)) { toast(S.tooShort); return; }
         const values = {
-          title: title.value.trim(), days: +days.value, download: download.box.checked,
+          title: title.value.trim(), download: download.box.checked,
           place: place.box.checked, people: people.box.checked, camera: camera.box.checked
         };
+        // Die Laufzeit nur, wenn sie hier gewaehlt wurde; der Server rechnet sie dann ab jetzt.
+        if (!share || (days.value !== initialDays && days.value !== 'keep')) values.days = +days.value;
         submit.disabled = true;
         try {
           if (share) {

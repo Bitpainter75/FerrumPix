@@ -118,7 +118,8 @@ Namespace Services
 
     ''' <summary>Die Listen der mobilen Seite: Zeitleiste, Ordner, Suche, Personen, Orte und das
     ''' Infoblatt eines Bildes. Jede Liste geht durch den Kontext der Anfrage
-    ''' (MobileContext.CanSee), und jede Datei geht als Kennung hinaus.
+    ''' (MobileContext.CanSeeOnDisk, das auch symbolische Verweise aufloest), und jede Datei geht
+    ''' als Kennung hinaus.
     '''
     ''' <para>EIN FOTO, EINE KACHEL: liegen eine RAW und ihr JPEG (oder HEIF) mit gleichem Namen im
     ''' selben Ordner, zeigt die Seite nur die RAW, wie die Galerie mit Stapeln. Bewertungen gehen an
@@ -204,7 +205,7 @@ Namespace Services
             Dim filesWithVariantRows As New HashSet(Of String)(variantRows.Keys.Select(Function(k) VariantKey.FileOf(k)), PathIdentity.Comparer)
             For Each row In rows
                 If VariantKey.IsVariant(row.Path) Then Continue For
-                If Not MediaFileTypes.IsDisplayable(row.Path) OrElse Not mobile.CanSee(row.Path) Then Continue For
+                If Not MediaFileTypes.IsDisplayable(row.Path) OrElse Not mobile.CanSeeOnDisk(row.Path) Then Continue For
                 ' Ein Ordner, den es nicht mehr gibt: der Katalog ist dort veraltet, jede Kachel
                 ' bliebe leer. Ein Laufwerk, das gerade fehlt, bleibt (Kacheln aus dem Speicher).
                 If Not folders.Exists(row.Path) Then Continue For
@@ -451,8 +452,9 @@ Namespace Services
         ''' <summary>Ein Bild fuer die Seite: Kennung, Aufnahmezeit, Video ja oder nein, Stand.
         ''' Fuer einen Benutzer ohne Administratorrolle dazu seine Stufe an der Datei ("r",
         ''' FolderAccessLevel als Zahl): die Aktionsleiste der Auswahl blendet damit aus, wofuer die
-        ''' Stufe bei keinem gewaehlten Bild reicht. Ohne "r" gilt Verwalten (Administrator). Reine
-        ''' Zeichenkettenarbeit wie CanSee; geprueft wird jeder Weg trotzdem am Server.</summary>
+        ''' Stufe bei keinem gewaehlten Bild reicht. Ohne "r" gilt Verwalten (Administrator). Die
+        ''' Stufe kommt aus LevelAt, mit aufgeloesten Verweisen; geprueft wird jeder Weg trotzdem am
+        ''' Server.</summary>
         Private Shared Function MobileItemJson(item As MobileItem, mobile As MobileContext) As Dictionary(Of String, Object)
             Dim result As New Dictionary(Of String, Object) From {
                 {"i", MobileIdFor(MobileFileKind, item.Path)},
@@ -564,7 +566,7 @@ Namespace Services
                     If entry.Name.StartsWith("."c) OrElse (entry.Attributes And (FileAttributes.Hidden Or FileAttributes.System)) <> 0 Then Continue For
                     If TypeOf entry Is DirectoryInfo Then
                         If mobile.CanSeeFolder(entry.FullName) Then folders.Add(entry.FullName)
-                    ElseIf MediaFileTypes.IsDisplayable(entry.Name) AndAlso mobile.CanSee(entry.FullName) Then
+                    ElseIf MediaFileTypes.IsDisplayable(entry.Name) AndAlso mobile.CanSeeOnDisk(entry.FullName) Then
                         files.Add(DirectCast(entry, FileInfo))
                     End If
                 Next
@@ -699,13 +701,13 @@ Namespace Services
             For Each row In library.GetMobilePersonRows()
                 Dim name As String = Nothing
                 If Not names.TryGetValue(row.PersonId, name) OrElse people.Contains(name) Then Continue For
-                If name.Contains(word, StringComparison.CurrentCultureIgnoreCase) AndAlso mobile.CanSee(row.Path) Then people.Add(name)
+                If name.Contains(word, StringComparison.CurrentCultureIgnoreCase) AndAlso mobile.CanSeeOnDisk(row.Path) Then people.Add(name)
             Next
             Dim places As New SortedSet(Of String)(StringComparer.CurrentCultureIgnoreCase)
             For Each row In library.GetMobilePlaceRows()
                 Dim city = row.City.Trim()
                 If city.Length = 0 OrElse places.Contains(city) Then Continue For
-                If city.Contains(word, StringComparison.CurrentCultureIgnoreCase) AndAlso mobile.CanSee(row.Path) Then places.Add(city)
+                If city.Contains(word, StringComparison.CurrentCultureIgnoreCase) AndAlso mobile.CanSeeOnDisk(row.Path) Then places.Add(city)
             Next
             For Each name In people.Take(8)
                 result.Add(New Dictionary(Of String, Object) From {{"k", "person"}, {"n", name}})
@@ -726,7 +728,7 @@ Namespace Services
                                                     ToDictionary(Function(p) p.Id, Function(p) p.Name, StringComparer.Ordinal)
                     Dim filesByPerson As New Dictionary(Of String, List(Of String))(StringComparer.Ordinal)
                     For Each row In library.GetMobilePersonRows()
-                        If Not names.ContainsKey(row.PersonId) OrElse Not mobile.CanSee(row.Path) Then Continue For
+                        If Not names.ContainsKey(row.PersonId) OrElse Not mobile.CanSeeOnDisk(row.Path) Then Continue For
                         Dim files As List(Of String) = Nothing
                         If Not filesByPerson.TryGetValue(row.PersonId, files) Then
                             files = New List(Of String)()
@@ -771,7 +773,7 @@ Namespace Services
                 Function()
                     Dim groups As New Dictionary(Of String, (Name As String, Files As List(Of String)))(StringComparer.OrdinalIgnoreCase)
                     For Each row In LibraryService.Instance.GetMobilePlaceRows()
-                        If Not mobile.CanSee(row.Path) Then Continue For
+                        If Not mobile.CanSeeOnDisk(row.Path) Then Continue For
                         Dim city = row.City.Trim()
                         If city.Length = 0 Then Continue For
                         Dim group As (Name As String, Files As List(Of String)) = Nothing
@@ -843,6 +845,9 @@ Namespace Services
             result("fileName") = IO.Path.GetFileName(path)
             If isVariant Then result("variant") = RawSidecarService.VariantName(key)
             result("format") = MobileFormatName(path)
+            ' Laesst sich die Datei als Original herunterladen? Nur JPEG, PNG, WebP und Videos; alles
+            ' andere nur als JPEG (IsPortableImageFormat), die Seite bietet dann kein "Original" an.
+            result("original") = MediaFileTypes.IsVideo(path) OrElse IsPortableImageFormat(path)
             Dim folder = IO.Path.GetDirectoryName(path)
             result("folder") = FolderDisplayName(If(folder, ""))
             If Not String.IsNullOrEmpty(folder) AndAlso mobile.CanSeeFolder(folder) Then result("folderId") = MobileIdFor(MobileFolderKind, folder)
@@ -850,10 +855,10 @@ Namespace Services
             Dim exists = MobileContext.ImageExists(key)
             If Not exists Then result("missing") = True
             ' Partner nur an der Datei selbst; eine Variante steht fuer sich.
-            Dim partners = If(isVariant OrElse Not exists, New List(Of String)(), MobilePartnersOf(path).Where(Function(p) mobile.CanSee(p)).ToList())
+            Dim partners = If(isVariant OrElse Not exists, New List(Of String)(), MobilePartnersOf(path).Where(Function(p) mobile.CanSeeOnDisk(p)).ToList())
             result("partners") = partners.Select(Function(p) IO.Path.GetFileName(p)).ToList()
             ' Was die Seite anbietet; der Server prueft jeden Weg trotzdem selbst. Eine Variante
-            ' wird bewertet, aber nicht umbenannt, geloescht oder geteilt: das trifft ihre Datei.
+            ' wird bewertet und geteilt, aber nicht umbenannt oder geloescht: das trifft ihre Datei.
             result("canRate") = exists AndAlso mobile.CanRate(path) AndAlso partners.All(Function(p) mobile.CanRate(p))
             Dim canManage = exists AndAlso Not isVariant AndAlso mobile.CanRename(path) AndAlso mobile.CanDelete(path) AndAlso
                             partners.All(Function(p) mobile.CanRename(p) AndAlso mobile.CanDelete(p))
@@ -861,8 +866,9 @@ Namespace Services
             ' Loescht die Anwendung ohne Papierkorb (Einstellung), sagt die Rueckfrage der Seite
             ' das ausdruecklich: dann ist das Bild endgueltig weg.
             If canManage Then result("deleteForever") = AppSettingsService.Load().DeleteSkipTrash
-            ' Link zum Teilen: "Mitarbeiten" auf dem Bild (BrowserBridgeShares.vb).
-            result("canShare") = exists AndAlso Not isVariant AndAlso CanShareFile(mobile, path)
+            ' Link zum Teilen: "Mitarbeiten" auf dem Bild (BrowserBridgeShares.vb). Eine Variante
+            ' geht als eigenes Bild mit ihrem Rezept in die Freigabe.
+            result("canShare") = exists AndAlso CanShareFile(mobile, key)
             ' Ein Bewegtbild: die Seite zeigt den Knopf, der den Film holt (/api/m/motion), mit
             ' denselben Rechten wie das Original.
             If exists AndAlso mobile.CanDownload(path) Then

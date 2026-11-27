@@ -36,7 +36,11 @@ Namespace ViewModels
                 If Not items(0).IsFolderDownloadable Then Return Nothing
                 folder = items(0).FilePath
             Else
-                paths = GetPathsForTransfer(items.Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder AndAlso i.IsDownloadable))
+                Dim chosen = items.Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder AndAlso i.IsDownloadable).ToList()
+                paths = GetPathsForTransfer(chosen.Where(Function(i) Not i.IsVariant))
+                ' Eine zusaetzliche Variante geht als eigenes Bild mit ihrem Rezept in die Freigabe,
+                ' nicht als ihre Datei (wie in der mobilen Seite).
+                paths.AddRange(chosen.Where(Function(i) i.IsVariant).Select(Function(i) i.ItemPath))
             End If
             Dim result = Await Task.Run(Function() BrowserBridge.CreateShareFromDesktop(paths, folder))
             Dim heading = LocalizationService.T("Link zum Teilen erstellen")

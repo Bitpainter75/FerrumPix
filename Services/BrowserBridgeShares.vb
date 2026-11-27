@@ -41,11 +41,14 @@ Namespace Services
     ''' Raten an Links und Raten am Anmeldefenster nicht gegenseitig sperren.</para>
     '''
     ''' <para>WAS HINAUSGEHT: Kachel und Vorschau immer mit Bearbeitung und ohne Metadaten (wie die
-    ''' mobile Seite, durch dieselbe Warteschlange und DecodeGate), nie eine Beistelldatei. Das
-    ''' Original nur, wenn Herunterladen erlaubt ist (<see cref="ShareDeliveryFor"/>): unveraendert,
-    ''' wenn Ort, Personen und Kamera mitgehen; sonst ein JPEG ohne Metadaten (JpegMetadataStrip),
-    ''' jedes andere Format als JPEG mit Bearbeitung, ein Video gar nicht (sein Ort laesst sich nicht
-    ''' herausnehmen).</para>
+    ''' mobile Seite, durch dieselbe Warteschlange und DecodeGate), nie eine Beistelldatei.
+    ''' Herunterladen nur, wenn es erlaubt ist (<see cref="ShareDeliveryFor"/>): ein bearbeitetes
+    ''' Bild (Vermerk "bearbeitet", Variante) und jedes Format ausser JPEG, PNG und WebP (RAW, HEIC,
+    ''' TIFF, PSD, ...) als JPEG mit Bearbeitung in voller Groesse ohne Metadaten, wie die Seite es
+    ''' zeigt; ein unbearbeitetes JPEG, PNG oder WebP unveraendert, wenn Ort, Personen und Kamera
+    ''' mitgehen, sonst als JPEG ohne Metadaten (JpegMetadataStrip, PNG und WebP gerechnet); ein
+    ''' Video nur mit allen Metadaten (sein Ort laesst sich nicht herausnehmen).
+    ''' Dasselbe gilt fuer jeden Eintrag des ZIP.</para>
     ''' </summary>
     Partial Public NotInheritable Class BrowserBridge
 
@@ -95,6 +98,8 @@ Namespace Services
         ''' <summary>Ein Bild einer Freigabe, wie es ausgeliefert wird.</summary>
         Friend NotInheritable Class ShareEntry
             Public Id As String
+            ''' <summary>Der Pfad der Datei, bei einer zusaetzlichen Variante ihr Schluessel
+            ''' (VariantKey); die Datei dahinter gibt VariantKey.FileOf.</summary>
             Public Path As String
             ''' <summary>Aufnahmezeit als ISO ohne Zone, leer ohne Datum.</summary>
             Public Taken As String
@@ -129,11 +134,15 @@ Namespace Services
         ' --- Rechte ------------------------------------------------------------------------------
 
         ''' <summary>Darf dieser Benutzer die Datei teilen? Er muss sie ausliefern duerfen und auf ihr
-        ''' mindestens "Mitarbeiten" haben (ein Administrator hat alles). Allein ueber den Kontext.</summary>
+        ''' mindestens "Mitarbeiten" haben (ein Administrator hat alles). Allein ueber den Kontext.
+        ''' Eine zusaetzliche Variante (VariantKey) nach den Rechten ihrer Datei, und nur, solange es
+        ''' sie in der Begleitdatei noch gibt.</summary>
         Friend Shared Function CanShareFile(mobile As MobileContext, filePath As String) As Boolean
             If mobile Is Nothing OrElse String.IsNullOrEmpty(filePath) Then Return False
-            Return MediaFileTypes.IsDisplayable(filePath) AndAlso mobile.CanDownload(filePath) AndAlso
-                   mobile.LevelAt(filePath) >= FolderAccessLevel.Contribute
+            Dim file = VariantKey.FileOf(filePath)
+            If Not MediaFileTypes.IsDisplayable(file) OrElse Not mobile.CanDownload(file) OrElse
+               mobile.LevelAt(file) < FolderAccessLevel.Contribute Then Return False
+            Return Not VariantKey.IsVariant(filePath) OrElse MobileContext.ImageExists(filePath)
         End Function
 
         ''' <summary>Darf dieser Benutzer den Ordner teilen? Er muss hineinsehen duerfen und auf ihm
@@ -172,14 +181,105 @@ Namespace Services
             Return record
         End Function
 
-        ''' <summary>Was beim Herunterladen dieser Datei hinausgeht.</summary>
+        ''' <summary>Gibt die Freigabe Ort, Personen und Kamera mit? Nur dann darf eine Datei mit
+        ''' allen ihren Metadaten hinaus.</summary>
+        Private Shared Function SharesAllMetadata(record As ShareRecord) As Boolean
+            Return record.ShareLocation AndAlso record.SharePeople AndAlso record.ShareCamera
+        End Function
+
+        ''' <summary>Laesst sich das Bild aus der Freigabe herunterladen, egal in welcher Form? Billig
+        ''' (kein Blick ins Rezept), fuer die Liste: Herunterladen erlaubt, und ein Video nur mit
+        ''' allen Metadaten (sein Ort laesst sich nicht herausnehmen).</summary>
+        Friend Shared Function CanDownloadFromShare(record As ShareRecord, key As String) As Boolean
+            If record Is Nothing OrElse Not record.AllowDownload Then Return False
+            Return Not MediaFileTypes.IsVideo(VariantKey.FileOf(key)) OrElse SharesAllMetadata(record)
+        End Function
+
+        ''' <summary>Geht das Bild gerechnet hinaus, mit seiner Bearbeitung? Eine zusaetzliche
+        ''' Variante (ihr eigenes Rezept), eine RAW (sie wird entwickelt) und jede Datei, deren
+        ''' Begleitdatei den Vermerk "bearbeitet" traegt (RawSidecarService.IsEditedFile, auch ein
+        ''' FerrumPix-Projekt). So, wie die Seite es zeigt.</summary>
+        Friend Shared Function IsRenderedForShare(key As String) As Boolean
+            If VariantKey.IsVariant(key) Then Return True
+            Dim filePath = VariantKey.FileOf(key)
+            If MediaFileTypes.IsVideo(filePath) Then Return False
+            Return RawPreviewService.IsSupportedRaw(filePath) OrElse RawSidecarService.IsEditedFile(filePath)
+        End Function
+
+        ''' <summary>Was beim Herunterladen dieses Bildes hinausgeht. Ein bearbeitetes Bild
+        ''' (<see cref="IsRenderedForShare"/>) immer gerechnet, mit Bearbeitung und ohne Metadaten,
+        ''' wie die Seite es zeigt; ebenso jedes Format ausser JPEG, PNG und WebP
+        ''' (<see cref="IsPortableImageFormat"/>), eine RAW also nie als RAW. Ein unbearbeitetes
+        ''' JPEG, PNG oder WebP unveraendert, wenn Ort, Personen und Kamera mitgehen, sonst ein JPEG
+        ''' ohne Metadaten (PNG und WebP gerechnet). Ein Video nur mit allen Metadaten, sonst gar
+        ''' nicht.</summary>
         Friend Shared Function ShareDeliveryFor(record As ShareRecord, filePath As String) As ShareDelivery
-            If record Is Nothing OrElse Not record.AllowDownload Then Return ShareDelivery.None
-            If record.ShareLocation AndAlso record.SharePeople AndAlso record.ShareCamera Then Return ShareDelivery.AsIs
-            If MediaFileTypes.IsVideo(filePath) Then Return ShareDelivery.None
-            Dim extension = IO.Path.GetExtension(filePath).ToLowerInvariant()
-            If extension = ".jpg" OrElse extension = ".jpeg" OrElse extension = ".jpe" Then Return ShareDelivery.StrippedJpeg
+            If Not CanDownloadFromShare(record, filePath) Then Return ShareDelivery.None
+            Dim file = VariantKey.FileOf(filePath)
+            If MediaFileTypes.IsVideo(file) Then Return ShareDelivery.AsIs
+            ' Als Original gehen nur Formate, die jeder Empfaenger oeffnen kann; alles andere (RAW,
+            ' DNG, HEIC, TIFF, PSD, JPEG XL, ...) kommt immer als JPEG an, auch mit allen Metadaten.
+            If Not IsPortableImageFormat(file) OrElse IsRenderedForShare(filePath) Then Return ShareDelivery.Rendered
+            If SharesAllMetadata(record) Then Return ShareDelivery.AsIs
+            If IsJpegExtension(file) Then Return ShareDelivery.StrippedJpeg
+            ' PNG und WebP ohne alle Metadaten: es gibt kein Herausnehmen wie beim JPEG, also gerechnet.
             Return ShareDelivery.Rendered
+        End Function
+
+        ''' <summary>Darf ein Bild dieses Formats aus einer Freigabe oder der mobilen Seite als
+        ''' Original hinaus? Nur JPEG, PNG und WebP: die oeffnet jedes Geraet. RAW, DNG,
+        ''' HEIC/HEIF/AVIF, TIFF, PSD, FerrumPix-Projekt, JPEG XL, BMP, GIF und der Rest gehen dort
+        ''' nur als gerechnetes JPEG hinaus. Videos fragt niemand hier (eigene Regel). Die volle
+        ''' Oberflaeche im Browser bleibt davon unberuehrt: dort geht alles als Original.</summary>
+        Friend Shared Function IsPortableImageFormat(filePath As String) As Boolean
+            Dim extension = IO.Path.GetExtension(VariantKey.FileOf(filePath)).ToLowerInvariant()
+            Return IsJpegExtension(filePath) OrElse extension = ".png" OrElse extension = ".webp"
+        End Function
+
+        Private Shared Function IsJpegExtension(filePath As String) As Boolean
+            Dim extension = IO.Path.GetExtension(VariantKey.FileOf(filePath)).ToLowerInvariant()
+            Return extension = ".jpg" OrElse extension = ".jpeg" OrElse extension = ".jpe"
+        End Function
+
+        ''' <summary>Darf der Film eines Bewegtbilds hinaus? Nach derselben Regel wie ein Video:
+        ''' Herunterladen erlaubt und alle Metadaten (der Film traegt seine eigenen, auch den Ort).
+        ''' Nie an einer Variante.</summary>
+        Private Shared Function ShareMotionAllowed(record As ShareRecord, key As String) As Boolean
+            Return record IsNot Nothing AndAlso record.AllowDownload AndAlso SharesAllMetadata(record) AndAlso Not VariantKey.IsVariant(key)
+        End Function
+
+        ''' <summary>Der Name eines gerechneten Bildes: der Name der Datei mit ".jpg", bei einer
+        ''' Variante ihr Name in Klammern dahinter, ohne Zeichen, die ein Dateiname nicht traegt.</summary>
+        Friend Shared Function ShareRenderedName(key As String) As String
+            Return CleanShareFileName(ShareImageTitle(key)) & ".jpg"
+        End Function
+
+        ''' <summary>Das Kamera-JPEG eines RAW-Paars, das statt der RAW hinausgeht (Freigabe und
+        ''' mobile Seite, einzeln und im ZIP): nur bei einer UNBEARBEITETEN RAW (kein Vermerk
+        ''' "bearbeitet", keine Variante) mit einem JPEG, PNG oder WebP gleichen Namens daneben, das
+        ''' <paramref name="canUse"/> erlaubt. Sonst Nothing, und die RAW geht gerechnet unter dem
+        ''' Namen des Paares hinaus. So kommt je Paar genau EIN JPEG an, ohne Namensgleichheit.</summary>
+        Friend Shared Function PairJpegFor(key As String, canUse As Func(Of String, Boolean)) As String
+            If String.IsNullOrEmpty(key) OrElse VariantKey.IsVariant(key) Then Return Nothing
+            If Not RawPreviewService.IsCameraRaw(key) OrElse RawSidecarService.IsEditedFile(key) Then Return Nothing
+            Return MobilePartnersOf(key).FirstOrDefault(Function(p) IsPortableImageFormat(p) AndAlso canUse(p))
+        End Function
+
+        ''' <summary>Der Name eines Bildes ohne Endung, bei einer Variante mit ihrem Namen in
+        ''' Klammern; als Titel einer Freigabe aus einem Bild.</summary>
+        Private Shared Function ShareImageTitle(key As String) As String
+            Dim stem = IO.Path.GetFileNameWithoutExtension(VariantKey.FileOf(key))
+            If Not VariantKey.IsVariant(key) Then Return stem
+            Return stem & " (" & RawSidecarService.VariantName(key) & ")"
+        End Function
+
+        Private Shared Function CleanShareFileName(name As String) As String
+            Dim invalid = IO.Path.GetInvalidFileNameChars()
+            Dim clean As New StringBuilder()
+            For Each c In If(name, "")
+                clean.Append(If(invalid.Contains(c) OrElse Char.IsControl(c) OrElse c = "/"c OrElse c = "\"c OrElse c = ":"c, "_"c, c))
+            Next
+            Return clean.ToString().Trim()
         End Function
 
         ' --- Die Bilder einer Freigabe ---------------------------------------------------------------
@@ -253,16 +353,18 @@ Namespace Services
                                 New List(Of String)())
             Else
                 ' Nur die Datei, die geteilt wurde: liegt unter dem Pfad inzwischen eine andere
-                ' (Fingerabdruck aus Groesse und Zeit weicht ab), fehlt das Bild.
-                candidates = record.Paths.Where(Function(p) FileExists(p) AndAlso ShareStore.IsSameFile(record, p)).ToList()
+                ' (Fingerabdruck aus Groesse und Zeit weicht ab), fehlt das Bild. Eine Variante,
+                ' die aus der Begleitdatei verschwunden ist, ebenso.
+                candidates = record.Paths.Where(Function(p) MobileContext.ImageExists(p) AndAlso ShareStore.IsSameFile(record, p)).ToList()
             End If
             Dim paths = CollapseSharePairs(candidates.Where(Function(p) CanShareFile(owner, p)).
                                                      Distinct(PathIdentity.Comparer).Take(MaxShareItems).ToList())
-            Dim metas = LibraryService.Instance.GetMetaForPaths(paths)
+            ' Die Aufnahmezeit einer Variante ist die ihrer Datei.
+            Dim metas = LibraryService.Instance.GetMetaForPaths(paths.Select(AddressOf VariantKey.FileOf).Distinct(PathIdentity.Comparer))
             Dim entries As New List(Of ShareEntry)(paths.Count)
             For Each filePath In paths
                 Dim meta As LibraryImageMeta = Nothing
-                metas.TryGetValue(filePath, meta)
+                metas.TryGetValue(VariantKey.FileOf(filePath), meta)
                 entries.Add(New ShareEntry With {
                     .Id = ShareItemId(record.Id, filePath),
                     .Path = filePath,
@@ -273,14 +375,6 @@ Namespace Services
             Return entries.OrderBy(Function(e) If(e.Taken.Length = 0, 1, 0)).
                            ThenBy(Function(e) e.Taken, StringComparer.Ordinal).
                            ThenBy(Function(e) IO.Path.GetFileName(e.Path), StringComparer.CurrentCultureIgnoreCase).ToList()
-        End Function
-
-        Private Shared Function FileExists(filePath As String) As Boolean
-            Try
-                Return Not String.IsNullOrEmpty(filePath) AndAlso File.Exists(filePath)
-            Catch
-                Return False
-            End Try
         End Function
 
         ''' <summary>Die Bilder eines Ordners, auf Wunsch mit Unterordnern: ohne Verstecktes, ohne
@@ -314,14 +408,15 @@ Namespace Services
         End Function
 
         ''' <summary>Liegen eine RAW und ihr JPEG (oder HEIF) gleichen Namens im selben Ordner, steht
-        ''' nur die RAW da, mit ihrer Bearbeitung; dieselbe Paarregel wie in der mobilen Seite.</summary>
+        ''' nur die RAW da, mit ihrer Bearbeitung; dieselbe Paarregel wie in der mobilen Seite. Eine
+        ''' zusaetzliche Variante bleibt immer: sie wurde ausdruecklich geteilt.</summary>
         Private Shared Function CollapseSharePairs(paths As List(Of String)) As List(Of String)
             Dim rawStems As New HashSet(Of String)(StringComparer.Ordinal)
             For Each filePath In paths
-                If RawPreviewService.IsCameraRaw(filePath) Then rawStems.Add(SharePairKey(filePath))
+                If Not VariantKey.IsVariant(filePath) AndAlso RawPreviewService.IsCameraRaw(filePath) Then rawStems.Add(SharePairKey(filePath))
             Next
             If rawStems.Count = 0 Then Return paths
-            Return paths.Where(Function(p) RawPreviewService.IsCameraRaw(p) OrElse
+            Return paths.Where(Function(p) VariantKey.IsVariant(p) OrElse RawPreviewService.IsCameraRaw(p) OrElse
                                            Not ImageStackService.IsCompanionFormat(p) OrElse
                                            Not rawStems.Contains(SharePairKey(p))).ToList()
         End Function
@@ -343,11 +438,11 @@ Namespace Services
             Return day & "T00:00:00"
         End Function
 
-        ''' <summary>Stand der Datei und ihres Rezepts, kurz.</summary>
+        ''' <summary>Stand der Datei und ihres Rezepts, kurz; bei einer Variante dazu ihre Kennung.</summary>
         Private Shared Function ShareStampOf(filePath As String) As String
-            Dim parts As New StringBuilder()
+            Dim parts As New StringBuilder(VariantKey.IdOf(filePath))
             Try
-                Dim info As New FileInfo(filePath)
+                Dim info As New FileInfo(VariantKey.FileOf(filePath))
                 parts.Append(info.LastWriteTimeUtc.Ticks).Append("|"c).Append(info.Length)
                 Dim recipe = RawSidecarService.SidecarPathFor(filePath)
                 If Not String.IsNullOrEmpty(recipe) AndAlso File.Exists(recipe) Then parts.Append("|"c).Append(File.GetLastWriteTimeUtc(recipe).Ticks)
@@ -361,7 +456,7 @@ Namespace Services
         Private Shared Function ResolveShareEntry(record As ShareRecord, id As String) As ShareEntry
             If String.IsNullOrEmpty(id) OrElse id.Length <> 17 OrElse id(0) <> ShareItemKind Then Return Nothing
             Dim found = ShareEntriesOf(record).FirstOrDefault(Function(e) String.Equals(e.Id, id, StringComparison.Ordinal))
-            If found Is Nothing OrElse Not FileExists(found.Path) Then Return Nothing
+            If found Is Nothing OrElse Not MobileContext.ImageExists(found.Path) Then Return Nothing
             ' Die Liste ist bis zu 20 Sekunden alt; dazwischen kann eine fremde Datei den Pfad genommen haben.
             If record.KindValue() <> ShareKind.Folder AndAlso Not ShareStore.IsSameFile(record, found.Path) Then Return Nothing
             If Not CanShareFile(New MobileContext(record.OwnerUserId, ""), found.Path) Then Return Nothing
@@ -658,28 +753,34 @@ Namespace Services
                 Function()
                     Dim entries = ShareEntriesOf(record)
                     Dim items As New List(Of Dictionary(Of String, Object))(entries.Count)
+                    ' Das ZIP nimmt jedes Bild in der Form, in der es auch einzeln hinausgeht, ein
+                    ' bearbeitetes also gerechnet (PlanShareZip); es fehlt nur, wenn eines gar nicht
+                    ' hinaus darf (ein Video ohne alle Metadaten).
                     Dim zip = record.AllowDownload AndAlso entries.Count > 0
                     ' Bewegtbilder nur, wo ihr Film hinausgehen darf (HandleShareMotionAsync), und
                     ' nach dem Katalog in einer Abfrage fuer alle; ob der Film wirklich da ist,
                     ' entscheidet erst das Abspielen.
                     Dim motionMeta = LibraryService.Instance.GetMetaForPaths(
-                        entries.Where(Function(e) LivePhotoService.IsImageHalf(e.Path) AndAlso
-                                                  ShareDeliveryFor(record, e.Path) = ShareDelivery.AsIs).
+                        entries.Where(Function(e) ShareMotionAllowed(record, e.Path) AndAlso LivePhotoService.IsImageHalf(e.Path)).
                                 Select(Function(e) e.Path))
                     For Each entry In entries
                         Dim item As New Dictionary(Of String, Object) From {
-                            {"i", entry.Id}, {"t", entry.Taken}, {"s", entry.Stamp}, {"n", IO.Path.GetFileName(entry.Path)}}
-                        Dim delivery = ShareDeliveryFor(record, entry.Path)
-                        If MediaFileTypes.IsVideo(entry.Path) Then
+                            {"i", entry.Id}, {"t", entry.Taken}, {"s", entry.Stamp}, {"n", MobileDisplayName(entry.Path)}}
+                        ' Billig, ohne Blick ins Rezept: ob es hinaus darf, nicht in welcher Form.
+                        Dim canDownload = CanDownloadFromShare(record, entry.Path)
+                        If MediaFileTypes.IsVideo(VariantKey.FileOf(entry.Path)) Then
                             item("v") = 1
                             ' Abspielen heisst das Original holen; das geht nur, wo es auch heruntergeladen werden darf.
-                            If delivery = ShareDelivery.AsIs Then item("p") = 1
+                            If canDownload Then item("p") = 1
                         End If
                         Dim meta As LibraryImageMeta = Nothing
                         If motionMeta.TryGetValue(entry.Path, meta) AndAlso
                            (meta.MotionKind = MotionKind.MotionPhoto OrElse meta.MotionKind = MotionKind.LivePhotoImage) Then item("m") = 1
-                        If delivery <> ShareDelivery.None Then item("x") = 1
-                        If delivery <> ShareDelivery.AsIs AndAlso delivery <> ShareDelivery.StrippedJpeg Then zip = False
+                        If canDownload Then
+                            item("x") = 1
+                        Else
+                            zip = False
+                        End If
                         items.Add(item)
                     Next
                     Dim expiry = ShareStore.ExpiryOf(record)
@@ -734,8 +835,10 @@ Namespace Services
                 WriteShareNotFound(context)
                 Return
             End If
+            ' Datei oder Variante: Kachelspeicher und Rechnung nehmen den Schluessel (eigenes
+            ' Rezept), der Stand ist der der Datei.
             Dim filePath = entry.Path
-            Dim info As New FileInfo(filePath)
+            Dim info As New FileInfo(VariantKey.FileOf(filePath))
             Dim stamp = info.LastWriteTimeUtc
             Dim size = info.Length
             Dim etag = """" & entry.Stamp & "t"""
@@ -833,14 +936,16 @@ Namespace Services
 
         Friend Shared Function ShareInfoOf(record As ShareRecord, entry As ShareEntry) As Dictionary(Of String, Object)
             Dim library = LibraryService.Instance
+            ' Bei einer Variante: ihr Name, Aufnahmedaten und Personen der Datei.
+            Dim filePath = VariantKey.FileOf(entry.Path)
             Dim meta As LibraryImageMeta = Nothing
-            library.GetMetaForPaths({entry.Path}).TryGetValue(entry.Path, meta)
+            library.GetMetaForPaths({filePath}).TryGetValue(filePath, meta)
             Dim result As New Dictionary(Of String, Object) From {
-                {"ok", True}, {"name", IO.Path.GetFileName(entry.Path)}, {"taken", entry.Taken},
-                {"video", MediaFileTypes.IsVideo(entry.Path)}, {"format", MobileFormatName(entry.Path)}}
+                {"ok", True}, {"name", MobileDisplayName(entry.Path)}, {"taken", entry.Taken},
+                {"video", MediaFileTypes.IsVideo(filePath)}, {"format", MobileFormatName(filePath)}}
             ' Nur Name, Format und Groesse der Datei; ihr Ordner bleibt drinnen (kein Pfad nach aussen).
             Try
-                result("bytes") = New FileInfo(entry.Path).Length
+                result("bytes") = New FileInfo(filePath).Length
             Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is UnauthorizedAccessException
             End Try
             If meta IsNot Nothing Then
@@ -863,7 +968,7 @@ Namespace Services
                 End If
             End If
             If record.SharePeople Then
-                result("people") = library.GetPeopleForImage(entry.Path).Where(Function(p) Not p.IsUnknownBin AndAlso p.Name.Trim().Length > 0).
+                result("people") = library.GetPeopleForImage(filePath).Where(Function(p) Not p.IsUnknownBin AndAlso p.Name.Trim().Length > 0).
                                            Select(Function(p) p.Name).Distinct(StringComparer.CurrentCultureIgnoreCase).ToList()
             End If
             Return result
@@ -878,8 +983,12 @@ Namespace Services
                 WriteShareNotFound(context)
                 Return
             End If
-            Dim filePath = entry.Path
-            Dim delivery = ShareDeliveryFor(record, filePath)
+            ' Der Schluessel (Datei oder Variante) fuer die Rechnung, die Datei fuer alles andere. Ein
+            ' unbearbeitetes RAW-Paar gibt das JPEG der Kamera (PairJpegFor).
+            Dim owner As New MobileContext(record.OwnerUserId, "")
+            Dim key = Await Task.Run(Function() If(PairJpegFor(entry.Path, Function(p) CanShareFile(owner, p)), entry.Path))
+            Dim filePath = VariantKey.FileOf(key)
+            Dim delivery = Await Task.Run(Function() ShareDeliveryFor(record, key))
             Dim attachment = context.Request.QueryString("dl") = "1"
             Select Case delivery
                 Case ShareDelivery.None
@@ -890,12 +999,12 @@ Namespace Services
                 Case ShareDelivery.StrippedJpeg
                     Dim stripped = Await Task.Run(Function() StrippedJpegOf(filePath))
                     If stripped Is Nothing Then
-                        Await SendRenderedJpegAsync(context, record, filePath)
+                        Await SendRenderedJpegAsync(context, record, key)
                     Else
                         Await SendShareBytesAsync(context, stripped, "image/jpeg", IO.Path.GetFileName(filePath), attachment)
                     End If
                 Case Else
-                    Await SendRenderedJpegAsync(context, record, filePath)
+                    Await SendRenderedJpegAsync(context, record, key)
             End Select
         End Function
 
@@ -909,26 +1018,22 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Das Bild in voller Groesse als JPEG mit Bearbeitung, ohne Metadaten; durch die
-        ''' Schlange und die Schleuse wie jede Rechnung der Seite.</summary>
-        Private Shared Async Function SendRenderedJpegAsync(context As HttpListenerContext, record As ShareRecord, filePath As String) As Task
-            ' Dateien, die das Rezept nennt, nur nach der Leseregel des Teilenden (RecipeReferences).
-            Dim reader = New MobileContext(record.OwnerUserId, "").ReferenceReader
-            Dim bytes = Await RunMobileJobAsync(ShareJobKey(record, context.Request),
-                Function()
-                    Return DecodeGate.Run(
-                        Function()
-                            Using guard = RecipeReferences.Restrict(reader),
-                                  developed = ImageProcessor.DecodeDevelopedForOutput(filePath, developRaw:=True)
-                                Return EncodeMobileJpeg(developed, Integer.MaxValue, 92)
-                            End Using
-                        End Function)
-                End Function)
+        ''' <summary>Das Bild in voller Groesse als JPEG mit Bearbeitung, ohne Metadaten; derselbe
+        ''' Weg wie das volle JPEG der mobilen Seite (RenderFullMobileJpeg, eine Variante mit ihrem
+        ''' Rezept), durch die Schlange und die Schleuse wie jede Rechnung der Seite.</summary>
+        Private Shared Async Function SendRenderedJpegAsync(context As HttpListenerContext, record As ShareRecord, key As String) As Task
+            Dim bytes = Await RunMobileJobAsync(ShareJobKey(record, context.Request), Function() RenderShareJpeg(record, key))
             If bytes Is Nothing Then
                 WriteShareNotFound(context)
                 Return
             End If
-            Await SendShareBytesAsync(context, bytes, "image/jpeg", IO.Path.GetFileNameWithoutExtension(filePath) & ".jpg", attachment:=True)
+            Await SendShareBytesAsync(context, bytes, "image/jpeg", ShareRenderedName(key), attachment:=True)
+        End Function
+
+        ''' <summary>Rechnet das Bild einer Freigabe in voller Groesse; Dateien, die das Rezept nennt,
+        ''' nur nach der Leseregel des Teilenden (RecipeReferences). Nothing, wenn es nicht gelingt.</summary>
+        Private Shared Function RenderShareJpeg(record As ShareRecord, key As String) As Byte()
+            Return RenderFullMobileJpegSafe(key, New MobileContext(record.OwnerUserId, "").ReferenceReader)
         End Function
 
         Private Shared Async Function SendShareBytesAsync(context As HttpListenerContext, bytes As Byte(), contentType As String,
@@ -960,8 +1065,8 @@ Namespace Services
         End Function
 
         ''' <summary>GET /s/&lt;token&gt;/motion?i=: der Film eines Motion Photos oder Live Photos
-        ''' zum Abspielen, mit Bereichen. Nur, wo das Bild unveraendert hinausgehen darf
-        ''' (<see cref="ShareDelivery.AsIs"/>, also mit Ort, Personen und Kamera): der Film traegt
+        ''' zum Abspielen, mit Bereichen. Nur mit Herunterladen und mit Ort, Personen und Kamera
+        ''' (<see cref="ShareMotionAllowed"/>): der Film traegt
         ''' seine eigenen Metadaten, auch den Ort, und die lassen sich aus MP4 und MOV nicht
         ''' herausnehmen. Dieselbe Regel wie bei Videos. Sonst 403, ohne Film 404.</summary>
         Private Shared Async Function HandleShareMotionAsync(context As HttpListenerContext, record As ShareRecord) As Task
@@ -970,7 +1075,7 @@ Namespace Services
                 WriteShareNotFound(context)
                 Return
             End If
-            If ShareDeliveryFor(record, entry.Path) <> ShareDelivery.AsIs Then
+            If Not ShareMotionAllowed(record, entry.Path) Then
                 context.Response.StatusCode = 403
                 context.Response.Close()
                 Return
@@ -990,9 +1095,10 @@ Namespace Services
         End Function
 
         ''' <summary>GET /s/&lt;token&gt;/zip: alle Bilder der Freigabe als EIN ZIP, stroemend, ohne
-        ''' Beistelldateien. Nur, wenn Herunterladen erlaubt ist und jedes Bild ohne Neuberechnung
-        ''' hinausgeht (unveraendert oder als JPEG ohne Metadaten); sonst 403, und die Seite bietet
-        ''' das ZIP gar nicht an.</summary>
+        ''' Beistelldateien, jedes in der Form, in der es auch einzeln hinausgeht
+        ''' (<see cref="ShareDeliveryFor"/>; ein bearbeitetes gerechnet). Nur, wenn Herunterladen
+        ''' erlaubt ist und jedes Bild hinaus darf; sonst 403, und die Seite bietet das ZIP gar
+        ''' nicht an.</summary>
         Private Shared Async Function HandleShareZipAsync(context As HttpListenerContext, record As ShareRecord) As Task
             ' Ein ZIP liest jedes Bild einer Freigabe; mehr als eines je Freigabe und eine Handvoll
             ' insgesamt laesst die Bruecke nicht gleichzeitig laufen.
@@ -1046,7 +1152,12 @@ Namespace Services
                 response.Headers("Cache-Control") = "no-store"
                 response.Headers("X-Content-Type-Options") = "nosniff"
                 response.Headers("Content-Disposition") = ContentDisposition(ShareZipName(record))
-                response.ContentLength64 = StreamingZipWriter.TotalLength(plan)
+                ' Ein gerechnetes Bild hat vorab keine Groesse: dann ohne Laenge, in Stuecken.
+                If StreamingZipWriter.HasUnknownSizes(plan) Then
+                    If context.Request.ProtocolVersion >= HttpVersion.Version11 Then response.SendChunked = True
+                Else
+                    response.ContentLength64 = StreamingZipWriter.TotalLength(plan)
+                End If
                 Await StreamingZipWriter.WriteAsync(response.OutputStream, plan)
                 response.Close()
             Catch ex As Exception When TypeOf ex Is HttpListenerException OrElse TypeOf ex Is IOException OrElse
@@ -1062,29 +1173,47 @@ Namespace Services
         ''' <summary>Die Eintraege des ZIP einer Freigabe, Nothing, wenn es keines geben darf. Ein JPEG
         ''' ohne Metadaten entsteht beim Schreiben; seine Groesse kommt aus
         ''' <see cref="StrippedJpegSizeOf"/> (beim ersten Mal einmal gerechnet, danach gemerkt), statt
-        ''' alle im Speicher zu halten.</summary>
+        ''' alle im Speicher zu halten. Ein gerechnetes Bild (bearbeitet, Variante, RAW, ein anderes
+        ''' Format ohne Metadaten, und ein JPEG, das sich nicht sauber zerlegen laesst) entsteht
+        ''' ebenfalls erst beim Schreiben, eines zur Zeit durch die Schleuse (DecodeGate); seine
+        ''' Groesse steht vorher nicht fest (StreamingZipWriter.UnknownSize), das Archiv geht dann
+        ''' ohne Laenge vorab hinaus. Misslingt die Rechnung, fehlt nur dieses Bild.</summary>
         Friend Shared Function PlanShareZip(record As ShareRecord) As List(Of ZipEntryPlan)
             If Not record.AllowDownload Then Return Nothing
             Dim entries = ShareEntriesOf(record)
             If entries.Count = 0 Then Return Nothing
+            Dim owner As New MobileContext(record.OwnerUserId, "")
             Dim used As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
             Dim result As New List(Of ZipEntryPlan)(entries.Count)
             For Each entry In entries
-                Dim filePath = entry.Path
-                Dim delivery = ShareDeliveryFor(record, filePath)
-                If delivery <> ShareDelivery.AsIs AndAlso delivery <> ShareDelivery.StrippedJpeg Then Return Nothing
-                If Not FileExists(filePath) Then Continue For
-                Dim name = UniqueEntryName(IO.Path.GetFileName(filePath), used)
+                ' Ein RAW-Paar gibt EIN JPEG: unbearbeitet das der Kamera (PairJpegFor), bearbeitet
+                ' das gerechnete der RAW unter dem Namen des Paares.
+                Dim key = If(PairJpegFor(entry.Path, Function(p) CanShareFile(owner, p)), entry.Path)
+                Dim filePath = VariantKey.FileOf(key)
+                Dim delivery = ShareDeliveryFor(record, key)
+                If delivery = ShareDelivery.None Then Return Nothing
+                If Not MobileContext.ImageExists(key) Then Continue For
                 If delivery = ShareDelivery.AsIs Then
-                    result.Add(StreamingZipWriter.PlanFile(filePath, name, allowPacking:=False))
+                    result.Add(StreamingZipWriter.PlanFile(filePath, UniqueEntryName(IO.Path.GetFileName(filePath), used), allowPacking:=False))
                     Continue For
                 End If
-                Dim strippedSize = StrippedJpegSizeOf(filePath)
-                If strippedSize < 0 Then Return Nothing
+                If delivery = ShareDelivery.StrippedJpeg Then
+                    Dim strippedSize = StrippedJpegSizeOf(filePath)
+                    If strippedSize >= 0 Then
+                        result.Add(New ZipEntryPlan With {
+                            .SourcePath = filePath, .EntryName = UniqueEntryName(IO.Path.GetFileName(filePath), used), .Size = strippedSize,
+                            .Modified = File.GetLastWriteTime(filePath),
+                            .Producer = Function() StrippedJpegOf(filePath)})
+                        Continue For
+                    End If
+                    ' Laesst sich das JPEG nicht von Metadaten befreien (Fuellbytes, fehlendes Ende),
+                    ' geht es wie beim Einzeldownload gerechnet hinaus, statt das ganze ZIP abzulehnen.
+                End If
                 result.Add(New ZipEntryPlan With {
-                    .SourcePath = filePath, .EntryName = name, .Size = strippedSize,
+                    .SourcePath = filePath, .EntryName = UniqueEntryName(ShareRenderedName(key), used),
+                    .Size = StreamingZipWriter.UnknownSize,
                     .Modified = File.GetLastWriteTime(filePath),
-                    .Producer = Function() StrippedJpegOf(filePath)})
+                    .Producer = Function() RenderShareJpeg(record, key)})
             Next
             Return If(result.Count = 0, Nothing, result)
         End Function
@@ -1116,12 +1245,7 @@ Namespace Services
         ''' <summary>Der Name des ZIP: der Titel der Freigabe ohne Zeichen, die ein Dateiname nicht
         ''' traegt, sonst "FerrumPix".</summary>
         Private Shared Function ShareZipName(record As ShareRecord) As String
-            Dim invalid = IO.Path.GetInvalidFileNameChars()
-            Dim clean As New StringBuilder()
-            For Each c In If(record.Title, "")
-                clean.Append(If(invalid.Contains(c) OrElse Char.IsControl(c) OrElse c = "/"c OrElse c = "\"c OrElse c = ":"c, "_"c, c))
-            Next
-            Dim stem = clean.ToString().Trim().Trim("."c)
+            Dim stem = CleanShareFileName(record.Title).Trim("."c)
             If stem.Length > 80 Then stem = stem.Substring(0, 80).Trim()
             Return If(stem.Length = 0, "FerrumPix", stem) & ".zip"
         End Function
@@ -1313,16 +1437,18 @@ Namespace Services
             If list.GetArrayLength() > MaxShareListPaths Then Return (413, kind, Nothing, "", "")
             For Each entry In list.EnumerateArray()
                 If entry.ValueKind <> JsonValueKind.String Then Return (400, kind, Nothing, "", "")
-                Dim filePath = mobile.ResolveFile(entry.GetString())
-                If filePath Is Nothing Then Return (404, kind, Nothing, "", "")
+                ' Eine Datei oder eine ihrer zusaetzlichen Varianten: die Variante geht als eigenes
+                ' Bild mit ihrem Rezept in die Freigabe (ihre Kachel steht in der Seite fuer sich).
+                Dim key = mobile.ResolveImage(entry.GetString())
+                If key Is Nothing OrElse Not MobileContext.ImageExists(key) Then Return (404, kind, Nothing, "", "")
                 ' Mitarbeiten auf JEDEM Bild; eines ohne Recht lehnt die ganze Freigabe ab.
-                If Not CanShareFile(mobile, filePath) Then Return (403, kind, Nothing, "", "")
-                paths.Add(filePath)
+                If Not CanShareFile(mobile, key) Then Return (403, kind, Nothing, "", "")
+                paths.Add(key)
             Next
             paths = paths.Distinct(PathIdentity.Comparer).ToList()
             If paths.Count = 0 Then Return (400, kind, Nothing, "", "")
             If kind = ShareKind.Image AndAlso paths.Count <> 1 Then kind = ShareKind.Selection
-            Dim title = If(paths.Count = 1, IO.Path.GetFileNameWithoutExtension(paths(0)),
+            Dim title = If(paths.Count = 1, ShareImageTitle(paths(0)),
                            String.Format(CultureInfo.CurrentCulture, LocalizationService.T("{0} Bilder"), paths.Count))
             Return (0, kind, paths, "", title)
         End Function
@@ -1394,7 +1520,10 @@ Namespace Services
         End Function
 
         ''' <summary>POST /api/m/share-edit: {"share", und was sich aendert: "title", "days" (ab
-        ''' jetzt), "password" (neu), "removePassword", "download", "place", "people", "camera"}.</summary>
+        ''' jetzt), "password" (neu), "removePassword", "download", "place", "people", "camera"}.
+        ''' Das Ende aendert sich NUR mit "days": die Seite schickt es nur, wenn die Laufzeit im
+        ''' Formular ausdruecklich neu gewaehlt wurde. Ein Speichern ohne verlaengert also nichts,
+        ''' und eine abgelaufene Freigabe bleibt abgelaufen.</summary>
         Private Shared Async Function HandleMobileShareEditAsync(context As HttpListenerContext, mobile As MobileContext) As Task
             Dim body = Await ReadMobileJsonAsync(context.Request)
             Dim record = Await FindManagedShareAsync(context, mobile, body)
@@ -1540,8 +1669,9 @@ Namespace Services
                 record.Title = CleanShareTitle(FolderDisplayName(folder))
             Else
                 ' Beistelldateien und andere Begleiter der Auswahl gehen nie mit.
+                ' Eine Variante (VariantKey) geht als eigenes Bild mit ihrem Rezept mit.
                 Dim files = If(paths, Enumerable.Empty(Of String)()).
-                                Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso MediaFileTypes.IsDisplayable(p)).
+                                Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso MediaFileTypes.IsDisplayable(VariantKey.FileOf(p))).
                                 Distinct(PathIdentity.Comparer).ToList()
                 If files.Count > MaxShareListPaths Then Return (Nothing, ShareCreateProblemText(ShareStore.CreateProblem.TooManyPaths))
                 If files.Count = 0 OrElse files.Any(Function(p) Not CanShareFile(mobile, p)) Then
@@ -1549,7 +1679,7 @@ Namespace Services
                 End If
                 record.Kind = If(files.Count = 1, ShareKind.Image, ShareKind.Selection).ToString()
                 record.Paths = files
-                record.Title = CleanShareTitle(If(files.Count = 1, IO.Path.GetFileNameWithoutExtension(files(0)),
+                record.Title = CleanShareTitle(If(files.Count = 1, ShareImageTitle(files(0)),
                                                   String.Format(CultureInfo.CurrentCulture, LocalizationService.T("{0} Bilder"), files.Count)))
             End If
             Dim token As String = Nothing

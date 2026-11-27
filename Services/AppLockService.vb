@@ -160,8 +160,25 @@ Namespace Services
 
         Private Const MaxDelaySeconds As Integer = 300
 
-        ''' <summary>Hoechstens so viele Absender merkt sich die Wartezeit.</summary>
-        Private Const MaxTrackedSenders As Integer = 256
+        ''' <summary>Hoechstens so viele Zaehler je Browser (Kennung der Anmeldeseite) merkt sich die
+        ''' Wartezeit. Laeuft die Liste ueber, faellt zuerst ein ungebremster heraus.</summary>
+        Private Const MaxTrackedBrowsers As Integer = 256
+
+        ''' <summary>Hoechstens so viele Zaehler je Adresse (und alle uebrigen ausser den Konten).
+        ''' Laeuft die Liste ueber, faellt nur ein UNGEBREMSTER heraus, der am laengsten keinen
+        ''' Fehlversuch hatte; sind alle gebremst, wartet ein neuer Absender, bis der erste frei
+        ''' wird (<see cref="RetryAfter"/>).</summary>
+        Private Const MaxTrackedAddresses As Integer = 1024
+
+        ''' <summary>Hoechstens so viele Zaehler je Konto. Konten gibt es nur so viele, wie es Benutzer
+        ''' gibt; die Grenze faengt nur einen Fehler ab, gemerkt wird wie bei den Adressen.</summary>
+        Private Const MaxTrackedAccounts As Integer = 4096
+
+        ''' <summary>So beginnt der Zaehler eines Browsers (BrowserBridge.LoginCounterKeys).</summary>
+        Friend Const BrowserCounterPrefix As String = "login "
+
+        ''' <summary>So beginnt der Zaehler eines Kontos (BrowserBridge.SecondFactorCounters).</summary>
+        Friend Const AccountCounterPrefix As String = "code account "
 
         ''' <summary>Die erlaubten Zeiten ohne Eingabe in Minuten; 0 heisst nie.</summary>
         Public Shared ReadOnly IdleChoices As Integer() = {0, 5, 15, 30, 60}
@@ -540,28 +557,87 @@ Namespace Services
         End Sub
 
         ''' <summary>Wie lange noch gewartet werden muss: die laengste Wartezeit der Zaehler.</summary>
+        ''' <summary>Wie lange noch gewartet werden muss: die laengste Wartezeit der Zaehler. Ist die
+        ''' Liste der Adressen (oder Konten) voll und jeder darin gebremst, wartet ein Zaehler, den
+        ''' es darin noch nicht gibt, bis der erste frei wird: sonst verdraengte eine Flut aus neuen
+        ''' Absendern die gebremsten (<see cref="RegisterFailure"/>).</summary>
         Public Shared Function RetryAfter(ParamArray counters As String()) As TimeSpan
             Dim now = Clock()
             Dim until = DateTime.MinValue
             SyncLock StateLock
                 For Each key In If(counters, Array.Empty(Of String)())
+                    If key Is Nothing Then Continue For
                     Dim record As FailureRecord = Nothing
-                    If key IsNot Nothing AndAlso Failures.TryGetValue(key, record) AndAlso record.BlockedUntilUtc > until Then
-                        until = record.BlockedUntilUtc
+                    If Failures.TryGetValue(key, record) Then
+                        If record.BlockedUntilUtc > until Then until = record.BlockedUntilUtc
+                    Else
+                        Dim full = FullUntil(key, now)
+                        If full > until Then until = full
                     End If
                 Next
             End SyncLock
             Return If(until > now, until - now, TimeSpan.Zero)
         End Function
 
+        ''' <summary>Die Art eines Zaehlers: 0 Browser, 1 Konto, 2 Adresse und alles Uebrige.</summary>
+        Private Shared Function KindOf(key As String) As Integer
+            If key.StartsWith(BrowserCounterPrefix, StringComparison.Ordinal) Then Return 0
+            If key.StartsWith(AccountCounterPrefix, StringComparison.Ordinal) Then Return 1
+            Return 2
+        End Function
+
+        Private Shared Function LimitOf(kind As Integer) As Integer
+            Select Case kind
+                Case 0 : Return MaxTrackedBrowsers
+                Case 1 : Return MaxTrackedAccounts
+                Case Else : Return MaxTrackedAddresses
+            End Select
+        End Function
+
+        ''' <summary>Unter StateLock: ist die Liste dieser Art voll und kein Eintrag darin frei
+        ''' (alle gebremst), bis wann der erste frei wird; sonst DateTime.MinValue. Fuer Browser nie:
+        ''' dort darf ein neuer jeden alten verdraengen, die Adresse bremst weiter.</summary>
+        Private Shared Function FullUntil(key As String, now As DateTime) As DateTime
+            Dim kind = KindOf(key)
+            If kind = 0 Then Return DateTime.MinValue
+            Dim limit = LimitOf(kind)
+            Dim count = 0
+            Dim earliest = DateTime.MaxValue
+            For Each pair In Failures
+                If KindOf(pair.Key) <> kind Then Continue For
+                count += 1
+                If pair.Value.BlockedUntilUtc <= now Then Return DateTime.MinValue
+                If pair.Value.BlockedUntilUtc < earliest Then earliest = pair.Value.BlockedUntilUtc
+            Next
+            Return If(count >= limit, earliest, DateTime.MinValue)
+        End Function
+
+        ''' <summary>Zaehlt einen Fehlversuch.
+        '''
+        ''' <para>DREI LISTEN MIT EIGENER GRENZE (Browser, Konten, Adressen samt allem Uebrigen), damit
+        ''' eine Flut der einen Art die andere nicht verdraengt. Laeuft eine Liste ueber, faellt der
+        ''' UNGEBREMSTE Eintrag heraus, der am laengsten keinen Fehlversuch hatte; ein gebremster
+        ''' faellt nie heraus. Wer mit vielen neuen Absendern flutet, verdraengt also nur
+        ''' ungebremste Zaehler und loest damit nicht seine eigene Bremse. Sind alle gebremst, wird
+        ''' kein neuer angelegt, und <see cref="RetryAfter"/> laesst den neuen warten, bis der erste
+        ''' frei wird. Nur Browser duerfen auch gebremste verdraengen: ihr Zaehler steht nie allein,
+        ''' die Adresse bremst weiter.</para></summary>
         Private Shared Sub RegisterFailure(key As String)
             Dim now = Clock()
             SyncLock StateLock
                 Dim record As FailureRecord = Nothing
                 If Not Failures.TryGetValue(key, record) Then
-                    If Failures.Count >= MaxTrackedSenders Then
-                        Dim oldest = Failures.OrderBy(Function(pair) pair.Value.LastUtc).First().Key
-                        Failures.Remove(oldest)
+                    Dim kind = KindOf(key)
+                    Dim same = Failures.Where(Function(pair) KindOf(pair.Key) = kind).ToList()
+                    If same.Count >= LimitOf(kind) Then
+                        Dim free = same.Where(Function(pair) pair.Value.BlockedUntilUtc <= now).ToList()
+                        If free.Count > 0 Then
+                            Failures.Remove(free.OrderBy(Function(pair) pair.Value.LastUtc).First().Key)
+                        ElseIf kind = 0 Then
+                            Failures.Remove(same.OrderBy(Function(pair) pair.Value.LastUtc).First().Key)
+                        Else
+                            Return
+                        End If
                     End If
                     record = New FailureRecord()
                     Failures(key) = record
@@ -569,6 +645,23 @@ Namespace Services
                 CountFailure(record, FreeAttempts, now)
             End SyncLock
         End Sub
+
+        ''' <summary>Wie viele Fehlversuche ein Zaehler gerade hat, 0 ohne Eintrag. Fuer den
+        ''' Pruefstand.</summary>
+        Friend Shared Function FailureCount(key As String) As Integer
+            SyncLock StateLock
+                Dim record As FailureRecord = Nothing
+                Return If(key IsNot Nothing AndAlso Failures.TryGetValue(key, record), record.Count, 0)
+            End SyncLock
+        End Function
+
+        ''' <summary>Wie viele Zaehler es gerade gibt, deren Schluessel so beginnt. Fuer den
+        ''' Pruefstand.</summary>
+        Friend Shared Function CounterCount(prefix As String) As Integer
+            SyncLock StateLock
+                Return Failures.Keys.Where(Function(k) k.StartsWith(If(prefix, ""), StringComparison.Ordinal)).Count()
+            End SyncLock
+        End Function
 
         Private Shared Sub CountFailure(record As FailureRecord, free As Integer, now As DateTime)
             record.Count += 1

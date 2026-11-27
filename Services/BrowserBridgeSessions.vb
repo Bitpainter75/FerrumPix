@@ -92,8 +92,15 @@ Namespace Services
         ''' <summary>Ohne eingestellte Sperrzeit endet eine Sitzung nach so langer Zeit ohne Nutzung.</summary>
         Friend Shared ReadOnly DefaultSessionLifetime As TimeSpan = TimeSpan.FromDays(30)
 
-        ''' <summary>Hoechstens so viele Sitzungen zugleich; die am laengsten unbenutzte faellt heraus.</summary>
-        Private Const MaxSessions As Integer = 64
+        ''' <summary>Hoechstens so viele Sitzungen je Benutzer; mit einer weiteren faellt seine am
+        ''' laengsten unbenutzte heraus, nie die eines anderen.</summary>
+        Friend Const MaxSessionsPerUser As Integer = 20
+
+        ''' <summary>Hoechstens so viele Sitzungen zugleich, ueber alle Benutzer. Wird es voll, faellt
+        ''' die am laengsten unbenutzte Sitzung des Benutzers mit den meisten Sitzungen heraus: wer
+        ''' viele anlegt, verdraengt zuerst seine eigenen. Kein Const, damit der Pruefstand die
+        ''' Grenze senken kann.</summary>
+        Friend Shared MaxSessions As Integer = 512
 
         Private Const MaxLoginBodyBytes As Integer = 4096
 
@@ -233,15 +240,39 @@ Namespace Services
             Dim now = AppLockService.Clock()
             Dim sender = SenderKey(request)
             Dim address = LogAddress(request)
+            Dim lifetime = SessionLifetime()
             SyncLock Sessions
-                If Sessions.Count >= MaxSessions Then
-                    Dim oldest = Sessions.OrderBy(Function(pair) pair.Value.LastUsedUtc).First().Key
-                    Sessions.Remove(oldest)
+                ' Abgelaufene zuerst: sie belegen sonst Plaetze, bis jemand ihr Cookie vorzeigt.
+                For Each stale In Sessions.Where(Function(pair) now - pair.Value.LastUsedUtc > lifetime).Select(Function(pair) pair.Key).ToList()
+                    Sessions.Remove(stale)
+                Next
+                ' Je Benutzer eine Grenze: ein angemeldeter Benutzer, der sich immer wieder anmeldet,
+                ' verdraengt nur seine eigenen Sitzungen, nicht die der anderen.
+                Dim own = Sessions.Where(Function(pair) String.Equals(pair.Value.UserId, userId, StringComparison.Ordinal)).ToList()
+                If own.Count >= MaxSessionsPerUser Then
+                    RemoveSessionLocked(own.OrderBy(Function(pair) pair.Value.LastUsedUtc).First().Key)
+                End If
+                If Sessions.Count >= Math.Max(1, MaxSessions) Then
+                    ' Voll ueber alle: die aelteste Sitzung des Benutzers mit den meisten Sitzungen
+                    ' (bei Gleichstand der, dessen aelteste am laengsten unbenutzt ist).
+                    Dim busiest = Sessions.GroupBy(Function(pair) If(pair.Value.UserId, "")).
+                                           OrderByDescending(Function(g) g.Count()).
+                                           ThenBy(Function(g) g.Min(Function(pair) pair.Value.LastUsedUtc)).First()
+                    RemoveSessionLocked(busiest.OrderBy(Function(pair) pair.Value.LastUsedUtc).First().Key)
                 End If
                 Sessions(SessionKey(value)) = New BrowserSession With {.LastUsedUtc = now, .Sender = sender, .Address = address, .UserId = userId}
             End SyncLock
             Return value
         End Function
+
+        ''' <summary>Entfernt eine Sitzung unter der Sperre von Sessions. War es die des verbundenen
+        ''' Browsers, wird er danach getrennt (ausserhalb der Sperre, ueber den Thread-Pool).</summary>
+        Private Shared Sub RemoveSessionLocked(key As String)
+            Sessions.Remove(key)
+            If String.Equals(key, _clientSessionKey, StringComparison.Ordinal) Then
+                Dim ignored = Task.Run(Sub() DisconnectSignedInClient())
+            End If
+        End Sub
 
         ''' <summary>Wer an der vollen Oberflaeche sitzt, fuer das Protokoll (SecurityLog.DesktopActor):
         ''' Name und Adresse der Sitzung des verbundenen Browsers, ohne ihn zweimal "-".</summary>
@@ -617,9 +648,39 @@ Namespace Services
         ''' Anmeldefenster am Rechner merken nichts (AppLockService.CheckPassword).</summary>
         Private Shared Function LoginCounterKeys(request As HttpListenerRequest) As String()
             Dim address = SenderKey(request)
-            Dim value = ReadHexCookie(request, LoginCookieName)
+            Dim value = ReadLoginCookie(request)
             If value Is Nothing Then Return {address}
-            Return {"login " & SessionKey(value).Substring(0, 16), address}
+            Return {AppLockService.BrowserCounterPrefix & SessionKey(value).Substring(0, 16), address}
+        End Function
+
+        ''' <summary>Der Schluessel, mit dem der Server die Kennungen der Anmeldeseite unterschreibt,
+        ''' neu bei jedem Start (eine alte Kennung gilt danach nicht, die Seite gibt eine neue aus).</summary>
+        Private Shared ReadOnly LoginCookieKey As Byte() = RandomNumberGenerator.GetBytes(32)
+
+        ''' <summary>Eine neue Kennung fuer die Anmeldeseite: 16 Zufallsbytes und die ersten 16 Bytes
+        ''' ihres HMAC-SHA256, zusammen 32 Bytes als Hex wie zuvor.</summary>
+        Private Shared Function NewLoginCookieValue() As String
+            Dim nonce = RandomNumberGenerator.GetBytes(16)
+            Dim mac = HMACSHA256.HashData(LoginCookieKey, nonce)
+            Return Convert.ToHexString(nonce) & Convert.ToHexString(mac, 0, 16)
+        End Function
+
+        ''' <summary>Die Kennung der Anmeldeseite dieser Anfrage, wenn der Server sie selbst
+        ''' ausgegeben hat, sonst Nothing.
+        '''
+        ''' <para>NUR AUSGEGEBENE ZAEHLEN: frueher galt jeder Wert aus 64 Hexzeichen. Wer fuer jeden
+        ''' Versuch einen neuen erfand, bekam je Versuch einen neuen Zaehler und schob damit die
+        ''' gemerkten anderer aus der Liste. Ein ausgedachter Wert gilt jetzt wie keiner: gezaehlt
+        ''' wird dann nur die Adresse.</para></summary>
+        Private Shared Function ReadLoginCookie(request As HttpListenerRequest) As String
+            Dim value = ReadHexCookie(request, LoginCookieName)
+            If value Is Nothing Then Return Nothing
+            Dim bytes = Convert.FromHexString(value)
+            Dim nonce = bytes.Take(16).ToArray()
+            Dim given = bytes.Skip(16).ToArray()
+            Dim expected = HMACSHA256.HashData(LoginCookieKey, nonce).Take(16).ToArray()
+            If Not CryptographicOperations.FixedTimeEquals(expected, given) Then Return Nothing
+            Return value
         End Function
 
         ''' <summary>Kam die Seite ueber HTTPS? Hinter dem Proxy nimmt die Bruecke nur an, was er als
@@ -931,7 +992,7 @@ Namespace Services
                     .LinkHint = LocalizationService.T("Falls der Knopf nicht geht, kopiere diesen Link in den Browser:"),
                     .Validity = LocalizationService.T("Der Link gilt 30 Minuten und nur einmal."),
                     .Ignore = LocalizationService.T("Wenn du das nicht angefordert hast, kannst du diese Mail ignorieren.")}
-            Dim accepted = PasswordResetService.Request(who, counters, linkBase, texts)
+            Dim accepted = PasswordResetService.Admit(counters)
             ' Nur der Absender: wer gemeint war und ob es das Konto gibt, steht nicht im Protokoll.
             If accepted Then SecurityLog.ResetRequested(LogAddress(request))
             If Not accepted Then
@@ -944,6 +1005,9 @@ Namespace Services
             End If
             Dim sent = Await Dispatcher.UIThread.InvokeAsync(Function() LocalizationService.T("Wenn es dazu ein Konto mit E-Mail-Adresse gibt, ist eine Nachricht unterwegs. Sonst wenden Sie sich bitte an den Administrator."))
             Await WriteLoginAnswerAsync(context, 200, Nothing, 0, message:=sent)
+            ' Erst nach der Antwort: alles, was vom Konto abhaengt. So verraet die Antwortzeit
+            ' nicht, ob es das Konto gibt.
+            PasswordResetService.SendInBackground(who, linkBase, texts)
         End Function
 
         ''' <summary>Die eingetragene oeffentliche Adresse (AppSettings.BrowserPublicAddress) ohne
@@ -1006,7 +1070,9 @@ Namespace Services
 
         ''' <summary>POST /reset mit {"token", "password", "repeat"}: setzt das neue Kennwort mit den
         ''' Regeln wie immer. Danach enden alle Sitzungen dieses Benutzers, und dieser Browser ist
-        ''' angemeldet. Ein ungueltiger Versuch zaehlt als Fehlversuch (dieselbe Bremse).</summary>
+        ''' angemeldet. Ein ungueltiger Versuch zaehlt als Fehlversuch (dieselbe Bremse). Hat das
+        ''' Konto einen zweiten Faktor, gehoert {"code"} oder {"recovery"} in dieselbe Anfrage; ohne
+        ''' ihn antwortet der Weg nur mit "second" und schreibt nichts.</summary>
         Private Shared Async Function HandleResetAsync(context As HttpListenerContext) As Task
             Dim request = context.Request
             If String.Equals(request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) Then
@@ -1043,10 +1109,60 @@ Namespace Services
                 Await WriteLoginAnswerAsync(context, 400, text, 0)
                 Return
             End If
-            Dim userId = PasswordResetService.Consume(token)
+            ' Erst nachsehen, nicht verbrauchen: bei einem Konto mit zweitem Faktor bleibt der
+            ' Verweis gueltig, bis auch der Code stimmt.
+            Dim userId = PasswordResetService.Peek(token)
             If userId Is Nothing OrElse Not UserAccountService.IsActive(userId) Then
                 AppLockService.RegisterFailedAttempt(counters)
                 SecurityLog.Write("password.reset.invalid", SecurityLog.NoValue, LogAddress(request))
+                Dim expired = Await Dispatcher.UIThread.InvokeAsync(Function() LocalizationService.T("Der Verweis ist abgelaufen oder wurde schon benutzt."))
+                Await WriteLoginAnswerAsync(context, 400, expired, 0)
+                Return
+            End If
+            Dim from = LogAddress(request)
+            ' MIT ZWEITEM FAKTOR verlangt das neue Kennwort zugleich einen gueltigen Code (oder
+            ' Wiederherstellungscode). Wer nur das Postfach hat, aendert so weder das Kennwort noch
+            ' beendet er die Sitzungen des Inhabers. Ohne Code sagt die Antwort nur "second" und
+            ' schreibt nichts; ein falscher Code zaehlt auf die Bremse der Codes.
+            Dim codeCounters As String() = Nothing
+            Dim usedRecovery = False
+            If TwoFactorService.IsEnabled(userId) Then
+                Dim code As String = Nothing
+                Dim recoveryCode As String = Nothing
+                If Not fields.TryGetValue("code", code) Then code = ""
+                If Not fields.TryGetValue("recovery", recoveryCode) Then recoveryCode = ""
+                If code.Trim().Length = 0 AndAlso recoveryCode.Trim().Length = 0 Then
+                    Await WriteSecondFactorAnswerAsync(context, 200, New Dictionary(Of String, Object) From {{"ok", False}, {"second", True}})
+                    Return
+                End If
+                codeCounters = SecondFactorCounters(request, userId)
+                Dim codeWait = AppLockService.RetryAfter(codeCounters)
+                If codeWait > TimeSpan.Zero Then
+                    SecurityLog.Throttled("twofactor", from, codeWait)
+                    Await WriteThrottledSecondFactorAsync(context, codeWait)
+                    Return
+                End If
+                usedRecovery = recoveryCode.Trim().Length > 0
+                Dim checkedId = userId
+                Dim accepted = Await Task.Run(Function() If(usedRecovery,
+                                                          TwoFactorService.UseRecoveryCode(checkedId, recoveryCode),
+                                                          TwoFactorService.VerifyCode(checkedId, code) = TwoFactorOutcome.Accepted))
+                If Not accepted Then
+                    AppLockService.RegisterFailedAttempt(codeCounters)
+                    TwoFactorService.NoteFailed(userId, from, "reset")
+                    Dim retry = AppLockService.RetryAfter(codeCounters)
+                    Dim answer As New Dictionary(Of String, Object) From {
+                        {"ok", False},
+                        {"error", If(retry > TimeSpan.Zero, ViewModels.LockScreenViewModel.ThrottledText(retry), LocalizationService.T("Der Code ist falsch."))}}
+                    If retry > TimeSpan.Zero Then answer("retry") = CInt(Math.Ceiling(retry.TotalSeconds))
+                    Await WriteSecondFactorAnswerAsync(context, 401, answer)
+                    Return
+                End If
+            End If
+            ' Jetzt verbrauchen; ging der Verweis inzwischen anders weg, gilt er nicht.
+            If Not String.Equals(PasswordResetService.Consume(token), userId, StringComparison.Ordinal) Then
+                AppLockService.RegisterFailedAttempt(counters)
+                SecurityLog.Write("password.reset.invalid", SecurityLog.NoValue, from)
                 Dim expired = Await Dispatcher.UIThread.InvokeAsync(Function() LocalizationService.T("Der Verweis ist abgelaufen oder wurde schon benutzt."))
                 Await WriteLoginAnswerAsync(context, 400, expired, 0)
                 Return
@@ -1056,13 +1172,9 @@ Namespace Services
                 Await WriteLoginAnswerAsync(context, 400, "", 0)
                 Return
             End If
-            Dim from = LogAddress(request)
-            ' Das Zuruecksetzen gilt nur dem Kennwort, nicht dem zweiten Faktor: mit ihm geht es
-            ' erst nach dem Code weiter (BrowserBridgeTwoFactor.vb), wie bei jeder Anmeldung.
-            If TwoFactorService.IsEnabled(userId) Then
-                SecurityLog.ResetByLink(userId, from)
-                Await BeginSecondStepAsync(context, userId)
-                Return
+            If codeCounters IsNot Nothing Then
+                AppLockService.ClearFailedAttempts(codeCounters)
+                If usedRecovery Then TwoFactorService.NoteRecoveryUsed(userId, from)
             End If
             Dim value = CreateSession(request, userId)
             context.Response.Headers.Add("Set-Cookie", SessionCookie(value, SessionCookieMaxAgeSeconds(), IsSecureRequest(request)))
@@ -1151,9 +1263,10 @@ Namespace Services
             response.Headers("X-Frame-Options") = "DENY"
             response.Headers("Referrer-Policy") = "no-referrer"
             ' Die Kennung dieses Browsers fuer die Zaehlung seiner Fehlversuche (LoginCounterKeys).
-            If ReadHexCookie(context.Request, LoginCookieName) Is Nothing Then
+            ' Nur der Server gibt sie aus (unterschrieben); eine fremde oder alte gilt wie keine.
+            If ReadLoginCookie(context.Request) Is Nothing Then
                 response.Headers.Add("Set-Cookie",
-                    $"{LoginCookieName}={Convert.ToHexString(RandomNumberGenerator.GetBytes(32))}; Max-Age=86400; Path=/; HttpOnly; SameSite=Strict" &
+                    $"{LoginCookieName}={NewLoginCookieValue()}; Max-Age=86400; Path=/; HttpOnly; SameSite=Strict" &
                     If(IsSecureRequest(context.Request), "; Secure", ""))
             End If
             response.ContentLength64 = bytes.Length

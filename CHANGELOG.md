@@ -29,7 +29,9 @@
   own tiles as in the gallery, and a tile whose file is gone or cannot be read shows a sign
   instead of staying grey. Rate, favourite, label, keep or reject there and the desktop sees it.
   Upload photos and videos from the phone into a folder, download the original, a JPEG with your
-  edits or several pictures as a ZIP, and share from the full screen view. Select several pictures
+  edits or several pictures as a ZIP, and share from the full screen view. Raw, HEIC, TIFF and
+  other formats a phone cannot open download there only as a JPEG with your edits, also in a ZIP;
+  the full desktop interface in the browser still downloads every original. Select several pictures
   or whole days (long press, the select button, the circle at a day, or CTRL and SHIFT with the
   mouse) and download, share, rate, favourite, label, keep, reject or delete them at once; keep
   and reject use the thumbs of the gallery. Over HTTPS the page can
@@ -46,7 +48,7 @@
   together with the password of the sign-in window) the administrator adds further
   users for the browser and decides per folder what each may do: view and download, also rate,
   mark and upload, or also rename and delete. Other users only get the page for phones and see
-  nothing beyond their folders; ratings and marks stay shared. Each user can pick a language for
+  nothing beyond their folders, not even through links in them; ratings and marks stay shared. Each user can pick a language for
   that page. Every user name can be changed, the administrator's too: there by the administrator,
   and on the phone page under More for your own account; signed in browsers stay signed in.
 
@@ -59,16 +61,24 @@
 - **Second factor for signing in.** Every user can add a code from an authenticator app to the
   sign-in in the browser: on the page for phones under More, Second factor, and for the
   administrator also in Settings, User management. It is set up with a QR code, takes effect only
-  after a valid code, and comes with ten recovery codes. Forgot your password keeps it, the
+  after a valid code, and comes with ten recovery codes. Forgot your password keeps it and asks
+  for a code of the second factor too before the new password takes effect; the
   administrator can reset it for another user. Signing in at the computer itself stays without a code.
 
 - **Share links.** In the browser, pictures can be shared with people who have no account: one
   picture, a selection, a folder or a search result, from the page for phones or the right-click
   menu of the gallery. Each link can expire, have its own password, allow or forbid downloads and
   leave out place, people and camera; the page behind it shows only those pictures, with your
-  edits. My shares on the phone page and Settings, User management list the links with their
-  views, revoke them or pause them all. A picture saved again in FerrumPix stays in its links; one
-  that is replaced by a different file or deleted leaves them.
+  edits. Downloads, one by one or as a ZIP, come with your edits too: an edited picture, a variant
+  and every format other than JPEG, PNG and WebP (raw, HEIC, TIFF and the like) arrive as a full
+  size JPEG, and only unedited JPEG, PNG and WebP pictures go out as the original. A raw picture
+  with its camera JPEG gives one JPEG: the camera's while the raw is unedited, the edited raw
+  otherwise; the same goes for downloads on the page for phones. Variants of a
+  raw picture can be shared on their own. Saving a link again keeps its end date unless you pick
+  a new one, so an expired link stays expired. My shares on the phone page and Settings, User
+  management list the links with their views, revoke them or pause them all. A picture saved
+  again in FerrumPix stays in its links; one that is replaced by a different file or deleted
+  leaves them.
 
 - **One search everywhere.** The search field in a folder and over the whole catalog, saved
   searches and the page for phones now all find the same pictures: file names, keywords, recognised

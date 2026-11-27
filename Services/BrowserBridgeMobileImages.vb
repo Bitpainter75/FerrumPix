@@ -846,6 +846,13 @@ Namespace Services
                 context.Response.Close()
                 Return
             End If
+            ' RAW, HEIC, TIFF, PSD und die uebrigen Formate ausser JPEG, PNG und WebP gehen aus der
+            ' mobilen Seite nie als Datei hinaus, nur als JPEG mit Bearbeitung (IsPortableImageFormat).
+            ' Videos und alles, was keine Bilddatei ist, bleiben, wie sie sind.
+            If MediaFileTypes.IsDisplayable(path) AndAlso Not MediaFileTypes.IsVideo(path) AndAlso Not IsPortableImageFormat(path) Then
+                Await HandleMobileJpegAsync(context, mobile)
+                Return
+            End If
             Await SendFileRangeAsync(context, path, MobileContentType(path),
                                      If(context.Request.QueryString("dl") = "1", ContentDisposition(IO.Path.GetFileName(path)), "inline"))
         End Function
@@ -1062,28 +1069,20 @@ Namespace Services
                 context.Response.Close()
                 Return
             End If
+            ' Ein unbearbeitetes RAW-Paar gibt das JPEG der Kamera (PairJpegFor): ohne eigene
+            ' Bearbeitung die Datei selbst, sonst gerechnet wie jedes Bild.
+            Dim pair = Await Task.Run(Function() PairJpegFor(key, AddressOf mobile.CanDownload))
+            If pair IsNot Nothing Then
+                If Not Await Task.Run(Function() RawSidecarService.IsEditedFile(pair)) Then
+                    Await SendFileRangeAsync(context, pair, MobileContentType(pair), ContentDisposition(IO.Path.GetFileName(pair)))
+                    Return
+                End If
+                key = pair
+                path = pair
+            End If
             ' Dateien, die das Rezept nennt, nur nach der Leseregel dieses Benutzers (RecipeReferences).
             Dim reader = mobile.ReferenceReader
-            Dim bytes = Await RunMobileJobAsync(MobileJobKey(mobile, context.Request),
-                Function()
-                    Return DecodeGate.Run(
-                        Function()
-                            Using guard = RecipeReferences.Restrict(reader)
-                                If VariantKey.IsVariant(key) Then
-                                    ' Eine Variante mit ihrem eigenen Rezept, in voller Groesse.
-                                    Dim adjustments = RawSidecarService.TryRead(key)
-                                    If adjustments Is Nothing Then Return Nothing
-                                    Using developedVariant = ImageProcessor.RenderPreviewBitmap(path, adjustments, 0)
-                                        If developedVariant Is Nothing Then Return Nothing
-                                        Return EncodeMobileJpeg(developedVariant, Integer.MaxValue, 92)
-                                    End Using
-                                End If
-                                Using developed = ImageProcessor.DecodeDevelopedForOutput(path, developRaw:=True)
-                                    Return EncodeMobileJpeg(developed, Integer.MaxValue, 92)
-                                End Using
-                            End Using
-                        End Function)
-                End Function)
+            Dim bytes = Await RunMobileJobAsync(MobileJobKey(mobile, context.Request), Function() RenderFullMobileJpeg(key, reader))
             If bytes Is Nothing Then
                 context.Response.StatusCode = 404
                 context.Response.Close()
@@ -1109,6 +1108,32 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Das Bild in voller Groesse als JPEG mit Bearbeitung, ohne Metadaten (Skia
+        ''' schreibt keine): eine Datei mit ihrem Rezept, eine Variante mit dem ihren. Durch die
+        ''' Schleuse der Anwendung, Dateien des Rezepts nur nach <paramref name="canRead"/>
+        ''' (RecipeReferences). Der eine Weg fuer das volle JPEG der mobilen Seite und fuer das
+        ''' Herunterladen aus einer Freigabe. Nothing, wenn sich nichts rechnen laesst.</summary>
+        Friend Shared Function RenderFullMobileJpeg(key As String, canRead As Func(Of String, Boolean)) As Byte()
+            Dim path = VariantKey.FileOf(key)
+            Return DecodeGate.Run(
+                Function()
+                    Using guard = RecipeReferences.Restrict(canRead)
+                        If VariantKey.IsVariant(key) Then
+                            ' Eine Variante mit ihrem eigenen Rezept, in voller Groesse.
+                            Dim adjustments = RawSidecarService.TryRead(key)
+                            If adjustments Is Nothing Then Return Nothing
+                            Using developedVariant = ImageProcessor.RenderPreviewBitmap(path, adjustments, 0)
+                                If developedVariant Is Nothing Then Return Nothing
+                                Return EncodeMobileJpeg(developedVariant, Integer.MaxValue, 92)
+                            End Using
+                        End If
+                        Using developed = ImageProcessor.DecodeDevelopedForOutput(path, developRaw:=True)
+                            Return EncodeMobileJpeg(developed, Integer.MaxValue, 92)
+                        End Using
+                    End Using
+                End Function)
+        End Function
+
         ' --- Mehrere als ZIP ------------------------------------------------------------------------
 
         ''' <summary>POST /api/m/zip mit {"ids": [...]} legt einen Abholschein an und nennt seine
@@ -1124,11 +1149,19 @@ Namespace Services
                 If body.HasValue AndAlso body.Value.TryGetProperty("ids", list) AndAlso list.ValueKind = JsonValueKind.Array Then
                     For Each entry In list.EnumerateArray().Take(MaxMobileList)
                         If entry.ValueKind <> JsonValueKind.String Then Continue For
-                        ' Eine Variante bringt ihre Datei mit (samt Begleitdatei mit allen Varianten).
-                        Dim path = mobile.ResolveOriginal(entry.GetString())
-                        If path Is Nothing OrElse Not mobile.CanDownload(path) Then Continue For
-                        paths.Add(path)
-                        paths.AddRange(MobilePartnersOf(path).Where(Function(p) mobile.CanDownload(p)))
+                        Dim key = mobile.ResolveImage(entry.GetString())
+                        If key Is Nothing OrElse Not MobileContext.ImageExists(key) Then Continue For
+                        Dim path = VariantKey.FileOf(key)
+                        If Not mobile.CanDownload(path) Then Continue For
+                        ' Eine Variante kommt als JPEG mit ihrem eigenen Rezept, ohne Partner
+                        ' (MobileZipEntries); ihre Datei nur, wenn sie selbst gewaehlt ist.
+                        If VariantKey.IsVariant(key) Then
+                            paths.Add(key)
+                            Continue For
+                        End If
+                        ' Ein RAW-Paar gibt EIN JPEG: unbearbeitet das der Kamera (samt seinen
+                        ' Beistelldateien), bearbeitet das gerechnete der RAW (PairJpegFor).
+                        paths.Add(If(PairJpegFor(path, AddressOf mobile.CanDownload), path))
                     Next
                 End If
                 paths = paths.Distinct(PathIdentity.Comparer).ToList()
@@ -1163,18 +1196,24 @@ Namespace Services
                 Return
             End If
             ' Zwischen Schein und Abholung kann sich die Sicht geaendert haben; geprueft wird erneut.
-            Dim files = found.Paths.Where(Function(p) mobile.CanDownload(p)).ToList()
+            Dim files = found.Paths.Where(Function(p) mobile.CanDownload(VariantKey.FileOf(p))).ToList()
             Dim response = context.Response
             SecurityLog.ZipDownload(SecurityLog.UserNameOf(mobile.UserKey), LogAddress(context.Request), files.Count)
             Try
-                Dim entries = Await Task.Run(Function() PlanDownloadEntries(files))
+                Dim reader = mobile.ReferenceReader
+                Dim entries = Await Task.Run(Function() MobileZipEntries(files, reader))
                 Dim name = $"FerrumPix_{DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}_{files.Count.ToString(CultureInfo.InvariantCulture)}.zip"
                 response.StatusCode = 200
                 response.ContentType = "application/zip"
                 response.Headers("Cache-Control") = "no-store"
                 response.Headers("X-Content-Type-Options") = "nosniff"
                 response.Headers("Content-Disposition") = ContentDisposition(name)
-                response.ContentLength64 = StreamingZipWriter.TotalLength(entries)
+                ' Ein gerechnetes Bild hat vorab keine Groesse: dann ohne Laenge, in Stuecken.
+                If StreamingZipWriter.HasUnknownSizes(entries) Then
+                    If context.Request.ProtocolVersion >= HttpVersion.Version11 Then response.SendChunked = True
+                Else
+                    response.ContentLength64 = StreamingZipWriter.TotalLength(entries)
+                End If
                 Await StreamingZipWriter.WriteAsync(response.OutputStream, entries)
                 response.Close()
             Catch ex As Exception When TypeOf ex Is HttpListenerException OrElse TypeOf ex Is IOException OrElse
@@ -1184,6 +1223,41 @@ Namespace Services
                     response.Abort()
                 Catch
                 End Try
+            End Try
+        End Function
+
+        ''' <summary>Die Eintraege des ZIP der mobilen Seite. JPEG, PNG, WebP, Videos und alles, was
+        ''' keine Bilddatei ist, wie auf der Desktop-Seite (PlanDownloadEntries, mit Beistelldateien).
+        ''' Jedes andere Bildformat (RAW, HEIC, TIFF, PSD, ...) und jede Variante als JPEG mit
+        ''' Bearbeitung in voller Groesse (Name.jpg, ohne Beistelldateien): aus der mobilen Seite geht
+        ''' keine solche Datei als Original hinaus (IsPortableImageFormat). Gerechnet wird erst beim
+        ''' Schreiben, eines zur Zeit durch die Schleuse; misslingt es, fehlt nur dieses Bild.</summary>
+        Friend Shared Function MobileZipEntries(keys As IList(Of String), canRead As Func(Of String, Boolean)) As List(Of ZipEntryPlan)
+            Dim rendered = Function(key As String) VariantKey.IsVariant(key) OrElse
+                                                   (MediaFileTypes.IsDisplayable(key) AndAlso Not MediaFileTypes.IsVideo(key) AndAlso Not IsPortableImageFormat(key))
+            Dim result = PlanDownloadEntries(keys.Where(Function(k) Not rendered(k)).ToList())
+            Dim used As New HashSet(Of String)(result.Select(Function(e) e.EntryName), StringComparer.OrdinalIgnoreCase)
+            For Each key In keys.Where(rendered).Distinct(PathIdentity.Comparer)
+                Dim filePath = VariantKey.FileOf(key)
+                If Not File.Exists(filePath) Then Continue For
+                Dim entryKey = key
+                result.Add(New ZipEntryPlan With {
+                    .SourcePath = filePath, .EntryName = UniqueEntryName(ShareRenderedName(key), used),
+                    .Size = StreamingZipWriter.UnknownSize,
+                    .Modified = File.GetLastWriteTime(filePath),
+                    .Producer = Function() RenderFullMobileJpegSafe(entryKey, canRead)})
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Wie <see cref="RenderFullMobileJpeg"/>, aber Nothing statt einer Ausnahme: im ZIP
+        ''' soll ein Bild, das sich nicht rechnen laesst, fehlen, statt das Archiv abzubrechen.</summary>
+        Friend Shared Function RenderFullMobileJpegSafe(key As String, canRead As Func(Of String, Boolean)) As Byte()
+            Try
+                Return RenderFullMobileJpeg(key, canRead)
+            Catch ex As Exception When TypeOf ex IsNot OutOfMemoryException
+                DiagnosticLogService.LogException("BrowserBridge.RenderFullJpeg", ex)
+                Return Nothing
             End Try
         End Function
 

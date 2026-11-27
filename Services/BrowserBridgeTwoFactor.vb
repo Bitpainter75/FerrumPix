@@ -61,14 +61,14 @@ Namespace Services
         ''' Konto und je Absender.</summary>
         Private Shared Function SecondFactorCounters(request As HttpListenerRequest, userId As String) As String()
             Dim keys As New List(Of String)(LoginCounterKeys(request))
-            keys.Add("code account " & userId)
+            keys.Add(AppLockService.AccountCounterPrefix & userId)
             keys.Add("code " & SenderKey(request))
             Return keys.ToArray()
         End Function
 
         ''' <summary>Die Kennung der Anmeldeseite dieses Browsers als Zaehler, sonst leer.</summary>
         Private Shared Function BrowserKeyOf(request As HttpListenerRequest) As String
-            Dim value = ReadHexCookie(request, LoginCookieName)
+            Dim value = ReadLoginCookie(request)
             Return If(value Is Nothing, "", SessionKey(value))
         End Function
 
@@ -149,14 +149,25 @@ Namespace Services
         ''' zweite Schritt. Ohne gueltigen Zwischenstand 401 mit "restart" (die Seite geht zum
         ''' ersten Schritt zurueck). Ein falscher Code zaehlt als Fehlversuch bei den Zaehlern von
         ''' <see cref="SecondFactorCounters"/>; gebremst 429. Richtig: der Zwischenstand ist
-        ''' verbraucht, und es geht weiter wie nach einer Anmeldung ohne zweiten Faktor.</summary>
+        ''' verbraucht, und es geht weiter wie nach einer Anmeldung ohne zweiten Faktor.
+        '''
+        ''' <para>OHNE ZWISCHENSTAND ZAEHLT NICHTS: geprueft wird dann kein Code, es gibt also nichts
+        ''' zu raten. Frueher zaehlte ein solcher Versuch als Fehlversuch, ohne Kennwortrechnung und
+        ''' ohne vorher nach der Bremse zu fragen; mit erfundenen Werten liess sich so billig die
+        ''' Liste der Zaehler fuellen. Jetzt fragt der Weg zuerst die Bremse (gebremst 429) und legt
+        ''' keinen Zaehler an.</para></summary>
         Private Shared Async Function HandleSecondFactorAsync(context As HttpListenerContext, fields As Dictionary(Of String, String)) As Task
             Dim request = context.Request
             Dim from = LogAddress(request)
             Dim stepKey As String = Nothing
             Dim pending = FindSecondStep(request, stepKey)
             If pending Is Nothing Then
-                AppLockService.RegisterFailedAttempt(LoginCounterKeys(request))
+                Dim blocked = AppLockService.RetryAfter(LoginCounterKeys(request))
+                If blocked > TimeSpan.Zero Then
+                    SecurityLog.Throttled("twofactor", from, blocked)
+                    Await WriteThrottledSecondFactorAsync(context, blocked)
+                    Return
+                End If
                 context.Response.Headers.Add("Set-Cookie", SecondStepCookie("", 0, IsSecureRequest(request)))
                 Await WriteSecondFactorAnswerAsync(context, 401, New Dictionary(Of String, Object) From {
                     {"ok", False}, {"restart", True},

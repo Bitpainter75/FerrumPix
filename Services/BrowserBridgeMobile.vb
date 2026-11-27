@@ -61,10 +61,76 @@ Namespace Services
             _rules = If(IsAdmin, New List(Of (Folder As String, Level As FolderAccessLevel))(), UserAccountService.RulesFor(Me.UserKey))
         End Sub
 
-        ''' <summary>Was dieser Benutzer an einem Pfad darf. Ein Administrator alles.</summary>
+        ''' <summary>Was dieser Benutzer an einem Pfad darf. Ein Administrator alles. Mit Blick auf
+        ''' die Platte: fuehrt ein symbolischer Verweis im Pfad (die Datei selbst oder ein Ordner
+        ''' darueber) anderswohin, gilt die kleinere Stufe von Pfad und Ziel
+        ''' (<see cref="LinkedLevel"/>). Fuer Listen ueber den ganzen Katalog ohne Platte gibt es
+        ''' <see cref="NamedLevel"/>.</summary>
         Public Function LevelAt(path As String) As FolderAccessLevel
             If IsAdmin Then Return FolderAccessLevel.Manage
+            Return LinkedLevel(path)
+        End Function
+
+        ''' <summary>Die Stufe nach dem Pfad, wie er dasteht: reine Zeichenkettenarbeit.</summary>
+        Private Function NamedLevel(path As String) As FolderAccessLevel
+            If IsAdmin Then Return FolderAccessLevel.Manage
             Return UserAccountService.LevelFor(_rules, path)
+        End Function
+
+        ''' <summary>Die Ordner der Regeln mit aufgeloesten Verweisen, einmal je Anfrage.</summary>
+        Private _resolvedRules As List(Of (Folder As String, Level As FolderAccessLevel))
+
+        ''' <summary>Die Stufe eines Pfads, wenn Verweise darin aufgeloest werden.
+        '''
+        ''' <para>SYMBOLISCHE VERWEISE: die Regeln sind Zeichenketten. Liegt in einem freigegebenen
+        ''' Ordner ein Verweis auf einen Ordner oder eine Datei, fuer die der Benutzer keine oder eine
+        ''' kleinere Stufe hat, kaeme er sonst ueber den Namen im freigegebenen Ordner hinein. Deshalb
+        ''' zaehlt die kleinere Stufe aus dem Pfad, wie er dasteht, und dem Ziel, verglichen mit den
+        ''' ebenfalls aufgeloesten Ordnern der Regeln (liegt ein Ordner einer Regel selbst hinter
+        ''' einem Verweis, aendert das nichts). Ohne Verweis im Pfad bleibt es bei der Stufe nach dem
+        ''' Namen.</para></summary>
+        Private Function LinkedLevel(path As String) As FolderAccessLevel
+            Dim named = NamedLevel(path)
+            If named = FolderAccessLevel.None OrElse String.IsNullOrWhiteSpace(path) Then Return named
+            Dim resolved = ResolvedPath(path)
+            If String.IsNullOrEmpty(resolved) OrElse PathIdentity.AreSame(resolved, path) Then Return named
+            If _resolvedRules Is Nothing Then
+                _resolvedRules = _rules.Select(Function(r) (Folder:=FileOperationPolicy.ResolveLinks(r.Folder), Level:=r.Level)).ToList()
+            End If
+            Dim target = UserAccountService.LevelFor(_resolvedRules, resolved)
+            Return If(target < named, target, named)
+        End Function
+
+        ''' <summary>Die Ziele der Ordner, je Anfrage einmal aufgeloest: Listen ueber den Katalog
+        ''' fragen viele Dateien desselben Ordners.</summary>
+        Private ReadOnly _folderTargets As New Dictionary(Of String, String)(PathIdentity.Comparer)
+
+        ''' <summary>Wohin ein Pfad wirklich zeigt: der Ordner darueber mit aufgeloesten Verweisen
+        ''' (je Anfrage einmal), dazu die Datei oder der Ordner selbst, wenn er ein Verweis ist. Fuer
+        ''' eine Datei ohne Verweis kostet das einen Blick auf ihren Eintrag.</summary>
+        Private Function ResolvedPath(path As String) As String
+            Dim full As String
+            Try
+                full = IO.Path.TrimEndingDirectorySeparator(IO.Path.GetFullPath(path))
+            Catch
+                Return path
+            End Try
+            Dim folder = IO.Path.GetDirectoryName(full)
+            If String.IsNullOrEmpty(folder) Then Return full
+            Dim folderTarget As String = Nothing
+            SyncLock _folderTargets
+                If Not _folderTargets.TryGetValue(folder, folderTarget) Then
+                    folderTarget = FileOperationPolicy.ResolveLinks(folder)
+                    _folderTargets(folder) = folderTarget
+                End If
+            End SyncLock
+            Dim candidate = IO.Path.Combine(folderTarget, IO.Path.GetFileName(full))
+            Try
+                ' FileInfo fragt den Eintrag selbst (lstat), auch wenn er auf einen Ordner zeigt.
+                If New FileInfo(candidate).LinkTarget IsNot Nothing Then Return FileOperationPolicy.ResolveLinks(candidate)
+            Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is UnauthorizedAccessException
+            End Try
+            Return candidate
         End Function
 
         ''' <summary>Fuer Zwischenspeicher, die je Sichtbarkeit gelten (Zeitleiste): gleicher
@@ -103,15 +169,23 @@ Namespace Services
         End Function
 
         ''' <summary>Darf dieser Benutzer die Datei in Listen sehen? Reine Zeichenkettenarbeit, ohne
-        ''' Blick auf die Platte: sie laeuft ueber jede Zeile des Katalogs. Wer das Bild dann holt,
-        ''' geht zusaetzlich durch <see cref="CanDownload"/>.</summary>
+        ''' Blick auf die Platte und damit ohne Verweise: der Vorfilter, der ueber jede Zeile des
+        ''' Katalogs laeuft. Was hinausgeht, geht danach durch <see cref="CanSeeOnDisk"/>.</summary>
         Public Function CanSee(path As String) As Boolean
             If String.IsNullOrWhiteSpace(path) OrElse path.Contains("://", StringComparison.Ordinal) Then Return False
             If VariantKey.IsVariant(path) Then Return False
             If Not IO.Path.IsPathRooted(path) Then Return False
             If FolderRoots.IsActive AndAlso Not FolderRoots.Roots.Any(Function(r) PathIdentity.IsAncestorOrSelf(r, path)) Then Return False
             If FileOperationPolicy.IsInHiddenFolder(path) OrElse FileOperationPolicy.IsTrashFolder(path) Then Return False
-            Return LevelAt(path) >= FolderAccessLevel.View
+            Return NamedLevel(path) >= FolderAccessLevel.View
+        End Function
+
+        ''' <summary>Wie <see cref="CanSee"/>, dazu mit Blick auf die Platte: ein symbolischer
+        ''' Verweis, der zu etwas fuehrt, das dieser Benutzer nicht sehen darf, faellt weg
+        ''' (<see cref="LevelAt"/>). Fuer Listen und jeden Zugriff auf eine Datei; ein
+        ''' Administrator bekommt dasselbe wie CanSee.</summary>
+        Public Function CanSeeOnDisk(path As String) As Boolean
+            Return CanSee(path) AndAlso LevelAt(path) >= FolderAccessLevel.View
         End Function
 
         ''' <summary>Darf dieser Benutzer in den Ordner sehen? Ein Administrator, wenn er unter einer
@@ -131,7 +205,7 @@ Namespace Services
         ''' <summary>Darf die Datei selbst (Vorschau, Original, ZIP) ausgeliefert werden? Dieselbe
         ''' Regel wie beim Herunterladen am Desktop, dazu die Sicht dieses Benutzers ("Ansehen").</summary>
         Public Function CanDownload(path As String) As Boolean
-            Return CanSee(path) AndAlso File.Exists(path) AndAlso FileOperationPolicy.CanDownload(path)
+            Return CanSeeOnDisk(path) AndAlso File.Exists(path) AndAlso FileOperationPolicy.CanDownload(path)
         End Function
 
         ''' <summary>Die Leseregel fuer Dateien, die ein Rezept nennt (RecipeReferences): fuer einen
@@ -184,7 +258,7 @@ Namespace Services
         ''' gibt; sonst Nothing. Der einzige Weg von einer Kennung zu einem Pfad.</summary>
         Public Function ResolveFile(id As String) As String
             Dim path = BrowserBridge.MobileValueOf(BrowserBridge.MobileFileKind, id)
-            If path Is Nothing OrElse Not CanSee(path) OrElse Not File.Exists(path) Then Return Nothing
+            If path Is Nothing OrElse Not CanSeeOnDisk(path) OrElse Not File.Exists(path) Then Return Nothing
             Return path
         End Function
 
@@ -194,7 +268,7 @@ Namespace Services
         ''' (Original, Umbenennen, Loeschen, Hochladen, Teilen), geht darueber.</summary>
         Public Function CanSeeItem(key As String) As Boolean
             If String.IsNullOrWhiteSpace(key) Then Return False
-            Return CanSee(VariantKey.FileOf(key))
+            Return CanSeeOnDisk(VariantKey.FileOf(key))
         End Function
 
         ''' <summary>Das Bild zu einer Kennung fuer Kachel, Vorschau, Infoblatt und Markierungen:
@@ -837,7 +911,7 @@ Namespace Services
             End If
             ' Ein RAW-Paar ist eine Kachel: bewertet werden beide Dateien, also muessen beide erlaubt
             ' sein. Ein Partner, den dieser Benutzer gar nicht sieht, zaehlt nicht mit.
-            Dim partners = If(VariantKey.IsVariant(path), New List(Of String)(), MobilePartnersOf(path).Where(Function(p) mobile.CanSee(p)).ToList())
+            Dim partners = If(VariantKey.IsVariant(path), New List(Of String)(), MobilePartnersOf(path).Where(Function(p) mobile.CanSeeOnDisk(p)).ToList())
             If Not mobile.CanRate(VariantKey.FileOf(path)) OrElse partners.Any(Function(p) Not mobile.CanRate(p)) Then
                 Await WriteMobileJsonAsync(context, 403, MobileProblem(LocalizationService.T("Die Änderung konnte nicht gespeichert werden")))
                 Return
@@ -996,7 +1070,7 @@ Namespace Services
                     outcome.Refused += 1
                     Continue For
                 End If
-                Dim partners = If(isVariant, New List(Of String)(), MobilePartnersOf(key).Where(Function(p) mobile.CanSee(p)).ToList())
+                Dim partners = If(isVariant, New List(Of String)(), MobilePartnersOf(key).Where(Function(p) mobile.CanSeeOnDisk(p)).ToList())
                 If Not allowed(VariantKey.FileOf(key)) OrElse partners.Any(Function(p) Not allowed(p)) Then
                     outcome.Refused += 1
                     Continue For
@@ -1131,7 +1205,7 @@ Namespace Services
                 Return Nothing
             End If
             Dim files As New List(Of String) From {path}
-            files.AddRange(MobilePartnersOf(path).Where(Function(p) mobile.CanSee(p)))
+            files.AddRange(MobilePartnersOf(path).Where(Function(p) mobile.CanSeeOnDisk(p)))
             If files.Any(Function(f) Not allowed(f)) Then
                 Await WriteMobileJsonAsync(context, 403, MobileProblem(LocalizationService.T("Die Änderung konnte nicht gespeichert werden")))
                 Return Nothing

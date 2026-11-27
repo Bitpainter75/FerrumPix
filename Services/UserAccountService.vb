@@ -310,12 +310,28 @@ Namespace Services
             Dim bestLength = -1
             For Each rule In rules
                 If rule.Folder.Length <= bestLength Then Continue For
-                If PathIdentity.IsAncestorOrSelf(rule.Folder, path) Then
+                If RuleCovers(rule.Folder, path) Then
                     best = rule.Level
                     bestLength = rule.Folder.Length
                 End If
             Next
             Return best
+        End Function
+
+        ''' <summary>Gilt eine Regel auf <paramref name="folder"/> fuer <paramref name="path"/>? Wie
+        ''' PathIdentity.IsAncestorOrSelf, dazu die Wurzel des Dateisystems: beim Normalisieren wird
+        ''' aus "/" eine leere Zeichenkette, und IsAncestorOrSelf sagt dann fuer jeden Pfad nein. Eine
+        ''' Regel auf "/" wirkte unter Linux also nie. Hier gilt sie fuer jeden Pfad auf derselben
+        ''' Wurzel (unter Windows dasselbe Laufwerk).</summary>
+        Friend Shared Function RuleCovers(folder As String, path As String) As Boolean
+            If String.IsNullOrEmpty(folder) OrElse String.IsNullOrEmpty(path) Then Return False
+            If Not PathIdentity.IsFilesystemRoot(folder) Then Return PathIdentity.IsAncestorOrSelf(folder, path)
+            Try
+                If Not IO.Path.IsPathRooted(path) Then Return False
+                Return PathIdentity.AreSame(IO.Path.GetPathRoot(IO.Path.GetFullPath(path)), IO.Path.GetPathRoot(IO.Path.GetFullPath(folder)))
+            Catch
+                Return False
+            End Try
         End Function
 
         ''' <summary>Die Startordner, die die Regeln ergeben: jeder Ordner einer Regel mit mindestens
@@ -327,7 +343,7 @@ Namespace Services
             Dim own = rules.Where(Function(r) r.Level >= FolderAccessLevel.View AndAlso (usable Is Nothing OrElse usable(r.Folder))).
                             Select(Function(r) r.Folder).ToList()
             Return own.Where(Function(lower) Not own.Any(Function(upper) Not PathIdentity.AreSame(upper, lower) AndAlso
-                                                                         PathIdentity.IsAncestorOrSelf(upper, lower) AndAlso
+                                                                         RuleCovers(upper, lower) AndAlso
                                                                          IsReachable(rules, upper, lower))).ToList()
         End Function
 
@@ -339,8 +355,8 @@ Namespace Services
             If String.IsNullOrEmpty(parent) Then Return False
             Return Not rules.Any(Function(r) r.Level < FolderAccessLevel.View AndAlso
                                              Not PathIdentity.AreSame(r.Folder, upper) AndAlso
-                                             PathIdentity.IsAncestorOrSelf(upper, r.Folder) AndAlso
-                                             PathIdentity.IsAncestorOrSelf(r.Folder, parent))
+                                             RuleCovers(upper, r.Folder) AndAlso
+                                             RuleCovers(r.Folder, parent))
         End Function
 
         ' --- Aendern ----------------------------------------------------------------------------

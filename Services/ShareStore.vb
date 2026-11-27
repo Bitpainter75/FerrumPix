@@ -34,7 +34,8 @@ Namespace Services
         ''' <summary>Nur bei einem Ordner: der Ordner.</summary>
         Public Property Folder As String = ""
         Public Property IncludeSubfolders As Boolean
-        ''' <summary>Bei Bild, Auswahl und Suchergebnis: die Dateien.</summary>
+        ''' <summary>Bei Bild, Auswahl und Suchergebnis: die Dateien, eine zusaetzliche Variante
+        ''' als ihr Schluessel (VariantKey) mit eigenem Rezept.</summary>
         Public Property Paths As List(Of String) = New List(Of String)()
         ''' <summary>Je Pfad aus <see cref="Paths"/> der Fingerabdruck der Datei beim Teilen
         ''' (<see cref="ShareStore.StampOf"/>). Liegt spaeter eine andere Datei unter demselben
@@ -277,7 +278,8 @@ Namespace Services
         Public Shared Function StampOf(filePath As String) As String
             If String.IsNullOrEmpty(filePath) Then Return ""
             Try
-                Dim info As New FileInfo(filePath)
+                ' Eine Variante (VariantKey) hat den Fingerabdruck ihrer Datei.
+                Dim info As New FileInfo(VariantKey.FileOf(filePath))
                 If Not info.Exists Then Return ""
                 Return info.Length.ToString(CultureInfo.InvariantCulture) & ":" &
                        info.LastWriteTimeUtc.Ticks.ToString(CultureInfo.InvariantCulture)
@@ -297,13 +299,14 @@ Namespace Services
             Return actual.Length > 0 AndAlso String.Equals(actual, expected, StringComparison.Ordinal)
         End Function
 
-        ''' <summary>Alle Pfade aller festen Listen. Nur unter <see cref="Gate"/>.</summary>
+        ''' <summary>Alle Dateien aller festen Listen (bei einer Variante ihre Datei). Nur unter
+        ''' <see cref="Gate"/>.</summary>
         Private Shared Function SharedPaths() As HashSet(Of String)
             If _sharedPaths IsNot Nothing Then Return _sharedPaths
             Dim result As New HashSet(Of String)(PathIdentity.Comparer)
             For Each share In Current().Shares
                 For Each filePath In share.Paths
-                    result.Add(filePath)
+                    result.Add(VariantKey.FileOf(filePath))
                 Next
             Next
             _sharedPaths = result
@@ -613,7 +616,8 @@ Namespace Services
                 Dim stamp = StampOf(filePath)
                 For Each share In Current().Shares
                     For Each listed In share.Paths
-                        If Not PathIdentity.Comparer.Equals(listed, filePath) Then Continue For
+                        ' Die Datei selbst und jede ihrer Varianten in der Liste.
+                        If Not PathIdentity.Comparer.Equals(VariantKey.FileOf(listed), filePath) Then Continue For
                         Dim before As String = Nothing
                         If share.PathStamps.TryGetValue(listed, before) AndAlso String.Equals(before, stamp, StringComparison.Ordinal) Then Continue For
                         share.PathStamps(listed) = stamp
@@ -634,7 +638,7 @@ Namespace Services
             Dim changed = False
             SyncLock Gate
                 For Each share In Current().Shares
-                    Dim doomed = share.Paths.Where(Function(p) PathIdentity.IsAncestorOrSelf(path, p)).ToList()
+                    Dim doomed = share.Paths.Where(Function(p) PathIdentity.IsAncestorOrSelf(path, VariantKey.FileOf(p))).ToList()
                     If doomed.Count = 0 Then Continue For
                     For Each filePath In doomed
                         share.Paths.Remove(filePath)
@@ -665,7 +669,9 @@ Namespace Services
                     End If
                     For i = 0 To share.Paths.Count - 1
                         Dim before = share.Paths(i)
-                        moved = MovedPath(before, oldPath, newPath)
+                        ' Eine Variante wandert mit ihrer Datei und behaelt ihre Kennung.
+                        moved = MovedPath(VariantKey.FileOf(before), oldPath, newPath)
+                        If moved IsNot Nothing Then moved = VariantKey.Make(moved, VariantKey.IdOf(before))
                         If moved IsNot Nothing Then
                             share.Paths(i) = moved
                             ' Verschoben hat FerrumPix selbst: der Fingerabdruck wandert mit und nimmt

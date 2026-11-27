@@ -307,6 +307,9 @@ form.addEventListener('submit', async event => {
     // es erst danach.
     if (response.ok && answer.second) {
       if (!reset) store(userKey, user.value.trim());
+      // Neues Kennwort fuer ein Konto mit zweitem Faktor: der Server hat noch nichts
+      // geschrieben. Das Kennwort geht zusammen mit dem Code noch einmal an /reset.
+      resetBody = reset ? body : null;
       showSecond();
       return;
     }
@@ -357,6 +360,8 @@ const secondSubmit = document.getElementById('second-submit');
 const secondError = document.getElementById('second-error');
 const secondToggle = document.getElementById('second-toggle');
 let useRecovery = false;
+// Beim neuen Kennwort ueber den Verweis: Verweis und Kennwort aus dem ersten Schritt.
+let resetBody = null;
 document.getElementById('second-title').textContent = texts.secondTitle;
 code.placeholder = texts.code;
 code.setAttribute('aria-label', texts.code);
@@ -382,6 +387,7 @@ function setRecovery(on) {
   (on ? recovery : code).focus();
 }
 function backToFirst(message) {
+  resetBody = null;
   second.hidden = true;
   form.hidden = false;
   error.textContent = message || '';
@@ -403,9 +409,10 @@ second.addEventListener('submit', async event => {
   secondSubmit.disabled = true;
   secondError.textContent = '';
   try {
-    const response = await fetch('/login', {
+    const proof = useRecovery ? { recovery: value } : { code: value };
+    const response = await fetch(resetBody ? '/reset' : '/login', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(useRecovery ? { recovery: value } : { code: value }),
+      body: JSON.stringify(resetBody ? Object.assign({}, resetBody, proof) : proof),
       credentials: 'same-origin', cache: 'no-store'
     });
     let answer = {};

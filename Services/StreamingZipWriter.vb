@@ -15,7 +15,9 @@ Namespace Services
         ''' schon gepackt im Speicher liegt.</summary>
         Public SourcePath As String = ""
         Public EntryName As String = ""
-        ''' <summary>Groesse der Datei, wie sie beim Planen auf der Platte stand.</summary>
+        ''' <summary>Groesse der Datei, wie sie beim Planen auf der Platte stand. Bei einem Eintrag
+        ''' mit <see cref="Producer"/> darf sie <see cref="StreamingZipWriter.UnknownSize"/> sein:
+        ''' dann steht sie erst nach dem Erzeugen fest (siehe dort).</summary>
         Public Size As Long
         Public Modified As DateTime = DateTime.Now
         ''' <summary>Gesetzt bei einem kleinen Eintrag, der im Speicher gepackt wurde (Deflate);
@@ -25,9 +27,11 @@ Namespace Services
         ''' sie erst beim Schreiben und steht dann im Datennachsatz.</summary>
         Public Crc As UInteger
         ''' <summary>Gesetzt bei einem ungepackten Eintrag, dessen Bytes erst beim Schreiben
-        ''' entstehen (ein JPEG ohne Metadaten fuer eine Freigabe); dann wird nicht von
-        ''' <see cref="SourcePath"/> gelesen. Liefert sie nicht genau <see cref="Size"/> Bytes, endet
-        ''' das Archiv mit einem Abbruch.</summary>
+        ''' entstehen (ein JPEG ohne Metadaten oder ein gerechnetes JPEG fuer eine Freigabe); dann
+        ''' wird nicht von <see cref="SourcePath"/> gelesen. Mit bekannter Groesse gilt: liefert sie
+        ''' nicht genau <see cref="Size"/> Bytes, endet das Archiv mit einem Abbruch. Mit
+        ''' <see cref="StreamingZipWriter.UnknownSize"/> nimmt das Archiv, was sie liefert, und
+        ''' laesst den Eintrag weg, wenn sie nichts liefert.</summary>
         Public Producer As Func(Of Byte())
     End Class
 
@@ -62,6 +66,13 @@ Namespace Services
         ''' packbaren Daten ein wenig zulegt; eine Grenze genau auf 4 GB koennte gepackt darueber
         ''' landen.</summary>
         Friend Const Zip64EntryThreshold As Long = &HF0000000L
+
+        ''' <summary>Die Groesse eines Eintrags, dessen Bytes erst beim Schreiben entstehen und
+        ''' vorher nicht bekannt sind (ein gerechnetes JPEG). Ein Archiv mit einem solchen Eintrag
+        ''' hat keine Laenge vorab (<see cref="HasUnknownSizes"/>); geschrieben wird es trotzdem
+        ''' stroemend, denn der Kopf eines ungepackten Eintrags traegt ohnehin keine Groesse (Bit 3,
+        ''' Datennachsatz), und das Verzeichnis am Ende entsteht erst nach allen Eintraegen.</summary>
+        Friend Const UnknownSize As Long = -1
 
         Private Const Max32 As Long = &HFFFFFFFFL
         Private Const MaxEntries16 As Integer = &HFFFF
@@ -150,7 +161,14 @@ Namespace Services
             Return anyZip64 OrElse entries.Count >= MaxEntries16 OrElse offset >= Max32 OrElse directorySize >= Max32
         End Function
 
-        ''' <summary>Die Laenge des fertigen Archivs in Bytes, ohne etwas zu schreiben.</summary>
+        ''' <summary>Steht die Groesse eines Eintrags erst beim Schreiben fest? Dann gibt es keine
+        ''' Laenge vorab, und <see cref="TotalLength"/> gilt nicht.</summary>
+        Friend Shared Function HasUnknownSizes(entries As IList(Of ZipEntryPlan)) As Boolean
+            Return entries.Any(Function(e) e.Size = UnknownSize)
+        End Function
+
+        ''' <summary>Die Laenge des fertigen Archivs in Bytes, ohne etwas zu schreiben. Nur, wenn
+        ''' jede Groesse bekannt ist (<see cref="HasUnknownSizes"/>).</summary>
         Friend Shared Function TotalLength(entries As IList(Of ZipEntryPlan), Optional forceZip64 As Boolean = False) As Long
             Dim offset = 0L
             Dim directorySize = 0L
@@ -166,16 +184,37 @@ Namespace Services
 
         ''' <summary>Schreibt das Archiv. Stimmt die Groesse einer Datei beim Lesen nicht mehr mit der
         ''' geplanten, endet es mit einer IOException: die angekuendigte Laenge waere sonst falsch,
-        ''' und der Browser hielte ein kaputtes Archiv fuer fertig.</summary>
+        ''' und der Browser hielte ein kaputtes Archiv fuer fertig. Ein Eintrag mit
+        ''' <see cref="UnknownSize"/> bekommt seine Groesse beim Erzeugen (sie wird in den Plan
+        ''' geschrieben) oder faellt weg, wenn nichts entsteht; Verzeichnis und Schluss zaehlen nur
+        ''' die geschriebenen.</summary>
         Friend Shared Async Function WriteAsync(target As Stream, entries As IList(Of ZipEntryPlan),
                                                 Optional forceZip64 As Boolean = False) As Task
             Dim offset = 0L
+            Dim written As New List(Of ZipEntryPlan)()
             Dim offsets As New List(Of Long)()
             Dim checksums As New List(Of UInteger)()
             Dim buffer(1024 * 1024 - 1) As Byte
 
             For Each entry In entries
+                ' Erzeugte Bytes VOR dem Kopf: erst dann steht fest, ob der Eintrag kommt und wie
+                ' gross er ist (davon haengt ZIP64 ab).
+                Dim produced As Byte() = Nothing
+                If entry.Packed Is Nothing AndAlso entry.Producer IsNot Nothing Then
+                    produced = entry.Producer()
+                    If entry.Size = UnknownSize Then
+                        If produced Is Nothing Then Continue For
+                        If produced.LongLength >= Zip64EntryThreshold Then
+                            Throw New IOException($"{entry.EntryName} is too large for the archive.")
+                        End If
+                        entry.Size = produced.LongLength
+                    ElseIf produced Is Nothing OrElse produced.LongLength <> entry.Size Then
+                        Throw New IOException($"{entry.EntryName} changed while it was being sent.")
+                    End If
+                End If
+
                 Dim zip64 = EntryNeedsZip64(entry, forceZip64)
+                written.Add(entry)
                 offsets.Add(offset)
                 Dim header = LocalHeader(entry, zip64)
                 Await target.WriteAsync(header, 0, header.Length)
@@ -189,11 +228,7 @@ Namespace Services
                 End If
 
                 Dim checksum As New Crc32Accumulator()
-                If entry.Producer IsNot Nothing Then
-                    Dim produced = entry.Producer()
-                    If produced Is Nothing OrElse produced.LongLength <> entry.Size Then
-                        Throw New IOException($"{entry.EntryName} changed while it was being sent.")
-                    End If
+                If produced IsNot Nothing Then
                     checksum.Append(produced, 0, produced.Length)
                     Await target.WriteAsync(produced, 0, produced.Length)
                     offset += produced.Length
@@ -203,22 +238,22 @@ Namespace Services
                     offset += producedDescriptor.Length
                     Continue For
                 End If
-                Dim written = 0L
+                Dim copied = 0L
                 Using source As New FileStream(entry.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 16, FileOptions.Asynchronous Or FileOptions.SequentialScan)
                     Do
-                        Dim wanted = CInt(Math.Min(buffer.Length, entry.Size - written))
+                        Dim wanted = CInt(Math.Min(buffer.Length, entry.Size - copied))
                         If wanted <= 0 Then Exit Do
                         Dim read = Await source.ReadAsync(buffer, 0, wanted)
                         If read <= 0 Then Exit Do
                         checksum.Append(buffer, 0, read)
                         Await target.WriteAsync(buffer, 0, read)
-                        written += read
+                        copied += read
                     Loop
                 End Using
-                If written <> entry.Size Then
+                If copied <> entry.Size Then
                     Throw New IOException($"{entry.SourcePath} changed while it was being sent.")
                 End If
-                offset += written
+                offset += copied
                 checksums.Add(checksum.Value)
                 Dim descriptor = DataDescriptor(checksum.Value, entry.Size, zip64)
                 Await target.WriteAsync(descriptor, 0, descriptor.Length)
@@ -226,13 +261,13 @@ Namespace Services
             Next
 
             Dim directoryStart = offset
-            For index = 0 To entries.Count - 1
-                Dim entry = entries(index)
+            For index = 0 To written.Count - 1
+                Dim entry = written(index)
                 Dim record = CentralRecord(entry, EntryNeedsZip64(entry, forceZip64), offsets(index), checksums(index))
                 Await target.WriteAsync(record, 0, record.Length)
                 offset += record.Length
             Next
-            Dim tail = EndRecords(entries.Count, directoryStart, offset - directoryStart, ArchiveNeedsZip64(entries, forceZip64))
+            Dim tail = EndRecords(written.Count, directoryStart, offset - directoryStart, ArchiveNeedsZip64(written, forceZip64))
             Await target.WriteAsync(tail, 0, tail.Length)
             Await target.FlushAsync()
         End Function

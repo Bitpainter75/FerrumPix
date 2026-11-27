@@ -18,9 +18,11 @@ Namespace Services
     ''' (<see cref="Forget"/>). Ein neuer Verweis ersetzt den alten.</para>
     '''
     ''' <para>DIE ANTWORT VERRAET NICHTS: ob es das Konto gibt, ob es eine E-Mail-Adresse hat und ob
-    ''' die Bremse je Konto gegriffen hat, sieht der Anfragende nicht. Die Nachricht geht im
-    ''' Hintergrund hinaus; die Antwort wartet nicht auf den Mailserver und braucht deshalb fuer
-    ''' jedes Konto dieselbe Zeit.</para>
+    ''' die Bremse je Konto gegriffen hat, sieht der Anfragende nicht. Vor der Antwort laeuft nur
+    ''' die Bremse je Absender (<see cref="Admit"/>); alles, was vom Konto abhaengt (Suche,
+    ''' Verweis, Texte, Protokoll, Versand), laeuft erst danach im Hintergrund
+    ''' (<see cref="SendInBackground"/>). Die Antwort braucht deshalb fuer jedes Konto dieselbe
+    ''' Zeit.</para>
     '''
     ''' <para>ZWEI BREMSEN: je Browser und je Absenderadresse hoechstens
     ''' <see cref="MaxRequestsPerSender"/> Anfragen in der Stunde (dann 429, unabhaengig vom Konto),
@@ -95,12 +97,10 @@ Namespace Services
             Return True
         End Function
 
-        ''' <summary>Eine Anfrage "Kennwort vergessen". False nur, wenn dieser Browser oder diese
-        ''' Adresse zu oft gefragt hat; sonst True, gleich ob eine Nachricht hinausging.
-        ''' <paramref name="linkBase"/> ist der Anfang des Verweises ohne Schraegstrich am Ende,
-        ''' <paramref name="texts"/> kommt schon uebersetzt.</summary>
-        Friend Shared Function Request(nameOrEmail As String, counters As IEnumerable(Of String), linkBase As String,
-                                       buildTexts As Func(Of MailTexts)) As Boolean
+        ''' <summary>Der erste Teil einer Anfrage "Kennwort vergessen": die Bremse je Browser und
+        ''' Adresse. False, wenn dieser Browser oder diese Adresse zu oft gefragt hat; sonst ist die
+        ''' Anfrage gezaehlt. Haengt an keinem Konto, kostet also fuer jedes dieselbe Zeit.</summary>
+        Friend Shared Function Admit(counters As IEnumerable(Of String)) As Boolean
             Dim now = AppLockService.Clock()
             Dim keys = If(counters, Array.Empty(Of String)()).Where(Function(k) Not String.IsNullOrEmpty(k)).Distinct().ToList()
             SyncLock Gate
@@ -111,14 +111,54 @@ Namespace Services
                     CountWithin(RequestsBySender, key, MaxRequestsPerSender, now, record:=True)
                 Next
             End SyncLock
+            Return True
+        End Function
 
+        ''' <summary>Der zweite Teil, NACH der Antwort und im Hintergrund: Konto suchen, Verweis
+        ''' anlegen, Nachricht bauen, Protokoll, Versand. Die Bruecke schreibt die Antwort, bevor sie
+        ''' das hier startet: so haengt ihre Zeit an nichts, was vom Konto abhaengt (frueher liefen
+        ''' Suche, Verweis, Texte und eine Zeile im Diagnoseprotokoll fuer ein bekanntes Konto im
+        ''' Vordergrund, und die Antwortzeit verriet, ob es das Konto gibt).
+        ''' <paramref name="linkBase"/> ist der Anfang des Verweises ohne Schraegstrich am Ende,
+        ''' <paramref name="buildTexts"/> baut die Texte in der Sprache des Kontos.</summary>
+        Friend Shared Sub SendInBackground(nameOrEmail As String, linkBase As String, buildTexts As Func(Of MailTexts))
+            LastSendTask = Task.Run(Function() SendForAsync(nameOrEmail, linkBase, buildTexts))
+        End Sub
+
+        Private Shared Async Function SendForAsync(nameOrEmail As String, linkBase As String, buildTexts As Func(Of MailTexts)) As Task
+            Try
+                Dim body As MailContent = Nothing
+                Dim subject As String = Nothing
+                Dim recipient As String = Nothing
+                Dim settings As MailSettings = Nothing
+                Dim accountId = Prepare(nameOrEmail, linkBase, buildTexts, body, subject, recipient, settings)
+                If accountId Is Nothing Then Return
+                Try
+                    Await MailService.SendAsync(settings, recipient, subject, body)
+                    SecurityLog.ResetMailed(accountId, sent:=True)
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("PasswordReset.Send", ex)
+                    SecurityLog.ResetMailed(accountId, sent:=False)
+                End Try
+            Catch ex As Exception
+                DiagnosticLogService.LogException("PasswordReset.Prepare", ex)
+            End Try
+        End Function
+
+        ''' <summary>Sucht das Konto und legt den Verweis an. Die Kennung des Kontos, wenn eine
+        ''' Nachricht hinausgehen soll, sonst Nothing (kein Konto, keine Adresse, kein Mailserver,
+        ''' Bremse je Konto).</summary>
+        Private Shared Function Prepare(nameOrEmail As String, linkBase As String, buildTexts As Func(Of MailTexts),
+                                        ByRef body As MailContent, ByRef subject As String, ByRef recipient As String,
+                                        ByRef settings As MailSettings) As String
+            Dim now = AppLockService.Clock()
             Dim account = UserAccountService.FindForRecovery(nameOrEmail)
-            If account Is Nothing OrElse account.Email.Length = 0 Then Return True
-            Dim settings = MailSettings.FromAppSettings(AppSettingsService.Load())
-            If Not settings.IsComplete Then Return True
+            If account Is Nothing OrElse account.Email.Length = 0 Then Return Nothing
+            settings = MailSettings.FromAppSettings(AppSettingsService.Load())
+            If Not settings.IsComplete Then Return Nothing
             Dim token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant()
             SyncLock Gate
-                If Not CountWithin(MailsByAccount, account.Id, MaxMailsPerAccount, now, record:=True) Then Return True
+                If Not CountWithin(MailsByAccount, account.Id, MaxMailsPerAccount, now, record:=True) Then Return Nothing
                 ' Ein neuer Verweis ersetzt den alten.
                 For Each stale In Pending.Where(Function(p) p.Value.UserId = account.Id OrElse p.Value.ExpiresUtc < now).Select(Function(p) p.Key).ToList()
                     Pending.Remove(stale)
@@ -127,7 +167,7 @@ Namespace Services
             End SyncLock
             Dim link = linkBase.TrimEnd("/"c) & BrowserBridge.ResetRoute & "?t=" & token
             LastLinkForTests = link
-            Dim recipient = account.Email
+            recipient = account.Email
             ' Die Nachricht in der Sprache des Benutzers; bei "automatisch" in der dieser Anfrage
             ' (Accept-Language des Browsers).
             Dim texts As MailTexts
@@ -138,8 +178,8 @@ Namespace Services
                 language = LocalizationService.HtmlLanguage(LocalizationService.TextCulture)
             End Using
             texts = If(texts, New MailTexts())
-            Dim subject = If(texts.Subject, "FerrumPix")
-            Dim body As New MailContent With {
+            subject = If(texts.Subject, "FerrumPix")
+            body = New MailContent With {
                 .Title = If(texts.Title, ""),
                 .Greeting = If(texts.Greeting Is Nothing, "", String.Format(texts.Greeting, account.Name)),
                 .ButtonText = If(texts.ButtonText, ""),
@@ -151,17 +191,7 @@ Namespace Services
             If Not String.IsNullOrEmpty(texts.Validity) Then body.Notes.Add(texts.Validity)
             If Not String.IsNullOrEmpty(texts.Ignore) Then body.Notes.Add(texts.Ignore)
             DiagnosticLogService.LogAlways("PasswordReset", $"Reset link requested for {account.Id}.")
-            LastSendTask = Task.Run(
-                Async Function()
-                    Try
-                        Await MailService.SendAsync(settings, recipient, subject, body)
-                        SecurityLog.ResetMailed(account.Id, sent:=True)
-                    Catch ex As Exception
-                        DiagnosticLogService.LogException("PasswordReset.Send", ex)
-                        SecurityLog.ResetMailed(account.Id, sent:=False)
-                    End Try
-                End Function)
-            Return True
+            Return account.Id
         End Function
 
         ''' <summary>Gilt dieser Verweis noch? Fuer die Seite, die das neue Kennwort fragt.</summary>
@@ -171,6 +201,18 @@ Namespace Services
             SyncLock Gate
                 Dim found As PendingReset = Nothing
                 Return Pending.TryGetValue(HashToken(token), found) AndAlso found.ExpiresUtc >= now
+            End SyncLock
+        End Function
+
+        ''' <summary>Der Benutzer zu einem gueltigen Verweis, ohne ihn zu verbrauchen; sonst Nothing.
+        ''' Fuer ein Konto mit zweitem Faktor: der Verweis bleibt, bis auch der Code stimmt.</summary>
+        Friend Shared Function Peek(token As String) As String
+            If Not IsTokenShape(token) Then Return Nothing
+            Dim now = AppLockService.Clock()
+            SyncLock Gate
+                Dim found As PendingReset = Nothing
+                If Not Pending.TryGetValue(HashToken(token), found) OrElse found.ExpiresUtc < now Then Return Nothing
+                Return found.UserId
             End SyncLock
         End Function
 

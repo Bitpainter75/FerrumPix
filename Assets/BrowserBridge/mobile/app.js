@@ -1855,10 +1855,14 @@
     if (!item) return;
     showSheet((body, close) => {
       body.appendChild(el('div', 'sheet-title', T.download));
-      body.appendChild(sheetAction('download', T.original, () => {
-        close();
-        download('/api/m/original?dl=1&id=' + encodeURIComponent(item.i));
-      }));
+      // RAW, HEIC, TIFF und Verwandte gehen nur als JPEG hinaus (info.original falsch).
+      const info = viewer.info;
+      if (!info || info.original !== false) {
+        body.appendChild(sheetAction('download', T.original, () => {
+          close();
+          download('/api/m/original?dl=1&id=' + encodeURIComponent(item.i));
+        }));
+      }
       if (!item.v) {
         body.appendChild(sheetAction('image', T.edited, () => {
           close();
