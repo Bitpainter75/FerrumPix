@@ -13801,4 +13801,19 @@
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>På computeren vises med adgangskode et loginvindue ved start, efter den indstillede tid uden input og med CTRL+L. I browseren gælder her administratorens adgangskode, en særskilt. Adgangskoden beskytter det kørende program, ikke billederne: filerne ligger stadig læsbart på disken.</value>
   </data>
+  <data name="Keiner_der_berwachten_Ordner_ist_erreichbar_6a5eecb9" xml:space="preserve">
+    <value>Ingen af de overvågede mapper kan nås</value>
+  </data>
+  <data name="Keiner_der_gew_hlten_Ordner_ist_erreichbar_29a46551" xml:space="preserve">
+    <value>Ingen af de valgte mapper kan nås</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_ein_ande_7811deba" xml:space="preserve">
+    <value>Indekset kører ikke i denne session: en anden computer bruger kataloget</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_der_Date_c697d43c" xml:space="preserve">
+    <value>Indekset kører ikke i denne session: datamappen kan ikke nås</value>
+  </data>
+  <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
+    <value>Katalogindekset kører allerede</value>
+  </data>
 </root>

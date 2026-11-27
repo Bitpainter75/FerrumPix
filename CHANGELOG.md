@@ -23,6 +23,22 @@
   Entries the catalog took from there earlier, faces included, go away with the next catalog
   scan of those folders; the files on the disk are left alone.
 
+- **Catalog scan says why it does not start.** When the catalog scan cannot run, for example
+  because another computer is using the catalog, the data folder or the watched folders are not
+  reachable, or a scan is already running, it now says so instead of showing "Looking for
+  images..." forever.
+
+- **No full rescan after a time zone change.** The catalog no longer reads every picture again
+  when FerrumPix starts in another time zone, for example a container started once with and once
+  without a time zone, or on a share that reports file times less precisely. The catalog text of
+  a picture always stays in the language of the app, also when a browser user with another
+  language adds it.
+
+- **No more empty tiles in large folders.** In folders with more pictures than the thumbnail
+  memory holds, for example a large folder shown with its subfolders, tiles that came into view
+  could stay empty until the tile size changed, and after a while not even that helped. Every
+  tile on screen now gets its thumbnail, in the grid, the grouped view and the photo wall.
+
 ## 0.9.93
 
 ### Changes

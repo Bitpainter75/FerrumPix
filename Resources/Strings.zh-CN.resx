@@ -13759,4 +13759,19 @@
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>在电脑上，设置密码后，登录窗口会在启动时、在设定的无操作时间之后以及按 CTRL+L 时出现。在浏览器中这里是管理员的密码，是单独的密码。密码保护的是正在运行的应用程序，而不是照片：文件在磁盘上仍然可读。</value>
   </data>
+  <data name="Keiner_der_berwachten_Ordner_ist_erreichbar_6a5eecb9" xml:space="preserve">
+    <value>所有监视的文件夹均无法访问</value>
+  </data>
+  <data name="Keiner_der_gew_hlten_Ordner_ist_erreichbar_29a46551" xml:space="preserve">
+    <value>所有选定的文件夹均无法访问</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_ein_ande_7811deba" xml:space="preserve">
+    <value>本次会话不运行索引：另一台计算机正在使用目录</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_der_Date_c697d43c" xml:space="preserve">
+    <value>本次会话不运行索引：无法访问数据文件夹</value>
+  </data>
+  <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
+    <value>目录索引已在运行</value>
+  </data>
 </root>

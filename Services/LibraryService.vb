@@ -1743,10 +1743,12 @@ Namespace Services
 
             Dim currentSidecarAt = SidecarStamp(filePath)
 
+            ' Die Zeiten als Zeitpunkte (FileTimeStamp): unter einer anderen Zeitzone geschrieben,
+            ' ist die Zeile trotzdem frisch und wird nicht neu geschrieben.
             Dim existing = GetMetaForPaths({filePath}).Values.FirstOrDefault()
             If existing IsNot Nothing AndAlso
-               String.Equals(existing.ScannedSourceModifiedAt, currentModifiedAt, StringComparison.Ordinal) AndAlso
-               String.Equals(existing.ScannedSidecarModifiedAt, currentSidecarAt, StringComparison.Ordinal) AndAlso
+               FileTimeStamp.SameText(existing.ScannedSourceModifiedAt, currentModifiedAt) AndAlso
+               FileTimeStamp.SameText(existing.ScannedSidecarModifiedAt, currentSidecarAt) AndAlso
                ExifDataMatches(existing, exif, summary) Then
                 Return
             End If
@@ -2039,7 +2041,7 @@ Namespace Services
                     cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                     Using reader = cmd.ExecuteReader()
                         If Not reader.Read() Then Return False
-                        If reader.IsDBNull(0) OrElse Not String.Equals(reader.GetString(0), modifiedAt, StringComparison.Ordinal) Then Return False
+                        If reader.IsDBNull(0) OrElse Not FileTimeStamp.SameText(reader.GetString(0), modifiedAt) Then Return False
                         If reader.IsDBNull(1) OrElse
                            Not String.Equals(reader.GetString(1), ExifService.CurrentSummaryFormatFor(filePath), StringComparison.Ordinal) Then Return False
                         kind = If(reader.IsDBNull(2), MotionKind.None, NormalizeMotionKind(reader.GetInt32(2)))

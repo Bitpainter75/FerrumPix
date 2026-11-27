@@ -13761,4 +13761,19 @@
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>Sul computer, con una password, una finestra di accesso appare all'avvio, dopo il tempo impostato senza input e con CTRL+L. Nel browser qui vale la password dell'amministratore, una propria. La password protegge l'applicazione in esecuzione, non le foto: i file restano leggibili sul disco.</value>
   </data>
+  <data name="Keiner_der_berwachten_Ordner_ist_erreichbar_6a5eecb9" xml:space="preserve">
+    <value>Nessuna delle cartelle monitorate è raggiungibile</value>
+  </data>
+  <data name="Keiner_der_gew_hlten_Ordner_ist_erreichbar_29a46551" xml:space="preserve">
+    <value>Nessuna delle cartelle scelte è raggiungibile</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_ein_ande_7811deba" xml:space="preserve">
+    <value>L'indice non viene eseguito in questa sessione: un altro computer sta usando il catalogo</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_der_Date_c697d43c" xml:space="preserve">
+    <value>L'indice non viene eseguito in questa sessione: la cartella dei dati non è raggiungibile</value>
+  </data>
+  <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
+    <value>L'indice del catalogo è già in esecuzione</value>
+  </data>
 </root>

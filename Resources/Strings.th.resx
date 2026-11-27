@@ -13805,4 +13805,19 @@
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>บนคอมพิวเตอร์ เมื่อมีรหัสผ่าน หน้าต่างเข้าสู่ระบบจะปรากฏเมื่อเริ่มโปรแกรม หลังจากไม่มีการป้อนข้อมูลตามเวลาที่ตั้งไว้ และเมื่อกด CTRL+L ในเบราว์เซอร์ที่นี่คือรหัสผ่านของผู้ดูแลระบบ ซึ่งเป็นรหัสผ่านแยกต่างหาก รหัสผ่านปกป้องแอปพลิเคชันที่กำลังทำงาน ไม่ใช่รูปภาพ: ไฟล์ยังคงอ่านได้บนดิสก์</value>
   </data>
+  <data name="Keiner_der_berwachten_Ordner_ist_erreichbar_6a5eecb9" xml:space="preserve">
+    <value>ไม่สามารถเข้าถึงโฟลเดอร์ที่เฝ้าดูได้เลย</value>
+  </data>
+  <data name="Keiner_der_gew_hlten_Ordner_ist_erreichbar_29a46551" xml:space="preserve">
+    <value>ไม่สามารถเข้าถึงโฟลเดอร์ที่เลือกได้เลย</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_ein_ande_7811deba" xml:space="preserve">
+    <value>ดัชนีไม่ทำงานในเซสชันนี้: คอมพิวเตอร์อีกเครื่องกำลังใช้แคตตาล็อก</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_der_Date_c697d43c" xml:space="preserve">
+    <value>ดัชนีไม่ทำงานในเซสชันนี้: ไม่สามารถเข้าถึงโฟลเดอร์ข้อมูลได้</value>
+  </data>
+  <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
+    <value>ดัชนีแคตตาล็อกกำลังทำงานอยู่แล้ว</value>
+  </data>
 </root>

@@ -64,6 +64,10 @@ Namespace Views
         ' Anzeigefenster wirklich besteht (siehe OnDisplayItemsCollectionChanged).
         Private _pendingFolderScrollReset As String
         Private ReadOnly _thumbnailTracker As New ViewportThumbnailTracker()
+        ''' <summary>Was die Repeater der drei Kachelansichten wirklich aufgebaut haben: das wird
+        ''' angefragt und vor der Verdraengung geschuetzt, unabhaengig vom gerechneten Bereich des
+        ''' Trackers (siehe RealizedTileThumbnails).</summary>
+        Private ReadOnly _realizedTiles As New RealizedTileThumbnails()
 
         ''' <summary>Aussenmass EINER Zeile der Listenansicht: Grid-Hoehe 72, dazu BorderThickness 2
         ''' oben und unten und Margin="5,3" mit 3 oben und unten (Border.thumb-card.list-row).
@@ -148,6 +152,9 @@ Namespace Views
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
             AttachGroupElementFactory()
+            For Each repeaterName In {"GalleryGridRepeater", "GalleryGroupRepeater", "GalleryWallRepeater"}
+                _realizedTiles.Attach(Me.FindControl(Of ItemsRepeater)(repeaterName))
+            Next
             AddHandler DataContextChanged, AddressOf OnViewDataContextChanged
             ContextMenuAttachment.Attach(Me.FindControl(Of Grid)("GalleryRootGrid"), AddressOf OnContextRequested)
             HookFooterZoomFit()

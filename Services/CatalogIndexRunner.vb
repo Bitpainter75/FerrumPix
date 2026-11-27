@@ -39,20 +39,51 @@ Namespace Services
 
         Public Property Cancelled As Boolean
 
-        ''' <summary>Der Lauf hat gar nicht erst begonnen, weil schon einer laeuft.
+        ''' <summary>Warum der Lauf gar nicht erst begonnen hat; <see cref="CatalogIndexNotStartedReason.None"/>
+        ''' heisst, er hat gearbeitet. Der Grund kommt vom Lauf selbst und wird nicht vom Aufrufer
+        ''' aus Zustaenden erraten: der sieht nur das Ergebnis, und jeder Nichtstart braucht einen
+        ''' eigenen Satz in der Anzeige, sonst bleibt dort "Bilder werden gesucht..." stehen.</summary>
+        Public Property NotStartedReason As CatalogIndexNotStartedReason
+
+        ''' <summary>Der Lauf hat gar nicht erst begonnen (Grund in <see cref="NotStartedReason"/>).
         '''
         ''' Muss vom leeren Ergebnis unterscheidbar sein: der Anrufer haelt sonst seinen
-        ''' Anzeigezustand fuer beendet und setzt ihn zurueck, waehrend der ERSTE Lauf weiterarbeitet
-        ''' - Stopp-Knopf und Fortschritt verschwinden dann mitten im Lauf. Der Fall tritt auf, wenn
-        ''' der Start nach dem Programmstart und ein Klick auf "Starten" sich ueberholen.</summary>
-        Public Property NotStarted As Boolean
+        ''' Anzeigezustand fuer beendet und meldet "Keine Bilder gefunden", obwohl gar nicht gesucht
+        ''' wurde.</summary>
+        Public ReadOnly Property NotStarted As Boolean
+            Get
+                Return NotStartedReason <> CatalogIndexNotStartedReason.None
+            End Get
+        End Property
 
         ''' <summary>Nicht begonnen, weil ein ANDERES FENSTER gerade schreibt (siehe
-        ''' BackgroundRunLock). Getrennt von <see cref="NotStarted"/> gemeldet, weil der Nutzer
-        ''' etwas anderes tun muss: im eigenen Fenster warten hilft nicht, wenn die Arbeit anderswo
-        ''' laeuft.</summary>
-        Public Property BlockedByOtherWindow As Boolean
+        ''' BackgroundRunLock). Eigens abfragbar, weil der Nutzer etwas anderes tun muss: im eigenen
+        ''' Fenster warten hilft nicht, wenn die Arbeit anderswo laeuft.</summary>
+        Public ReadOnly Property BlockedByOtherWindow As Boolean
+            Get
+                Return NotStartedReason = CatalogIndexNotStartedReason.OtherWindow
+            End Get
+        End Property
     End Class
+
+    ''' <summary>Warum ein Katalogindex nicht begonnen hat.</summary>
+    Public Enum CatalogIndexNotStartedReason
+        ''' <summary>Er hat begonnen.</summary>
+        None
+        ''' <summary>Keiner der Ordner existiert oder ist erreichbar (ausgehaengte Platte,
+        ''' fehlende Einbindung im Behaelter).</summary>
+        NoReachableFolders
+        ''' <summary>Ein anderer Rechner haelt den Katalog (CatalogLockState.HeldElsewhere); diese
+        ''' Sitzung arbeitet mit einem leeren Katalog, und vom Lauf bliebe nichts.</summary>
+        CatalogHeldElsewhere
+        ''' <summary>Der Datenordner ist nicht erreichbar (CatalogLockState.Unavailable); ebenfalls
+        ''' ein leerer Katalog fuer die Sitzung.</summary>
+        CatalogUnavailable
+        ''' <summary>In diesem Prozess laeuft schon ein Index.</summary>
+        AlreadyRunning
+        ''' <summary>Ein anderes Fenster haelt die Schreibsperre (BackgroundRunLock).</summary>
+        OtherWindow
+    End Enum
 
     ''' <summary>Wie weit der Lauf ist. Der Gesamtstand steht erst, wenn die Ordner durchgezaehlt
     ''' sind - bis dahin ist <see cref="Total"/> null und die Anzeige sagt "wird gesucht".</summary>
@@ -101,6 +132,11 @@ Namespace Services
         Private Shared ReadOnly _runLock As New Object()
         Private Shared _stopSource As CancellationTokenSource
         Private Shared _running As Boolean
+
+        ''' <summary>Fuer den Pruefstand: der Zustand des Katalogs, wie ihn NUR dieser Lauf sieht.
+        ''' Nothing fragt <see cref="CatalogLock.State"/>. Bewusst nicht die Sperre selbst
+        ''' umgestellt: an ihr haengt der Pfad der Datenbank fuer den ganzen Prozess.</summary>
+        Friend Shared CatalogStateOverride As CatalogLockState?
 
         ''' <summary>Laeuft gerade einer?</summary>
         Public Shared ReadOnly Property IsRunning As Boolean
@@ -202,21 +238,23 @@ Namespace Services
             Dim result As New CatalogIndexResult()
             Dim roots = If(folders Is Nothing, ConfiguredFolders(),
                            folders.Where(Function(f) Not String.IsNullOrWhiteSpace(f) AndAlso Directory.Exists(f)).ToList())
-            If roots.Count = 0 Then Return result
-            ' Ohne den Katalog (ein anderer Rechner hat ihn, CatalogLock) bliebe vom Lauf nichts.
-            If Not CatalogLock.HasCatalog Then
-                result.NotStarted = True
-                Return result
-            End If
+            If roots.Count = 0 Then Return NotStartedBecause(result, CatalogIndexNotStartedReason.NoReachableFolders, folders)
+            ' Ohne den Katalog (ein anderer Rechner hat ihn, oder der Datenordner fehlt; CatalogLock)
+            ' bliebe vom Lauf nichts.
+            Select Case If(CatalogStateOverride, CatalogLock.State)
+                Case CatalogLockState.HeldElsewhere
+                    Return NotStartedBecause(result, CatalogIndexNotStartedReason.CatalogHeldElsewhere, folders)
+                Case CatalogLockState.Unavailable
+                    Return NotStartedBecause(result, CatalogIndexNotStartedReason.CatalogUnavailable, folders)
+            End Select
 
             ' HOECHSTENS EIN DURCHLAUF. Wer abgewiesen wird, bekommt das GEMELDET und nicht nur ein
-            ' leeres Ergebnis - sonst haelt er seinen Anzeigezustand fuer beendet und setzt ihn
-            ' zurueck, waehrend der erste Lauf weiterarbeitet.
+            ' leeres Ergebnis - sonst sagte seine Anzeige "Keine Bilder gefunden", waehrend der
+            ' erste Lauf weiterarbeitet.
             Dim stopSource As CancellationTokenSource = Nothing
             SyncLock _runLock
                 If _running Then
-                    result.NotStarted = True
-                    Return result
+                    Return NotStartedBecause(result, CatalogIndexNotStartedReason.AlreadyRunning, folders)
                 End If
                 stopSource = New CancellationTokenSource()
                 _stopSource = stopSource
@@ -233,9 +271,7 @@ Namespace Services
                     _stopSource = Nothing
                     stopSource.Dispose()
                 End SyncLock
-                result.NotStarted = True
-                result.BlockedByOtherWindow = True
-                Return result
+                Return NotStartedBecause(result, CatalogIndexNotStartedReason.OtherWindow, roots)
             End If
 
             ' Die Zeitmessung nur mit eingeschaltetem Protokoll (sonst Nothing, siehe
@@ -302,6 +338,36 @@ Namespace Services
             Return result
         End Function
 
+        ''' <summary>Vermerkt den Grund eines Nichtstarts im Ergebnis und im Protokoll. Die Zeile
+        ''' ist der einzige Ort, an dem ein Lauf ohne Fenster (Behaelter, Server) sagt, warum er
+        ''' nichts tut.</summary>
+        Private Shared Function NotStartedBecause(result As CatalogIndexResult,
+                                                  reason As CatalogIndexNotStartedReason,
+                                                  folders As IEnumerable(Of String)) As CatalogIndexResult
+            result.NotStartedReason = reason
+            Dim detail As String
+            Select Case reason
+                Case CatalogIndexNotStartedReason.NoReachableFolders
+                    Dim named = If(folders, If(AppSettingsService.Load().CatalogWatchFolders, New List(Of String)()))
+                    detail = "no folder exists or is reachable: " & String.Join(" | ", named)
+                Case CatalogIndexNotStartedReason.CatalogHeldElsewhere
+                    Dim holder = CatalogLock.Holder
+                    detail = "another computer holds the catalog" &
+                             If(holder IsNot Nothing, $" ({holder.Machine}, process {holder.ProcessId})", "") &
+                             ", this session works on an empty catalog"
+                Case CatalogIndexNotStartedReason.CatalogUnavailable
+                    detail = "the data folder is not reachable, this session works on an empty catalog"
+                Case CatalogIndexNotStartedReason.AlreadyRunning
+                    detail = "an index run is already active in this window"
+                Case CatalogIndexNotStartedReason.OtherWindow
+                    detail = "another window holds the background run lock"
+                Case Else
+                    detail = reason.ToString()
+            End Select
+            DiagnosticLogService.LogAlways("CatalogIndex.NotStarted", detail)
+            Return result
+        End Function
+
         ''' <summary>Wie viele Beispielpfade die Zeile zu den Eintraegen ohne Datei nennt.</summary>
         Private Const OrphanExampleCount As Integer = 10
 
@@ -337,6 +403,10 @@ Namespace Services
                 result.Cancelled = True
                 Return Nothing
             End If
+            ' Bis die Liste steht, zeigt die Anzeige nur "Bilder werden gesucht...". Ueber einen
+            ' grossen Bestand auf einer Netzfreigabe dauert das Minuten; ohne diese Zeile laesst sich
+            ' von aussen (Behaelter, Server) nicht sagen, ob der Lauf zaehlt oder nie begann.
+            DiagnosticLogService.LogAlways("CatalogIndex.Collect", $"collecting files in {String.Join(" | ", roots)}")
             Dim files = CollectFromRoots(roots, token)
             If token.IsCancellationRequested Then
                 result.Cancelled = True
@@ -593,7 +663,9 @@ Namespace Services
 
         ''' <summary>Hat sich seit dem letzten Lauf nichts geaendert? Verglichen werden Bilddatei,
         ''' Beistelldateien und das Format der gespeicherten Zusammenfassungen - Letzteres, weil ein
-        ''' Eintrag aus einer aelteren Fassung oder einer anderen Anzeigesprache stammen kann.</summary>
+        ''' Eintrag aus einer aelteren Fassung oder einer anderen Anzeigesprache stammen kann.
+        ''' Die Zeiten als Zeitpunkte (<see cref="FileTimeStamp"/>): ein Neustart unter einer
+        ''' anderen Zeitzone laesst den Bestand stehen.</summary>
         Private Shared Function IsUnchanged(stamps As Dictionary(Of String, CatalogIndexStamp),
                                             filePath As String, info As FileInfo,
                                             summaryFormat As String,
@@ -601,8 +673,8 @@ Namespace Services
             Dim stamp As CatalogIndexStamp = Nothing
             If Not stamps.TryGetValue(filePath, stamp) Then Return False
             If Not String.Equals(stamp.SummaryFormat, If(summaryFormat, ""), StringComparison.Ordinal) Then Return False
-            If Not String.Equals(stamp.SourceModifiedAt, info.LastWriteTime.ToString("o"), StringComparison.Ordinal) Then Return False
-            Return String.Equals(stamp.SidecarModifiedAt, sidecars.StampFor(filePath), StringComparison.Ordinal)
+            If Not FileTimeStamp.Matches(stamp.SourceModifiedAt, info.LastWriteTime) Then Return False
+            Return FileTimeStamp.SameText(stamp.SidecarModifiedAt, sidecars.StampFor(filePath))
         End Function
 
         ''' <summary>Die Auflistung der Beistelldateien fuer diesen Ordner: die vorhandene, wenn sie

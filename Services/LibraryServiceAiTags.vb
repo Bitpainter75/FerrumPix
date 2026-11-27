@@ -36,9 +36,11 @@ Namespace Services
         Public Property ModelKey As String
         Public Property ModelVersion As String
 
-        ''' <summary>Weicht der gemerkte Stand vom heutigen ab?</summary>
+        ''' <summary>Weicht der gemerkte Stand vom heutigen ab? Die Zeit als Zeitpunkt
+        ''' (<see cref="FileTimeStamp"/>): eine andere Zeitzone schickt den Bestand nicht noch einmal
+        ''' durch das Modell.</summary>
         Public Function Differs(sourceModifiedAt As String, modelKey As String, modelVersion As String) As Boolean
-            Return Not String.Equals(If(Me.SourceModifiedAt, ""), If(sourceModifiedAt, ""), StringComparison.Ordinal) OrElse
+            Return Not FileTimeStamp.SameText(Me.SourceModifiedAt, sourceModifiedAt) OrElse
                    Not String.Equals(If(Me.ModelKey, ""), If(modelKey, ""), StringComparison.Ordinal) OrElse
                    Not String.Equals(If(Me.ModelVersion, ""), If(modelVersion, ""), StringComparison.Ordinal)
         End Function

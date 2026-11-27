@@ -1183,7 +1183,22 @@ Namespace Services
             "Profile Date/Time", "Version", "Copyright"
         }
 
+        ''' <summary>Die Zusammenfassung fuer den Katalog, IMMER in der Sprache der Anwendung.
+        '''
+        ''' Der Stempel (<see cref="CurrentSummaryFormat"/>) nennt die Sprache der Anwendung, die
+        ''' Texte kaemen ueber T() aber aus der Sprache des laufenden Ablaufs - und die ist im Browser
+        ''' die des Benutzers, der gerade anfragt (LocalizationService.TextCulture). Ohne den Riegel
+        ''' stuende nach dem Hochladen eines Benutzers mit anderer Sprache eine fremdsprachige Zeile
+        ''' unter dem Stempel der Anwendung im Katalog, fuer alle sichtbar und als frisch
+        ''' geltend.</summary>
         Public Shared Function BuildCatalogSummary(data As ExifData, Optional fields As ExifSearchFields = Nothing) As ExifCatalogSummary
+            If Not LocalizationService.HasRequestCulture Then Return BuildCatalogSummaryCore(data, fields)
+            Using LocalizationService.UseRequestCulture(Nothing)
+                Return BuildCatalogSummaryCore(data, fields)
+            End Using
+        End Function
+
+        Private Shared Function BuildCatalogSummaryCore(data As ExifData, fields As ExifSearchFields) As ExifCatalogSummary
             Return New ExifCatalogSummary With {
                 .HasExifMetadata = data IsNot Nothing AndAlso data.ExifTags IsNot Nothing AndAlso data.ExifTags.Count > 0,
                 .HasIptcMetadata = data IsNot Nothing AndAlso data.IptcTags IsNot Nothing AndAlso data.IptcTags.Count > 0,

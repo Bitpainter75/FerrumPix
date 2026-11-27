@@ -13801,4 +13801,19 @@
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>コンピューターでは、パスワードを設定すると、起動時、設定した時間操作がなかった後、CTRL+L を押したときにサインイン画面が表示されます。ブラウザーではここは管理者のパスワードで、独自のものです。パスワードが守るのは実行中のアプリケーションで、写真ではありません。ファイルはディスク上で引き続き読み取れます。</value>
   </data>
+  <data name="Keiner_der_berwachten_Ordner_ist_erreichbar_6a5eecb9" xml:space="preserve">
+    <value>監視フォルダーのいずれにもアクセスできません</value>
+  </data>
+  <data name="Keiner_der_gew_hlten_Ordner_ist_erreichbar_29a46551" xml:space="preserve">
+    <value>選択したフォルダーのいずれにもアクセスできません</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_ein_ande_7811deba" xml:space="preserve">
+    <value>このセッションではインデックスを作成しません：別のコンピューターがカタログを使用しています</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_der_Date_c697d43c" xml:space="preserve">
+    <value>このセッションではインデックスを作成しません：データフォルダーにアクセスできません</value>
+  </data>
+  <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
+    <value>カタログのインデックス作成はすでに実行中です</value>
+  </data>
 </root>

@@ -93,28 +93,46 @@ Namespace ViewModels
 
             ' Die Anzeige zurueckstellen, und ERST DANACH den Riegel freigeben (siehe LeaveRun).
             '
-            ' Abgewiesen? Dann laeuft ein anderer noch, und ihm gehoert die Anzeige - hier still
-            ' zurueckziehen, ohne ihm Stopp-Knopf und Fortschritt wegzunehmen. Seit dem Riegel kann
-            ' das nur noch ein Lauf sein, der gar nicht ueber dieses ViewModel gestartet wurde.
+            ' AUF JEDEM WEG, auch nach einem Nichtstart. Die Anzeige gehoert diesem Aufruf: er hat
+            ' sie oben gesetzt, und ein Lauf, der nicht ueber dieses ViewModel kam, meldet hier
+            ' ohnehin nichts hinein. Blieb sie nach einem Nichtstart stehen (kein Katalog in dieser
+            ' Sitzung), stand "Bilder werden gesucht..." fuer den Rest der Sitzung da.
             '
             ' NICHT in einem Finally: VB laesst dort kein Await zu. Der Block faengt deshalb selbst,
             ' damit LeaveRun auf jedem Weg erreicht wird - sonst bliebe der Riegel liegen und der
             ' Index waere fuer den Rest der Sitzung gesperrt.
             Try
-                If result IsNot Nothing AndAlso result.BlockedByOtherWindow Then
-                    ' Ein anderes Fenster schreibt gerade. Hier warten hilft nicht - also
-                    ' zuruecksetzen und sagen, woran es liegt.
-                    Await SetRunningAsync(False).ConfigureAwait(False)
-                    Await SetStatusAsync(LocalizationService.T("Ein anderes Fenster arbeitet gerade am Katalog"),
-                                         0, False).ConfigureAwait(False)
-                ElseIf result Is Nothing OrElse Not result.NotStarted Then
-                    Await SetRunningAsync(False).ConfigureAwait(False)
+                Await SetRunningAsync(False).ConfigureAwait(False)
+                If result IsNot Nothing AndAlso result.NotStarted Then
+                    Await SetStatusAsync(DescribeNotStarted(result.NotStartedReason, folders), 0, False).ConfigureAwait(False)
+                Else
                     Await SetStatusAsync(SummarizeResult(result), 100, False).ConfigureAwait(False)
                 End If
             Catch ex As Exception
                 DiagnosticLogService.LogException("CatalogIndex.Finish", ex)
             End Try
             LeaveRun()
+        End Function
+
+        ''' <summary>Warum der Lauf nicht begonnen hat, in einem Satz. Jeder Grund sagt, was zu tun
+        ''' ist: auf den anderen Rechner oder das andere Fenster warten, den Ordner einhaengen.</summary>
+        ''' <param name="folders">Nothing heisst: die ueberwachten Ordner aus den Einstellungen.</param>
+        Friend Shared Function DescribeNotStarted(reason As CatalogIndexNotStartedReason,
+                                                  folders As IReadOnlyList(Of String)) As String
+            Select Case reason
+                Case CatalogIndexNotStartedReason.NoReachableFolders
+                    Return If(folders Is Nothing,
+                              LocalizationService.T("Keiner der überwachten Ordner ist erreichbar"),
+                              LocalizationService.T("Keiner der gewählten Ordner ist erreichbar"))
+                Case CatalogIndexNotStartedReason.CatalogHeldElsewhere
+                    Return LocalizationService.T("Der Index läuft in dieser Sitzung nicht: ein anderer Rechner benutzt den Katalog")
+                Case CatalogIndexNotStartedReason.CatalogUnavailable
+                    Return LocalizationService.T("Der Index läuft in dieser Sitzung nicht: der Datenordner ist nicht erreichbar")
+                Case CatalogIndexNotStartedReason.AlreadyRunning
+                    Return LocalizationService.T("Der Katalogindex läuft bereits")
+                Case Else
+                    Return LocalizationService.T("Ein anderes Fenster arbeitet gerade am Katalog")
+            End Select
         End Function
 
         ''' <summary>Fasst zusammen, was der Lauf gebracht hat. Bewusst in Saetzen, die ein Mensch

@@ -63,7 +63,8 @@ Namespace Services
                     cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                     Dim r = cmd.ExecuteScalar()
                     If r Is Nothing OrElse TypeOf r Is DBNull Then Return True
-                    Return Not String.Equals(CStr(r), If(sourceModifiedAt, ""), StringComparison.Ordinal)
+                    ' Die Zeit darin als Zeitpunkt, auf der groberen Genauigkeit (FileTimeStamp).
+                    Return Not FileTimeStamp.SameText(CStr(r), sourceModifiedAt)
                 End Using
             End Using
         End Function

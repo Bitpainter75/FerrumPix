@@ -13805,4 +13805,19 @@
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>컴퓨터에서는 암호가 있으면 시작할 때, 설정한 시간 동안 입력이 없을 때, CTRL+L을 누를 때 로그인 창이 나타납니다. 브라우저에서는 여기서 관리자 암호가 적용되며, 별도의 암호입니다. 암호는 실행 중인 애플리케이션을 보호할 뿐 사진을 보호하지 않습니다. 파일은 디스크에서 계속 읽을 수 있습니다.</value>
   </data>
+  <data name="Keiner_der_berwachten_Ordner_ist_erreichbar_6a5eecb9" xml:space="preserve">
+    <value>감시 중인 폴더에 모두 접근할 수 없습니다</value>
+  </data>
+  <data name="Keiner_der_gew_hlten_Ordner_ist_erreichbar_29a46551" xml:space="preserve">
+    <value>선택한 폴더에 모두 접근할 수 없습니다</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_ein_ande_7811deba" xml:space="preserve">
+    <value>이 세션에서는 색인이 실행되지 않습니다: 다른 컴퓨터가 카탈로그를 사용 중입니다</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_der_Date_c697d43c" xml:space="preserve">
+    <value>이 세션에서는 색인이 실행되지 않습니다: 데이터 폴더에 접근할 수 없습니다</value>
+  </data>
+  <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
+    <value>카탈로그 색인이 이미 실행 중입니다</value>
+  </data>
 </root>

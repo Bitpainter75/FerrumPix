@@ -13760,4 +13760,19 @@
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>No computador, com palavra-passe, aparece uma janela de início de sessão ao iniciar, após o tempo definido sem atividade e com CTRL+L. No navegador vale aqui a palavra-passe do administrador, uma própria. A palavra-passe protege a aplicação em execução, não as fotos: os ficheiros continuam legíveis no disco.</value>
   </data>
+  <data name="Keiner_der_berwachten_Ordner_ist_erreichbar_6a5eecb9" xml:space="preserve">
+    <value>Nenhuma das pastas monitorizadas está acessível</value>
+  </data>
+  <data name="Keiner_der_gew_hlten_Ordner_ist_erreichbar_29a46551" xml:space="preserve">
+    <value>Nenhuma das pastas escolhidas está acessível</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_ein_ande_7811deba" xml:space="preserve">
+    <value>O índice não é executado nesta sessão: outro computador usa o catálogo</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_der_Date_c697d43c" xml:space="preserve">
+    <value>O índice não é executado nesta sessão: a pasta de dados está inacessível</value>
+  </data>
+  <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
+    <value>O índice do catálogo já está em execução</value>
+  </data>
 </root>

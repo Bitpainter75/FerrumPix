@@ -13780,4 +13780,19 @@
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>On the computer, a password brings up a sign-in window at start, after the set time without input and with CTRL+L. In the browser this is the administrator password, one of its own. The password protects the running application, not the photos: the files stay readable on the disk.</value>
   </data>
+  <data name="Keiner_der_berwachten_Ordner_ist_erreichbar_6a5eecb9" xml:space="preserve">
+    <value>None of the watched folders is reachable</value>
+  </data>
+  <data name="Keiner_der_gew_hlten_Ordner_ist_erreichbar_29a46551" xml:space="preserve">
+    <value>None of the selected folders is reachable</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_ein_ande_7811deba" xml:space="preserve">
+    <value>The index does not run in this session: another computer is using the catalogue</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_der_Date_c697d43c" xml:space="preserve">
+    <value>The index does not run in this session: the data folder is not reachable</value>
+  </data>
+  <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
+    <value>The catalogue index is already running</value>
+  </data>
 </root>

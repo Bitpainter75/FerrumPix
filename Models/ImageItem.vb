@@ -1771,6 +1771,50 @@ Namespace Models
         Private _fileInfoLoaded As Boolean = False
         Private _residentLruNode As LinkedListNode(Of ImageItem)
         Private _isPinnedVisible As Boolean = False
+        ''' <summary>Wie viele Kacheln einer Galerieansicht dieses Element gerade zeigen, gezaehlt
+        ''' vom Repeater selbst (ElementPrepared und ElementClearing, siehe
+        ''' <see cref="RealizedTileThumbnails"/>). Unter _thumbnailQueueLock lesen und schreiben.
+        '''
+        ''' DAS IST DIE WAHRHEIT UEBER DAS SICHTBARE. <see cref="_isPinnedVisible"/> setzt der
+        ''' ViewportThumbnailTracker aus einem GERECHNETEN Bereich (Rollversatz durch Zeilenhoehe,
+        ''' Tabellen der Fotowand und Gruppenansicht). Lag die Rechnung daneben, waren die wirklich
+        ''' gezeigten Kacheln weder angefragt noch vor der Verdraengung geschuetzt; sobald der
+        ''' Speicher voll war, bekamen sie gar kein Bild mehr (Nutzerbefund: 25 000 Bilder
+        ''' rekursiv, Speicher 1000, nur die ersten Kacheln mit Bild).</summary>
+        Private _realizedTileCount As Integer = 0
+
+        ''' <summary>Vor der Verdraengung geschuetzt: gerechnet sichtbar ODER als Kachel aufgebaut.
+        ''' Unter _thumbnailQueueLock aufrufen.</summary>
+        Private Function IsProtectedFromEvictionLocked() As Boolean
+            Return _isPinnedVisible OrElse _realizedTileCount > 0
+        End Function
+
+        ''' <summary>Eine Kachel zeigt jetzt dieses Element: schuetzen und sofort mit dem Vorrang
+        ''' des Sichtbaren anfragen. Ein schon geladenes Bild wird nur als zuletzt genutzt
+        ''' vermerkt.</summary>
+        Public Sub MarkTileRealized()
+            SyncLock _thumbnailQueueLock
+                _realizedTileCount += 1
+            End SyncLock
+            If IsImage Then QueueThumbnail(ViewportThumbnailPriority)
+        End Sub
+
+        ''' <summary>Eine Kachel zeigt dieses Element nicht mehr. Das Bild bleibt im Speicher und
+        ''' faellt nur noch ueber die normale Verdraengung.</summary>
+        Public Sub MarkTileCleared()
+            SyncLock _thumbnailQueueLock
+                If _realizedTileCount > 0 Then _realizedTileCount -= 1
+            End SyncLock
+        End Sub
+
+        ''' <summary>Zeigt gerade mindestens eine Kachel dieses Element?</summary>
+        Public ReadOnly Property IsRealizedAsTile As Boolean
+            Get
+                SyncLock _thumbnailQueueLock
+                    Return _realizedTileCount > 0
+                End SyncLock
+            End Get
+        End Property
 
         ' Ein bei ~480px Cache-Breite dekodiertes Thumbnail liegt typischerweise bei ca. 400-700KB
         ' (Bgra8888). Der Cap bindet die dauerhaft im Speicher gehaltenen, bereits gesehenen
@@ -1842,7 +1886,7 @@ Namespace Models
             While _residentLru.Count > _maxResidentThumbnails AndAlso node IsNot Nothing
                 Dim nextNode = node.Next
                 Dim candidate = node.Value
-                If Not candidate._isPinnedVisible Then
+                If Not candidate.IsProtectedFromEvictionLocked() Then
                     _residentLru.Remove(node)
                     candidate._residentLruNode = Nothing
                     candidate._thumbState = 0
@@ -2525,8 +2569,10 @@ Namespace Models
                     ToList()
                 Dim requestedSet = New HashSet(Of ImageItem)(requested)
 
+                ' Aufgebaute Kacheln behalten ihren Platz in der sichtbaren Schlange, auch wenn der
+                ' gerechnete Bereich sie nicht nennt (siehe _realizedTileCount).
                 For Each queued In _viewportQueue.ToList()
-                    If requestedSet.Contains(queued) Then Continue For
+                    If requestedSet.Contains(queued) OrElse queued._realizedTileCount > 0 Then Continue For
                     queued._inViewportQueue = False
                     If Not queued._inBackgroundQueue AndAlso Not queued._isThumbnailLoading AndAlso queued._thumbState = 1 Then
                         ' Nicht komplett aus jeder Warteschlange werfen (state=0) - das würde das
@@ -2538,7 +2584,7 @@ Namespace Models
                         _backgroundQueue.Add(queued)
                     End If
                 Next
-                _viewportQueue.RemoveAll(Function(i) Not requestedSet.Contains(i))
+                _viewportQueue.RemoveAll(Function(i) Not requestedSet.Contains(i) AndAlso i._realizedTileCount = 0)
 
                 For Each item In requested
                     item._evictThumbnailAfterLoad = False
@@ -2661,7 +2707,7 @@ Namespace Models
         Private Shared Function TakeBackgroundItemsWhileRoomLocked() As Boolean
             While _backgroundQueue.Count > 0
                 Dim candidate = _backgroundQueue(_backgroundQueue.Count - 1)
-                If candidate._residentLruNode IsNot Nothing OrElse candidate._isPinnedVisible OrElse
+                If candidate._residentLruNode IsNot Nothing OrElse candidate.IsProtectedFromEvictionLocked() OrElse
                    _residentLru.Count < _maxResidentThumbnails Then Return True
                 _backgroundQueue.RemoveAt(_backgroundQueue.Count - 1)
                 candidate._inBackgroundQueue = False
@@ -3106,6 +3152,9 @@ Namespace Models
         ''' auslöst. Safe to call concurrently — does not touch viewport-queue items.
         Public Sub EvictThumbnail()
             SyncLock _thumbnailQueueLock
+                ' Eine aufgebaute Kachel bleibt angefragt, auch wenn der gerechnete Bereich sie
+                ' verlassen hat: der Repeater zeigt sie, also wird ihr Bild gebraucht.
+                If _realizedTileCount > 0 Then Return
                 If _thumbState = 1 AndAlso _inBackgroundQueue Then
                     _backgroundQueue.Remove(Me)
                     _inBackgroundQueue = False
@@ -3157,7 +3206,7 @@ Namespace Models
                 While node IsNot Nothing
                     Dim nextNode = node.Next
                     Dim candidate = node.Value
-                    If candidate._isPinnedVisible Then
+                    If candidate.IsProtectedFromEvictionLocked() Then
                         visible.Add(candidate)
                     Else
                         _residentLru.Remove(node)

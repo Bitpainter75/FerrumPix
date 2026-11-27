@@ -13805,4 +13805,19 @@
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>कंप्यूटर पर पासवर्ड होने पर साइन-इन विंडो शुरू होने पर, तय समय तक कोई इनपुट न होने पर और CTRL+L दबाने पर दिखाई देती है। ब्राउज़र में यहाँ एडमिनिस्ट्रेटर का पासवर्ड लागू होता है, जो अपना अलग है। पासवर्ड चल रहे ऐप्लिकेशन की रक्षा करता है, फ़ोटो की नहीं: फ़ाइलें डिस्क पर पढ़ने योग्य रहती हैं।</value>
   </data>
+  <data name="Keiner_der_berwachten_Ordner_ist_erreichbar_6a5eecb9" xml:space="preserve">
+    <value>निगरानी वाले फ़ोल्डरों में से कोई भी उपलब्ध नहीं है</value>
+  </data>
+  <data name="Keiner_der_gew_hlten_Ordner_ist_erreichbar_29a46551" xml:space="preserve">
+    <value>चुने गए फ़ोल्डरों में से कोई भी उपलब्ध नहीं है</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_ein_ande_7811deba" xml:space="preserve">
+    <value>इस सत्र में इंडेक्स नहीं चलता: कोई दूसरा कंप्यूटर कैटलॉग का उपयोग कर रहा है</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_der_Date_c697d43c" xml:space="preserve">
+    <value>इस सत्र में इंडेक्स नहीं चलता: डेटा फ़ोल्डर उपलब्ध नहीं है</value>
+  </data>
+  <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
+    <value>कैटलॉग इंडेक्स पहले से चल रहा है</value>
+  </data>
 </root>

@@ -8776,13 +8776,13 @@ Namespace ViewModels
         ''' dasselbe für die XMP-Beistelldatei. Sie muss getrennt geprüft werden: ein Fremdprogramm
         ''' ändert Bewertung oder Stichworte in "foto.cr2.xmp", ohne die Bilddatei anzufassen - ohne
         ''' diesen zweiten Vergleich bliebe der Eintrag "frisch" und der Import liefe nie an.
+        ''' Beide Zeiten als Zeitpunkte (FileTimeStamp), wie im Katalogindex: eine andere Zeitzone
+        ''' oder eine Ablage mit weniger Nachkommastellen laesst den Ordner nicht neu einlesen.
         Private Shared Function IsScannedSnapshotFresh(scannedSourceModifiedAt As String, currentModified As DateTime,
                                                        scannedSidecarModifiedAt As String, currentSidecar As String) As Boolean
             If String.IsNullOrWhiteSpace(scannedSourceModifiedAt) Then Return False
-            Dim scanned As DateTime
-            If Not DateTime.TryParse(scannedSourceModifiedAt, Globalization.CultureInfo.InvariantCulture, Globalization.DateTimeStyles.RoundtripKind, scanned) Then Return False
-            If scanned <> currentModified Then Return False
-            Return String.Equals(If(scannedSidecarModifiedAt, ""), If(currentSidecar, ""), StringComparison.Ordinal)
+            If Not FileTimeStamp.Matches(scannedSourceModifiedAt, currentModified) Then Return False
+            Return FileTimeStamp.SameText(scannedSidecarModifiedAt, currentSidecar)
         End Function
 
         ''' <summary>Snapshot-Vergleich: Der SQLite-Katalog invalidiert sich sonst nie automatisch bei

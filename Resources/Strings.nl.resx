@@ -13801,4 +13801,19 @@
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>Op de computer verschijnt met een wachtwoord bij het starten, na de ingestelde tijd zonder invoer en met CTRL+L een aanmeldvenster. In de browser geldt hier het wachtwoord van de beheerder, een eigen wachtwoord. Het wachtwoord beschermt de draaiende toepassing, niet de foto's: de bestanden blijven leesbaar op de schijf.</value>
   </data>
+  <data name="Keiner_der_berwachten_Ordner_ist_erreichbar_6a5eecb9" xml:space="preserve">
+    <value>Geen van de bewaakte mappen is bereikbaar</value>
+  </data>
+  <data name="Keiner_der_gew_hlten_Ordner_ist_erreichbar_29a46551" xml:space="preserve">
+    <value>Geen van de gekozen mappen is bereikbaar</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_ein_ande_7811deba" xml:space="preserve">
+    <value>De index draait niet in deze sessie: een andere computer gebruikt de catalogus</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_der_Date_c697d43c" xml:space="preserve">
+    <value>De index draait niet in deze sessie: de gegevensmap is niet bereikbaar</value>
+  </data>
+  <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
+    <value>De catalogusindex draait al</value>
+  </data>
 </root>

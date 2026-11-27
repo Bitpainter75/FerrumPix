@@ -13801,4 +13801,19 @@
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>På datamaskinen vises med passord et påloggingsvindu ved oppstart, etter den innstilte tiden uten inndata og med CTRL+L. I nettleseren gjelder her administratorens passord, et eget. Passordet beskytter programmet som kjører, ikke bildene: filene ligger fortsatt lesbare på disken.</value>
   </data>
+  <data name="Keiner_der_berwachten_Ordner_ist_erreichbar_6a5eecb9" xml:space="preserve">
+    <value>Ingen av de overvåkede mappene kan nås</value>
+  </data>
+  <data name="Keiner_der_gew_hlten_Ordner_ist_erreichbar_29a46551" xml:space="preserve">
+    <value>Ingen av de valgte mappene kan nås</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_ein_ande_7811deba" xml:space="preserve">
+    <value>Indeksen kjører ikke i denne økten: en annen datamaskin bruker katalogen</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_der_Date_c697d43c" xml:space="preserve">
+    <value>Indeksen kjører ikke i denne økten: datamappen kan ikke nås</value>
+  </data>
+  <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
+    <value>Katalogindeksen kjører allerede</value>
+  </data>
 </root>

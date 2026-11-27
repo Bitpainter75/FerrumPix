@@ -13779,4 +13779,19 @@
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>Am Rechner erscheint mit Kennwort beim Start, nach der eingestellten Zeit ohne Eingabe und mit STRG+L ein Anmeldefenster. Im Browser gilt hier das Kennwort des Administrators, ein eigenes. Das Kennwort schützt die laufende Anwendung, nicht die Fotos: die Dateien liegen weiter offen auf der Platte.</value>
   </data>
+  <data name="Keiner_der_berwachten_Ordner_ist_erreichbar_6a5eecb9" xml:space="preserve">
+    <value>Keiner der überwachten Ordner ist erreichbar</value>
+  </data>
+  <data name="Keiner_der_gew_hlten_Ordner_ist_erreichbar_29a46551" xml:space="preserve">
+    <value>Keiner der gewählten Ordner ist erreichbar</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_ein_ande_7811deba" xml:space="preserve">
+    <value>Der Index läuft in dieser Sitzung nicht: ein anderer Rechner benutzt den Katalog</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_der_Date_c697d43c" xml:space="preserve">
+    <value>Der Index läuft in dieser Sitzung nicht: der Datenordner ist nicht erreichbar</value>
+  </data>
+  <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
+    <value>Der Katalogindex läuft bereits</value>
+  </data>
 </root>

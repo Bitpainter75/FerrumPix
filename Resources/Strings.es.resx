@@ -13761,4 +13761,19 @@
   <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
     <value>En el ordenador, con contraseña aparece una ventana de inicio de sesión al iniciar, tras el tiempo configurado sin actividad y con CTRL+L. En el navegador aquí vale la contraseña del administrador, una propia. La contraseña protege la aplicación en ejecución, no las fotos: los archivos siguen siendo legibles en el disco.</value>
   </data>
+  <data name="Keiner_der_berwachten_Ordner_ist_erreichbar_6a5eecb9" xml:space="preserve">
+    <value>Ninguna de las carpetas supervisadas está accesible</value>
+  </data>
+  <data name="Keiner_der_gew_hlten_Ordner_ist_erreichbar_29a46551" xml:space="preserve">
+    <value>Ninguna de las carpetas elegidas está accesible</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_ein_ande_7811deba" xml:space="preserve">
+    <value>El índice no se ejecuta en esta sesión: otro equipo está usando el catálogo</value>
+  </data>
+  <data name="Der_Index_l_uft_in_dieser_Sitzung_nicht_der_Date_c697d43c" xml:space="preserve">
+    <value>El índice no se ejecuta en esta sesión: la carpeta de datos no está accesible</value>
+  </data>
+  <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
+    <value>El índice del catálogo ya se está ejecutando</value>
+  </data>
 </root>
