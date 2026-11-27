@@ -131,6 +131,13 @@ Namespace Services
             ''' ihm: nach dem fertigen Download, beim Ablauf, beim Verdraengen. Nothing bei einem
             ''' Angebot von Dateien aus dem Bestand.</summary>
             Public OwnedFolder As String
+            ''' <summary>Wie viele Auslieferungen gerade laufen. Solange es eine gibt, bleibt der
+            ''' eigene Ordner liegen, auch wenn das Angebot schon weg ist; die letzte nimmt ihn mit.
+            ''' Gelesen und geschrieben nur unter der Sperre von Offers.</summary>
+            Public ActiveDeliveries As Integer
+            ''' <summary>Das Angebot ist aus Offers heraus (ausgeliefert, abgelaufen, verdraengt,
+            ''' Bruecke angehalten); sein Ordner geht, sobald keine Auslieferung mehr laeuft.</summary>
+            Public Retired As Boolean
         End Class
 
         ''' <summary>Die Texte der Seite in der Sprache der Anwendung. Sie stehen hier und nicht in
@@ -651,21 +658,21 @@ Namespace Services
                 .FileName = If(files.Count = 1, Path.GetFileName(files(0)),
                                $"FerrumPix_{DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}_{files.Count.ToString(CultureInfo.InvariantCulture)}.zip")}
             Dim id = Convert.ToHexString(RandomNumberGenerator.GetBytes(16))
-            Dim dropped As New List(Of DownloadOffer)()
+            Dim dropped As New List(Of String)()
             SyncLock Offers
                 For Each stale In Offers.Where(Function(o) DateTime.UtcNow - o.Value.Created > OfferLifetime).Select(Function(o) o.Key).ToList()
-                    dropped.Add(Offers(stale))
+                    dropped.Add(RetireOffer(Offers(stale)))
                     Offers.Remove(stale)
                 Next
                 While Offers.Count >= MaxOffers
                     Dim oldest = Offers.OrderBy(Function(o) o.Value.Created).First().Key
-                    dropped.Add(Offers(oldest))
+                    dropped.Add(RetireOffer(Offers(oldest)))
                     Offers.Remove(oldest)
                 End While
                 Offers(id) = offer
             End SyncLock
-            For Each gone In dropped
-                DeleteDownloadFolder(gone.OwnedFolder)
+            For Each folder In dropped
+                DeleteDownloadFolder(folder)
             Next
             If ownedFolder IsNot Nothing Then EnsureOfferSweep()
 
@@ -698,6 +705,9 @@ Namespace Services
             Dim id = If(request.QueryString("id"), "")
             SyncLock Offers
                 If Not Offers.TryGetValue(id, offer) OrElse DateTime.UtcNow - offer.Created > OfferLifetime Then offer = Nothing
+                ' Ab hier laeuft eine Auslieferung; der Ordner bleibt bis zu ihrem Ende
+                ' (EndDelivery), auch wenn das Angebot unterdessen geht.
+                If offer IsNot Nothing Then offer.ActiveDeliveries += 1
             End SyncLock
             If offer Is Nothing Then
                 context.Response.StatusCode = 404
@@ -706,6 +716,7 @@ Namespace Services
             End If
 
             Dim response = context.Response
+            Dim delivered = False
             Try
                 response.Headers("Cache-Control") = "no-store"
                 response.Headers("Content-Disposition") = ContentDisposition(offer.FileName)
@@ -723,16 +734,7 @@ Namespace Services
                     Await StreamingZipWriter.WriteAsync(response.OutputStream, entries)
                 End If
                 response.Close()
-                ' Was fuer das Ziel "Herunterladen" entstand, liegt nur fuer diesen Download im
-                ' Datenordner: einmal vollstaendig ausgeliefert, geht es samt Angebot. Ein
-                ' abgebrochener Download laesst beides stehen, der Knopf der Seite holt es noch einmal.
-                ' Ein Download ueber einen Verweis meldet der Seite kein Ende; das tut die Bruecke,
-                ' damit der Eintrag verschwindet, sobald die Datei ganz hinausgegangen ist.
-                If offer.OwnedFolder IsNot Nothing Then
-                    ReleaseOwnedOffer(id)
-                Else
-                    NotifyOfferState("delivered", id)
-                End If
+                delivered = True
             Catch ex As Exception When TypeOf ex Is HttpListenerException OrElse TypeOf ex Is IOException OrElse
                                        TypeOf ex Is ObjectDisposedException OrElse TypeOf ex Is UnauthorizedAccessException OrElse
                                        TypeOf ex Is InvalidOperationException
@@ -742,11 +744,47 @@ Namespace Services
                     response.Abort()
                 Catch
                 End Try
+            Finally
+                EndDelivery(offer)
+            End Try
+            If delivered Then
+                ' Was fuer das Ziel "Herunterladen" entstand, liegt nur fuer diesen Download im
+                ' Datenordner: einmal vollstaendig ausgeliefert, geht es samt Angebot. Ein
+                ' abgebrochener Download laesst beides stehen, der Knopf der Seite holt es noch einmal.
+                ' Ein Download ueber einen Verweis meldet der Seite kein Ende; das tut die Bruecke,
+                ' damit der Eintrag verschwindet, sobald die Datei ganz hinausgegangen ist. Laeuft
+                ' noch ein zweiter Abruf desselben Angebots, nimmt erst er den Ordner mit.
+                If offer.OwnedFolder IsNot Nothing Then
+                    ReleaseOwnedOffer(id)
+                Else
+                    NotifyOfferState("delivered", id)
+                End If
+            Else
                 ' Die Seite zeigt den Eintrag dann wieder, mit dem Grund und dem Knopf fuer einen
                 ' neuen Versuch.
                 NotifyOfferState("interrupted", id)
-            End Try
+            End If
         End Function
+
+        ''' <summary>Nimmt ein Angebot aus dem Verkehr und liefert seinen Ordner, wenn er jetzt
+        ''' geloescht werden darf: nur ohne laufende Auslieferung, sonst nimmt ihn deren Ende mit
+        ''' (<see cref="EndDelivery"/>). Nur unter der Sperre von Offers rufen; geloescht wird
+        ''' danach, ausserhalb.</summary>
+        Private Shared Function RetireOffer(offer As DownloadOffer) As String
+            offer.Retired = True
+            Return If(offer.ActiveDeliveries = 0, offer.OwnedFolder, Nothing)
+        End Function
+
+        ''' <summary>Eine Auslieferung ist zu Ende, gelungen oder nicht. War das Angebot inzwischen
+        ''' aus dem Verkehr und war sie die letzte, geht jetzt sein Ordner.</summary>
+        Private Shared Sub EndDelivery(offer As DownloadOffer)
+            Dim folder As String = Nothing
+            SyncLock Offers
+                offer.ActiveDeliveries -= 1
+                If offer.Retired AndAlso offer.ActiveDeliveries = 0 Then folder = offer.OwnedFolder
+            End SyncLock
+            DeleteDownloadFolder(folder)
+        End Sub
 
         ''' <summary>Sagt der Seite, wie ein Download ausging: "delivered" (ganz hinaus),
         ''' "interrupted" (abgebrochen) oder "gone" (das Angebot gilt nicht mehr).</summary>
@@ -816,7 +854,7 @@ Namespace Services
         Private Shared Sub ResetFileTransfers()
             Dim owned As List(Of String)
             SyncLock Offers
-                owned = Offers.Values.Select(Function(o) o.OwnedFolder).Where(Function(f) f IsNot Nothing).ToList()
+                owned = Offers.Values.Select(Function(o) RetireOffer(o)).Where(Function(f) f IsNot Nothing).ToList()
                 Offers.Clear()
             End SyncLock
             For Each folder In owned

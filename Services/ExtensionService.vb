@@ -206,6 +206,10 @@ Namespace Services
         Friend Property DeepEffect As SKRuntimeEffect
         ''' <summary>Verlangt die Rechnung die Lage im Bild (effect mit zwei Eingaben)?</summary>
         Public Property UsesPosition As Boolean
+        ''' <summary>Der Stand des Bestands (ExtensionService.Revision), mit dem sie geladen wurde.
+        ''' Gehoert in den Schluessel eines Ergebnisses, das mit genau dieser Definition gerechnet
+        ''' ist: der Stand, getrennt gelesen, kann schon der naechste sein.</summary>
+        Friend Property LoadRevision As Long
 
         Public ReadOnly Property Name As String
             Get
@@ -566,9 +570,15 @@ Namespace Services
                     definitions.Add(loaded.Definition)
                 Next
             Next
+            ' Jede Definition traegt den Stand, unter dem sie gilt, bevor beides sichtbar wird
+            ' (gerufen nur unter _lock).
+            Dim revision = Interlocked.Read(_revision) + 1
+            For Each definition In definitions
+                definition.LoadRevision = revision
+            Next
             _definitions = definitions
             _failures = failures
-            Interlocked.Increment(_revision)
+            Interlocked.Exchange(_revision, revision)
         End Sub
 
         ''' <summary>Nimmt eine Erweiterungsdatei in den Ordner des Nutzers auf. Sie wird erst

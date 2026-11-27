@@ -25,8 +25,14 @@ Namespace Services
         ''' unterscheiden sich so trotzdem.</summary>
         Public Property MachineId As String = ""
         Public Property ProcessId As Integer
-        ''' <summary>Die Startzeit nach der Uhr DES Rechners, der die Datei schrieb. Nur zur Anzeige
-        ''' und zur Reihenfolge der Nennung, nie zur Entscheidung (siehe CatalogLock).</summary>
+        ''' <summary>Die Kennung dieses einen Laufs, neu bei jedem Start. Sie steht auch im
+        ''' Dateinamen: zwei Flatpak-Instanzen oder Behaelter haben je einen eigenen Raum der
+        ''' Prozessnummern und meist dieselbe niedrige Nummer, Rechnername und machine-id sind
+        ''' ohnehin gleich. Leer in Dateien frueherer Fassungen.</summary>
+        Public Property InstanceId As String = ""
+        ''' <summary>Die Startzeit nach der Uhr DES Rechners, der die Datei schrieb. Zur Anzeige,
+        ''' zur Reihenfolge der Nennung und auf demselben Rechner gegen eine wiederverwendete
+        ''' Prozessnummer; nie zur Entscheidung zwischen zwei Rechnern (siehe CatalogLock).</summary>
         Public Property StartedUtc As DateTime
         Public Property AppVersion As String = ""
     End Class
@@ -39,9 +45,9 @@ Namespace Services
     ''' Rechner sind dagegen erlaubt und gewollt (siehe BackgroundRunLock): dort tragen die
     ''' Dateisperren.
     '''
-    ''' WIE: jeder Prozess legt beim Start eine kleine Datei "&lt;rechner&gt;.&lt;prozess&gt;.json"
-    ''' in den Ordner <see cref="FolderName"/> neben dem Katalog und nimmt sie beim Beenden wieder
-    ''' weg. Eine Datei eines ANDEREN Rechners heisst: der Katalog ist belegt. Eigene Dateien eines
+    ''' WIE: jeder Prozess legt beim Start eine kleine Datei
+    ''' "&lt;rechner&gt;.&lt;prozess&gt;.&lt;lauf&gt;.json" in den Ordner <see cref="FolderName"/>
+    ''' neben dem Katalog und nimmt sie beim Beenden wieder weg. Eine Datei eines ANDEREN Rechners heisst: der Katalog ist belegt. Eigene Dateien eines
     ''' beendeten Prozesses (ein Absturz) raeumt der naechste Start auf diesem Rechner still weg;
     ''' ob ein Prozess auf einem anderen Rechner noch laeuft, laesst sich von hier nicht sagen,
     ''' deshalb fragt die Anwendung, bevor sie eine fremde Sperre uebernimmt
@@ -57,8 +63,18 @@ Namespace Services
     ''' faelschlich belegt als faelschlich frei.
     '''
     ''' DERSELBE RECHNER heisst: gleicher Name UND, wo beide eine haben, gleiche Kennung
-    ''' (<see cref="CatalogLockHolder.MachineId"/>). Nur dort sagt die Prozessnummer etwas, und nur
-    ''' dort darf eine Datei als liegengeblieben gelten.
+    ''' (<see cref="CatalogLockHolder.MachineId"/>). Nur dort darf eine Datei als liegengeblieben
+    ''' gelten.
+    '''
+    ''' OB EIN LAUF DIESES RECHNERS NOCH LEBT, sagt eine Dateisperre und nicht die Prozessnummer:
+    ''' neben jeder Datei "&lt;name&gt;.json" liegt "&lt;name&gt;.alive", die der Lauf mit
+    ''' FileShare.None offen haelt, solange er lebt (wie <see cref="BackgroundRunLock"/>). Das
+    ''' Betriebssystem gibt sie frei, wenn der Prozess endet, auch bei einem Absturz. Die
+    ''' Prozessnummer taugt dafuer nicht: im Flatpak und in einem Behaelter hat jede Instanz einen
+    ''' eigenen Raum der Prozessnummern, eine fremde lebende Instanz sieht von hier aus tot aus,
+    ''' und nach einem Neustart des Rechners gehoert dieselbe Nummer einem anderen Prozess. Nur
+    ''' fuer Dateien frueherer Fassungen ohne ".alive" gilt noch die Prozessnummer, dann samt
+    ''' Startzeit des Prozesses gegen die in der Datei.
     '''
     ''' OHNE KATALOG heisst: ein leerer Katalog fuer diese Sitzung im temporaeren Ordner. Alles,
     ''' was ihn fragt, laeuft weiter, nur bleibt nichts davon. Der Katalogindex laeuft dann nicht,
@@ -89,6 +105,18 @@ Namespace Services
         Private Shared _ownEntry As String
         Private Shared _sessionCatalog As String
         Private Shared _exitHooked As Boolean
+
+        ''' <summary>Die Endung der Datei, die ein lebender Lauf gesperrt haelt.</summary>
+        Friend Const AliveExtension As String = ".alive"
+
+        ''' <summary>Wie viel spaeter ein Prozess gestartet sein darf als die Startzeit in seiner
+        ''' Datei, bevor seine Nummer als wiederverwendet gilt. Die Datei entsteht nach dem
+        ''' Prozess, die Zeit des Systems kann um Sekunden springen.</summary>
+        Private Shared ReadOnly PidReuseTolerance As TimeSpan = TimeSpan.FromMinutes(2)
+
+        ''' <summary>Die gehaltenen Sperren je Datei: die eigene, im Pruefstand auch die
+        ''' nachgestellter Laeufe.</summary>
+        Private Shared ReadOnly _aliveHandles As New Dictionary(Of String, FileStream)(StringComparer.Ordinal)
 
         Private Shared ReadOnly JsonOptions As New JsonSerializerOptions With {.WriteIndented = True}
 
@@ -183,18 +211,30 @@ Namespace Services
                     .Machine = If(AppFolders.MachineNameOverride, Environment.MachineName),
                     .MachineId = OwnMachineId,
                     .ProcessId = OwnProcessId,
+                    .InstanceId = Guid.NewGuid().ToString("N"),
                     .StartedUtc = If(UtcNowOverride Is Nothing, DateTime.UtcNow, UtcNowOverride()),
                     .AppVersion = AppVersionText()}
                 ownEntry = Path.Combine(folder, EntryName(own))
+                ' Erst die Sperre, dann die Datei: wer die Datei sieht, findet die Sperre schon
+                ' gehalten und haelt diesen Lauf nie faelschlich fuer beendet.
+                HoldAlive(ownEntry)
                 Dim temp = ownEntry & ".tmp"
                 File.WriteAllText(temp, JsonSerializer.Serialize(own, JsonOptions))
                 File.Move(temp, ownEntry, overwrite:=True)
             Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is UnauthorizedAccessException
-                ' Laesst sich keine Sperre anlegen (schreibgeschuetzter Datenordner), gibt es auch
-                ' keinen zweiten Rechner, der dort schreibt. Der Katalog bleibt benutzbar.
                 DiagnosticLogService.LogException("CatalogLock.Acquire", ex)
+                If ownEntry IsNot Nothing Then RemoveEntryFiles(ownEntry)
                 ownEntry = Nothing
-                Return True
+                ' Laesst sich keine eigene Sperre anlegen (schreibgeschuetzt fuer diesen Rechner,
+                ' volle Platte), wird trotzdem nachgesehen: die Freigabe kann fuer einen anderen
+                ' Rechner beschreibbar sein, und der schreibt dann in denselben Katalog. Steht dort
+                ' keiner, bleibt der Katalog benutzbar.
+                Dim foreignOnFailure = ReadEntries(folder).
+                    Where(Function(e) Not IsOwnMachine(e.Holder)).
+                    OrderBy(Function(e) e.Holder.StartedUtc).ToList()
+                If foreignOnFailure.Count = 0 Then Return True
+                holder = foreignOnFailure(0).Holder
+                Return False
             End Try
             ' Erst geschrieben, jetzt nachgesehen: jede Datei eines anderen Rechners heisst belegt,
             ' gleich welche Startzeit sie traegt (siehe oben, keine Entscheidung nach der Uhr). Die
@@ -204,10 +244,7 @@ Namespace Services
                 OrderBy(Function(e) e.Holder.StartedUtc).ToList()
             If foreign.Count = 0 Then Return True
             holder = foreign(0).Holder
-            Try
-                File.Delete(ownEntry)
-            Catch
-            End Try
+            RemoveEntryFiles(ownEntry)
             ownEntry = Nothing
             Return False
         End Function
@@ -219,10 +256,103 @@ Namespace Services
             Dim folder = Path.Combine(dataRoot, FolderName)
             For Each entry In ReadEntries(folder).OrderBy(Function(e) e.Holder.StartedUtc)
                 If Not IsOwnMachine(entry.Holder) Then Return entry.Holder
-                If entry.Holder.ProcessId <> OwnProcessId AndAlso IsAlive(entry.Holder.ProcessId) Then Return entry.Holder
+                If IsThisProcess(entry) Then Continue For
+                If IsEntryAlive(entry) Then Return entry.Holder
             Next
             Return Nothing
         End Function
+
+        ''' <summary>Die Datei dieses Laufs: die beim Start geschriebene. Eine Datei einer
+        ''' frueheren Fassung ohne Kennung des Laufs zaehlt wie bisher ueber die Prozessnummer.</summary>
+        Private Shared Function IsThisProcess(entry As LockEntry) As Boolean
+            Dim own = _ownEntry
+            If own IsNot Nothing AndAlso String.Equals(own, entry.FilePath, StringComparison.Ordinal) Then Return True
+            Return String.IsNullOrEmpty(entry.Holder.InstanceId) AndAlso entry.Holder.ProcessId = OwnProcessId
+        End Function
+
+        ''' <summary>Lebt der Lauf, der diese Datei schrieb? Mit ".alive" entscheidet deren Sperre:
+        ''' laesst sie sich exklusiv oeffnen, haelt sie niemand mehr. Ohne (eine fruehere Fassung)
+        ''' die Prozessnummer samt Startzeit.</summary>
+        Private Shared Function IsEntryAlive(entry As LockEntry) As Boolean
+            Dim alive = AlivePath(entry.FilePath)
+            If File.Exists(alive) Then Return IsAliveFileHeld(alive)
+            Return IsAlive(entry.Holder.ProcessId, entry.Holder.StartedUtc)
+        End Function
+
+        ''' <summary>Haelt ein Lauf diese Datei gesperrt? Eine Datei, die sich nicht oeffnen laesst
+        ''' (Rechte), gilt als gehalten: lieber faelschlich belegt als faelschlich frei.</summary>
+        Private Shared Function IsAliveFileHeld(alive As String) As Boolean
+            Try
+                Using probe As New FileStream(alive, FileMode.Open, FileAccess.ReadWrite, FileShare.None)
+                End Using
+                Return False
+            Catch ex As FileNotFoundException
+                Return False
+            Catch ex As DirectoryNotFoundException
+                Return False
+            Catch ex As IOException
+                Return True
+            Catch ex As UnauthorizedAccessException
+                Return True
+            End Try
+        End Function
+
+        Private Shared Function AlivePath(entryPath As String) As String
+            Return Path.ChangeExtension(entryPath, AliveExtension)
+        End Function
+
+        ''' <summary>Oeffnet die Sperrdatei dieses Laufs und haelt sie bis zum Ende.</summary>
+        Private Shared Sub HoldAlive(entryPath As String)
+            Dim stream As New FileStream(AlivePath(entryPath), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None)
+            SyncLock _aliveHandles
+                _aliveHandles(entryPath) = stream
+            End SyncLock
+        End Sub
+
+        ''' <summary>Gibt die Sperre eines Laufs frei, ohne etwas zu loeschen.</summary>
+        Private Shared Sub ReleaseAlive(entryPath As String)
+            Dim stream As FileStream = Nothing
+            SyncLock _aliveHandles
+                If _aliveHandles.TryGetValue(entryPath, stream) Then _aliveHandles.Remove(entryPath)
+            End SyncLock
+            Try
+                stream?.Dispose()
+            Catch
+            End Try
+        End Sub
+
+        ''' <summary>Entfernt Datei und Sperrdatei eines Laufs; eine eigene Sperre wird vorher
+        ''' freigegeben.</summary>
+        Private Shared Sub RemoveEntryFiles(entryPath As String)
+            Try
+                If File.Exists(entryPath) Then File.Delete(entryPath)
+            Catch
+            End Try
+            ReleaseAlive(entryPath)
+            Try
+                Dim alive = AlivePath(entryPath)
+                If File.Exists(alive) Then File.Delete(alive)
+            Catch
+            End Try
+        End Sub
+
+        ''' <summary>Fuer den Pruefstand: ein nachgestellter Lauf stuerzt ab. Die Sperre faellt
+        ''' wie beim Ende des Prozesses, die Dateien bleiben liegen.</summary>
+        Friend Shared Sub AbandonForTest(entryPath As String)
+            ReleaseAlive(entryPath)
+        End Sub
+
+        ''' <summary>Fuer den Pruefstand: alle nachgestellten Laeufe enden; die eigene Sperre
+        ''' dieses Prozesses bleibt.</summary>
+        Friend Shared Sub ReleaseTestHandles()
+            Dim keys As List(Of String)
+            SyncLock _aliveHandles
+                keys = _aliveHandles.Keys.Where(Function(k) Not String.Equals(k, _ownEntry, StringComparison.Ordinal)).ToList()
+            End SyncLock
+            For Each key In keys
+                ReleaseAlive(key)
+            Next
+        End Sub
 
         ''' <summary>Uebernimmt die Sperre eines anderen Rechners, nach der Rueckfrage. Der leere
         ''' Katalog dieser Sitzung bleibt; geoeffnet wird der eigentliche beim naechsten Start.</summary>
@@ -236,6 +366,8 @@ Namespace Services
                 For Each entry In ReadEntries(folder)
                     If IsOwnMachine(entry.Holder) Then Continue For
                     File.Delete(entry.FilePath)
+                    Dim alive = AlivePath(entry.FilePath)
+                    If File.Exists(alive) Then File.Delete(alive)
                     DiagnosticLogService.LogAlways("CatalogLock", $"taken over from {entry.Holder.Machine}")
                 Next
                 Return True
@@ -250,7 +382,7 @@ Namespace Services
         Public Shared Sub Release()
             SyncLock _gate
                 Try
-                    If _ownEntry IsNot Nothing AndAlso File.Exists(_ownEntry) Then File.Delete(_ownEntry)
+                    If _ownEntry IsNot Nothing Then RemoveEntryFiles(_ownEntry)
                     Dim folder = If(_ownEntry Is Nothing, Nothing, Path.GetDirectoryName(_ownEntry))
                     If folder IsNot Nothing AndAlso FolderRelocation.IsEmptyDirectory(folder) Then Directory.Delete(folder)
                 Catch
@@ -280,9 +412,15 @@ Namespace Services
             End SyncLock
         End Sub
 
+        ''' <summary>"&lt;rechner&gt;.&lt;prozess&gt;.&lt;lauf&gt;.json". Der Lauf steht mit
+        ''' darin, damit zwei Instanzen mit derselben Prozessnummer (Flatpak, Behaelter) nicht
+        ''' dieselbe Datei schreiben und beim Beenden die des anderen loeschen.</summary>
         Private Shared Function EntryName(holder As CatalogLockHolder) As String
+            Dim instance = If(holder.InstanceId, "")
+            If instance.Length > 12 Then instance = instance.Substring(0, 12)
             Return AppFolders.SafeMachineName(holder.Machine) & "." &
-                   holder.ProcessId.ToString(Globalization.CultureInfo.InvariantCulture) & ".json"
+                   holder.ProcessId.ToString(Globalization.CultureInfo.InvariantCulture) &
+                   If(instance.Length > 0, "." & instance, "") & ".json"
         End Function
 
         ''' <summary>Derselbe Rechner: gleicher Name, und tragen beide eine Kennung, auch dieselbe.
@@ -325,27 +463,52 @@ Namespace Services
             End Get
         End Property
 
-        Private Shared Function IsAlive(processId As Integer) As Boolean
+        ''' <summary>Nur fuer Dateien ohne ".alive" (fruehere Fassungen): laeuft ein Prozess mit
+        ''' dieser Nummer, und ist er nicht spaeter gestartet als die Datei entstand? Nach einem
+        ''' Neustart des Rechners gehoert dieselbe Nummer oft einem ganz anderen Prozess.</summary>
+        Private Shared Function IsAlive(processId As Integer, startedUtc As DateTime) As Boolean
             If ProcessAliveProbe IsNot Nothing Then Return ProcessAliveProbe(processId)
             Try
                 Using running = Diagnostics.Process.GetProcessById(processId)
-                    Return Not running.HasExited
+                    If running.HasExited Then Return False
+                    Try
+                        Dim processStartUtc = running.StartTime.ToUniversalTime()
+                        If startedUtc > DateTime.MinValue AndAlso processStartUtc > startedUtc.ToUniversalTime() + PidReuseTolerance Then Return False
+                    Catch
+                        ' Startzeit nicht lesbar (Rechte): dann zaehlt, dass er laeuft.
+                    End Try
+                    Return True
                 End Using
             Catch
                 Return False
             End Try
         End Function
 
-        ''' <summary>Eigene Dateien beendeter Prozesse: liegengeblieben nach einem Absturz.</summary>
+        ''' <summary>Eigene Dateien beendeter Laeufe: liegengeblieben nach einem Absturz. Dazu
+        ''' eine Sperrdatei ohne ihre ".json", wenn der Absturz genau dazwischen kam.</summary>
         Private Shared Sub RemoveDeadOwnMachineEntries(folder As String)
             For Each entry In ReadEntries(folder)
                 If Not IsOwnMachine(entry.Holder) Then Continue For
-                If entry.Holder.ProcessId = OwnProcessId OrElse IsAlive(entry.Holder.ProcessId) Then Continue For
+                If IsThisProcess(entry) OrElse IsEntryAlive(entry) Then Continue For
                 Try
                     File.Delete(entry.FilePath)
+                    Dim alive = AlivePath(entry.FilePath)
+                    If File.Exists(alive) Then File.Delete(alive)
                 Catch
                 End Try
             Next
+            Try
+                If Not Directory.Exists(folder) Then Return
+                For Each alive In Directory.GetFiles(folder, "*" & AliveExtension)
+                    If File.Exists(Path.ChangeExtension(alive, ".json")) Then Continue For
+                    If IsAliveFileHeld(alive) Then Continue For
+                    Try
+                        File.Delete(alive)
+                    Catch
+                    End Try
+                Next
+            Catch
+            End Try
         End Sub
 
         Private Structure LockEntry

@@ -252,6 +252,13 @@ Namespace Views
             GetVm()?.RefreshPlaceFilterOptions()
         End Sub
 
+        ''' <summary>Im Orte-Menue: auf den ganzen Katalog schalten, weil Orte des Katalogs in
+        ''' diesem Ordner nicht vorkommen. Derselbe Schalter wie neben dem Suchfeld.</summary>
+        Private Sub OnShowPlacesOfWholeCatalogClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.ShowPlacesOfWholeCatalog()
+            e.Handled = True
+        End Sub
+
         ''' <summary>Einen Ort dazunehmen oder abwaehlen. Ueber den Datenkontext der Schaltflaeche,
         ''' gleicher Grund wie bei Personen und Stichwoertern. Es geht der GANZE Eintrag hinueber,
         ''' nicht nur der Name: dieselbe Stadt kann lokal und auf dem Server stehen, und nur der

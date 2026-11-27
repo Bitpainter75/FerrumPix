@@ -64,6 +64,26 @@ Namespace Services
             Return Nothing
         End Function
 
+        ''' <summary>Das Rezept der LUT aus dem ganzen Rezept des Bildes (<paramref name="current"/>,
+        ''' mit Herkunft des Quellbilds): die übertragbaren, gewählten Einträge.
+        '''
+        ''' KOMMT DAS BILD AUS DER RAW-STUFE, trägt das Rezept auch deren Herkunft: die Belichtung als
+        ''' schon im Quellbild (ExposureInSource gleich Exposure, die Kette rechnet also keine), dazu
+        ''' SourceFromRawStage. Die Kette des Editors richtet sich danach: in Tonfassung 1 nimmt sie
+        ''' abgesenkte Lichter nach positiver Belichtung zurück (ImageAdjustments.ChainHighlights), und
+        ''' der Verstärker der Feinstruktur fällt mit der Belichtung (BoostsLuminanceDetail). Ohne
+        ''' diese Herkunft rechnete das Gitter mit dem vollen Regler und wich vom Editor ab.</summary>
+        Public Shared Function ExtractRecipe(current As ImageAdjustments, entries As IEnumerable(Of AdjustmentEntry)) As ImageAdjustments
+            If current Is Nothing Then Return New ImageAdjustments()
+            Dim recipe = AdjustmentEntries.Extract(current.ExtractTransferableAdjustments(), entries)
+            If current.BoostsLuminanceDetail() Then
+                recipe.SourceFromRawStage = True
+                recipe.Exposure = current.Exposure
+                recipe.ExposureInSource = current.Exposure
+            End If
+            Return recipe
+        End Function
+
         ''' <summary>Die Tabelle zu <paramref name="recipe"/>: <paramref name="gridSize"/> hoch drei
         ''' Punkte, je drei Werte. <paramref name="recipe"/> traegt nur, was in die LUT soll (der
         ''' Dialog zieht die gewaehlten und erlaubten Eintraege heraus).</summary>

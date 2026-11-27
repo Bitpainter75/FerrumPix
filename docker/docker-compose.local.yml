@@ -1,7 +1,11 @@
 # FerrumPix in the browser ON THIS COMPUTER ONLY: the port is published on 127.0.0.1 alone. For
 # other devices use docker-compose.yml with the proxy.
 #
+#   mkdir data; sudo chown 1000 data
 #   FERRUMPIX_PHOTOS=/path/to/photos docker compose -f docker-compose.local.yml up -d
+#
+# The folder data next to this file holds everything FerrumPix keeps (settings, catalog,
+# thumbnails, models); it has to belong to user id 1000.
 #
 # Then open http://127.0.0.1:14501. A password is optional and comes from the environment
 # (FERRUMPIX_PASSWORD, likewise FERRUMPIX_USER), not from this file. If one is set, it needs at
@@ -9,8 +13,7 @@
 # (a space counts), otherwise FerrumPix does not start; it becomes the password of the sign-in
 # window.
 #
-# Own fonts go to /data/share/FerrumPix/Fonts in the data volume, there is no separate volume for
-# them.
+# Own fonts go to ./data/share/FerrumPix/Fonts, there is no separate folder for them.
 #
 # THE LINE UNDER "ports" STAYS ON 127.0.0.1. FERRUMPIX_BROWSER_LOCAL_FORWARD tells FerrumPix that
 # the port is only open on this computer; it then only checks that the browser called 127.0.0.1
@@ -32,7 +35,7 @@ services:
     ports:
       - "127.0.0.1:14501:14500"
     volumes:
-      - ferrumpix-data:/data
+      - ./data:/data
       - "${FERRUMPIX_PHOTOS:?FERRUMPIX_PHOTOS is missing}:/photos/Pictures"
     # GRAPHICS CARD FOR THE MODELS (optional; without it the models run on the processor).
     # Intel or AMD: uncomment these lines. FERRUMPIX_RENDER_GID is the group of the render device
@@ -50,6 +53,3 @@ services:
     #         - driver: nvidia
     #           count: all
     #           capabilities: [gpu]
-
-volumes:
-  ferrumpix-data:

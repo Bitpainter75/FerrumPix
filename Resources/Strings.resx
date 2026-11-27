@@ -13072,4 +13072,10 @@
   <data name="Sperren_STRG_L_10c0fb95" xml:space="preserve">
     <value>Lock (CTRL+L)</value>
   </data>
+  <data name="0_weitere_Orte_kommen_in_diesem_Ordner_nicht_vor_2e15c447" xml:space="preserve">
+    <value>{0} more places do not appear in this folder.</value>
+  </data>
+  <data name="Alle_Orte_des_Katalogs_zeigen_c19f79e6" xml:space="preserve">
+    <value>Show all places of the catalog</value>
+  </data>
 </root>

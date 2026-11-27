@@ -11,6 +11,8 @@
 #      .env                      FERRUMPIX_DOMAIN=photos.example.org
 #                                FERRUMPIX_PHOTOS=/path/to/photos
 #                                FERRUMPIX_USER=anna         (optional)
+#      data/                     an empty folder for everything FerrumPix keeps, owned by user
+#                                id 1000 (mkdir data; sudo chown 1000 data)
 # 2. docker compose up -d
 # 3. Open https://<FERRUMPIX_DOMAIN> in the browser.
 #
@@ -47,8 +49,8 @@ services:
       - ferrumpix_password
     volumes:
       # Settings, catalog, thumbnails and downloaded models. Own fonts go to
-      # /data/share/FerrumPix/Fonts, there is no separate volume for them.
-      - ferrumpix-data:/data
+      # ./data/share/FerrumPix/Fonts, there is no separate folder for them.
+      - ./data:/data
       # Every photo folder under /photos/<name>; add lines in the same pattern.
       - "${FERRUMPIX_PHOTOS:?FERRUMPIX_PHOTOS is missing in .env}:/photos/Pictures"
     # GRAPHICS CARD FOR THE MODELS (optional; without it the models run on the processor).
@@ -102,6 +104,5 @@ secrets:
     file: ./ferrumpix-password.txt
 
 volumes:
-  ferrumpix-data:
   caddy-data:
   caddy-config:

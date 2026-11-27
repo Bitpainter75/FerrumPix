@@ -92,7 +92,7 @@ Namespace Services
     ''' sichere Fassung (<see cref="SafeFileName"/>). Gefunden wird eine Anpassung ueber ihre
     ''' KENNUNG; sie uebersteht Umbenennen und Verschieben, auch im Dateimanager.
     '''
-    ''' WO: immer "presets" im Datenordner (<see cref="DefaultRoot"/>). Einen eigenen Ort gibt es
+    ''' WO: immer "Presets" im Datenordner (<see cref="DefaultRoot"/>). Einen eigenen Ort gibt es
     ''' nicht mehr; wer mit dem Datenordner umzieht, nimmt die Anpassungen mit (AppFolders). Ein
     ''' bis 0.9.91 gewaehlter Ordner wird beim Start einmal hierher kopiert
     ''' (FolderLayoutMigration). Ist der Ordner nicht erreichbar, ist der Stand leer und Reachable
@@ -138,7 +138,7 @@ Namespace Services
 
         ' ── Wo ──────────────────────────────────────────────────────────────────────────────
 
-        ''' <summary>"presets" im Datenordner der Anwendung (AppFolders.PresetsFolder).</summary>
+        ''' <summary>"Presets" im Datenordner der Anwendung (AppFolders.PresetsFolder).</summary>
         Public Shared ReadOnly Property DefaultRoot As String
             Get
                 If Not String.IsNullOrEmpty(RootOverride) Then Return RootOverride

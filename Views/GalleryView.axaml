@@ -531,16 +531,31 @@
                                     <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto"><ItemsRepeater ItemsSource="{Binding PlaceFilterOptions}"><ItemsRepeater.ItemTemplate><DataTemplate DataType="{x:Type models:PlaceFilterOption}"><Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="10,8" Click="OnPlaceFilterItemClick"><Grid ColumnDefinitions="*,20"><TextBlock Text="{Binding Label}" Classes="no-translate" TextTrimming="CharacterEllipsis"/><TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}" Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/></Grid></Button></DataTemplate></ItemsRepeater.ItemTemplate></ItemsRepeater></ScrollViewer>
 
                                     <TextBlock Text="Noch keine Orte bekannt"
-                                               IsVisible="{Binding !PlaceFilterOptions.Count}"
+                                               IsVisible="{Binding ShowNoPlacesHint}"
                                                Foreground="{DynamicResource FP.Text.Muted}"
                                                FontSize="{DynamicResource FP.Font.Small}"
                                                Margin="10,8,10,2"/>
                                     <TextBlock Text="Ortsnamen entstehen aus den Koordinaten im Bild"
-                                               IsVisible="{Binding !PlaceFilterOptions.Count}"
+                                               IsVisible="{Binding ShowNoPlacesHint}"
                                                Foreground="{DynamicResource FP.Text.Muted}"
                                                FontSize="{DynamicResource FP.Font.Small}"
                                                TextWrapping="Wrap"
                                                Margin="10,0,10,8"/>
+
+                                    <!-- Im Umfang "Ordner" stehen nur Orte dieses Ordners. In einem
+                                         Ordner ohne Koordinaten hiess es sonst "Noch keine Orte bekannt",
+                                         obwohl der Katalog Orte kennt
+                                         (GalleryViewModel.PlacesOutsideFolderText). -->
+                                    <StackPanel IsVisible="{Binding HasPlacesOutsideFolder}" Spacing="4" Margin="10,4,10,8">
+                                        <TextBlock Text="{Binding PlacesOutsideFolderText}" Classes="no-translate"
+                                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                                   FontSize="{DynamicResource FP.Font.Small}"
+                                                   TextWrapping="Wrap" MaxWidth="260" HorizontalAlignment="Left"/>
+                                        <Button Classes="ghost" Padding="8,4" HorizontalAlignment="Left"
+                                                Click="OnShowPlacesOfWholeCatalogClick">
+                                            <TextBlock Text="Alle Orte des Katalogs zeigen" FontSize="{DynamicResource FP.Font.Small}"/>
+                                        </Button>
+                                    </StackPanel>
                                 </StackPanel>
                             </Flyout>
                         </Button.Flyout>

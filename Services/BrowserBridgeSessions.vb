@@ -32,8 +32,13 @@ Namespace Services
     ''' solange die Sitzung gilt.</para>
     '''
     ''' <para>ABLAUF: nach der eingestellten Sperrzeit ohne Nutzung, ohne Sperrzeit nach 30 Tagen
-    ''' ohne Nutzung. Sperren (von Hand, nach Inaktivitaet) beendet ALLE Sitzungen; "Abmelden"
-    ''' (POST /logout) nur die eigene.</para>
+    ''' ohne Nutzung. Das entscheidet allein der Server (LastUsedUtc); das Cookie lebt im Browser
+    ''' immer 30 Tage, auch mit kurzer Sperrzeit. Mit einem Max-Age von der Laenge der Sperrzeit
+    ''' liefe es sonst ab, waehrend ueber den WebSocket gearbeitet wird (der verlaengert nur beim
+    ''' Server), und Hochladen, Herunterladen und Neuladen stuenden ploetzlich ohne Anmeldung da.
+    ''' Sperren (von Hand, nach Inaktivitaet) beendet ALLE Sitzungen; "Abmelden" (POST /logout)
+    ''' nur die eigene; ein neues Kennwort und das Abschalten des Kennworts alle ausser der des
+    ''' verbundenen Browsers (<see cref="EndOtherSessions"/>).</para>
     '''
     ''' <para>DEM BROWSER WIRD NIE WWW-Authenticate GESCHICKT, damit sein eigener Dialog nicht mehr
     ''' erscheint. Werkzeuge (curl, der Probelauf des Abbilds) duerfen weiter selbst
@@ -43,7 +48,8 @@ Namespace Services
     ''' <para>GEGEN FREMDE SEITEN: SameSite=Strict, dazu prueft POST /login und /logout die Herkunft
     ''' (Origin gegen Host) und verlangt JSON, was jeder fremden Seite eine Vorabfrage des Browsers
     ''' aufzwingt, die hier nie beantwortet wird. Gegen Raten zaehlt AppLockService Fehlversuche je
-    ''' Absenderadresse und insgesamt.</para>
+    ''' Browser und je Absenderadresse (<see cref="SenderKey"/>), einen gemeinsamen Zaehler gibt es
+    ''' nicht.</para>
     ''' </summary>
     Partial Public NotInheritable Class BrowserBridge
 
@@ -217,6 +223,27 @@ Namespace Services
             DisconnectSignedInClient()
         End Sub
 
+        ''' <summary>Nach einem neuen Kennwort oder dem Abschalten des Kennworts: alle Sitzungen enden
+        ''' ausser der des verbundenen Browsers. Wer das Kennwort aendert, tut das in der Oberflaeche,
+        ''' und die sieht im Browser nur der verbundene; ihn auszusperren hiesse, ihn mitten in den
+        ''' Einstellungen zum Anmeldefenster zu schicken. Jeder andere Browser meldet sich mit dem
+        ''' neuen Kennwort neu an. Beim Abschalten verhindert das, dass alte Sitzungen nach einem
+        ''' spaeteren Einschalten wieder gelten. Ohne Sitzung (es gab vorher kein Kennwort) bleibt
+        ''' keine; der verbundene Browser landet dann wie bisher beim Anmeldefenster.</summary>
+        Friend Shared Sub EndOtherSessions()
+            Dim keep = _clientSessionKey
+            Dim ended As Integer
+            SyncLock Sessions
+                Dim kept As BrowserSession = Nothing
+                If keep.Length = 0 OrElse Not Sessions.TryGetValue(keep, kept) Then kept = Nothing
+                ended = Sessions.Count - If(kept Is Nothing, 0, 1)
+                Sessions.Clear()
+                If kept IsNot Nothing Then Sessions(keep) = kept
+                _basicHeaderKey = ""
+            End SyncLock
+            If ended > 0 Then DiagnosticLogService.LogAlways("BrowserBridge", $"Password changed, ended {ended} other session(s).")
+        End Sub
+
         Private Shared Sub EndSession(key As String)
             If String.IsNullOrEmpty(key) Then Return
             SyncLock Sessions
@@ -301,14 +328,68 @@ Namespace Services
             Return passwordMatches And userMatches
         End Function
 
-        ''' <summary>Der Zaehler der Fehlversuche fuer die Absenderadresse. Grenze: im Behaelter
-        ''' mit Portweiterleitung traegt jede Verbindung die Adresse des Docker-Gateways, dann teilen
-        ''' sich alle Geraete diesen Zaehler (mit network_mode host nicht).</summary>
+        ''' <summary>Der Zaehler der Fehlversuche fuer die Absenderadresse.
+        '''
+        ''' <para>HINTER DEM PROXY kaeme jede Verbindung von ihm, und alle Geraete im Internet teilten
+        ''' sich einen Zaehler: ein Fremder hielte mit einem Fehlversuch je Wartezeit den Eigentuemer
+        ''' draussen. Gezaehlt wird dort deshalb die Adresse, die der Proxy in X-Forwarded-For
+        ''' meldet (<see cref="CounterAddress"/>).</para>
+        '''
+        ''' <para>IPv6 ZAEHLT JE /64: ein Anschluss bekommt mindestens ein ganzes /64 und kann darin
+        ''' fuer jeden Versuch eine neue Adresse nehmen. Je voller Adresse liefe die Bremse damit ins
+        ''' Leere, und die Versuche verdraengten nebenbei die gemerkten Zaehler anderer.</para>
+        '''
+        ''' <para>Grenze: im Behaelter mit Portweiterleitung und ohne Proxy traegt jede Verbindung die
+        ''' Adresse des Docker-Gateways, dann teilen sich alle Geraete diesen Zaehler (mit
+        ''' network_mode host nicht).</para></summary>
         Private Shared Function SenderKey(request As HttpListenerRequest) As String
-            Dim address = SenderAddress(request)
+            Return CounterKeyOf(CounterAddress(request))
+        End Function
+
+        ''' <summary>Der Zaehler zu einer Adresse: IPv4 voll, IPv6 als ihr /64.</summary>
+        Friend Shared Function CounterKeyOf(address As IPAddress) As String
             If address Is Nothing Then Return "address unknown"
             If address.IsIPv4MappedToIPv6 Then address = address.MapToIPv4()
+            If address.AddressFamily = System.Net.Sockets.AddressFamily.InterNetworkV6 AndAlso Not IPAddress.IsLoopback(address) Then
+                Dim bytes = address.GetAddressBytes()
+                For i = 8 To 15
+                    bytes(i) = 0
+                Next
+                ' Ohne Zonenkennung: fe80::1%2 und fe80::1%3 sind derselbe Zaehler.
+                Return "address " & New IPAddress(bytes).ToString() & "/64"
+            End If
             Return "address " & address.ToString()
+        End Function
+
+        ''' <summary>Die Adresse, deren Fehlversuche zaehlen: hinter dem Proxy der Browser, wie der
+        ''' Proxy ihn meldet, sonst der Absender der Verbindung.
+        '''
+        ''' <para>Dem Kopf wird nur geglaubt, wenn die Verbindung vom Proxy kommt
+        ''' (<see cref="IsTrustedSender"/>), sonst koennte jeder sich mit einem erfundenen Kopf von
+        ''' der Bremse loesen. Und es zaehlt nur der LETZTE Eintrag: den hat der Proxy selbst
+        ''' angehaengt (nginx mit $proxy_add_x_forwarded_for, auch der Proxy von DSM), was davor
+        ''' steht, kommt vom Browser und ist frei erfunden. Caddy (docker/Caddyfile) glaubt ohne
+        ''' trusted_proxies keinem mitgeschickten Kopf und setzt nur die Adresse des Browsers; das
+        ''' ist dann zugleich der letzte Eintrag. Fehlt der Kopf oder ist er unlesbar, zaehlt wie
+        ''' bisher der Proxy.</para></summary>
+        Private Shared Function CounterAddress(request As HttpListenerRequest) As IPAddress
+            Dim connection = SenderAddress(request)
+            If _tlsProxy AndAlso IsTrustedSender(connection, _trustEverySender, _proxyAddresses) Then
+                Dim forwarded = LastForwardedAddress(request.Headers("X-Forwarded-For"))
+                If forwarded IsNot Nothing Then Return forwarded
+            End If
+            Return connection
+        End Function
+
+        ''' <summary>Der letzte Eintrag von X-Forwarded-For als Adresse, sonst Nothing. Ein Port
+        ''' dahinter ("203.0.113.7:51000", "[2001:db8::1]:443") faellt weg.</summary>
+        Friend Shared Function LastForwardedAddress(header As String) As IPAddress
+            If String.IsNullOrWhiteSpace(header) Then Return Nothing
+            Dim entries = header.Split(","c)
+            Dim last = entries(entries.Length - 1).Trim()
+            Dim endPoint As IPEndPoint = Nothing
+            If last.Length = 0 OrElse Not IPEndPoint.TryParse(last, endPoint) Then Return Nothing
+            Return endPoint.Address
         End Function
 
         ''' <summary>Die Zaehler fuer einen Anmeldeversuch im Anmeldefenster: der dieses Browsers
@@ -335,13 +416,20 @@ Namespace Services
                    If(secure, "; Secure", "")
         End Function
 
-        ''' <summary>Setzt das Cookie einer gueltigen Sitzung neu, damit es im Browser so lange lebt
-        ''' wie die Sitzung beim Server.</summary>
+        ''' <summary>So lange lebt das Cookie im Browser, gleich welche Sperrzeit gilt. Ob die Sitzung
+        ''' noch gilt, entscheidet der Server (<see cref="SessionLifetime"/>); das Cookie darf nur
+        ''' nicht VOR ihr ablaufen.</summary>
+        Friend Shared Function SessionCookieMaxAgeSeconds() As Long
+            Return CLng(DefaultSessionLifetime.TotalSeconds)
+        End Function
+
+        ''' <summary>Setzt das Cookie einer gueltigen Sitzung neu, damit seine 30 Tage wieder vom
+        ''' letzten Laden der Seite an zaehlen.</summary>
         Private Shared Sub RefreshSessionCookie(context As HttpListenerContext)
             Dim value = ReadSessionCookie(context.Request)
             If value Is Nothing Then Return
             context.Response.Headers.Add("Set-Cookie",
-                SessionCookie(value, CLng(SessionLifetime().TotalSeconds), IsSecureRequest(context.Request)))
+                SessionCookie(value, SessionCookieMaxAgeSeconds(), IsSecureRequest(context.Request)))
         End Sub
 
         ' --- Anmelden und Abmelden ---------------------------------------------------------------
@@ -402,7 +490,7 @@ Namespace Services
             Select Case result.Outcome
                 Case PasswordCheckOutcome.Accepted, PasswordCheckOutcome.NotProtected
                     Dim value = CreateSession(sender)
-                    context.Response.Headers.Add("Set-Cookie", SessionCookie(value, CLng(SessionLifetime().TotalSeconds), IsSecureRequest(request)))
+                    context.Response.Headers.Add("Set-Cookie", SessionCookie(value, SessionCookieMaxAgeSeconds(), IsSecureRequest(request)))
                     AppLockService.Unlock()
                     DiagnosticLogService.LogAlways("BrowserBridge", $"Signed in from {sender}.")
                     Await WriteLoginAnswerAsync(context, 200, Nothing, 0)

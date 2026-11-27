@@ -300,6 +300,8 @@ Namespace ViewModels
                         Return False
                     End If
                     AppSettingsService.Update(Sub(s) s.AppLockPasswordHash = "")
+                    ' Sonst gaelten die alten Sitzungen nach einem spaeteren Einschalten wieder.
+                    BrowserBridge.EndOtherSessions()
                     AppLockService.Unlock()
                     ClearAccessFields()
                     ReportAccess(LocalizationService.T("Der Schutz mit Kennwort ist ausgeschaltet."), False)
@@ -331,6 +333,9 @@ Namespace ViewModels
                         If newHash IsNot Nothing Then s.AppLockPasswordHash = newHash
                         s.AppLockIdleMinutes = minutes
                     End Sub)
+                ' Ein neues Kennwort beendet jede Sitzung, die mit dem alten entstand, bis auf die
+                ' des Browsers, in dem es eben geaendert wurde.
+                If newHash IsNot Nothing Then BrowserBridge.EndOtherSessions()
                 AppLockService.NoteActivity()
                 ClearAccessFields()
                 ReportAccess(If(newHash Is Nothing, LocalizationService.T("Gespeichert."),

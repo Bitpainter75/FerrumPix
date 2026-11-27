@@ -1247,7 +1247,7 @@ Namespace Services
         ''' darueber bleibt als Rueckfall fuer Einstellungen von frueher.
         Public Property LastAdjustmentPresetId As String = ""
         ''' Der eigene Ordner der Anpassungen bis 0.9.91. Die Anwendung liest ihn nicht mehr: die
-        ''' Anpassungen liegen immer unter "presets" im Datenordner. Steht hier noch einer, kopiert
+        ''' Anpassungen liegen immer unter "Presets" im Datenordner. Steht hier noch einer, kopiert
         ''' der Umzug beim Start seine Anpassungen dorthin und leert danach die Angabe
         ''' (FolderLayoutMigration); der Ordner selbst bleibt unberuehrt, er gehoert dem Nutzer.
         Public Property AdjustmentPresetFolder As String = ""
@@ -1467,13 +1467,29 @@ Namespace Services
 
         ''' <summary>Vergisst den gemerkten Stand; das naechste Load liest die Datei neu. Nur fuer den
         ''' Start nach einer Wiederherstellung (CatalogBackupService.ApplyPendingRestore): wer dort
-        ''' schon gelesen hat, etwa das Protokoll, haette sonst den alten Stand festgehalten.</summary>
+        ''' schon gelesen hat, etwa das Protokoll, haette sonst den alten Stand festgehalten.
+        ''' Ein noch nicht geschriebener Stand faellt mit weg: er ist
+        ''' aelter als die neue Datei, und der Zeitgeber schriebe ihn sonst anderthalb Sekunden
+        ''' spaeter ueber sie.</summary>
         Friend Shared Sub InvalidateCache()
+            SyncLock _writeLock
+                _pendingJson = Nothing
+                _flushTimer?.Stop()
+            End SyncLock
             SyncLock _cacheLock
                 _cachedJson = Nothing
                 _cachedSettings = Nothing
             End SyncLock
         End Sub
+
+        ''' <summary>Schreibt einen ausstehenden Stand sofort und sagt, ob er auf der Platte steht.
+        ''' Fuer Schritte, nach denen etwas geloescht wird, das nur der neue Stand noch findet.</summary>
+        Public Shared Function FlushNow() As Boolean
+            Flush()
+            SyncLock _writeLock
+                Return _pendingJson Is Nothing
+            End SyncLock
+        End Function
 
         ''' Geschrieben wird verzögert und zusammengefasst. Sonst löste jedes Häkchen im Dialog ein
         ''' vollständiges Serialisieren samt Temporärdatei und Umbenennen aus. Flush erzwingt das Schreiben -

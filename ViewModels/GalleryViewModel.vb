@@ -6825,6 +6825,7 @@ Namespace ViewModels
         ''' bliebe diese Liste auf einem gewachsenen Bestand dauerhaft leer.</summary>
         Public Sub RefreshPlaceFilterOptions()
             PlaceFilterOptions.Clear()
+            Dim outsideFolder = 0
             Try
                 Dim search = If(_placeFilterSearch, "").Trim()
                 ' Im Umfang "Ordner" zaehlen nur die Dateien des Ordners. Ein gewaehlter Ort ohne
@@ -6835,6 +6836,19 @@ Namespace ViewModels
                     places = LibraryService.Instance.GetPlaceCounts()
                 Else
                     places = LibraryService.Instance.GetFilterCountsForPaths(scopePaths).Places
+                    ' Im Katalog bekannt, nur nicht in diesem Ordner: mitzaehlen, damit die Liste
+                    ' sagt, dass es sie gibt (PlacesOutsideFolderText). Die Katalogabfrage kostet
+                    ' nur hier etwas zusaetzlich; im Umfang "Katalog" ist sie ohnehin die Liste.
+                    ' Wie bei den Personen zaehlt die Suche nicht mit: die Zahl nennt, was der
+                    ' Umfang verbirgt, nicht was das Suchwort ausfiltert.
+                    Dim folderCities As New HashSet(Of String)(places.Select(Function(p) p.City),
+                                                               StringComparer.OrdinalIgnoreCase)
+                    For Each catalogEntry In LibraryService.Instance.GetPlaceCounts()
+                        If catalogEntry.Count <= 0 Then Continue For
+                        If folderCities.Contains(catalogEntry.City) Then Continue For
+                        If IsPlaceFilterSelected(catalogEntry.City) Then Continue For
+                        outsideFolder += 1
+                    Next
                     For Each city In _activePlaceFilters
                         If places.Any(Function(p) String.Equals(p.City, city, StringComparison.OrdinalIgnoreCase)) Then Continue For
                         places.Add(New PlaceEntry With {.City = city, .Count = 0})
@@ -6880,8 +6894,57 @@ Namespace ViewModels
                 DiagnosticLogService.LogException("Gallery.RefreshPlaceFilterOptions", ex)
             End Try
             KeepOnlyActiveSource(PlaceFilterOptions, Function(o) o.ServerSource)
+            _placesOutsideFolder = outsideFolder
+            Me.RaisePropertyChanged(NameOf(PlacesOutsideFolderCount))
+            Me.RaisePropertyChanged(NameOf(PlacesOutsideFolderText))
+            Me.RaisePropertyChanged(NameOf(HasPlacesOutsideFolder))
+            Me.RaisePropertyChanged(NameOf(ShowNoPlacesHint))
             RefreshPlaceFilterState()
             Me.RaisePropertyChanged(NameOf(HasPlaceFeature))
+        End Sub
+
+        ' DIE LISTE SAGT, WELCHE ORTE FEHLEN. Dieselbe Lage wie bei den Personen: im Umfang
+        ' "Ordner" (ab Werk) stehen nur Orte des offenen Ordners. In einem Ordner ohne GPS hiess
+        ' es dann "Noch keine Orte bekannt", obwohl der Katalog Orte kennt. Die Liste nennt die
+        ' Zahl und fuehrt mit einem Knopf auf den Schalter des Umfangs.
+
+        Private _placesOutsideFolder As Integer
+
+        ''' <summary>Wie viele Orte des Katalogs im Umfang "Ordner" aus der Liste fallen, weil in
+        ''' diesem Ordner kein Bild von dort ist. Null im Umfang "Katalog".</summary>
+        Public ReadOnly Property PlacesOutsideFolderCount As Integer
+            Get
+                Return _placesOutsideFolder
+            End Get
+        End Property
+
+        Public ReadOnly Property HasPlacesOutsideFolder As Boolean
+            Get
+                Return _placesOutsideFolder > 0
+            End Get
+        End Property
+
+        ''' <summary>"Noch keine Orte bekannt" stimmt nur, wenn die Liste leer ist UND der Katalog
+        ''' auch ausserhalb des Ordners keinen Ort kennt.</summary>
+        Public ReadOnly Property ShowNoPlacesHint As Boolean
+            Get
+                Return PlaceFilterOptions.Count = 0 AndAlso _placesOutsideFolder = 0
+            End Get
+        End Property
+
+        Public ReadOnly Property PlacesOutsideFolderText As String
+            Get
+                If _placesOutsideFolder <= 0 Then Return ""
+                Return String.Format(LocalizationService.T("{0} weitere Orte kommen in diesem Ordner nicht vor."), _placesOutsideFolder)
+            End Get
+        End Property
+
+        ''' <summary>Schaltet den Umfang auf den ganzen Katalog, wie der Schalter neben dem
+        ''' Suchfeld, und baut die Ortsliste neu.</summary>
+        Public Sub ShowPlacesOfWholeCatalog()
+            If Not CanToggleFilterScope Then Return
+            IsCatalogFilterScope = True
+            RefreshPlaceFilterOptions()
         End Sub
 
         Public Function IsPlaceFilterSelected(city As String) As Boolean

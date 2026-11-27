@@ -34,7 +34,7 @@ Namespace Services
     '''
     ''' WAS: die Modelle (aus "Modelle" wird "Models"), die Erweiterungen (dazu der alte Ordner
     ''' "Erweiterungen"), Favoriten, Suchlisten und die Sperren der Grafikkarte. Die Anpassungen
-    ''' eines bis 0.9.91 gewaehlten eigenen Ordners werden in "presets" KOPIERT: der Ordner gehoert
+    ''' eines bis 0.9.91 gewaehlten eigenen Ordners werden in "Presets" KOPIERT: der Ordner gehoert
     ''' dem Nutzer, und die Anwendung loescht dort nichts. Eine leere library.db (0 Byte), die bei
     ''' den Einstellungen liegengeblieben ist, faellt weg; eine mit Inhalt nie.
     '''
@@ -94,10 +94,13 @@ Namespace Services
 
             result.ModelsDone = MigrateModels(Path.Combine(configRoot, AppFolders.LegacyModelsFolderName),
                                               Path.Combine(dataRoot, AppFolders.ModelsFolderName), log)
-            result.ExtensionsDone = MigrateFolderMerging(Path.Combine(configRoot, AppFolders.ExtensionsFolderName),
-                                                         Path.Combine(dataRoot, AppFolders.ExtensionsFolderName), log) And
-                                    MigrateFolderMerging(Path.Combine(configRoot, AppFolders.OlderExtensionsFolderName),
-                                                         Path.Combine(dataRoot, AppFolders.ExtensionsFolderName), log)
+            ' Beide alten Ordner fuehren in denselben neuen; eine ".moving"-Datei dort kann aus jedem
+            ' der beiden stammen, deshalb kennt jeder Aufruf auch den anderen.
+            Dim extensionsSource = Path.Combine(configRoot, AppFolders.ExtensionsFolderName)
+            Dim olderExtensionsSource = Path.Combine(configRoot, AppFolders.OlderExtensionsFolderName)
+            Dim extensionsTarget = Path.Combine(dataRoot, AppFolders.ExtensionsFolderName)
+            result.ExtensionsDone = MigrateFolderMerging(extensionsSource, extensionsTarget, log, {olderExtensionsSource}) And
+                                    MigrateFolderMerging(olderExtensionsSource, extensionsTarget, log, {extensionsSource})
             result.FavoritesDone = MoveFileMerging(Path.Combine(configRoot, AppFolders.FavoritesFileName),
                                                    Path.Combine(dataRoot, AppFolders.FavoritesFileName), log)
             result.SearchListsDone = MoveFileMerging(Path.Combine(configRoot, AppFolders.SearchListsFileName),
@@ -153,7 +156,7 @@ Namespace Services
 
         Private Shared Function MigrateModels(source As String, target As String, log As List(Of String)) As Boolean
             If PathIdentity.AreSame(source, target) Then Return True
-            RecoverMovingFiles(source, target)
+            RecoverMovingFiles({source}, target)
             If Not Directory.Exists(source) Then Return True
             Dim usable = UsableModelFiles()
             Dim families = KnownModelFamilies()
@@ -266,16 +269,41 @@ Namespace Services
 
         ''' <summary>Fuehrt einen Ordner in einen anderen: was fehlt, kommt dazu; was da ist,
         ''' bleibt; eine andere Fassung kommt als ".old" daneben. Danach ist die Quelle leer und
-        ''' entfernt. True, wenn nichts mehr in der Quelle liegt.</summary>
-        Private Shared Function MigrateFolderMerging(source As String, target As String, log As List(Of String)) As Boolean
+        ''' entfernt. True, wenn nichts mehr in der Quelle liegt.
+        '''
+        ''' VERWEISE werden nie durchlaufen: ist der Ordner selbst oder ein Eintrag darin ein Verweis
+        ''' (etwa eine Erweiterung, die als Verweis auf ihr Arbeitsverzeichnis samt .git liegt),
+        ''' zieht der Verweis um, nicht was dahinter liegt. Liegt am Ziel schon etwas, bleibt er
+        ''' stehen und es steht im Protokoll.</summary>
+        ''' <param name="otherSources">Weitere alte Ordner, die in dasselbe Ziel fuehren.</param>
+        Friend Shared Function MigrateFolderMerging(source As String, target As String, log As List(Of String),
+                                                     otherSources As String()) As Boolean
             If PathIdentity.AreSame(source, target) Then Return True
-            RecoverMovingFiles(source, target)
+            If FolderRelocation.IsLink(source) Then
+                If FolderRelocation.MoveLink(source, target) Then
+                    log.Add($"moved link {source} to {target}")
+                    Return True
+                End If
+                log.Add($"{source} is a link and {target} exists, left")
+                Return False
+            End If
+            RecoverMovingFiles({source}.Concat(otherSources).ToArray(), target)
             If Not Directory.Exists(source) Then Return True
             Dim allDone = True
-            For Each file In Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories).ToList()
-                If file.EndsWith(MovingSuffix, StringComparison.Ordinal) Then Continue For
-                Dim relative = Path.GetRelativePath(source, file)
-                If Not MoveFileMerging(file, Path.Combine(target, relative), log) Then allDone = False
+            For Each entry In FolderRelocation.EnumerateTree(source)
+                If entry.Name.EndsWith(MovingSuffix, StringComparison.Ordinal) Then Continue For
+                Dim relative = Path.GetRelativePath(source, entry.FullName)
+                Dim entryTarget = Path.Combine(target, relative)
+                If FolderRelocation.LinkTargetOf(entry) IsNot Nothing Then
+                    If FolderRelocation.MoveLink(entry.FullName, entryTarget) Then
+                        log.Add($"moved link {entry.FullName} to {entryTarget}")
+                    Else
+                        log.Add($"link {entry.FullName} not moved, {entryTarget} exists")
+                        allDone = False
+                    End If
+                    Continue For
+                End If
+                If Not MoveFileMerging(entry.FullName, entryTarget, log) Then allDone = False
             Next
             RemoveEmptyFolders(source)
             Return allDone AndAlso Not Directory.Exists(source)
@@ -335,13 +363,24 @@ Namespace Services
 
         ''' <summary>Nach einem Abbruch liegt am Ziel womoeglich eine ".moving"-Datei, deren Quelle
         ''' es schon nicht mehr gibt; die Schleife ueber die Quelle saehe sie nie. Jede wird hier zu
-        ''' Ende gebracht (<see cref="FinishInterruptedMove"/>).</summary>
-        Private Shared Sub RecoverMovingFiles(sourceRoot As String, targetRoot As String)
+        ''' Ende gebracht wie in <see cref="FinishInterruptedMove"/>, mit allen alten Ordnern, die in
+        ''' dieses Ziel fuehren: liegt die Quelle in IRGENDEINEM noch da, ist die ".moving"-Datei
+        ''' womoeglich eine halbe Kopie (zwischen zwei Platten kopiert File.Move) und faellt weg.
+        ''' Mit nur einem Ordner bekaeme eine halbe Kopie aus "Erweiterungen" ihren Endnamen, weil
+        ''' ihre Quelle in "Extensions" fehlt.</summary>
+        Private Shared Sub RecoverMovingFiles(sourceRoots As String(), targetRoot As String)
             If Not Directory.Exists(targetRoot) Then Return
-            For Each moving In Directory.EnumerateFiles(targetRoot, "*" & MovingSuffix, SearchOption.AllDirectories).ToList()
+            For Each entry In FolderRelocation.EnumerateTree(targetRoot)
+                If Not entry.Name.EndsWith(MovingSuffix, StringComparison.Ordinal) OrElse Not TypeOf entry Is FileInfo Then Continue For
+                Dim moving = entry.FullName
                 Dim relative = Path.GetRelativePath(targetRoot, moving)
                 relative = relative.Substring(0, relative.Length - MovingSuffix.Length)
-                FinishInterruptedMove(Path.Combine(sourceRoot, relative), Path.Combine(targetRoot, relative))
+                Dim target = Path.Combine(targetRoot, relative)
+                If sourceRoots.Any(Function(root) File.Exists(Path.Combine(root, relative))) Then
+                    File.Delete(moving)
+                ElseIf Not File.Exists(target) Then
+                    File.Move(moving, target)
+                End If
             Next
         End Sub
 
@@ -369,8 +408,7 @@ Namespace Services
         Private Shared Sub RemoveEmptyFolders(root As String)
             Try
                 If Not Directory.Exists(root) Then Return
-                For Each folder In Directory.EnumerateDirectories(root, "*", SearchOption.AllDirectories).
-                                       OrderByDescending(Function(p) p.Length).ToList()
+                For Each folder In FolderRelocation.EnumerateRealDirectories(root).OrderByDescending(Function(p) p.Length).ToList()
                     If FolderRelocation.IsEmptyDirectory(folder) Then Directory.Delete(folder)
                 Next
                 If FolderRelocation.IsEmptyDirectory(root) Then Directory.Delete(root)

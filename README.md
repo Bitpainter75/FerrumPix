@@ -30,6 +30,7 @@ It runs on Windows, Linux and macOS, stays fast and local-first, and is built fo
 - Find the people in your photos and search by them, and search by where a photo was taken - both entirely on your own machine. If you switch it on, a map shows where your photos were taken.
 - Connect to your own Immich or Nextcloud server for browsing, upload, download, editing and metadata sync.
 - Use FerrumPix in a web browser: let it run on the computer where your photos are and work with it from the sofa.
+- Run it on a home server or NAS with Docker or Podman, and reach your whole photo collection from any laptop, tablet or phone. Ready-made templates for HTTPS, a Synology NAS and the home network are included.
 - Work in your own language: twenty-one are built in, and the symbol search finds shapes by their name in each of them.
 
 Your originals are never changed behind your back, and nothing at all is written until you save. Saving a RAW or a Photoshop file puts your edits in a small sidecar beside it, because those two are never written to; everything else is written the way you asked for it. For a RAW file that sidecar can hold several variants of the edit, say one in colour and one in black and white. Each variant is a picture of its own in the gallery, with its own rating and keywords, and is exported on its own.
@@ -260,20 +261,38 @@ flatpak run --env=FERRUMPIX_BROWSER_USER=anna --env=FERRUMPIX_BROWSER_PASSWORD=T
 | `--browser-proxy-address=192.168.1.2` | `FERRUMPIX_BROWSER_PROXY_ADDRESS` | where that proxy is, if it runs on a different computer |
 | `--browser-allow-http` | `FERRUMPIX_BROWSER_ALLOW_HTTP=1` | plain HTTP for devices in the home network, with a password |
 
-For a home server there is also a container image for Docker and Podman, for both amd64 and arm64 machines. Your photo folders go in under `/photos`, and everything FerrumPix keeps for itself goes into one volume:
+Pictures travel both ways: drop files onto the page, or use Upload in the gallery, to put them into the folder you are looking at, or drop them onto the picture in the editor to add them as a layer. Download in the right-click menu or on a gallery tile brings pictures to the device you sit at, and Save as, Export to and the batch tools can save straight to it as well.
+
+This is a first version, and a few things are still missing. Copy and paste stay inside FerrumPix and do not reach the clipboard of the device you sit at. Videos play without sound. And because the computer draws everything without the help of its graphics card in this mode, it feels a little less quick than the window does, mostly with very large browser windows.
+
+### On a home server or NAS with Docker
+
+The most comfortable way to use FerrumPix in the browser is a small server that is always on: a NAS, a mini PC in the cupboard, any Linux machine with Docker or Podman. FerrumPix runs there next to your photos, and every laptop, tablet or phone in the house opens it like a web page. Ratings, keywords, people and edits live in one catalogue on the server, so every device sees the same state.
+
+There is a container image for amd64 and arm64, `ghcr.io/bitpainter75/ferrumpix`, and four ready-made Compose templates in [`docker/`](docker/README.md):
+
+| Template | For |
+|---|---|
+| [`docker-compose.yml`](docker/docker-compose.yml) with [`Caddyfile`](docker/Caddyfile) | all your devices, with HTTPS through Caddy in front of FerrumPix |
+| [`docker-compose.synology.yml`](docker/docker-compose.synology.yml) | a Synology NAS, with HTTPS through the reverse proxy DSM already has |
+| [`docker-compose.synology-http.yml`](docker/docker-compose.synology-http.yml) | a Synology NAS without HTTPS, for a home network you trust |
+| [`docker-compose.local.yml`](docker/docker-compose.local.yml) | only the server itself, nothing else can reach it |
+
+Copy the one that fits into a folder, write the password into a small file next to it, add an empty folder `data`, name your photo folders and the address in an `.env` file, and start it with `docker compose up -d`. Each template explains its few steps at the top, and [`docker/README.md`](docker/README.md) walks through all of them.
+
+A few things worth knowing:
+
+- Your photo folders appear under `/photos`, and everything FerrumPix keeps for itself (settings, catalogue, thumbnails, models) goes into the folder `data` next to the template, a plain folder you can look into, back up and copy fonts into.
+- Every template that lets other devices in needs a password and does not start without one. Never open the port in your router; from outside, use HTTPS or a VPN into your home network.
+- A graphics card in the server is optional. The templates carry the lines for Intel and AMD as well as NVIDIA cards, which speed up people recognition and the other model-based tools.
+- A server usually brings only a few fonts. Put your own into `share/FerrumPix/Fonts` inside that `data` folder, and they are available for text in the editor and in saved projects.
+
+Just to try it, without any template, this keeps FerrumPix on the server itself at `http://127.0.0.1:14501`:
 
 ```
 docker run -d -p 127.0.0.1:14501:14500 -e FERRUMPIX_BROWSER_LOCAL_FORWARD=1 \
   -v ferrumpix-data:/data -v ~/Pictures:/photos/Pictures ghcr.io/bitpainter75/ferrumpix
 ```
-
-That keeps it on the server itself, at `http://127.0.0.1:14501`. For other devices the same rule as above applies: put a reverse proxy with HTTPS in front, tell FerrumPix where it is, and give it a password, or allow plain HTTP for your home network as described above. Ready-made Compose templates for that, with Caddy and HTTPS, for a Synology NAS, and only for the server itself, are in [`docker/`](docker/README.md).
-
-Fonts for text in the editor can be added by putting them into the `Fonts` folder of the data folder, in the container `/data/share/FerrumPix/Fonts`; a server usually brings only a few of its own.
-
-Pictures travel both ways: drop files onto the page, or use Upload in the gallery, to put them into the folder you are looking at, or drop them onto the picture in the editor to add them as a layer. Download in the right-click menu brings pictures to the device you sit at, and Save as, Export to and the batch tools can save straight to it as well.
-
-This is a first version, and a few things are still missing. Copy and paste stay inside FerrumPix and do not reach the clipboard of the device you sit at. Videos play without sound. And because the computer draws everything without the help of its graphics card in this mode, it feels a little less quick than the window does, mostly with very large browser windows.
 
 ## Settings
 
@@ -363,6 +382,10 @@ signed macOS builds are not planned for the time being.
 
 If the project receives sponsorship or other financial support in the future, official signing
 and notarization may be added.
+
+### Docker and Podman
+
+For a home server or NAS there is a container image, `ghcr.io/bitpainter75/ferrumpix`, for amd64 and arm64. FerrumPix then shows itself in the browser; how to set it up is described in [On a home server or NAS with Docker](#on-a-home-server-or-nas-with-docker), with ready-made templates in [`docker/`](docker/README.md).
 
 ### Good to know
 

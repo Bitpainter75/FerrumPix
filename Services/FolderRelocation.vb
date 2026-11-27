@@ -98,7 +98,13 @@ Namespace Services
     ''' waehrend des Kopierens am alten Ort verschwindet, fehlt am Ziel einfach. Eine Datei, die am
     ''' Ziel schon gleich gross liegt (auf Wunsch auch gleich alt,
     ''' <see cref="FolderRelocationOptions.RequireSameTimestamp"/>), gilt als vorhanden und wird
-    ''' nicht ueberschrieben; so setzt ein abgebrochener Umzug beim naechsten Mal fort.</summary>
+    ''' nicht ueberschrieben; so setzt ein abgebrochener Umzug beim naechsten Mal fort.
+    '''
+    ''' Eine andere Datei, die am Ziel ersetzt wird, liegt bis zum Ende unter
+    ''' <see cref="ReplacedSuffix"/> beiseite und kommt beim Rueckbau zurueck; ebenso Begleiter
+    ''' einer Datenbank (-wal, -shm, -journal) am Ziel, die die Quelle nicht hat. Verweise
+    ''' (symbolische Links, Verzweigungen) werden nie durchlaufen, sondern am Ziel als Verweis mit
+    ''' demselben Ziel neu angelegt und am alten Ort als Verweis entfernt.</summary>
     Public NotInheritable Class FolderRelocation
         Private Sub New()
         End Sub
@@ -161,7 +167,8 @@ Namespace Services
             If String.IsNullOrEmpty(parent) OrElse Not Directory.Exists(parent) Then Return -1
             Dim count = 0
             Try
-                count = Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories).Count()
+                ' Nur zum Anzeigen; ohne einem Verweis zu folgen (siehe EnumerateTree).
+                count = EnumerateTree(source).Count
             Catch
             End Try
             Dim removedEmptyTarget = False
@@ -190,7 +197,125 @@ Namespace Services
             Public Target As String
             Public Length As Long
             Public WriteTimeUtc As DateTime
+            ''' <summary>Ein Verweis (symbolischer Link, unter Windows auch eine Verzweigung): er
+            ''' wird am Ziel als Verweis mit demselben Ziel neu angelegt, nie durchlaufen.</summary>
+            Public LinkTarget As String
+            Public LinkIsDirectory As Boolean
+
+            Public ReadOnly Property IsLink As Boolean
+                Get
+                    Return LinkTarget IsNot Nothing
+                End Get
+            End Property
         End Structure
+
+        ''' <summary>Das Verweisziel eines Eintrags, Nothing fuer eine gewoehnliche Datei oder einen
+        ''' gewoehnlichen Ordner. Andere Analysepunkte (Platzhalter eines Cloud-Speichers) haben
+        ''' kein Verweisziel und gelten als gewoehnlich.</summary>
+        Friend Shared Function LinkTargetOf(info As FileSystemInfo) As String
+            Try
+                Return info.LinkTarget
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Alle Dateien und Verweise unter <paramref name="folder"/>, OHNE einem Verweis
+        ''' auf einen Ordner zu folgen. Directory.EnumerateFiles mit AllDirectories folgt ihnen
+        ''' unter .NET 10 (gemessen unter Linux): ein Ordner "Fonts", der auf ~/.fonts zeigt, kaeme
+        ''' sonst mit seinem Inhalt in den Umzug, und das Leeren des alten Orts loeschte die
+        ''' Schriften am Ziel des Verweises.</summary>
+        Friend Shared Function EnumerateTree(folder As String) As List(Of FileSystemInfo)
+            Dim found As New List(Of FileSystemInfo)()
+            Dim pending As New Stack(Of DirectoryInfo)()
+            pending.Push(New DirectoryInfo(folder))
+            While pending.Count > 0
+                For Each info In pending.Pop().EnumerateFileSystemInfos()
+                    If LinkTargetOf(info) Is Nothing AndAlso TypeOf info Is DirectoryInfo Then
+                        pending.Push(DirectCast(info, DirectoryInfo))
+                    Else
+                        found.Add(info)
+                    End If
+                Next
+            End While
+            Return found
+        End Function
+
+        ''' <summary>Die Ordner unter <paramref name="folder"/> ohne Verweise und ohne das, was
+        ''' hinter einem Verweis liegt.</summary>
+        Friend Shared Function EnumerateRealDirectories(folder As String) As List(Of String)
+            Dim found As New List(Of String)()
+            Dim pending As New Stack(Of DirectoryInfo)()
+            pending.Push(New DirectoryInfo(folder))
+            While pending.Count > 0
+                For Each child In pending.Pop().EnumerateDirectories()
+                    If LinkTargetOf(child) IsNot Nothing Then Continue For
+                    found.Add(child.FullName)
+                    pending.Push(child)
+                Next
+            End While
+            Return found
+        End Function
+
+        ''' <summary>Legt einen Verweis mit diesem Ziel an.</summary>
+        Friend Shared Sub CreateLink(path As String, linkTarget As String, isDirectory As Boolean)
+            If isDirectory Then
+                Directory.CreateSymbolicLink(path, linkTarget)
+            Else
+                File.CreateSymbolicLink(path, linkTarget)
+            End If
+        End Sub
+
+        ''' <summary>Entfernt einen Verweis selbst, nie das, worauf er zeigt.</summary>
+        Friend Shared Sub DeleteLink(path As String)
+            Dim info As New FileInfo(path)
+            If (info.Attributes And FileAttributes.Directory) <> 0 AndAlso OperatingSystem.IsWindows() Then
+                Directory.Delete(path, recursive:=False)
+            Else
+                File.Delete(path)
+            End If
+        End Sub
+
+        ''' <summary>Das Verweisziel, wenn an <paramref name="path"/> ein Verweis liegt, sonst
+        ''' Nothing.</summary>
+        Private Shared Function LinkAt(path As String) As String
+            Try
+                Return New FileInfo(path).LinkTarget
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Zieht einen Verweis um: am Ziel als Verweis mit demselben Ziel neu, am alten Ort
+        ''' entfernt; was dahinter liegt, bleibt unberuehrt. False, wenn hier kein Verweis liegt oder
+        ''' am Ziel schon etwas.</summary>
+        Friend Shared Function MoveLink(source As String, target As String) As Boolean
+            Dim linkTarget = LinkAt(source)
+            If linkTarget Is Nothing OrElse AnythingAt(target) Then Return False
+            Dim parent = IO.Path.GetDirectoryName(target)
+            If Not String.IsNullOrEmpty(parent) Then Directory.CreateDirectory(parent)
+            CreateLink(target, linkTarget, Directory.Exists(source))
+            DeleteLink(source)
+            Return True
+        End Function
+
+        ''' <summary>Liegt hier ein Verweis?</summary>
+        Friend Shared Function IsLink(path As String) As Boolean
+            Return LinkAt(path) IsNot Nothing
+        End Function
+
+        ''' <summary>Liegt an <paramref name="path"/> irgendetwas: Datei, Ordner oder ein Verweis,
+        ''' auch einer, dessen Ziel fehlt.</summary>
+        Private Shared Function AnythingAt(path As String) As Boolean
+            Return File.Exists(path) OrElse Directory.Exists(path) OrElse LinkAt(path) IsNot Nothing
+        End Function
+
+        ''' <summary>Die Begleiter einer SQLite-Datenbank, die neben ihr liegen.</summary>
+        Private Shared ReadOnly DatabaseCompanionSuffixes As String() = {"-wal", "-shm", "-journal"}
+
+        ''' <summary>Die Endung einer Zieldatei, die der Umzug ersetzt: sie liegt bis zum Ende
+        ''' beiseite und kommt beim Rueckbau zurueck.</summary>
+        Friend Const ReplacedSuffix As String = ".ferrumpix-replaced"
 
         Private Shared Function CopyThenRemove(source As String, target As String, opts As FolderRelocationOptions,
                                                progress As IProgress(Of Double),
@@ -198,25 +323,34 @@ Namespace Services
             Dim result As New FolderRelocationResult With {.Copied = True}
             Dim items As New List(Of CopyItem)()
             Dim callerHandled As New List(Of String)()
-            For Each entry In Directory.EnumerateFileSystemEntries(source)
-                Dim name = IO.Path.GetFileName(entry)
+            For Each entryInfo In New DirectoryInfo(source).EnumerateFileSystemInfos()
+                Dim name = entryInfo.Name
                 If opts.IncludeEntry IsNot Nothing AndAlso Not opts.IncludeEntry(name) Then Continue For
-                If File.Exists(entry) Then
-                    If opts.CallerHandledFiles.Contains(name) Then
-                        callerHandled.Add(name)
-                        Continue For
-                    End If
-                    Dim fileInfo As New FileInfo(entry)
-                    items.Add(New CopyItem With {.Source = entry, .Target = IO.Path.Combine(target, name), .Length = fileInfo.Length,
-                                                 .WriteTimeUtc = fileInfo.LastWriteTimeUtc})
-                ElseIf Directory.Exists(entry) Then
-                    For Each info In New DirectoryInfo(entry).EnumerateFiles("*", SearchOption.AllDirectories)
-                        Dim relative = IO.Path.GetRelativePath(source, info.FullName)
-                        items.Add(New CopyItem With {.Source = info.FullName, .Target = IO.Path.Combine(target, relative), .Length = info.Length,
-                                                     .WriteTimeUtc = info.LastWriteTimeUtc})
-                    Next
+                Dim entryIsLink = LinkTargetOf(entryInfo) IsNot Nothing
+                If TypeOf entryInfo Is FileInfo AndAlso Not entryIsLink AndAlso opts.CallerHandledFiles.Contains(name) Then
+                    callerHandled.Add(name)
+                    Continue For
                 End If
+                Dim found As IEnumerable(Of FileSystemInfo)
+                If TypeOf entryInfo Is DirectoryInfo AndAlso Not entryIsLink Then
+                    found = EnumerateTree(entryInfo.FullName)
+                Else
+                    found = {entryInfo}
+                End If
+                For Each info In found
+                    Dim relative = IO.Path.GetRelativePath(source, info.FullName)
+                    Dim linkTarget = LinkTargetOf(info)
+                    If linkTarget IsNot Nothing Then
+                        items.Add(New CopyItem With {.Source = info.FullName, .Target = IO.Path.Combine(target, relative),
+                                                     .LinkTarget = linkTarget, .LinkIsDirectory = TypeOf info Is DirectoryInfo})
+                    Else
+                        Dim fileInfo = DirectCast(info, FileInfo)
+                        items.Add(New CopyItem With {.Source = info.FullName, .Target = IO.Path.Combine(target, relative), .Length = fileInfo.Length,
+                                                     .WriteTimeUtc = fileInfo.LastWriteTimeUtc})
+                    End If
+                Next
             Next
+            Dim sourceFiles = items.Select(Function(i) i.Source).ToHashSet(StringComparer.Ordinal)
 
             Dim totalBytes = Math.Max(1L, items.Sum(Function(i) i.Length))
             Dim needed = items.Where(Function(i) Not AlreadyAtTarget(i, opts)).Sum(Function(i) i.Length)
@@ -231,12 +365,26 @@ Namespace Services
             Dim copiedSources As New List(Of String)()
             Dim createdRoot = Not Directory.Exists(target)
             Dim callerFilesBefore = callerHandled.Where(Function(n) File.Exists(IO.Path.Combine(target, n))).ToHashSet(StringComparer.Ordinal)
+            ' Was am Ziel schon lag und ersetzt wird (Original, beiseitegelegt unter ReplacedSuffix).
+            Dim replaced As New Dictionary(Of String, String)(StringComparer.Ordinal)
             Dim rollback =
                 Sub()
                     For Each path In createdFiles
                         Try
-                            File.Delete(path)
+                            If LinkAt(path) IsNot Nothing Then
+                                DeleteLink(path)
+                            Else
+                                File.Delete(path)
+                            End If
                         Catch
+                        End Try
+                    Next
+                    ' Was ersetzt wurde, kommt zurueck, samt den Begleitern einer Datenbank.
+                    For Each pair In replaced
+                        Try
+                            If File.Exists(pair.Value) Then File.Move(pair.Value, pair.Key, overwrite:=True)
+                        Catch ex As Exception
+                            DiagnosticLogService.LogException("FolderRelocation.RestoreReplaced", ex)
                         End Try
                     Next
                     For Each name In callerHandled
@@ -269,6 +417,25 @@ Namespace Services
                         .BytesTotal = totalBytes, .CurrentFile = If(current, ""), .Source = source, .Target = target})
                 End Sub
 
+            ' Eine Zieldatei beiseitelegen, bevor sie ersetzt wird. Liegt schon ein Original
+            ' beiseite (ein abgebrochener Umzug), bleibt es: es ist der Stand vor dem ersten Versuch.
+            Dim setAside =
+                Sub(path As String)
+                    Dim aside = path & ReplacedSuffix
+                    If Not File.Exists(aside) Then File.Move(path, aside)
+                    replaced(path) = aside
+                End Sub
+            ' Begleiter einer Datenbank am Ziel, die die Quelle nicht hat: eine alte library.db-wal
+            ' neben der neuen library.db spielte SQLite beim Oeffnen in sie ein.
+            Dim setAsideStaleCompanions =
+                Sub(item As CopyItem)
+                    For Each suffix In DatabaseCompanionSuffixes
+                        Dim companion = item.Target & suffix
+                        If sourceFiles.Contains(item.Source & suffix) OrElse Not File.Exists(companion) Then Continue For
+                        setAside(companion)
+                    Next
+                End Sub
+
             Try
                 Directory.CreateDirectory(target)
                 Dim doneBytes = 0L
@@ -279,8 +446,11 @@ Namespace Services
                         result.Outcome = FolderRelocationOutcome.Cancelled
                         Return result
                     End If
+                    ' Ein Original aus einem abgebrochenen Versuch gehoert zum Rueckbau dieses.
+                    If File.Exists(item.Target & ReplacedSuffix) Then replaced(item.Target) = item.Target & ReplacedSuffix
                     If AlreadyAtTarget(item, opts) Then
                         TryDeleteFile(item.Target & PartSuffix)
+                        If Not item.IsLink Then setAsideStaleCompanions(item)
                         copiedSources.Add(item.Source)
                         doneBytes += item.Length
                         doneFiles += 1
@@ -289,6 +459,26 @@ Namespace Services
                     End If
                     reportDetail(doneBytes, item.Source)
                     EnsureDirectory(IO.Path.GetDirectoryName(item.Target), target, createdDirs)
+                    If item.IsLink Then
+                        ' Ein Verweis wird als Verweis neu angelegt. Liegt dort schon etwas anderes,
+                        ' oder legt das System keinen an (Windows ohne das Recht dazu), bleibt er am
+                        ' alten Ort stehen; dort wird er dann auch nicht entfernt.
+                        If AnythingAt(item.Target) Then
+                            DiagnosticLogService.LogAlways("FolderRelocation", $"link {item.Source} not moved, {item.Target} exists")
+                        Else
+                            Try
+                                CreateLink(item.Target, item.LinkTarget, item.LinkIsDirectory)
+                                createdFiles.Add(item.Target)
+                                copiedSources.Add(item.Source)
+                                result.MovedFiles += 1
+                            Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is UnauthorizedAccessException
+                                DiagnosticLogService.LogAlways("FolderRelocation", $"link {item.Source} not moved: {ex.Message}")
+                            End Try
+                        End If
+                        doneFiles += 1
+                        reportDetail(doneBytes, "")
+                        Continue For
+                    End If
                     Dim existedBefore = File.Exists(item.Target)
                     ' Erst unter einem Zwischennamen, erst vollstaendig unter dem eigenen: bricht der
                     ' Prozess mitten in einer Datei ab, liegt am Ziel nie eine halbe Datei unter dem
@@ -315,6 +505,8 @@ Namespace Services
                         result.Detail = item.Target
                         Return result
                     End If
+                    If existedBefore Then setAside(item.Target)
+                    setAsideStaleCompanions(item)
                     File.Move(part, item.Target, overwrite:=True)
                     If Not existedBefore Then createdFiles.Add(item.Target)
                     copiedSources.Add(item.Source)
@@ -333,10 +525,19 @@ Namespace Services
                 Return result
             End Try
 
+            ' Der neue Stand gilt: die beiseitegelegten Originale am Ziel werden nicht mehr gebraucht.
+            For Each aside In replaced.Values
+                TryDeleteFile(aside)
+            Next
             ' Erst jetzt den alten Ort leeren: genau das Kopierte, dann die leer gewordenen Ordner.
+            ' Ein Verweis wird als Verweis entfernt, nie das, worauf er zeigt.
             For Each path In copiedSources
                 Try
-                    File.Delete(path)
+                    If LinkAt(path) IsNot Nothing Then
+                        DeleteLink(path)
+                    Else
+                        File.Delete(path)
+                    End If
                 Catch ex As Exception
                     DiagnosticLogService.LogException("FolderRelocation.RemoveSource", ex)
                 End Try
@@ -385,8 +586,7 @@ Namespace Services
         Private Shared Sub RemoveEmptyDirectories(root As String)
             Try
                 If Not Directory.Exists(root) Then Return
-                For Each folder In Directory.EnumerateDirectories(root, "*", SearchOption.AllDirectories).
-                                       OrderByDescending(Function(p) p.Length).ToList()
+                For Each folder In EnumerateRealDirectories(root).OrderByDescending(Function(p) p.Length).ToList()
                     If IsEmptyDirectory(folder) Then Directory.Delete(folder, recursive:=False)
                 Next
                 If IsEmptyDirectory(root) Then Directory.Delete(root, recursive:=False)
@@ -398,6 +598,7 @@ Namespace Services
         ''' <summary>Liegt die Datei am Ziel schon? Gleich gross, mit
         ''' <see cref="FolderRelocationOptions.RequireSameTimestamp"/> auch gleich alt.</summary>
         Private Shared Function AlreadyAtTarget(item As CopyItem, opts As FolderRelocationOptions) As Boolean
+            If item.IsLink Then Return String.Equals(LinkAt(item.Target), item.LinkTarget, StringComparison.Ordinal)
             Try
                 Dim info As New FileInfo(item.Target)
                 If Not info.Exists OrElse info.Length <> item.Length Then Return False

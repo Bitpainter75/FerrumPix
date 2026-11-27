@@ -88,7 +88,7 @@ Namespace Services
     ''' Zugangsdaten, behaelt die zurueckgeholte Einstellungsdatei die jetzigen.
     '''
     ''' DIE GESPEICHERTEN ANPASSUNGEN sind kein einzelnes Stueck, sondern ein Ordnerbaum aus Dateien
-    ''' (AdjustmentPresetStore) unter "presets" im Datenordner. Gesichert wird jede
+    ''' (AdjustmentPresetStore) unter "Presets" im Datenordner. Gesichert wird jede
     ''' lesbare Vorlage des geltenden Ordners als eigener Eintrag "presets/Ordner/Datei" mit
     ''' Pruefsumme; Fremdes und Kaputtes im Ordner bleibt draussen. Ist der Ordner beim Sichern nicht
     ''' erreichbar, fehlt der Teil, und das Inhaltsverzeichnis nennt den Ordner
@@ -505,7 +505,11 @@ Namespace Services
                     Dim node = JsonNode.Parse(File.ReadAllText(info))
                     useBackupSecrets = If(node?("UseBackupSecrets")?.GetValue(Of Boolean)(), False)
                 End If
-                ' Erst alles vorbereiten, was die jetzigen Dateien noch lesen muss.
+                ' Erst alles vorbereiten, was die jetzigen Dateien noch lesen muss. Davor einen noch
+                ' ausstehenden Stand auf die Platte: der Start schreibt kurz vorher etwa den Vermerk
+                ' des Umzugs von 0.9.92, und die Angaben dieses Rechners werden aus der DATEI
+                ' uebernommen. Danach verwirft InvalidateCache, was noch aussteht.
+                AppSettingsService.Flush()
                 Dim settingsStaged = Path.Combine(staging, "settings.json")
                 If File.Exists(settingsStaged) Then
                     Dim settingsTarget = KnownFiles().First(Function(k) k.Name = "settings.json").Target

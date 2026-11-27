@@ -41,6 +41,72 @@ Namespace Services
         Public Shared Sub PrepareAtStartup()
             If Interlocked.Exchange(_prepared, 1) = 1 Then Return
             Dim log As New List(Of String)()
+            Using gate = EnterStartupGate(StartupGatePath, Sub() log.Add("another FerrumPix is preparing the data folder, waiting for it"))
+                ' Erst hinter dem Riegel lesen: hat ein anderer Start eben umgezogen, steht in
+                ' settings.json schon der neue Ort, und der hier vor dem Riegel bestimmte
+                ' Datenordner (PlanStartupMove) waere der alte.
+                SyncLock _gate
+                    ResolveDataRoot()
+                End SyncLock
+                PrepareBehindGate(log)
+            End Using
+        End Sub
+
+        ''' <summary>Der Riegel des Starts im Ordner der Einstellungen (siehe
+        ''' <see cref="EnterStartupGate"/>).</summary>
+        Friend Const StartupGateFileName As String = "startup.lock"
+
+        Friend Shared ReadOnly Property StartupGatePath As String
+            Get
+                Return Path.Combine(ConfigRoot, StartupGateFileName)
+            End Get
+        End Property
+
+        ''' <summary>Wie lange zwischen zwei Versuchen am Riegel gewartet wird.</summary>
+        Private Const StartupGatePollMs As Integer = 200
+
+        ''' <summary>Nur EIN Start zur Zeit bereitet die Orte vor: der einmalige Umzug, ein
+        ''' vorgemerkter Wechsel, die Katalogsperre. Mehrere Fenster sind erlaubt, und ein Bild,
+        ''' das im Dateimanager geoeffnet wird, startet einen zweiten Prozess. Liefe der waehrend
+        ''' eines minutenlangen Umzugs mit derselben Vormerkung los, zaehlte er die Kopien des
+        ''' ersten als schon am Ziel, beide schrieben dieselben Zwischendateien, und einer loeschte
+        ''' am alten Ort, was der andere noch braucht.
+        '''
+        ''' WIE: eine Datei im Ordner der Einstellungen, offen gehalten mit FileShare.None (wie
+        ''' BackgroundRunLock); das Betriebssystem gibt sie auch nach einem Absturz frei. Der
+        ''' Ordner der Einstellungen und nicht der Datenordner, weil es genau um die Frage geht,
+        ''' welcher Datenordner gilt. Ein zweiter Start wartet, bis der erste fertig ist, und liest
+        ''' danach die Orte neu; mit Fenster zeigt er dabei das Fenster des Umzugs (er sieht
+        ''' dieselbe Vormerkung). Laesst sich der Riegel aus einem anderen Grund nicht anlegen
+        ''' (schreibgeschuetzt), geht es ohne ihn weiter wie bisher.</summary>
+        ''' <param name="onWait">Laeuft einmal, wenn gewartet werden muss.</param>
+        Friend Shared Function EnterStartupGate(gatePath As String, onWait As Action) As IDisposable
+            Dim waited = False
+            Do
+                Try
+                    Directory.CreateDirectory(Path.GetDirectoryName(gatePath))
+                    Return New FileStream(gatePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None)
+                Catch ex As IOException When IsSharingViolation(ex)
+                    If Not waited Then
+                        waited = True
+                        onWait?.Invoke()
+                    End If
+                    Thread.Sleep(StartupGatePollMs)
+                Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is UnauthorizedAccessException
+                    DiagnosticLogService.LogException("AppFolders.StartupGate", ex)
+                    Return Nothing
+                End Try
+            Loop
+        End Function
+
+        ''' <summary>Belegt, nicht kaputt: EWOULDBLOCK der Dateisperre unter Linux (11) und macOS
+        ''' (35), ERROR_SHARING_VIOLATION und ERROR_LOCK_VIOLATION unter Windows.</summary>
+        Private Shared Function IsSharingViolation(ex As IOException) As Boolean
+            Dim code = ex.HResult And &HFFFF
+            Return code = 11 OrElse code = 35 OrElse code = 32 OrElse code = 33
+        End Function
+
+        Private Shared Sub PrepareBehindGate(log As List(Of String))
             Dim saved = ReadFolderSettings(SettingsPath)
             Try
                 If saved.LayoutVersion < FolderLayoutMigration.LayoutVersion AndAlso Not IsDataRootFallback Then
@@ -75,6 +141,13 @@ Namespace Services
             Catch ex As Exception
                 log.Add("start guard names not migrated: " & ex.Message)
                 DiagnosticLogService.LogException("AppFolders.GuardNames", ex)
+            End Try
+            ' Ebenso vor dem ersten Lesen der Anpassungen: deren Ordner hiess bis 0.9.91 "presets".
+            Try
+                MigratePresetsFolderName(DataRoot, log)
+            Catch ex As Exception
+                log.Add("presets folder not renamed: " & ex.Message)
+                DiagnosticLogService.LogException("AppFolders.PresetsFolderName", ex)
             End Try
             WriteStartupLog(log)
             CatalogLock.Acquire()
@@ -134,6 +207,65 @@ Namespace Services
                 End If
             Next
         End Sub
+
+        ''' <summary>Der Zwischenname beim Umbenennen des Ordners der Anpassungen
+        ''' (<see cref="MigratePresetsFolderName"/>).</summary>
+        Friend Const PresetsRenamingName As String = "Presets.renaming"
+
+        ''' <summary>Gibt dem Ordner der Anpassungen seinen neuen Namen: aus
+        ''' <see cref="LegacyPresetsFolderName"/> (bis 0.9.91) wird <see cref="PresetsFolderName"/>,
+        ''' passend zu Models, Extensions und Fonts.
+        '''
+        ''' NUR DIE SCHREIBWEISE AENDERT SICH. Unter Windows und macOS trennt das Dateisystem Gross
+        ''' und Klein meist nicht: dort sind "presets" und "Presets" derselbe Ordner, und ein
+        ''' Umbenennen nur in der Schreibweise geht je nach System nicht oder laeuft ins Leere.
+        ''' Deshalb zuerst unter einen Zwischennamen (<see cref="PresetsRenamingName"/>), dann unter
+        ''' den neuen. Welcher Name wirklich auf der Platte steht, sagt nur die Aufzaehlung des
+        ''' Datenordners; Directory.Exists findet dort beide Schreibweisen.
+        '''
+        ''' LIEGEN BEIDE VOR (nur wo das Dateisystem Gross und Klein trennt, etwa weil der Umzug beim
+        ''' Start die Anpassungen eines eigenen Ordners schon in den neuen kopiert hat), wird der alte
+        ''' in den neuen gefuehrt, ohne etwas zu ueberschreiben: was fehlt, kommt dazu, eine gleiche
+        ''' Datei faellt weg, eine andere kommt als ".old" daneben
+        ''' (FolderLayoutMigration.MigrateFolderMerging). Der dann leere alte Ordner faellt weg.
+        '''
+        ''' BRICHT ES AB, steht womoeglich nur der Zwischenname da; der naechste Start bringt ihn
+        ''' zu Ende. OHNE ALTES kostet es zwei Abfragen, ob es die Ordner gibt.</summary>
+        Friend Shared Sub MigratePresetsFolderName(dataRoot As String, log As List(Of String))
+            Dim newFolder = Path.Combine(dataRoot, PresetsFolderName)
+            Dim parked = Path.Combine(dataRoot, PresetsRenamingName)
+            If Directory.Exists(parked) Then
+                If HasEntryNamed(dataRoot, PresetsFolderName) Then
+                    Dim merged = FolderLayoutMigration.MigrateFolderMerging(parked, newFolder, log, Array.Empty(Of String)())
+                    log.Add($"presets: interrupted rename finished by merging {parked} into {newFolder}" &
+                            If(merged, "", ", not everything moved"))
+                Else
+                    Directory.Move(parked, newFolder)
+                    log.Add($"presets: interrupted rename finished, {parked} to {newFolder}")
+                End If
+            End If
+            Dim oldFolder = Path.Combine(dataRoot, LegacyPresetsFolderName)
+            If Not Directory.Exists(oldFolder) OrElse Not HasEntryNamed(dataRoot, LegacyPresetsFolderName) Then Return
+            If HasEntryNamed(dataRoot, PresetsFolderName) Then
+                Dim merged = FolderLayoutMigration.MigrateFolderMerging(oldFolder, newFolder, log, Array.Empty(Of String)())
+                log.Add($"presets: merged {oldFolder} into {newFolder}" &
+                        If(merged, ", old folder removed", ", old folder kept (not everything moved)"))
+                Return
+            End If
+            Directory.Move(oldFolder, parked)
+            Directory.Move(parked, newFolder)
+            log.Add($"presets: renamed {oldFolder} to {newFolder}")
+        End Sub
+
+        ''' <summary>Steht im Ordner ein Eintrag mit genau diesem Namen, in dieser Schreibweise?
+        ''' Die Suche nach dem Namen ist unter Windows und macOS blind fuer Gross und Klein, der
+        ''' Vergleich danach nicht.</summary>
+        Private Shared Function HasEntryNamed(folder As String, name As String) As Boolean
+            For Each entry In Directory.EnumerateFileSystemEntries(folder, name)
+                If String.Equals(Path.GetFileName(entry), name, StringComparison.Ordinal) Then Return True
+            Next
+            Return False
+        End Function
 
         Private Shared Sub MigrateGuardFolder(oldFolder As String, newFolder As String, log As List(Of String))
             Directory.CreateDirectory(newFolder)
@@ -219,6 +351,8 @@ Namespace Services
                     CommitDataFolder(target, setting, Nothing)
                     ApplyDataRoot(target, setting, False)
                     log.Add($"data folder switched to {target}; the previous one is not reachable, the move had finished")
+                    ' Den Rueckfall gibt es nur fuer einen gewaehlten Ort: der alte war gewaehlt.
+                    If Not saved.PendingAdopt Then AlignMachineSpecificNames(target, True, setting.Length > 0, log)
                 Else
                     log.Add("pending change waits, current data folder not reachable")
                 End If
@@ -248,6 +382,22 @@ Namespace Services
                 AddNotice(FolderStartupNoticeKind.MoveFailed, target)
                 Return
             End If
+            ' Gewaehlt wurde das Ziel leer oder als Unterordner, aber das kann Tage her sein: ist
+            ' es inzwischen ein Datenordner (ein anderer Rechner hat dorthin umgezogen oder ihn
+            ' uebernommen) oder haelt dort jemand den Katalog, ueberschriebe der Umzug dessen
+            ' Katalog mit diesem. Die Marke traegt ein Ziel dieses Umzugs erst, wenn settings.json
+            ' ihn schon eingetragen hat (CommitDataFolder schreibt den Eintrag, bevor am alten Ort
+            ' etwas geloescht wird); bis auf den Augenblick dazwischen ist sie also fremd, und auch
+            ' dann liegt am alten Ort noch alles.
+            Dim targetHolder = CatalogLock.ForeignHolderAt(target)
+            If IsUsableDataFolder(target) OrElse targetHolder IsNot Nothing Then
+                log.Add($"data folder not moved, {target} is meanwhile a FerrumPix data folder" &
+                        If(targetHolder Is Nothing, "", $" in use by {targetHolder.Machine} (process {targetHolder.ProcessId})"))
+                ClearPending()
+                AddNotice(FolderStartupNoticeKind.MoveFailed, target)
+                Return
+            End If
+            Dim sourceChosen = Not PathIdentity.AreSame(source, DefaultDataRoot)
             Dim moved = MoveDataFolder(source, target, ConfigRoot, Nothing, Sub() CommitDataFolder(target, setting, source),
                                        Volatile.Read(_startupProgress))
             log.Add($"data folder move {source} to {target}: {moved.Outcome}, {moved.MovedFiles} files, copied={moved.Copied} {moved.Detail}")
@@ -258,6 +408,7 @@ Namespace Services
                         ' Umbenennen des ganzen Ordners steht es hier zum ersten Mal an.
                         CommitDataFolder(target, setting, source)
                         ApplyDataRoot(target, setting, False)
+                        AlignMachineSpecificNames(target, sourceChosen, setting.Length > 0, log)
                     Catch ex As Exception
                         ' Nur nach dem Umbenennen moeglich: die Daten liegen am Ziel, die Marke liess
                         ' sich nicht schreiben. Diese Sitzung arbeitet dort, die Vormerkung bleibt,
@@ -313,21 +464,46 @@ Namespace Services
         ''' <param name="previousRoot">Der alte Ort, Nothing, wenn er bleiben soll, wie er ist
         ''' (ein uebernommener Datenordner, ein nicht erreichbarer).</param>
         Private Shared Sub CommitDataFolder(target As String, setting As String, previousRoot As String)
+            Dim marker = Path.Combine(target, DataMarkerFileName)
+            Dim markerExisted = File.Exists(marker)
             If setting.Length > 0 Then
                 WriteDataMarker(target)
             Else
                 ' Zurueck am Ort ab Werk braucht es keine Marke.
                 Try
-                    Dim marker = Path.Combine(target, DataMarkerFileName)
                     If File.Exists(marker) Then File.Delete(marker)
                 Catch
                 End Try
             End If
+            Dim before As AppSettings = Nothing
             UpdateFolderSettings(Sub(s)
+                                     before = New AppSettings With {.DataFolder = s.DataFolder, .DataFolderPending = s.DataFolderPending,
+                                                                    .DataFolderPendingAdopt = s.DataFolderPendingAdopt}
                                      s.DataFolder = setting
                                      s.DataFolderPending = ""
                                      s.DataFolderPendingAdopt = False
                                  End Sub)
+            ' DER EINTRAG MUSS AUF DER PLATTE STEHEN, bevor am alten Ort etwas geloescht wird.
+            ' AppSettingsService schreibt sonst erst anderthalb Sekunden spaeter; endet der Prozess
+            ' dazwischen, zeigt settings.json auf einen geleerten Ort. Gelingt das Schreiben nicht,
+            ' gilt der Wechsel als gescheitert: Eintrag und Vormerkung wie vorher, eine eben
+            ' geschriebene Marke am Ziel wieder weg, und die Ausnahme baut das Ziel zurueck.
+            If Not FlushFolderSettings() Then
+                If before IsNot Nothing Then
+                    UpdateFolderSettings(Sub(s)
+                                             s.DataFolder = before.DataFolder
+                                             s.DataFolderPending = before.DataFolderPending
+                                             s.DataFolderPendingAdopt = before.DataFolderPendingAdopt
+                                         End Sub)
+                End If
+                If setting.Length > 0 AndAlso Not markerExisted Then
+                    Try
+                        If File.Exists(marker) Then File.Delete(marker)
+                    Catch
+                    End Try
+                End If
+                Throw New IOException("settings.json could not be written, data folder change not committed")
+            End If
             If previousRoot Is Nothing Then Return
             Try
                 Dim oldMarker = Path.Combine(previousRoot, DataMarkerFileName)
@@ -349,10 +525,52 @@ Namespace Services
             End If
         End Sub
 
+        ''' <summary>Fuer den Pruefstand: ersetzt das sofortige Schreiben von settings.json, etwa
+        ''' um eine volle Platte nachzustellen. False heisst: nicht geschrieben.</summary>
+        Friend Shared FolderSettingsFlushOverride As Func(Of Boolean)
+
+        ''' <summary>Schreibt den Stand sofort. Mit dem Ersatz des Pruefstands steht er schon
+        ''' in der Datei.</summary>
+        Private Shared Function FlushFolderSettings() As Boolean
+            Dim flush = FolderSettingsFlushOverride
+            If flush IsNot Nothing Then Return flush()
+            If FolderSettingsWriterOverride IsNot Nothing Then Return True
+            Return AppSettingsService.FlushNow()
+        End Function
+
+        ''' <summary>Gleicht nach einem Wechsel die Namen an, die nur in einem gewaehlten
+        ''' Datenordner den Rechnernamen tragen (<see cref="MachineSpecificName"/>): die Sperrdatei
+        ''' der Karte, die Marke der laufenden Karte und den Ordner des Startschutzes. Ohne das
+        ''' laegen sie nach dem Umzug vom Ort ab Werk in einen gewaehlten (oder zurueck) unter dem
+        ''' anderen Namen, und die Entscheidung, Karte oder Modell zu sperren, waere vergessen.
+        ''' Nur die Namen dieses Rechners; die anderer Rechner bleiben, wie sie sind. Ein
+        ''' vorhandenes Ziel bleibt wie beim Umzug der deutschen Namen.</summary>
+        Friend Shared Sub AlignMachineSpecificNames(dataRoot As String, fromChosen As Boolean, toChosen As Boolean, log As List(Of String))
+            If fromChosen = toChosen Then Return
+            Dim fromSuffix = If(fromChosen, "." & MachineTag, "")
+            Dim toSuffix = If(toChosen, "." & MachineTag, "")
+            Try
+                Dim oldGuard = Path.Combine(dataRoot, StartGuardFolderName & fromSuffix)
+                If Directory.Exists(oldGuard) Then
+                    MigrateGuardFolder(oldGuard, Path.Combine(dataRoot, StartGuardFolderName & toSuffix), log)
+                End If
+                For Each name In {(GpuBlockFileName, ".json"), (GpuBusyMarkerName, ".marker")}
+                    Dim oldFile = Path.Combine(dataRoot, name.Item1 & fromSuffix & name.Item2)
+                    If File.Exists(oldFile) Then
+                        FolderLayoutMigration.MoveFileMerging(oldFile, Path.Combine(dataRoot, name.Item1 & toSuffix & name.Item2), log)
+                    End If
+                Next
+            Catch ex As Exception
+                log.Add("machine specific names not aligned: " & ex.Message)
+            End Try
+        End Sub
+
         ''' <summary>Gehoert ein Eintrag zum Ordner der Einstellungen und nicht zu den Daten?</summary>
         Friend Shared Function BelongsToConfig(name As String) As Boolean
+            ' Der Riegel des Starts ist waehrend des Umzugs offen und gehoert zu den Einstellungen.
             Return name.StartsWith(SettingsFileName, StringComparison.Ordinal) OrElse
-                   String.Equals(name, LegacyModelsFolderName, StringComparison.Ordinal)
+                   String.Equals(name, LegacyModelsFolderName, StringComparison.Ordinal) OrElse
+                   String.Equals(name, StartupGateFileName, StringComparison.Ordinal)
         End Function
 
         Private Shared Sub ClearPending()

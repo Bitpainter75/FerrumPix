@@ -587,7 +587,7 @@ Namespace Services
                 Dim texts = Await Dispatcher.UIThread.InvokeAsync(Function() PageTextsJson())
                 Dim page = Encoding.UTF8.GetBytes(_pageText.Replace(TokenPlaceholder, IssueToken(), StringComparison.Ordinal).
                                                             Replace(TextsPlaceholder, texts, StringComparison.Ordinal))
-                ' Mit Sitzung lebt das Cookie im Browser wieder so lange wie beim Server.
+                ' Mit Sitzung zaehlen die 30 Tage des Cookies wieder von hier an.
                 RefreshSessionCookie(context)
                 context.Response.ContentType = "text/html; charset=utf-8"
                 context.Response.Headers("Cache-Control") = "no-store"

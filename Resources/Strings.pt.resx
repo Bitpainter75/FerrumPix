@@ -13052,4 +13052,10 @@
   <data name="Sperren_STRG_L_10c0fb95" xml:space="preserve">
     <value>Bloquear (CTRL+L)</value>
   </data>
+  <data name="0_weitere_Orte_kommen_in_diesem_Ordner_nicht_vor_2e15c447" xml:space="preserve">
+    <value>Mais {0} lugares não aparecem nesta pasta.</value>
+  </data>
+  <data name="Alle_Orte_des_Katalogs_zeigen_c19f79e6" xml:space="preserve">
+    <value>Mostrar todos os lugares do catálogo</value>
+  </data>
 </root>

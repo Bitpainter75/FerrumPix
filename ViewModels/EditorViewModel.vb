@@ -1739,7 +1739,9 @@ Namespace ViewModels
 
         ''' <summary>Die Schriften zur Wahl: die des Systems und die eigenen aus dem Ordner Fonts des
         ''' Datenordners (<see cref="FontLibraryService"/>), ohne Doppel und gemeinsam sortiert.
-        ''' Nach "Neu einlesen" baut die Liste sich neu (<see cref="OnFontLibraryChanged"/>).</summary>
+        ''' Nach "Neu einlesen" baut die Liste sich neu (<see cref="OnFontLibraryChanged"/>). Sie wartet
+        ''' nicht auf ein laufendes Einlesen (FontLibraryService.LoadedFamilyNames), denn sie entsteht
+        ''' auf dem Anzeigefaden; die eigenen Schriften kommen mit dem Ende des Einlesens dazu.</summary>
         Public ReadOnly Property AnnotationFontOptions As IReadOnlyList(Of String)
             Get
                 Dim libraryVersion = FontLibraryService.Version
@@ -1751,13 +1753,13 @@ Namespace ViewModels
                         systemNames = Nothing
                     End Try
                     Dim names = If(systemNames, Enumerable.Empty(Of String)()).
-                        Concat(FontLibraryService.FamilyNames).
+                        Concat(FontLibraryService.LoadedFamilyNames).
                         Where(Function(n) Not String.IsNullOrWhiteSpace(n)).
                         Distinct(StringComparer.OrdinalIgnoreCase).
                         OrderBy(Function(n) n, StringComparer.OrdinalIgnoreCase).
                         ToList()
                     _annotationFontOptionsCache = If(names.Count > 0, names, FallbackFontOptions)
-                    _annotationFontOptionsVersion = FontLibraryService.Version
+                    _annotationFontOptionsVersion = libraryVersion
                 End If
                 Return _annotationFontOptionsCache
             End Get
@@ -2408,9 +2410,12 @@ Namespace ViewModels
             Return ImageAdjustments.IsBuiltInLook(id)
         End Function
 
-        Private Sub ApplyBuiltInLook(id As String, Optional strengthPercent As Double = 50)
+        ''' <paramref name="grainModel"/>: die Fassung des Korns, siehe ImageAdjustments.CreateBuiltInLook.
+        ''' Ein neu aufgelegter Look bekommt die aktuelle; der Stärkeregler gibt die stehende weiter.
+        Private Sub ApplyBuiltInLook(id As String, Optional strengthPercent As Double = 50,
+                                     Optional grainModel As Integer = ImageAdjustments.CurrentGrainModel)
             Dim normalizedStrength = Math.Max(0, Math.Min(100, strengthPercent))
-            Dim look = ImageAdjustments.CreateBuiltInLook(id, normalizedStrength)
+            Dim look = ImageAdjustments.CreateBuiltInLook(id, normalizedStrength, grainModel)
             If look Is Nothing Then Return
             ' Der Filterplatz wird unten direkt gesetzt. Über ApplyLookAdjustments liefe er durch
             ' die Eigenschaft, deren Stärke-Setter den Look erneut anwenden würde.
@@ -10652,7 +10657,12 @@ Namespace ViewModels
                 If IsBuiltInLook(_filterPreset) Then
                     If Math.Abs(_filterStrength - normalized) < 0.0001 Then Return
                     CaptureUndoState(NameOf(FilterStrength))
-                    ApplyBuiltInLook(_filterPreset, normalized)
+                    ' Die Stärke legt denselben Look neu auf und ändert damit nur die Menge: steht
+                    ' schon Korn, bleibt seine Fassung (ImageAdjustments.GrainModelAfter). Eine ältere
+                    ' Bearbeitung behielte sonst bei jedem Schritt das Korn der alten Rechnung nicht,
+                    ' sondern spränge auf die neue samt deren Werten.
+                    ApplyBuiltInLook(_filterPreset, normalized,
+                                     If(_grain > 0, _grainModel, ImageAdjustments.CurrentGrainModel))
                     Return
                 End If
                 SetUndoableDouble(_filterStrength, normalized, NameOf(FilterStrength))
@@ -19402,11 +19412,14 @@ Namespace ViewModels
             End If
 
             Dim entries = dialog.SelectedEntries()
-            Dim transferable = GetCurrentAdjustments().ExtractTransferableAdjustments()
+            Dim current = GetCurrentAdjustments()
+            Dim transferable = current.ExtractTransferableAdjustments()
             Dim isLut = dialog.Target = AdjustmentSaveTarget.Lut
             Try
                 If isLut Then
-                    Dim recipe = AdjustmentEntries.Extract(transferable, entries)
+                    ' Das XMP-Preset unten behält den Regler, wie ihn das Format meint; die LUT rechnet
+                    ' mit der Herkunft der RAW-Stufe wie die Kette des Editors (CubeLutWriter.ExtractRecipe).
+                    Dim recipe = CubeLutWriter.ExtractRecipe(current, entries)
                     Dim gridSize = dialog.SelectedGridSize
                     Dim reference As ImageProcessor.ToneReference = Nothing
                     If _previewSource IsNot Nothing AndAlso recipe.ReadsImageStatistics() Then
@@ -19423,6 +19436,11 @@ Namespace ViewModels
                 Return False
             End Try
             AppSettingsService.Update(Sub(s) s.AdjustmentExportFolder = folder)
+            ' Neu geschrieben unter dem Pfad der LUT, die das offene Rezept traegt: das Bild zeigt
+            ' sonst den alten Inhalt, bis sich ein Regler bewegt (ImageProcessor.CubeLutKeyPart).
+            If isLut AndAlso _lutPath.Length > 0 AndAlso PathIdentity.AreSame(_lutPath, targetPath) Then
+                SchedulePreviewForCurrentTarget()
+            End If
             StatusText = String.Format(If(isLut, LocalizationService.T("LUT gespeichert: {0}"),
                                               LocalizationService.T("XMP-Preset gespeichert: {0}")),
                                        IO.Path.GetFileName(targetPath))

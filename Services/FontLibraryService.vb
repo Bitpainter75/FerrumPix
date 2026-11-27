@@ -136,6 +136,30 @@ Namespace Services
             End Get
         End Property
 
+        ''' <summary>Die eigenen Familien des Stands, der gerade da ist, ohne zu warten: fuer die
+        ''' Liste zur Wahl, die auf dem Anzeigefaden entsteht. Fehlt ein Stand fuer den aktuellen
+        ''' Ordner, ist sie leer, und das Einlesen beginnt im Hintergrund; <see cref="Changed"/>
+        ''' meldet danach den neuen Stand, und die Liste baut sich neu. Wer zeichnet, nimmt weiter
+        ''' <see cref="EnsureLoaded"/>, damit die richtige Schrift kommt.</summary>
+        Public Shared ReadOnly Property LoadedFamilyNames As IReadOnlyList(Of String)
+            Get
+                Dim current = Volatile.Read(_snapshot)
+                If current Is Nothing OrElse Not String.Equals(current.Folder, Folder, StringComparison.Ordinal) Then
+                    LoadInBackground()
+                    Return Array.Empty(Of String)()
+                End If
+                Return current.Families
+            End Get
+        End Property
+
+        ''' <summary>Beginnt ein Einlesen im Hintergrund, wenn keines laeuft.</summary>
+        Private Shared Sub LoadInBackground()
+            SyncLock _loadGate
+                If _loadTask IsNot Nothing AndAlso Not _loadTask.IsCompleted Then Return
+                _loadTask = Task.Run(Sub() Reload())
+            End SyncLock
+        End Sub
+
         ''' <summary>Wie viele Familien gefunden wurden, ohne auf ein laufendes Einlesen zu
         ''' warten (fuer die Anzeige in den Einstellungen); -1, solange noch nichts gelesen ist.</summary>
         Public Shared ReadOnly Property LoadedFamilyCount As Integer

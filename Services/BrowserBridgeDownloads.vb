@@ -16,7 +16,8 @@ Namespace Services
     ''' in einen Ordner unter dem Datenordner (je Rechner benannt, je Lauf und je Auftrag ein
     ''' Unterordner), angeboten wird mit startNow, und der Ordner gehoert dem Angebot: nach dem
     ''' vollstaendigen Download, beim Ablauf des Angebots (zwei Stunden), beim Verdraengen durch neue
-    ''' Angebote und beim Anhalten der Bruecke geht er mit. Was ein Absturz liegen laesst, raeumt der
+    ''' Angebote und beim Anhalten der Bruecke geht er mit, jeweils erst, wenn keine Auslieferung mehr
+    ''' aus ihm liest (DownloadOffer.ActiveDeliveries). Was ein Absturz liegen laesst, raeumt der
     ''' naechste Start weg (<see cref="CleanStaleDownloadFolders"/>).</para>
     '''
     ''' <para>Die Pruefung FileOperationPolicy.CanCopy gilt hier nicht: der Datenordner liegt ab Werk
@@ -128,14 +129,18 @@ Namespace Services
         End Sub
 
         ''' <summary>Ein Angebot mit eigenem Ordner ist ausgeliefert: Ordner und Angebot gehen, und
-        ''' die Seite nimmt seinen Eintrag weg, dessen Knopf sonst ins Leere griffe.</summary>
+        ''' die Seite nimmt seinen Eintrag weg, dessen Knopf sonst ins Leere griffe. Laeuft gerade
+        ''' noch eine Auslieferung (ein zweiter Abruf, oder das Fegen trifft einen laufenden
+        ''' Download), bleibt der Ordner bis zu deren Ende (BrowserBridge.EndDelivery).</summary>
         Private Shared Sub ReleaseOwnedOffer(id As String)
             Dim offer As DownloadOffer = Nothing
+            Dim folder As String = Nothing
             SyncLock Offers
                 If Not Offers.TryGetValue(id, offer) Then Return
                 Offers.Remove(id)
+                folder = RetireOffer(offer)
             End SyncLock
-            DeleteDownloadFolder(offer.OwnedFolder)
+            DeleteDownloadFolder(folder)
             NotifyOfferState("gone", id)
         End Sub
 

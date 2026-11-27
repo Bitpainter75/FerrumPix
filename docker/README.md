@@ -23,7 +23,9 @@ Each template explains its steps in the comments at the top. In short:
    user id 1000 (`chown 1000 ferrumpix-password.txt; chmod 600 ferrumpix-password.txt`).
 3. Create an `.env` with `FERRUMPIX_DOMAIN=photos.example.org` and
    `FERRUMPIX_PHOTOS=/path/to/photos`.
-4. `docker compose up -d`, then open `https://photos.example.org`.
+4. Create an empty folder `data` next to them for everything FerrumPix keeps, owned by user id
+   1000 (`mkdir data; sudo chown 1000 data`).
+5. `docker compose up -d`, then open `https://photos.example.org`.
 
 Caddy gets the certificate by itself when the name points at the server from the internet. Without
 a public name, uncomment `tls internal` in the `Caddyfile`; the browser then has to trust Caddy's
@@ -31,6 +33,7 @@ own certificate once.
 
 ## Only on this computer
 
+    mkdir data; sudo chown 1000 data
     FERRUMPIX_PHOTOS=/path/to/photos docker compose -f docker-compose.local.yml up -d
 
 Then open `http://127.0.0.1:14501`. A password is optional here (`FERRUMPIX_PASSWORD` in the
@@ -79,13 +82,23 @@ Optional: without a graphics card, everything runs on the processor. `docker-com
 `/dev/dri`, NVIDIA cards through the NVIDIA Container Toolkit. Whether FerrumPix uses the card is
 shown in Settings, Performance. Most Synology models have no suitable graphics unit.
 
+## Own fonts
+
+A container brings only a few fonts of its own, far fewer than a desktop. Fonts you put into
+`/data/share/FerrumPix/Fonts` can be chosen for text objects and text watermarks in the editor and
+are used in exports, prints, Photoshop files and FerrumPix projects. TrueType and OpenType files
+work (`.ttf`, `.otf`, `.ttc`, `.otc`); subfolders are fine.
+
+In the folder `data` next to the template, create `share/FerrumPix/Fonts` and copy the font files
+into it. Then click *Reload* next to the fonts folder in Settings, Catalog, or restart the container.
+
 ## Folders in the container
 
 | Path | Content |
 |---|---|
 | `/photos/<name>` | your photo folders, one line per folder in the template |
-| `/data` | settings, catalog, thumbnails and downloaded models; one volume or folder is enough |
-| `/data/share/FerrumPix/Fonts` | own fonts, inside the data folder, no separate volume |
+| `/data` | settings, catalog, thumbnails and downloaded models; the folder `data` next to the template |
+| `/data/share/FerrumPix/Fonts` | own fonts, inside the data folder, no separate folder (see [Own fonts](#own-fonts)) |
 
 FerrumPix runs as user 1000 in the container (on a Synology as the DSM user set in `.env`). The
 photo folders must be readable for that user, and writable if FerrumPix should save sidecar files

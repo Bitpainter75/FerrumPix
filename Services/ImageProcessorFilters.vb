@@ -3649,6 +3649,10 @@ Namespace Services
 
         Private Shared ReadOnly _cubeLutCache As New Dictionary(Of String, Lut3DData)(StringComparer.OrdinalIgnoreCase)
         Private Shared ReadOnly _cubeLutCacheLock As New Object()
+        ''' Zaehlt jedes Vergessen (ForgetCubeLut). Steht im Schluessel von Basis- und Tonspeicher
+        ''' (CubeLutKeyPart), damit ein darin gemerktes Bild mit dem alten Inhalt nicht mehr passt,
+        ''' und schuetzt das Eintragen in LoadCubeLut vor einem Parsen, das noch die alte Datei las.
+        Private Shared _cubeLutGeneration As Integer = 0
 
         ''' <summary>Groesste .cube-Datei, die gelesen wird. Die groesste zulaessige Tabelle
         ''' (MaxCube3DSize hoch drei Zeilen mit je drei Zahlen) braucht als Text rund 450 MB; die
@@ -3706,9 +3710,11 @@ Namespace Services
         Private Shared Function LoadCubeLut(path As String) As Lut3DData
             If Not IsLoadableLutPath(path) Then Return Nothing
 
+            Dim generation As Integer
             SyncLock _cubeLutCacheLock
                 Dim cached As Lut3DData = Nothing
                 If _cubeLutCache.TryGetValue(path, cached) Then Return cached
+                generation = _cubeLutGeneration
             End SyncLock
 
             ' Ausserhalb der Sperre: hier liegt die ganze Datei-Arbeit. Eine Ausnahme aus dem Parsen
@@ -3728,9 +3734,21 @@ Namespace Services
                 ' Aufrufer bekommt, haenge am Zufall.
                 Dim winner As Lut3DData = Nothing
                 If _cubeLutCache.TryGetValue(path, winner) Then Return winner
+                ' Wurde inzwischen vergessen, hat dieses Parsen womoeglich noch die alte Datei
+                ' gelesen: das Ergebnis gilt nur fuer diesen Aufruf, dessen Schluessel ohnehin
+                ' die alte Zaehlung traegt. Der naechste liest neu.
+                If generation <> _cubeLutGeneration Then Return parsed
                 _cubeLutCache(path) = parsed
                 Return parsed
             End SyncLock
+        End Function
+
+        ''' <summary>Der Teil des Cache-Schluessels fuer die LUT eines Rezepts: der Pfad und, wenn
+        ''' einer gesetzt ist, die Zaehlung des Vergessens. Schreibt FerrumPix eine LUT unter einem
+        ''' Pfad neu, der im offenen Rezept steht, passt ein gemerktes Basisbild damit nicht mehr.</summary>
+        Friend Shared Function CubeLutKeyPart(path As String) As String
+            If String.IsNullOrWhiteSpace(path) Then Return If(path, "")
+            Return path & "#" & Volatile.Read(_cubeLutGeneration).ToString(System.Globalization.CultureInfo.InvariantCulture)
         End Function
 
         ''' <summary>Vergisst den gemerkten Inhalt einer .cube-Datei, nachdem FerrumPix sie selbst
@@ -3741,6 +3759,7 @@ Namespace Services
             SyncLock _cubeLutCacheLock
                 _cubeLutCache.Remove(path)
                 _cubeLutCache.Remove(path.Trim())
+                Volatile.Write(_cubeLutGeneration, _cubeLutGeneration + 1)
             End SyncLock
         End Sub
 

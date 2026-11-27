@@ -77,10 +77,13 @@
   browser's own password prompt, each browser stays signed in until the app is locked, and a
   container started with a password is protected from the first start.
 
-- **Own fonts.** Fonts you put into the Fonts folder of the data folder can be chosen for text in
-  the editor next to the system fonts, and they come along into exports, prints and Photoshop
-  files. Settings, Catalog shows where the folder is and reads it again on request; in the
-  container it is /data/share/FerrumPix/Fonts.
+- **Own fonts.** Fonts you put into the Fonts folder of the data folder can be chosen for text
+  objects and text watermarks in the editor next to the system fonts. They are used wherever the
+  text is drawn: in the editor, in exports and prints, in Photoshop files and in FerrumPix
+  projects (.fpx), which no longer report them as missing when opened again. This matters most in
+  the browser and in the container, which brings only a few fonts of its own; there the folder is
+  /data/share/FerrumPix/Fonts. Settings, Catalog shows where the folder is and reads it again on
+  request.
 
 - With extensions on a picture, sliders that come after an extension in the editor, such as grain
   or the settings of a later extension, now react noticeably faster, because that extension is no
@@ -90,7 +93,9 @@
 
 - The People menu in the gallery now says when named people are missing because they don't appear
   in the open folder, and offers to show all people of the catalog. Before, someone named in
-  another folder simply wasn't there, which looked as if the name had been lost.
+  another folder simply wasn't there, which looked as if the name had been lost. The Places menu
+  does the same for places of the catalog that are not in the open folder, instead of saying that
+  no places are known yet.
 
 - Olympus, OM System and Panasonic pictures taken with the camera's own shading compensation
   switched on no longer get their corners brightened a second time by the lens profile. Distortion

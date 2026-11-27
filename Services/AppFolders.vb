@@ -79,7 +79,10 @@ Namespace Services
         Public Const ExtensionsFolderName As String = "Extensions"
         ''' <summary>Der Erweiterungsordner vor der Umbenennung ins Englische; kein Code liest ihn.</summary>
         Friend Const OlderExtensionsFolderName As String = "Erweiterungen"
-        Public Const PresetsFolderName As String = "presets"
+        Public Const PresetsFolderName As String = "Presets"
+        ''' <summary>Der Name des Ordners der Anpassungen bis 0.9.91, klein geschrieben; nur noch der
+        ''' Umzug beim Start liest ihn (<see cref="MigratePresetsFolderName"/>).</summary>
+        Friend Const LegacyPresetsFolderName As String = "presets"
         Public Const ThumbnailCacheFolderName As String = "ThumbnailCache"
         Public Const FontsFolderName As String = "Fonts"
         Public Const CatalogFileName As String = "library.db"

@@ -427,7 +427,9 @@ half4 main(float2 p) {
             If _detailSourceKey Is Nothing OrElse Not ExtensionResultFits(source) Then
                 Return If(RunExtensionOnBitmap(source, definition.Effect, inputs), CopyBitmap(source))
             End If
-            Dim entryKey = ExtensionService.Revision.ToString(Globalization.CultureInfo.InvariantCulture) & "|" &
+            ' Der Stand der Definition, mit der hier gerechnet wird, nicht der gerade aktuelle: liest
+            ' ein Neu-Einlesen dazwischen, laege das Ergebnis der alten sonst unter dem neuen Stand.
+            Dim entryKey = definition.LoadRevision.ToString(Globalization.CultureInfo.InvariantCulture) & "|" &
                            ExtensionRecipe.Serialize({entry})
             Dim kept = TakeExtensionResult(definition.Id, entryKey, source)
             If kept IsNot Nothing Then Return kept
