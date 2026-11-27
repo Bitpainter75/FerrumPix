@@ -507,6 +507,9 @@ Public Class App
         ' Ebenso, was fuer das Ziel "Herunterladen" im Browser im Datenordner liegen blieb; auch
         ' wenn diesmal am Rechner gestartet wird.
         System.Threading.Tasks.Task.Run(Sub() Services.BrowserBridge.CleanStaleDownloadFolders())
+        ' Das alte gemeinsame Kennwort wird einmal zu dem des Eigentuemers im Browser, auch bei
+        ' einem Start am Rechner: sonst stuende der Browser beim naechsten Start dort offen.
+        AppLockService.MigrateOwnerPassword()
         ' Mit Kennwort beginnt die Sitzung gesperrt, vor dem ersten Bild des Fensters.
         AppLockService.LockAtStart()
         Dim vm = New MainWindowViewModel(initialImagePath, initialFolderPath)

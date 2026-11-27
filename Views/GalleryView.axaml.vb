@@ -468,9 +468,10 @@ Namespace Views
             Dispatcher.UIThread.Post(restoreSelection, DispatcherPriority.Background)
         End Sub
 
-        ''' <summary>"Sperren" in der Seitenleiste gibt es nur mit Kennwort. Der Schutz aendert sich
-        ''' nur in den Einstellungen, also reicht es, beim Anhaengen und beim Betreten der Galerie
-        ''' nachzusehen. "Hochladen" gibt es nur im Browser; das steht beim Start fest.</summary>
+        ''' <summary>"Sperren" in der Seitenleiste gibt es nur mit Kennwort. Nachgesehen wird beim
+        ''' Anhaengen, beim Betreten der Galerie und bei jeder Aenderung des Schutzes
+        ''' (AppLockService.ProtectionChanged, aus den Einstellungen wie aus der Einrichtung im
+        ''' Browser). "Hochladen" gibt es nur im Browser; das steht beim Start fest.</summary>
         Private Sub UpdateLockAppButton()
             Dim button = Me.FindControl(Of Button)("LockAppButton")
             If button IsNot Nothing Then button.IsVisible = AppLockService.IsProtected

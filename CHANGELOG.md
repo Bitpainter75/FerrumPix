@@ -5,6 +5,17 @@
 - **Familiar share icon on the phone page.** Sharing now uses the usual icon with three connected
   dots.
 
+- **Lock screen password only for the desktop.** The password of the lock screen now only locks
+  the window on your computer, and the administrator has a password of their own for the browser.
+  Turning the lock screen off no longer touches the browser sign-in, and setting up the
+  browser from now on no longer locks the desktop window. An existing password carries over once
+  as the administrator password and stays on the desktop as well, so nothing changes after the
+  update; if you only set up the browser and don't want the desktop window locked, turn the lock
+  off in the settings, the browser stays protected. Turning "Protect
+  with a password" on or off now says that it only takes effect with Apply, an unapplied change is
+  dropped the next time the settings open, and the Lock buttons show up only while the lock is
+  on, without a restart.
+
 ## 0.9.93
 
 ### Changes

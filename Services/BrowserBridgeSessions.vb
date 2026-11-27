@@ -430,7 +430,7 @@ Namespace Services
         ''' fuer ein Werkzeug mit Basic der Benutzer zu Name und Kennwort im Kopf. Ein Benutzer, den
         ''' es nicht mehr gibt oder der gesperrt ist, gilt nicht, auch mit gueltigem Cookie.</summary>
         Private Shared Function SignedInUser(context As HttpListenerContext) As String
-            If Not AppLockService.IsProtected Then Return Nothing
+            If Not AppLockService.HasOwnerPassword Then Return Nothing
             Dim key = ValidSessionKey(context.Request)
             Dim user As String = Nothing
             If key IsNot Nothing Then
@@ -472,7 +472,7 @@ Namespace Services
             Dim user = SignedInUser(context)
             If user IsNot Nothing Then Return user
             Dim answer As New Dictionary(Of String, Object) From {{"ok", False}, {"signIn", True}}
-            If Not AppLockService.IsProtected Then answer("setup") = True
+            If Not AppLockService.HasOwnerPassword Then answer("setup") = True
             Dim bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(answer))
             context.Response.StatusCode = 401
             context.Response.ContentType = "application/json; charset=utf-8"
@@ -508,7 +508,7 @@ Namespace Services
                     Await ServeLoginPageAsync(context, mobile:=True)
                     Return
                 End If
-            ElseIf Not AppLockService.IsProtected Then
+            ElseIf Not AppLockService.HasOwnerPassword Then
                 context.Response.StatusCode = 401
                 context.Response.Close()
                 Return
@@ -528,7 +528,7 @@ Namespace Services
         ''' mehr. Fehlversuche zaehlen wie im Anmeldefenster. Name und Kennwort gelten wie dort, fuer
         ''' jeden Benutzer; geliefert wird seine Kennung, sonst Nothing.</summary>
         Private Shared Function BasicSignedInUser(request As HttpListenerRequest) As String
-            If Not AppLockService.IsProtected Then Return Nothing
+            If Not AppLockService.HasOwnerPassword Then Return Nothing
             Dim header = request.Headers("Authorization")
             If String.IsNullOrEmpty(header) OrElse Not header.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase) Then Return Nothing
             ' Ein Werkzeug schickt den Kopf bei jeder Anfrage; die Pruefung ist mit Absicht langsam.
@@ -770,7 +770,7 @@ Namespace Services
             If Not fields.TryGetValue("password", password) Then password = ""
             If Not fields.TryGetValue("user", user) Then user = ""
 
-            If Not AppLockService.IsProtected Then
+            If Not AppLockService.HasOwnerPassword Then
                 Await WriteLoginAnswerAsync(context, 409, "", 0, setup:=True)
                 Return
             End If
@@ -839,7 +839,7 @@ Namespace Services
             Dim request = context.Request
             Dim fields = Await ReadSignInBodyAsync(context)
             If fields Is Nothing Then Return
-            If AppLockService.IsProtected Then
+            If AppLockService.HasOwnerPassword Then
                 Dim taken = Await Dispatcher.UIThread.InvokeAsync(Function() LocalizationService.T("Das Kennwort wurde inzwischen schon festgelegt. Bitte anmelden."))
                 Await WriteLoginAnswerAsync(context, 409, taken, 0)
                 Return
@@ -966,7 +966,7 @@ Namespace Services
             Dim request = context.Request
             Dim fields = Await ReadSignInBodyAsync(context)
             If fields Is Nothing Then Return
-            If Not AppLockService.IsProtected Then
+            If Not AppLockService.HasOwnerPassword Then
                 Await WriteLoginAnswerAsync(context, 409, "", 0, setup:=True)
                 Return
             End If
@@ -1081,7 +1081,7 @@ Namespace Services
             End If
             Dim fields = Await ReadSignInBodyAsync(context)
             If fields Is Nothing Then Return
-            If Not AppLockService.IsProtected Then
+            If Not AppLockService.HasOwnerPassword Then
                 Await WriteLoginAnswerAsync(context, 409, "", 0, setup:=True)
                 Return
             End If
@@ -1241,14 +1241,14 @@ Namespace Services
             If _loginPageText Is Nothing Then _loginPageText = LoadAssetText(LoginPageAsset)
             Dim nonce = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16))
             Dim parts = Await Dispatcher.UIThread.InvokeAsync(Function() LoginPageParts())
-            Dim mode = If(Not AppLockService.IsProtected, "setup", If(modeOverride, PageMode()))
+            Dim mode = If(Not AppLockService.HasOwnerPassword, "setup", If(modeOverride, PageMode()))
             Dim page = _loginPageText.
                 Replace("__FERRUMPIX_NONCE__", nonce, StringComparison.Ordinal).
                 Replace("__FERRUMPIX_COLORS__", parts.Colors, StringComparison.Ordinal).
                 Replace("__FERRUMPIX_LANG__", parts.Language, StringComparison.Ordinal).
                 Replace("__FERRUMPIX_MODE__", mode, StringComparison.Ordinal).
                 Replace("__FERRUMPIX_MAIL__", If(CanSendResetMail(), "1", ""), StringComparison.Ordinal).
-                Replace("__FERRUMPIX_KEPT_USER__", JsonSerializer.Serialize(If(AppLockService.IsProtected, "", AppLockService.StoredUserName)), StringComparison.Ordinal).
+                Replace("__FERRUMPIX_KEPT_USER__", JsonSerializer.Serialize(If(AppLockService.HasOwnerPassword, "", AppLockService.StoredUserName)), StringComparison.Ordinal).
                 Replace("__FERRUMPIX_VARIANT__", If(mobile, "mobile", ""), StringComparison.Ordinal).
                 Replace("__FERRUMPIX_LOGIN_TEXTS__", parts.Texts, StringComparison.Ordinal)
             Dim bytes = Encoding.UTF8.GetBytes(page)
@@ -1277,7 +1277,7 @@ Namespace Services
         ''' <summary>Was die Seite zeigt: "setup" ohne Kennwort (Einrichtung), "claim" mit Kennwort,
         ''' aber noch ohne Namen (Anmeldung, die den Namen einmal festlegt), sonst "login".</summary>
         Friend Shared Function PageMode() As String
-            If Not AppLockService.IsProtected Then Return "setup"
+            If Not AppLockService.HasOwnerPassword Then Return "setup"
             If AppLockService.StoredUserName.Length = 0 Then Return "claim"
             Return "login"
         End Function

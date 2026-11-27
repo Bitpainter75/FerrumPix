@@ -62,8 +62,11 @@ Namespace Services
     ''' <summary>
     ''' Das Anmeldefenster der Anwendung: ein Kennwort, die Sperre und die Zeit ohne Eingabe.
     '''
-    ''' <para>EIN KENNWORT, NUR ALS HASH. Gespeichert wird PBKDF2 mit SHA-256, eigenem Salz und
-    ''' hoher Rundenzahl in AppSettings.AppLockPasswordHash, verglichen in fester Zeit. Argon2id
+    ''' <para>ZWEI KENNWOERTER, NUR ALS HASH. Am Rechner das des Anmeldefensters
+    ''' (AppSettings.AppLockPasswordHash, ein Schalter), im Browser das des Eigentuemers
+    ''' (AppSettings.BrowserOwnerPasswordHash, Pflicht), getrennt, siehe <see cref="CurrentHash"/>.
+    ''' Gespeichert wird PBKDF2 mit SHA-256, eigenem Salz und hoher Rundenzahl, verglichen in
+    ''' fester Zeit. Argon2id
     ''' gaebe es nur mit einer neuen Abhaengigkeit; PBKDF2 bringt .NET selbst mit. Die Rundenzahl
     ''' steht im Hash, ein spaeter erhoehter Wert macht alte Hashes also nicht ungueltig.</para>
     '''
@@ -77,10 +80,11 @@ Namespace Services
     ''' im Browser die Anmeldung des Browsers und seine Absenderadresse (siehe
     ''' <see cref="CheckPassword"/>). Geprueft wird immer nur eines zur Zeit.</para>
     '''
-    ''' <para>IM BROWSER (BrowserBridge) gilt dasselbe Kennwort fuer die Sitzungen; eine Sperre
-    ''' beendet sie alle (<see cref="LockStateChanged"/>). Dort ist es Pflicht: ohne gespeichertes
-    ''' Kennwort legt es der erste Browser fest (<see cref="TrySetInitialPassword"/>), genau
-    ''' einmal. Ein Kennwort beim Start mitzugeben gibt es nicht mehr.</para>
+    ''' <para>IM BROWSER (BrowserBridge) melden sich die Sitzungen mit den Benutzerkonten an, der
+    ''' Eigentuemer mit seinem eigenen Kennwort; eine Sperre beendet sie alle
+    ''' (<see cref="LockStateChanged"/>). Dort ist es Pflicht: ohne Kennwort des Eigentuemers legt
+    ''' es der erste Browser fest (<see cref="TrySetInitialPassword"/>), genau einmal. Ein
+    ''' Kennwort beim Start mitzugeben gibt es nicht mehr.</para>
     ''' </summary>
     Public NotInheritable Class AppLockService
 
@@ -240,30 +244,111 @@ Namespace Services
         ''' Browser); wer die Oberflaeche anfasst, wechselt selbst auf den Anzeigefaden.</summary>
         Public Shared Event LockStateChanged As EventHandler
 
-        ''' <summary>Ein Kennwort wurde ausserhalb der Einstellungen gesetzt (Ersteinrichtung im
-        ''' Browser, von einem Hintergrundfaden). Wer "Sperren" zeigt, sieht danach nach.</summary>
+        ''' <summary>Das Kennwort wurde gesetzt oder entfernt: in den Einstellungen
+        ''' (<see cref="NotifyProtectionChanged"/>), bei der Ersteinrichtung im Browser oder ueber
+        ''' den Notweg, die beiden letzten von einem Hintergrundfaden. Wer "Sperren" zeigt, sieht
+        ''' danach nach.</summary>
         Public Shared Event ProtectionChanged As EventHandler
 
-        ''' <summary>Der Hash, gegen den geprueft wird: der gespeicherte, im Pruefstand ersetzbar
-        ''' (<see cref="TestPasswordHash"/>).</summary>
-        Private Shared Function CurrentHash() As String
+        ''' <summary>Meldet <see cref="ProtectionChanged"/>, nachdem die Einstellungen das Kennwort
+        ''' gesetzt, geaendert oder entfernt haben.</summary>
+        Friend Shared Sub NotifyProtectionChanged()
+            RaiseEvent ProtectionChanged(Nothing, EventArgs.Empty)
+        End Sub
+
+        ''' <summary>Der Hash des Eigentuemers fuer den Browser (AppSettings.BrowserOwnerPasswordHash),
+        ''' im Pruefstand ersetzbar (<see cref="TestPasswordHash"/>).</summary>
+        Private Shared Function OwnerHash() As String
             Dim forTests = TestPasswordHash
             If Not String.IsNullOrEmpty(forTests) Then Return forTests
+            Return If(AppSettingsService.Load().BrowserOwnerPasswordHash, "")
+        End Function
+
+        ''' <summary>Laeuft FerrumPix im Browser? Gestartet mit --browser (schon vor dem Webserver,
+        ''' fuer die Sperre beim Start) oder mit laufendem Webserver (auch der des Pruefstands).</summary>
+        Private Shared ReadOnly Property InBrowser As Boolean
+            Get
+                Return BrowserBridge.IsActive OrElse BrowserBridge.RequiresPassword
+            End Get
+        End Property
+
+        ''' <summary>Der Hash der Sperre, die gerade gilt: im Browser das Kennwort des Eigentuemers,
+        ''' am Rechner das des Anmeldefensters (AppSettings.AppLockPasswordHash).
+        '''
+        ''' <para>ZWEI KENNWOERTER, GETRENNT. Am Rechner ist die Sperre ein Schalter fuer das Fenster
+        ''' dort; im Browser ist die Anmeldung Pflicht und gehoert zum Konto des Eigentuemers. Das
+        ''' eine abzuschalten oder zu aendern ruehrt das andere nicht an: wer am Rechner die Sperre
+        ''' abschaltet, oeffnet damit nicht die Einrichtung im Browser fuer den, der zuerst kommt,
+        ''' und die Einrichtung im Browser sperrt nicht das Fenster am Rechner. Beide Laeufe teilen
+        ''' sich dieselbe settings.json, deshalb zwei Felder.</para></summary>
+        Private Shared Function CurrentHash() As String
+            If InBrowser Then Return OwnerHash()
             Return If(AppSettingsService.Load().AppLockPasswordHash, "")
         End Function
 
-        ''' <summary>Der geltende Hash als Marke: aendert sich das Kennwort, aendert sie sich mit.
-        ''' Fuer Zwischenspeicher, die eine gelungene Pruefung kurz behalten (BrowserBridge).</summary>
+        ''' <summary>Der Hash des Eigentuemers als Marke: aendert sich sein Kennwort, aendert sie sich
+        ''' mit. Fuer Zwischenspeicher, die eine gelungene Pruefung kurz behalten (BrowserBridge).</summary>
         Friend Shared Function PasswordStamp() As String
-            Return CurrentHash() & "|" & StoredUserName & "|" & UserAccountService.Version.ToString(CultureInfo.InvariantCulture)
+            Return OwnerHash() & "|" & StoredUserName & "|" & UserAccountService.Version.ToString(CultureInfo.InvariantCulture)
         End Function
 
-        ''' <summary>Ist ein Kennwort gesetzt? Nur dann gibt es Anmeldefenster und Sperre.</summary>
+        ''' <summary>Gibt es die Sperre, die gerade gilt (<see cref="CurrentHash"/>)? Am Rechner: ist
+        ''' das Kennwort des Anmeldefensters gesetzt; im Browser: hat der Eigentuemer ein Kennwort.
+        ''' Nur dann gibt es Anmeldefenster, Sperre und "Sperren".</summary>
         Public Shared ReadOnly Property IsProtected As Boolean
             Get
                 Return CurrentHash().Length > 0
             End Get
         End Property
+
+        ''' <summary>Hat der Eigentuemer ein Kennwort fuer den Browser? Ohne zeigt der Browser die
+        ''' Einrichtung. Haengt nie am Kennwort des Anmeldefensters am Rechner.</summary>
+        Public Shared ReadOnly Property HasOwnerPassword As Boolean
+            Get
+                Return OwnerHash().Length > 0
+            End Get
+        End Property
+
+        ''' <summary>Die einmalige Uebernahme beim Start (App und BrowserBridge.Start, wer zuerst
+        ''' kommt): bis zur Trennung war das Kennwort des Anmeldefensters zugleich die Anmeldung im
+        ''' Browser. Hat der Eigentuemer noch kein eigenes, bekommt er diesen Hash; das Kennwort am
+        ''' Rechner bleibt dabei unveraendert. Ohne die Uebernahme stuende der Browser nach dem
+        ''' Update offen fuer die Einrichtung durch den, der zuerst kommt.
+        '''
+        ''' <para>GENAU EINMAL (AppSettings.OwnerPasswordMigrated): spaeter gesetzte Kennwoerter am
+        ''' Rechner werden nie mehr zur Anmeldung im Browser, und nach dem Notweg
+        ''' (<see cref="ResetOwnerPassword"/>) kaeme sonst das alte Kennwort zurueck. True, wenn
+        ''' dabei ein Hash uebernommen wurde.</para></summary>
+        Friend Shared Function MigrateOwnerPassword() As Boolean
+            Dim settings = AppSettingsService.Load()
+            If settings.OwnerPasswordMigrated Then Return False
+            Dim adopted = False
+            SyncLock SetupGate
+                AppSettingsService.Update(
+                    Sub(s)
+                        If s.OwnerPasswordMigrated Then Return
+                        If String.IsNullOrEmpty(s.BrowserOwnerPasswordHash) AndAlso Not String.IsNullOrEmpty(s.AppLockPasswordHash) Then
+                            s.BrowserOwnerPasswordHash = s.AppLockPasswordHash
+                            adopted = True
+                        End If
+                        s.OwnerPasswordMigrated = True
+                    End Sub)
+                AppSettingsService.FlushNow()
+            End SyncLock
+            If adopted Then DiagnosticLogService.LogAlways("AppLock", "The lock screen password became the administrator password for the browser.")
+            Return adopted
+        End Function
+
+        ''' <summary>Schreibt den Hash der Sperre, die gerade gilt (<see cref="CurrentHash"/>), in
+        ''' die Einstellungen <paramref name="s"/>: im Browser den des Eigentuemers, am Rechner den
+        ''' des Anmeldefensters. Fuer den Zugang in den Einstellungen.</summary>
+        Friend Shared Sub StoreCurrentHash(s As AppSettings, hash As String)
+            If InBrowser Then
+                s.BrowserOwnerPasswordHash = If(hash, "")
+            Else
+                s.AppLockPasswordHash = If(hash, "")
+            End If
+        End Sub
 
         Public Shared ReadOnly Property IsLocked As Boolean
             Get
@@ -306,15 +391,17 @@ Namespace Services
             If keptName.Length = 0 AndAlso Not IsValidUserName(userName) Then Return InitialPasswordOutcome.InvalidName
             If Not UserAccountService.IsValidEmail(email) Then Return InitialPasswordOutcome.InvalidEmail
             If PasswordProblems(password).Count > 0 Then Return InitialPasswordOutcome.Weak
-            If IsProtected Then Return InitialPasswordOutcome.AlreadySet
+            If HasOwnerPassword Then Return InitialPasswordOutcome.AlreadySet
             Dim hash = HashPassword(password)
             Dim name = If(keptName.Length > 0, keptName, userName.Trim())
             Dim mail = If(email, "").Trim()
             SyncLock SetupGate
-                If IsProtected Then Return InitialPasswordOutcome.AlreadySet
+                If HasOwnerPassword Then Return InitialPasswordOutcome.AlreadySet
                 If mail.Length > 0 AndAlso UserAccountService.EmailTaken(mail, OwnerUserId) Then Return InitialPasswordOutcome.InvalidEmail
+                ' Nur das Konto des Eigentuemers; das Kennwort des Anmeldefensters am Rechner
+                ' bleibt, wie es ist.
                 AppSettingsService.Update(Sub(s)
-                                              s.AppLockPasswordHash = hash
+                                              s.BrowserOwnerPasswordHash = hash
                                               s.AppLockUserName = name
                                               If mail.Length > 0 Then s.AppLockUserEmail = mail
                                           End Sub)
@@ -346,7 +433,8 @@ Namespace Services
         End Property
 
         ''' <summary>Nach einer gelungenen Anmeldung im Browser: ist noch kein Name gespeichert
-        ''' (Kennwort aus den Einstellungen), wird der eingegebene der Name des Eigentuemers. True,
+        ''' (Kennwort aus der einmaligen Uebernahme oder aus den Einstellungen im Browser), wird der
+        ''' eingegebene der Name des Eigentuemers. True,
         ''' wenn der Name dabei festgelegt wurde.</summary>
         Friend Shared Function AdoptUserName(userName As String) As Boolean
             If StoredUserName.Length > 0 OrElse Not IsValidUserName(userName) Then Return False
@@ -389,8 +477,11 @@ Namespace Services
             ' Der zweite Faktor des Eigentuemers geht mit: wer den Notweg nimmt, hat Zugriff auf den
             ' Rechner und hat womoeglich auch das Telefon mit der App verloren.
             Dim hadSecondFactor = TwoFactorService.IsEnabled(OwnerUserId)
+            ' Nur das Konto des Eigentuemers; das Kennwort am Rechner bleibt. Die Uebernahme gilt
+            ' als gelaufen, sonst kaeme mit ihr das alte Kennwort zurueck.
             AppSettingsService.Update(Sub(s)
-                                          s.AppLockPasswordHash = ""
+                                          s.BrowserOwnerPasswordHash = ""
+                                          s.OwnerPasswordMigrated = True
                                           s.AdminPasswordResetConsumed = True
                                           TwoFactorService.RemoveFrom(s, OwnerUserId)
                                       End Sub)
@@ -489,14 +580,16 @@ Namespace Services
         ''' gross). Ein falscher Name zaehlt wie ein falsches Kennwort: dieselbe Antwort, dieselbe
         ''' Rechenzeit (das Kennwort wird immer geprueft), dieselbe Bremse, und kein Hinweis, ob es
         ''' den Namen gibt; ein gesperrter Benutzer ebenso. Ist fuer den Eigentuemer noch kein Name
-        ''' gespeichert (Kennwort aus den Einstellungen), passt ihm jeder gueltige, den kein anderer
+        ''' gespeichert (Kennwort aus der einmaligen Uebernahme), passt ihm jeder gueltige, den kein anderer
         ''' traegt; die Anmeldung legt ihn dann fest (<see cref="AdoptUserName"/>).</summary>
         Public Shared Function CheckSignIn(userName As String, password As String, ParamArray counters As String()) As PasswordCheckResult
             Return Check(password, If(userName, ""), counters)
         End Function
 
         Private Shared Function Check(password As String, userName As String, counters As String()) As PasswordCheckResult
-            Dim hash = CurrentHash()
+            ' Mit Namen ist es immer die Anmeldung im Browser und damit das Konto des Eigentuemers;
+            ' ohne Namen die Sperre, die gerade gilt (am Rechner das Anmeldefenster).
+            Dim hash = If(userName Is Nothing, CurrentHash(), OwnerHash())
             If hash.Length = 0 Then Return New PasswordCheckResult(PasswordCheckOutcome.NotProtected, TimeSpan.Zero)
             Dim keys = If(counters, Array.Empty(Of String)()).Where(Function(k) Not String.IsNullOrEmpty(k)).Distinct().ToArray()
             If keys.Length = 0 Then keys = {LocalKey}
@@ -539,7 +632,8 @@ Namespace Services
         Friend Shared Function CheckUserPassword(userId As String, password As String, ParamArray counters As String()) As PasswordCheckResult
             Dim hash As String
             If userId = OwnerUserId Then
-                hash = CurrentHash()
+                ' Das Konto des Eigentuemers, nie das Anmeldefenster am Rechner.
+                hash = OwnerHash()
             Else
                 Dim stored As String = Nothing
                 Dim hashes = AppSettingsService.Load().BrowserUserPasswordHashes
@@ -552,7 +646,7 @@ Namespace Services
                 Dim wait = RetryAfter(keys)
                 If wait > TimeSpan.Zero Then Return New PasswordCheckResult(PasswordCheckOutcome.Throttled, wait)
                 ' Auch ohne Hash wird gerechnet, gegen den des Eigentuemers: gleiche Zeit.
-                Dim verified = VerifyHash(If(password, ""), If(hash.Length > 0, hash, CurrentHash()))
+                Dim verified = VerifyHash(If(password, ""), If(hash.Length > 0, hash, OwnerHash()))
                 matches = verified AndAlso hash.Length > 0
                 For Each key In keys
                     If matches Then

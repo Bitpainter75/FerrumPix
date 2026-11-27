@@ -160,10 +160,10 @@ Namespace Services
         End Function
 
         ''' <summary>Gilt die Freigabe gerade? Nicht pausiert, nicht abgelaufen, der Teilende kann
-        ''' sich anmelden, und bei einem Ordner darf er ihn noch teilen. Ohne Kennwort der
-        ''' Anwendung gilt keine.</summary>
+        ''' sich anmelden, und bei einem Ordner darf er ihn noch teilen. Ohne Kennwort des
+        ''' Eigentuemers im Browser gilt keine; das Kennwort am Rechner zaehlt dafuer nicht.</summary>
         Friend Shared Function IsShareActive(record As ShareRecord) As Boolean
-            If record Is Nothing OrElse Not AppLockService.IsProtected Then Return False
+            If record Is Nothing OrElse Not AppLockService.HasOwnerPassword Then Return False
             If ShareStore.Paused OrElse ShareStore.IsExpired(record, AppLockService.Clock()) Then Return False
             If Not UserAccountService.IsActive(record.OwnerUserId) Then Return False
             If record.KindValue() = ShareKind.Folder Then

@@ -21,10 +21,11 @@
 
                         <StackPanel Spacing="2">
                             <TextBlock Text="Zugang" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Ein Kennwort für FerrumPix. Mit Kennwort erscheint beim Start, nach der eingestellten Zeit ohne Eingabe und mit STRG+L ein Anmeldefenster; im Browser ersetzt es die Anmeldung des Browsers. Das Kennwort schützt die laufende Anwendung, nicht die Fotos: die Dateien liegen weiter offen auf der Platte." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            <TextBlock Text="Am Rechner erscheint mit Kennwort beim Start, nach der eingestellten Zeit ohne Eingabe und mit STRG+L ein Anmeldefenster. Im Browser gilt hier das Kennwort des Administrators, ein eigenes. Das Kennwort schützt die laufende Anwendung, nicht die Fotos: die Dateien liegen weiter offen auf der Platte." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         </StackPanel>
 
-                        <Grid ColumnDefinitions="*,Auto">
+                        <!-- Den Schalter gibt es nur am Rechner: im Browser ist das Kennwort Pflicht. -->
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding AccessProtectionToggleEnabled}">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Mit Kennwort schützen" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Ein vergessenes Kennwort lässt sich hier nicht zurückholen. Dann bei beendeter Anwendung den Eintrag AppLockPasswordHash aus der Datei settings.json löschen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
@@ -36,6 +37,13 @@
                                           OffContent=""
                                           VerticalAlignment="Center"/>
                         </Grid>
+
+                        <!-- Der Schalter ist nur vorgemerkt: steht er anders, als der Schutz gilt,
+                             sagt es dieser Satz (AccessHasPendingChange). Ohne ihn hielt man einen
+                             Schalter auf aus fuer einen abgeschalteten Schutz. -->
+                        <TextBlock Text="Noch nicht übernommen. Der Schutz ändert sich erst mit Anwenden."
+                                   IsVisible="{Binding AccessHasPendingChange}"
+                                   Foreground="{DynamicResource FP.Text.Accent}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
 
                         <TextBlock Text="Im Browser braucht FerrumPix immer ein Kennwort. Ändern lässt es sich, abschalten nicht."
                                    IsVisible="{Binding AccessPasswordRequired}"

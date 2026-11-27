@@ -5967,6 +5967,9 @@ Namespace ViewModels
         ''' verstellt wurde (Info-Leiste in Viewer/Editor, Ansichtsmodus der Galerie usw.).
         Public Sub BeginEditSession()
             SnapshotSettings()
+            ' Der Zugang hat keinen Schnappschuss, er wirkt nur mit "Anwenden": was davon beim
+            ' letzten Mal vorgemerkt und nicht angewendet wurde, faellt hier weg.
+            DiscardAccessDraft()
         End Sub
 
         Private Sub SnapshotSettings()

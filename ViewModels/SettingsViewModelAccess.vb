@@ -82,8 +82,21 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_accessProtectionWanted, value)
                 Me.RaisePropertyChanged(NameOf(AccessShowsNewPassword))
                 Me.RaisePropertyChanged(NameOf(AccessShowsIdle))
+                Me.RaisePropertyChanged(NameOf(AccessHasPendingChange))
                 RaiseCanApplyAccess()
             End Set
+        End Property
+
+        ''' <summary>Steht der Schalter anders, als der Schutz gerade gilt? Dann sagt ein Satz unter
+        ''' dem Schalter, dass erst "Anwenden" ihn umlegt.
+        '''
+        ''' <para>BEFUND: der Schalter stand auf aus, das Kennwort galt weiter, und Anmeldefenster,
+        ''' "Sperren" und STRG+L blieben. Ausgeschaltet war nur der vorgemerkte Wert; ohne
+        ''' "Anwenden" mit dem aktuellen Kennwort aendert sich nichts, und nichts sagte das.</para></summary>
+        Public ReadOnly Property AccessHasPendingChange As Boolean
+            Get
+                Return _accessProtectionWanted <> AccessIsProtected
+            End Get
         End Property
 
         ''' <summary>Was dem neuen Kennwort noch fehlt, eine Regel je Zeile, waehrend getippt wird.
@@ -307,10 +320,9 @@ Namespace ViewModels
                         ReportAccess(LocalizationService.T("Im Browser braucht FerrumPix immer ein Kennwort. Ändern lässt es sich, abschalten nicht."), True)
                         Return False
                     End If
+                    ' Nur das Kennwort des Anmeldefensters am Rechner. Konten, Sitzungen und
+                    ' Verweise des Browsers haengen am Kennwort des Eigentuemers und bleiben.
                     AppSettingsService.Update(Sub(s) s.AppLockPasswordHash = "")
-                    ' Sonst gaelten die alten Sitzungen nach einem spaeteren Einschalten wieder.
-                    BrowserBridge.EndOtherSessions()
-                    PasswordResetService.Forget(AppLockService.OwnerUserId)
                     SecurityLog.PasswordRemoved()
                     AppLockService.UnlockBy("settings")
                     ClearAccessFields()
@@ -340,16 +352,24 @@ Namespace ViewModels
                 Dim minutes = AppLockService.NormalizeIdleMinutes(_accessIdleMinutes)
                 AppSettingsService.Update(
                     Sub(s)
-                        If newHash IsNot Nothing Then s.AppLockPasswordHash = newHash
+                        ' Am Rechner das Kennwort des Anmeldefensters, im Browser das des
+                        ' Eigentuemers (AppLockService.StoreCurrentHash).
+                        If newHash IsNot Nothing Then AppLockService.StoreCurrentHash(s, newHash)
                         s.AppLockIdleMinutes = minutes
                     End Sub)
-                ' Ein neues Kennwort beendet jede Sitzung, die mit dem alten entstand, bis auf die
-                ' des Browsers, in dem es eben geaendert wurde. Ein offener Verweis zum
-                ' Zuruecksetzen (Kennwort vergessen) gilt danach ebenso wenig.
                 If newHash IsNot Nothing Then
-                    BrowserBridge.EndOtherSessions()
-                    PasswordResetService.Forget(AppLockService.OwnerUserId)
-                    SecurityLog.PasswordChanged(AppLockService.OwnerUserId, "settings")
+                    If AccessPasswordRequired Then
+                        ' Im Browser: ein neues Kennwort des Eigentuemers beendet jede Sitzung, die
+                        ' mit dem alten entstand, bis auf die des Browsers, in dem es eben geaendert
+                        ' wurde. Ein offener Verweis zum Zuruecksetzen (Kennwort vergessen) gilt
+                        ' danach ebenso wenig.
+                        BrowserBridge.EndOtherSessions()
+                        PasswordResetService.Forget(AppLockService.OwnerUserId)
+                        SecurityLog.PasswordChanged(AppLockService.OwnerUserId, "settings")
+                    Else
+                        ' Am Rechner gehoert das Kennwort zu keinem Konto.
+                        SecurityLog.PasswordChanged(Nothing, "lockscreen")
+                    End If
                 End If
                 AppLockService.NoteActivity()
                 ClearAccessFields()
@@ -372,16 +392,36 @@ Namespace ViewModels
         End Sub
 
         Private Sub AfterAccessChanged()
+            RefreshAccessState()
+            ' Ein Ereignis fuer alle, die "Sperren" zeigen: Fensterleiste (MainWindowViewModel)
+            ' und Seitenleiste der Galerie.
+            AppLockService.NotifyProtectionChanged()
+        End Sub
+
+        ''' <summary>Schalter und Sperrzeit wieder auf den Stand, der gerade gilt; Eingaben und
+        ''' Meldung bleiben. Nach "Anwenden" und wenn der Schutz anderswo umgelegt wurde
+        ''' (Ersteinrichtung im Browser, MainWindowViewModel.OnAppLockProtectionChanged).</summary>
+        Friend Sub RefreshAccessState()
             _accessProtectionWanted = AccessIsProtected
             _accessIdleMinutes = AppLockService.IdleMinutes
             Me.RaisePropertyChanged(NameOf(AccessProtectionWanted))
             Me.RaisePropertyChanged(NameOf(AccessIsProtected))
+            Me.RaisePropertyChanged(NameOf(AccessHasPendingChange))
             Me.RaisePropertyChanged(NameOf(AccessShowsCurrentPassword))
             Me.RaisePropertyChanged(NameOf(AccessShowsNewPassword))
             Me.RaisePropertyChanged(NameOf(AccessShowsIdle))
             Me.RaisePropertyChanged(NameOf(SelectedAccessIdle))
             RaiseCanApplyAccess()
-            _mainVm?.OnAppLockProtectionChanged()
+        End Sub
+
+        ''' <summary>Verwirft, was am Zugang vorgemerkt und nicht angewendet ist: Schalter,
+        ''' Sperrzeit, Kennwortfelder und Meldung. Beim Oeffnen der Einstellungen
+        ''' (<see cref="BeginEditSession"/>), damit der Schalter nie einen Stand zeigt, der nicht
+        ''' gilt.</summary>
+        Friend Sub DiscardAccessDraft()
+            ClearAccessFields()
+            ReportAccess("", False)
+            RefreshAccessState()
         End Sub
 
     End Class

@@ -12923,9 +12923,6 @@
   <data name="Zugang_c4f24d7a" xml:space="preserve">
     <value>Akses</value>
   </data>
-  <data name="Ein_Kennwort_f_r_FerrumPix_Mit_Kennwort_erschein_2fdf1d3a" xml:space="preserve">
-    <value>Kata sandi untuk FerrumPix. Dengan kata sandi, jendela masuk muncul saat mulai, setelah waktu yang diatur tanpa masukan, dan dengan CTRL+L; di peramban jendela ini menggantikan proses masuk milik peramban. Kata sandi melindungi aplikasi yang berjalan, bukan foto: berkas tetap dapat dibaca di disk.</value>
-  </data>
   <data name="Mit_Kennwort_sch_tzen_eaa7dfc6" xml:space="preserve">
     <value>Lindungi dengan kata sandi</value>
   </data>
@@ -13801,5 +13798,11 @@
   </data>
   <data name="Bilder_werden_vorbereitet_a543af53" xml:space="preserve">
     <value>Menyiapkan gambar</value>
+  </data>
+  <data name="Noch_nicht_bernommen_Der_Schutz_ndert_sich_erst__b617486a" xml:space="preserve">
+    <value>Belum diterapkan. Perlindungan baru berubah dengan Terapkan.</value>
+  </data>
+  <data name="Am_Rechner_erscheint_mit_Kennwort_beim_Start_nac_252d41ef" xml:space="preserve">
+    <value>Di komputer, dengan kata sandi jendela masuk muncul saat mulai, setelah waktu yang diatur tanpa masukan, dan dengan CTRL+L. Di peramban, di sini berlaku kata sandi administrator, yang tersendiri. Kata sandi melindungi aplikasi yang berjalan, bukan foto: berkas tetap dapat dibaca di disk.</value>
   </data>
 </root>

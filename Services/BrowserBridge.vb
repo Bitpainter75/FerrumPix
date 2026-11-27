@@ -188,6 +188,9 @@ Namespace Services
                 Console.Out.WriteLine("FerrumPix in the browser: " & line)
                 DiagnosticLogService.LogAlways("BrowserBridge", line)
             Next
+            ' Erst die einmalige Uebernahme des alten gemeinsamen Kennworts, dann der Notweg: in
+            ' umgekehrter Reihenfolge braechte die Uebernahme das eben geloeschte Kennwort zurueck.
+            AppLockService.MigrateOwnerPassword()
             ' Der Notweg fuer das Kennwort des Eigentuemers, vor der Sperre beim Start: danach zeigt
             ' die Seite die Einrichtung fuer den bestehenden Namen (AppLockService.ResetOwnerPassword).
             Dim resetLine = AppLockService.ResetOwnerPassword(IsResetAdminRequested(args))
@@ -447,7 +450,7 @@ Namespace Services
                 Console.Out.WriteLine(notice)
                 DiagnosticLogService.LogAlways("BrowserBridge", notice)
             End If
-            If Not AppLockService.IsProtected Then
+            If Not AppLockService.HasOwnerPassword Then
                 ' Gewollt ohne Einmalcode und ohne Beschraenkung: wer zuerst kommt, legt fest. Die
                 ' Zeile steht deshalb deutlich im Protokoll (im Behaelter docker logs).
                 Const setupNotice As String = "No password set yet, the first browser to open the page sets it. Until then only the setup page is reachable."

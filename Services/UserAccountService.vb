@@ -80,11 +80,10 @@ Namespace Services
     ''' <summary>
     ''' Die Benutzer des Browsers und ihre Rechte je Ordner.
     '''
-    ''' <para>DER EIGENTUEMER bleibt, wo er war: Name, Hash und E-Mail in AppLockUserName,
-    ''' AppLockPasswordHash und AppLockUserEmail, Kennung <see cref="AppLockService.OwnerUserId"/>.
-    ''' Eine bestehende Installation wird so ohne jeden Umbau zu einer mit einem Administrator. Er
-    ''' ist immer Administrator, laesst sich nicht sperren, loeschen oder herabstufen; das
-    ''' Anmeldefenster am Rechner und die Sperre der Anwendung gehoeren weiter ihm.</para>
+    ''' <para>DER EIGENTUEMER: Name, Hash und E-Mail in AppLockUserName, BrowserOwnerPasswordHash
+    ''' und AppLockUserEmail, Kennung <see cref="AppLockService.OwnerUserId"/>. Er ist immer
+    ''' Administrator, laesst sich nicht sperren, loeschen oder herabstufen. Das Anmeldefenster am
+    ''' Rechner hat ein eigenes Kennwort (AppLockPasswordHash) und gehoert zu keinem Konto.</para>
     '''
     ''' <para>WEITERE BENUTZER stehen in den Einstellungen dieses Rechners
     ''' (AppSettings.BrowserUsers), ihre Hashes getrennt (BrowserUserPasswordHashes), die Regeln
@@ -212,7 +211,8 @@ Namespace Services
         ''' Zeit, auch nach einem Treffer, damit die Laufzeit nicht verraet, ob und wo es den Namen
         ''' gibt. Ein gesperrter Benutzer oder einer ohne Kennwort hat keinen Treffer.
         '''
-        ''' <para>Hat der Eigentuemer noch keinen Namen (Kennwort aus den Einstellungen am Rechner),
+        ''' <para>Hat der Eigentuemer noch keinen Namen (Kennwort aus der einmaligen Uebernahme,
+        ''' AppLockService.MigrateOwnerPassword, oder aus den Einstellungen im Browser),
         ''' gehoert ihm jeder gueltige Name, den kein weiterer Benutzer traegt; die Anmeldung legt
         ''' ihn dann fest (AppLockService.AdoptUserName).</para></summary>
         Friend Shared Function ResolveSignIn(userName As String, ownerHash As String) As (Id As String, Hash As String)?
@@ -424,7 +424,8 @@ Namespace Services
                 AppSettingsService.Update(
                     Sub(s)
                         If account.IsOwner Then
-                            s.AppLockPasswordHash = hash
+                            ' Das Konto im Browser; das Anmeldefenster am Rechner hat sein eigenes.
+                            s.BrowserOwnerPasswordHash = hash
                         Else
                             s.BrowserUserPasswordHashes(userId) = hash
                         End If

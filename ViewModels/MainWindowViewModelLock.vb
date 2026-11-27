@@ -85,10 +85,13 @@ Namespace ViewModels
             AppLockService.Lock()
         End Sub
 
-        ''' <summary>Der Schutz wurde in den Einstellungen ein- oder ausgeschaltet.</summary>
+        ''' <summary>Der Schutz wurde ein- oder ausgeschaltet, in den Einstellungen oder im Browser.
+        ''' Der Schalter der Einstellungen folgt mit: zeigte er weiter den alten Stand, sagte er
+        ''' etwas, das nicht gilt.</summary>
         Friend Sub OnAppLockProtectionChanged()
             Me.RaisePropertyChanged(NameOf(CanLockApp))
             Me.RaisePropertyChanged(NameOf(IsWindowLockButtonVisible))
+            Settings?.RefreshAccessState()
         End Sub
 
         Private Sub OnAppLockStateChanged(sender As Object, e As EventArgs)

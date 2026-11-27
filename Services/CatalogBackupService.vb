@@ -112,9 +112,18 @@ Namespace Services
         ''' Anmeldung (Eigentuemer und weitere Benutzer) samt zweitem Faktor (Geheimnis und
         ''' Wiederherstellungscodes). Ohne Zustimmung kommen sie nicht in eine Sicherung, und eine
         ''' Wiederherstellung ohne sie behaelt die jetzigen.
+        '''
+        ''' Dazu der Vermerk der einmaligen Uebernahme (OwnerPasswordMigrated). Er ist nicht geheim,
+        ''' gehoert aber zu den Hashes, mit denen er geschrieben wurde: kaeme er ohne sie aus einer
+        ''' Sicherung von vor der Trennung zurueck (False), liefe die Uebernahme erneut und braechte
+        ''' nach dem Notweg das alte Kennwort als Anmeldung im Browser zurueck. Kommen die Hashes
+        ''' mit, kommt er mit, und die Uebernahme gilt fuer genau diese Hashes (Program.vb stellt
+        ''' wieder her, bevor App.axaml.vb uebernimmt).
         Private Shared ReadOnly SecretFieldNames As String() = {
             "ImmichApiKey", "NextcloudAppPassword", "MailSmtpPassword",
-            NameOf(AppSettings.AppLockPasswordHash), NameOf(AppSettings.BrowserUserPasswordHashes),
+            NameOf(AppSettings.AppLockPasswordHash), NameOf(AppSettings.BrowserOwnerPasswordHash),
+            NameOf(AppSettings.OwnerPasswordMigrated),
+            NameOf(AppSettings.BrowserUserPasswordHashes),
             NameOf(AppSettings.TwoFactorSecrets), NameOf(AppSettings.TwoFactorRecoveryHashes)}
         ''' Die Angaben, die dem Rechner gehoeren und nie aus einer Sicherung kommen: wo der
         ''' Datenordner liegt und welche Aufteilung der Orte erreicht ist. Eine Sicherung von einem

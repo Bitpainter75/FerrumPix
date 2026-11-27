@@ -1001,11 +1001,23 @@ Namespace Services
         ''' noch nicht kennt: so erscheint der Assistent nach dem Update genau einmal auch bei
         ''' bestehenden Installationen, mit deren Einstellungen vorausgewaehlt.</summary>
         Public Property SetupAssistantDone As Boolean = False
-        ''' <summary>Das Kennwort des Anmeldefensters, nur als Hash (AppLockService.HashPassword:
-        ''' Verfahren, Rundenzahl, Salz und Ergebnis in einer Zeile). Leer heisst: die Anwendung ist
-        ''' nicht geschuetzt. Das Kennwort selbst steht nirgends. Wer es vergessen hat, loescht
-        ''' diesen Eintrag, solange die Anwendung nicht laeuft.</summary>
+        ''' <summary>Das Kennwort des Anmeldefensters AM RECHNER, nur als Hash
+        ''' (AppLockService.HashPassword: Verfahren, Rundenzahl, Salz und Ergebnis in einer Zeile).
+        ''' Leer heisst: das Fenster am Rechner sperrt sich nie. Mit dem Browser hat es nichts zu
+        ''' tun, dort gilt <see cref="BrowserOwnerPasswordHash"/>. Das Kennwort selbst steht
+        ''' nirgends. Wer es vergessen hat, loescht diesen Eintrag, solange die Anwendung nicht
+        ''' laeuft.</summary>
         Public Property AppLockPasswordHash As String = ""
+        ''' <summary>Das Kennwort des Eigentuemers (Administrators) fuer die Anmeldung im Browser,
+        ''' nur als Hash, im selben Format. Leer heisst: der Browser zeigt die Einrichtung. Gesetzt
+        ''' von der Einrichtung, "Kennwort vergessen", dem Zugang in den Einstellungen im Browser und
+        ''' einmal aus <see cref="AppLockPasswordHash"/> (<see cref="OwnerPasswordMigrated"/>).</summary>
+        Public Property BrowserOwnerPasswordHash As String = ""
+        ''' <summary>Die einmalige Uebernahme ist gelaufen: wer vor der Trennung ein Kennwort hatte,
+        ''' das zugleich die Anmeldung im Browser war, bekam es als Kennwort des Eigentuemers
+        ''' (AppLockService.MigrateOwnerPassword). Ab Werk False, also auch fuer eine vorhandene
+        ''' Datei, die den Wert noch nicht kennt.</summary>
+        Public Property OwnerPasswordMigrated As Boolean = False
         ''' <summary>Der Benutzername des Eigentuemers fuer die Anmeldung im Browser, festgelegt in
         ''' der Ersteinrichtung zusammen mit dem Kennwort. Leer bei einer Installation, deren
         ''' Kennwort aus den Einstellungen stammt: dann legt die naechste Anmeldung im Browser ihn
