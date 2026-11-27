@@ -178,9 +178,10 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [libraw, bildformate]
     # Uebersprungene Bauten (Schalter aus) halten nichts auf, ein gescheiterter schon: dann
-    # entstuenden Pakete mit der alten Bibliothek, obwohl eine neue verlangt war.
+    # entstuenden Pakete mit der alten Bibliothek, obwohl eine neue verlangt war. !cancelled()
+    # statt always(): ein Job mit always() laesst sich nach "Cancel workflow" nicht abbrechen.
     if: >-
-      ${{ always()
+      ${{ !cancelled()
           && (needs.libraw.result == 'success' || needs.libraw.result == 'skipped')
           && (needs.bildformate.result == 'success' || needs.bildformate.result == 'skipped') }}
     timeout-minutes: 30

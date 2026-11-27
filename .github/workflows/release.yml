@@ -383,9 +383,10 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [pakete]
     # Laeuft, wenn der Bau-Job gebaut hat und nicht gescheitert ist. Uebersprungen (bei "msix")
-    # zaehlt nicht als Fehler, veroeffentlicht dann aber auch nichts.
+    # zaehlt nicht als Fehler, veroeffentlicht dann aber auch nichts. !cancelled() statt always():
+    # ein Job mit always() laeuft auch nach "Cancel workflow" weiter und laesst sich nicht abbrechen.
     if: >-
-      ${{ always()
+      ${{ !cancelled()
           && !contains(needs.*.result, 'failure')
           && !contains(needs.*.result, 'cancelled')
           && contains(needs.*.result, 'success') }}
