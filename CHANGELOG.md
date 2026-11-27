@@ -57,11 +57,12 @@
 
 - In the browser, pictures now travel both ways: drop files onto the page to put them into the
   folder you are looking at, or onto the picture in the editor to add them as a layer, and choose
-  Download in the context menu to bring pictures to your device, several at once as a ZIP with
-  their sidecar files. Save as, Export to and the batch tools have Download as a destination, so
+  Download in the context menu or the download button on a gallery tile to bring pictures to your
+  device, several at once as a ZIP with their sidecar files. Save as, Export to and the batch tools have Download as a destination, so
   the finished pictures come straight to your device without a folder on the server, and Upload in
   the gallery opens the file picker of your browser. Signing out works through Lock, and the page
-  shows the FerrumPix icon in the tab.
+  shows the FerrumPix icon in the tab. The picture now follows a slider more smoothly in the
+  browser, and the app needs less processor time while nothing happens.
 
 - FerrumPix in the browser is now also available as a container image for Docker and Podman, for
   amd64 and arm64, so it can run on a home server without a screen.
@@ -72,7 +73,7 @@
 
 - FerrumPix can now be protected with a password (Settings, General, Access). A sign-in window
   then covers the app at start, after a time without use that you choose, and whenever you lock
-  it by hand. In the browser the same sign-in window replaces the
+  it by hand, also with the padlock at the top right of the window. In the browser the same sign-in window replaces the
   browser's own password prompt, each browser stays signed in until the app is locked, and a
   container started with a password is protected from the first start.
 
@@ -80,6 +81,10 @@
   the editor next to the system fonts, and they come along into exports, prints and Photoshop
   files. Settings, Catalog shows where the folder is and reads it again on request; in the
   container it is /data/share/FerrumPix/Fonts.
+
+- With extensions on a picture, sliders that come after an extension in the editor, such as grain
+  or the settings of a later extension, now react noticeably faster, because that extension is no
+  longer calculated again when nothing before it has changed.
 
 ### Fixes
 

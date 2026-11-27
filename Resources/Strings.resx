@@ -13066,4 +13066,10 @@
   <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
     <value>Ready to download: {0}</value>
   </data>
+  <data name="Auswahl_herunterladen_26b74c13" xml:space="preserve">
+    <value>Download selection</value>
+  </data>
+  <data name="Sperren_STRG_L_10c0fb95" xml:space="preserve">
+    <value>Lock (CTRL+L)</value>
+  </data>
 </root>

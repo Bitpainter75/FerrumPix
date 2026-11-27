@@ -13045,4 +13045,10 @@
   <data name="Zum_Herunterladen_bereit_0_6b4bcc47" xml:space="preserve">
     <value>可以下载：{0}</value>
   </data>
+  <data name="Auswahl_herunterladen_26b74c13" xml:space="preserve">
+    <value>下载所选项</value>
+  </data>
+  <data name="Sperren_STRG_L_10c0fb95" xml:space="preserve">
+    <value>锁定 (CTRL+L)</value>
+  </data>
 </root>

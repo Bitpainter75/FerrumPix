@@ -2138,6 +2138,109 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ''' <summary>Das Abzeichen "Herunterladen" auf der Kachel, nur im Browser gebaut. Es laedt
+        ''' wie "Herunterladen" im Kontextmenue (GalleryViewModel.DownloadFromTile): in einer
+        ''' Auswahl mehrerer Bilder die ganze Auswahl als ZIP, sonst diese Datei. Die Auswahl bleibt,
+        ''' wie sie ist: als Knopf faengt es den Druck selbst ab, die Kachel sieht ihn nicht, auch
+        ''' nicht im Zeichentablett-Modus, wo der Klick schon beim Druecken kommt. Der Download
+        ''' laeuft ueber einen Verweis der Seite und oeffnet keinen Dialog, das Loslassen kommt also
+        ''' wieder an.</summary>
+        Public Sub OnBrowserDownloadBadgeClick(sender As Object, e As RoutedEventArgs)
+            e.Handled = True
+            Dim item = TryCast(TryCast(sender, Control)?.DataContext, ImageItem)
+            GetVm()?.DownloadFromTile(item)
+        End Sub
+
+        ''' <summary>Der Hinweis sagt, was der Klick holt: bei einer Auswahl mehrerer Bilder
+        ''' "Auswahl herunterladen". Gesetzt beim Betreten, die Auswahl kann sich seit dem Bauen
+        ''' der Kachel geaendert haben.</summary>
+        Public Sub OnBrowserDownloadBadgePointerEntered(sender As Object, e As PointerEventArgs)
+            Dim button = TryCast(sender, Control)
+            Dim item = TryCast(button?.DataContext, ImageItem)
+            Dim vm = GetVm()
+            If button Is Nothing OrElse item Is Nothing OrElse vm Is Nothing Then Return
+            ToolTip.SetTip(button, If(vm.TileDownloadsSelection(item),
+                                      LocalizationService.T("Auswahl herunterladen"),
+                                      LocalizationService.T("Herunterladen")))
+        End Sub
+
+        ''' <summary>Ein Doppelklick auf das Abzeichen oeffnet das Bild nicht: das Doppeltippen
+        ''' kaeme sonst bei der Kachel an (OnThumbnailDoubleTapped).</summary>
+        Public Sub OnBrowserDownloadBadgeDoubleTapped(sender As Object, e As TappedEventArgs)
+            e.Handled = True
+        End Sub
+
+        ''' <summary>Das Abzeichen ist eben gebaut worden (beim ersten Ueberfahren der Kachel). Die
+        ''' Masse der Nachbarn stehen erst nach dem naechsten Layout fest.</summary>
+        Public Sub OnBrowserDownloadBadgeAttached(sender As Object, e As VisualTreeAttachmentEventArgs)
+            Dim badge = TryCast(sender, Button)
+            If badge Is Nothing Then Return
+            UpdateBrowserDownloadBadge(badge)
+            Dispatcher.UIThread.Post(Sub() UpdateBrowserDownloadBadge(badge), DispatcherPriority.Loaded)
+        End Sub
+
+        ''' <summary>Die Kachel zeigt ein anderes Element (der Repeater verwendet sie wieder).</summary>
+        Public Sub OnBrowserDownloadBadgeDataContextChanged(sender As Object, e As EventArgs)
+            Dim badge = TryCast(sender, Button)
+            If badge Is Nothing Then Return
+            UpdateBrowserDownloadBadge(badge)
+            Dispatcher.UIThread.Post(Sub() UpdateBrowserDownloadBadge(badge), DispatcherPriority.Loaded)
+        End Sub
+
+        ''' <summary>Hat das Abzeichen "Herunterladen" rechts neben den Knoepfen der Reihe noch Platz,
+        ''' bevor rechts oben Stapel oder Auswahlkreis beginnen? Alles in Punkten der Bildflaeche:
+        ''' <paramref name="rowLeft"/> ist der linke Rand der Reihe, <paramref name="othersWidth"/> die
+        ''' Breite der sichtbaren Knoepfe davor samt ihrer Abstaende, <paramref name="freeRight"/> die
+        ''' linke Kante des ersten Aufsatzes rechts oben. Gemessen wird an den TREFFERFLAECHEN: sie
+        ''' duerfen sich beruehren, nicht ueberlappen. Sichtbar bleibt dann noch ein Spalt, weil der
+        ''' Auswahlkreis 3 Punkte innerhalb seiner Flaeche sitzt. Im kleinsten Kachelmass (180) passt
+        ''' die volle Reihe (8 + 4 mal 30 + 3 mal 5 = 143) mit 3 Punkten Luft.</summary>
+        Friend Shared Function BrowserDownloadBadgeFits(rowLeft As Double, othersWidth As Double, badgeWidth As Double,
+                                                        freeRight As Double) As Boolean
+            Return rowLeft + othersWidth + badgeWidth <= freeRight
+        End Function
+
+        ''' <summary>Zeigt das Abzeichen "Herunterladen", wenn das Element sich herunterladen laesst
+        ''' (ImageItem.IsDownloadable, also nie an Ordner oder Serverbild) und die Reihe dann nicht in
+        ''' Stapel oder Auswahlkreis hineinlaeuft (<see cref="BrowserDownloadBadgeFits"/>). Bei
+        ''' kleinen Kacheln mit allen drei Knoepfen davor faellt es weg; das Kontextmenue bleibt.</summary>
+        Private Shared Sub UpdateBrowserDownloadBadge(badge As Button)
+            Dim item = TryCast(badge.DataContext, ImageItem)
+            If item Is Nothing OrElse Not item.IsDownloadable Then
+                badge.IsVisible = False
+                Return
+            End If
+            Dim part = TryCast(badge.Parent, Control)
+            Dim row = TryCast(part?.Parent, StackPanel)
+            Dim rowHost = TryCast(row?.Parent, Control)
+            Dim area = TryCast(rowHost?.Parent, Panel)
+            If row Is Nothing OrElse area Is Nothing OrElse area.Bounds.Width <= 0 Then
+                badge.IsVisible = True
+                Return
+            End If
+            Dim others As Double = 0
+            For Each child In row.Children
+                If child Is part OrElse Not child.IsVisible Then Continue For
+                others += If(Double.IsNaN(child.Width), child.Bounds.Width, child.Width) + row.Spacing
+            Next
+            Dim freeRight = area.Bounds.Width
+            For Each child In area.Children
+                If Not child.IsVisible Then Continue For
+                Dim corner As Control = Nothing
+                If child.Classes.Contains("selection-badge-hit") Then
+                    corner = child
+                Else
+                    Dim deferred = TryCast(child, DeferredPart)
+                    Dim inner = TryCast(deferred?.Child, Button)
+                    If inner IsNot Nothing AndAlso inner.IsVisible AndAlso inner.Classes.Contains("stack-badge") Then corner = inner
+                End If
+                If corner Is Nothing Then Continue For
+                Dim origin = corner.TranslatePoint(New Point(0, 0), area)
+                If origin.HasValue AndAlso corner.Bounds.Width > 0 Then freeRight = Math.Min(freeRight, origin.Value.X)
+            Next
+            badge.IsVisible = BrowserDownloadBadgeFits(row.Margin.Left, others, badge.Width, freeRight)
+        End Sub
+
         ''' Der Kreis an der Kopfzeile einer Gruppe. Er wirkt wie der auf der Kachel, nur auf alle
         ''' Bilder der Gruppe zugleich, und laesst eine Auswahl ausserhalb der Gruppe stehen.
         Public Sub OnGroupSelectionBadgeClick(sender As Object, e As RoutedEventArgs)
@@ -2299,6 +2402,14 @@ Namespace Views
         ''' In den anderen Ansichten tut das ViewModel hier nichts.</summary>
         Public Sub OnThumbnailPointerEntered(sender As Object, e As PointerEventArgs)
             GetVm()?.BeginTileHover(TryCast(TryCast(sender, Control)?.DataContext, ImageItem))
+            ' Die Reihe links oben erscheint erst jetzt; ob "Herunterladen" darin Platz hat, haengt
+            ' an der Kachelgroesse, die sich seit dem letzten Mal geaendert haben kann.
+            If BrowserBridge.IsActive Then
+                Dim card = TryCast(sender, Visual)
+                Dim badge = card?.GetVisualDescendants().OfType(Of Button)().
+                    FirstOrDefault(Function(b) b.Classes.Contains("browser-download-badge"))
+                If badge IsNot Nothing Then UpdateBrowserDownloadBadge(badge)
+            End If
         End Sub
 
         Public Sub OnThumbnailPointerExited(sender As Object, e As PointerEventArgs)

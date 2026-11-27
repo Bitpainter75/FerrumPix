@@ -56,6 +56,50 @@ Namespace Views
             _lockIdleTimer = New DispatcherTimer With {.Interval = TimeSpan.FromSeconds(10)}
             AddHandler _lockIdleTimer.Tick, Sub(s, e) AppLockService.CheckIdle()
             _lockIdleTimer.Start()
+            InstallWindowLockButtonPlacement()
+        End Sub
+
+        ''' <summary>Abstand des Knopfs "Sperren" der Fensterleiste zu dem, was rechts aussen in der
+        ''' Leiste steht, in Punkten.</summary>
+        Friend Const WindowLockButtonGap As Double = 8.0
+
+        ''' <summary>Der Knopf "Sperren" oben rechts in der Fensterleiste (WindowLockButton) steht
+        ''' links neben dem, was die rechte Kante belegt: die eigenen Fensterknoepfe, wenn sie
+        ''' rechts sitzen; das Logo, wenn es dort steht (Knoepfe links, oder macOS mit den nativen
+        ''' Knoepfen links); sonst, etwa im Browser ohne Fensterknoepfe, die Kante selbst. Beides
+        ''' kann sich verschieben (Einstellung der Knopfseite, Aktualisierungshinweis am Logo,
+        ''' Sprache), deshalb folgt der Knopf ihren Massen statt einer festen Zahl.</summary>
+        Private Sub InstallWindowLockButtonPlacement()
+            Dim host = Me.FindControl(Of Border)("CustomWindowControlsHost")
+            Dim logo = Me.FindControl(Of StackPanel)("WindowLogoPanel")
+            Dim follow = Sub(s As Object, e As AvaloniaPropertyChangedEventArgs)
+                             If e.Property Is BoundsProperty OrElse e.Property Is IsVisibleProperty OrElse
+                                e.Property Is MarginProperty OrElse e.Property Is HorizontalAlignmentProperty OrElse
+                                e.Property Is Grid.ColumnProperty Then
+                                 PlaceWindowLockButton()
+                             End If
+                         End Sub
+            If host IsNot Nothing Then AddHandler host.PropertyChanged, follow
+            If logo IsNot Nothing Then AddHandler logo.PropertyChanged, follow
+            PlaceWindowLockButton()
+        End Sub
+
+        ''' <summary>Setzt den rechten Rand des Knopfs "Sperren" nach der Regel in
+        ''' <see cref="InstallWindowLockButtonPlacement"/>.</summary>
+        Friend Sub PlaceWindowLockButton()
+            Dim button = Me.FindControl(Of Button)("WindowLockButton")
+            If button Is Nothing Then Return
+            Dim host = Me.FindControl(Of Border)("CustomWindowControlsHost")
+            Dim logo = Me.FindControl(Of StackPanel)("WindowLogoPanel")
+            Dim inset = WindowLockButtonGap
+            If host IsNot Nothing AndAlso host.IsVisible AndAlso
+               host.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right Then
+                inset = host.Margin.Right + host.Bounds.Width + WindowLockButtonGap
+            ElseIf logo IsNot Nothing AndAlso Grid.GetColumn(logo) = 2 Then
+                inset = logo.Margin.Right + logo.Bounds.Width + WindowLockButtonGap
+            End If
+            Dim wanted = New Thickness(0, 0, inset, 0)
+            If button.Margin <> wanted Then button.Margin = wanted
         End Sub
 
         ''' <summary>Zeigt oder verbirgt das Anmeldefenster nach dem Stand des ViewModels. Die Ansicht

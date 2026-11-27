@@ -208,11 +208,37 @@ Namespace Services
         ''' versteht (ein Dialog darueber, ein Menue).</para>
         '''
         ''' <para>Die Dateien gehen ohne Stelle hinauf und damit in den Ordner der Galerie, wie
-        ''' beim Ablegen ausserhalb des Editors. False ohne laufende Bruecke.</para></summary>
+        ''' beim Ablegen ausserhalb des Editors.</para>
+        '''
+        ''' <para>EIN WAEHLER ZUR ZEIT. Solange einer offen ist, geht kein zweites "pick" hinaus;
+        ''' die Seite meldet das Ende der Auswahl ("picked", nach einer Wahl wie nach Abbrechen).
+        ''' Kommt keins (ein Browser ohne das Ereignis "cancel"), gibt die Zeitgrenze den Weg
+        ''' wieder frei. Die Seite selbst verwirft ein "pick", das kurz nach dem Schliessen
+        ''' eintrifft. Beides ist Absicherung; die Ursache des Befunds, dass sich der Waehler
+        ''' immer wieder oeffnete, steht bei CancelPointer.</para>
+        '''
+        ''' <para>False ohne laufende Bruecke, ohne verbundenen Browser und bei offenem Waehler.</para></summary>
         Public Shared Function RequestFilePicker() As Boolean
-            If _listener Is Nothing Then Return False
+            If _listener Is Nothing OrElse CurrentClient Is Nothing Then Return False
+            Dim now = Environment.TickCount64
+            Dim openedAt = Interlocked.Read(_filePickerOpenedAt)
+            If openedAt <> 0 AndAlso now - openedAt < FilePickerTimeoutMilliseconds Then Return False
+            Interlocked.Exchange(_filePickerOpenedAt, now)
             Dim ignored = SendTextAsync("{""t"":""pick""}")
             Return True
         End Function
+
+        ''' <summary>Seit wann ein Dateiwaehler offen ist (Environment.TickCount64), 0 ohne.</summary>
+        Private Shared _filePickerOpenedAt As Long
+
+        ''' <summary>So lange gilt ein Dateiwaehler hoechstens als offen, wenn die Seite kein Ende
+        ''' meldet. Danach oeffnet der naechste Klick wieder einen.</summary>
+        Private Const FilePickerTimeoutMilliseconds As Long = 60000
+
+        ''' <summary>Die Seite meldet das Ende der Auswahl, oder ein neuer Browser hat sich
+        ''' verbunden.</summary>
+        Private Shared Sub FilePickerClosed()
+            Interlocked.Exchange(_filePickerOpenedAt, 0)
+        End Sub
     End Class
 End Namespace

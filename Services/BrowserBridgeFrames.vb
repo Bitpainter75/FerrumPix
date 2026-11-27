@@ -29,9 +29,9 @@ Namespace Services
     ' Anwendung gezeichnet hat - fuer eine Bildbearbeitung ist das der Punkt des Ganzen.
     Partial Public NotInheritable Class BrowserBridge
 
-        ''' <summary>Abstand der Abholung in Millisekunden, also hoechstens rund sechzig Bilder je
-        ''' Sekunde. Kostet im Leerlauf fast nichts: hat die Anwendung nichts neu gezeichnet,
-        ''' endet ein Durchgang nach einem Vergleich zweier Verweise.</summary>
+        ''' <summary>Der Takt: so lange liegt zwischen zwei gezeichneten Bildern mindestens, also
+        ''' hoechstens rund sechzig Bilder je Sekunde. Gezeichnet und abgeholt wird im selben
+        ''' Durchgang, siehe "Der Takt".</summary>
         Private Const FrameIntervalMilliseconds As Integer = 16
 
         ''' <summary>So lange muss ein Fenster stillstehen, bevor der verlustfreie Nachzug kommt.</summary>
@@ -62,8 +62,6 @@ Namespace Services
             Public Id As Integer
             ''' <summary>Der Stand, den der Browser hat.</summary>
             Public Previous As Integer()
-            ''' <summary>Arbeitspuffer fuer das neue Bild; tauscht nach dem Vergleich mit Previous.</summary>
-            Public Scratch As Integer()
             Public PixelWidth As Integer
             Public PixelHeight As Integer
             ''' <summary>Das Bildobjekt der Plattform, das zuletzt verglichen wurde. Ist es noch
@@ -93,7 +91,6 @@ Namespace Services
         End Class
 
         Private Shared ReadOnly States As New Dictionary(Of Window, BridgeWindow)()
-        Private Shared _framePump As DispatcherTimer
         Private Shared _nextWindowId As Integer
         Private Shared _activationCounter As Integer
         Private Shared _lastLayout As String
@@ -102,16 +99,318 @@ Namespace Services
         Private Shared _lastFrameField As FieldInfo
         Private Shared _lastFrameFieldSearched As Boolean
 
+        ' ------------------------------------------------------------------------------------
+        ' Der Takt: zeichnen und abholen in EINEM Durchgang.
+        '
+        ' GEMESSEN (Anzeigefadenmessung, Release, Tab mit 5,4 Megapixeln): beim Ziehen eines
+        ' Reglers zeichnete die Plattform rund 50 Bilder je Sekunde zu je 19 ms, der Faden war zu
+        ' 90 bis 95 % belegt. Jede Mausbewegung stiess ein Bild an, dazu lief der eigene Takt der
+        ' Plattform mit 60 Hz, und die Abholung kam alle 16 ms; Bilder dazwischen sah niemand. Im
+        ' Leerlauf kosteten die Zeitgeber 10 bis 12 % eines Kerns: die Ereignisschleife des
+        ' Toolkits wartet nicht, wenn ein Zeitgeber in weniger als einer Millisekunde faellig
+        ' ist, sondern dreht leer (ManagedDispatcherImpl.RunLoop).
+        '
+        ' Deshalb gilt:
+        '
+        ' 1. DIE BRUECKE IST DER ZEICHENTAKT. Die Zeichenschleife des Toolkits bekommt statt des
+        '    Takts der Plattform den der Bruecke (BridgeRenderTimer). Sie meldet sich damit, wenn
+        '    es etwas zu zeichnen gibt, und gezeichnet wird nur noch in einem Durchgang der
+        '    Bruecke, unmittelbar vor dem Abholen. Ein Bild ohne Abnehmer entsteht so nicht.
+        '
+        ' 2. HOECHSTENS EIN BILD JE TAKT. Ist seit dem letzten Bild ein Takt vergangen, wird sofort
+        '    gezeichnet und abgeholt (nach einer Pause kommt die Bewegung ohne Wartezeit an, siehe
+        '    RequestFrameNow); sonst genau einmal zum naechsten Takt.
+        '
+        ' 3. EIN ZEITGEBER, UND ER STEHT, WENN NICHTS ZU TUN IST: ohne verbundenen Browser, ohne
+        '    Wunsch der Zeichenschleife und ohne faelligen verlustfreien Nachzug. Er laeuft auf
+        '    einem Faden des Pools und stellt den Durchgang nur in die Schlange; die
+        '    Ereignisschleife bekommt damit keinen Zeitgeber, vor dem sie leer drehen koennte.
+        '
+        ' Fehlt die Zeichenschleife des Toolkits in der erwarteten Form (neue Fassung), bleibt
+        ' ihr eigener Takt, und die Bruecke laeuft wie ein gewoehnlicher Abholtakt alle 16 ms,
+        ' solange ein Browser verbunden ist: langsamer, aber richtig.
+        ' ------------------------------------------------------------------------------------
+
+        ''' <summary>Der Zeichentakt der Bruecke an Stelle des Takts der Plattform. Die
+        ''' Zeichenschleife setzt <c>Tick</c>, wenn sie etwas zu zeichnen hat, und nimmt ihn weg,
+        ''' wenn nicht; getickt wird nur im Durchgang der Bruecke.
+        '''
+        ''' <para>Die Schnittstelle (<c>IRenderTimer</c>) fuehrt das Toolkit als PrivateApi: beim
+        ''' Bauen sind ihre Glieder nicht sichtbar und sie laesst sich nicht umsetzen. Die Klasse
+        ''' entsteht deshalb erst zur Laufzeit als Stellvertreter (<see cref="DispatchProxy"/>),
+        ''' wie die Eingaben ueber Reflexion gehen.</para></summary>
+        Friend Class BridgeRenderTimer
+            Inherits DispatchProxy
+
+            Private ReadOnly _clock As Stopwatch = Stopwatch.StartNew()
+            Private _tick As Action(Of TimeSpan)
+
+            ''' <summary>Der Takt der Plattform und sein Feld fuer den erzwungenen Takt
+            ''' (<c>AvaloniaHeadlessPlatform.ForceRenderTimerTick</c>). Solange die Schleife wach
+            ''' ist, zeigt es auf <see cref="Fire"/>: wer ein Bild erzwingt (die Hilfen der
+            ''' Plattform fuer Tests tun das bei jeder Eingabe), bekommt es weiter.</summary>
+            Public PlatformTimer As Object
+            Public PlatformForceTick As FieldInfo
+
+            ''' <summary>Ob die Zeichenschleife wach ist, also etwas zeichnen will.</summary>
+            Public ReadOnly Property IsAwake As Boolean
+                Get
+                    Return Volatile.Read(_tick) IsNot Nothing
+                End Get
+            End Property
+
+            Protected Overrides Function Invoke(targetMethod As MethodInfo, args As Object()) As Object
+                Select Case targetMethod?.Name
+                    Case "get_Tick"
+                        Return Volatile.Read(_tick)
+                    Case "set_Tick"
+                        Dim value = TryCast(args(0), Action(Of TimeSpan))
+                        Volatile.Write(_tick, value)
+                        PlatformForceTick?.SetValue(PlatformTimer, If(value Is Nothing, Nothing, New Action(AddressOf Fire)))
+                        ' Die Schleife ist aufgewacht: es gibt etwas zu zeichnen.
+                        If value IsNot Nothing Then SchedulePass()
+                        Return Nothing
+                    Case "get_RunsInBackground"
+                        Return False
+                End Select
+                Return Nothing
+            End Function
+
+            ''' <summary>Laesst die Zeichenschleife einmal laufen, wenn sie wach ist. Nur auf dem
+            ''' Anzeigefaden.</summary>
+            Public Sub Fire()
+                Volatile.Read(_tick)?.Invoke(_clock.Elapsed)
+            End Sub
+        End Class
+
+        Private Shared ReadOnly PassLock As New Object()
+        Private Shared _passClock As System.Threading.Timer
+        Private Shared _pumpActive As Boolean
+        Private Shared _renderTimer As BridgeRenderTimer
+        Private Shared _originalRenderTimer As Object
+        Private Shared _renderLoop As Object
+        Private Shared _renderLoopTimerField As FieldInfo
+        Private Shared _renderTimerTick As PropertyInfo
+        ''' <summary>Wann zuletzt ein Bild gezeichnet wurde (Stopwatch); Grundlage der Regel
+        ''' "hoechstens ein Bild je Takt".</summary>
+        Private Shared _lastFrameTicks As Long
+        ''' <summary>Wann der Zeitgeber faellig ist (Stopwatch), 0 wenn er steht.</summary>
+        Private Shared _clockDueTicks As Long
+        Private Shared _passPosted As Integer
+        ''' <summary>Ein Durchgang fiel aus, weil der vorige Schwung noch unterwegs war; ist er
+        ''' hinaus, kommt der naechste gleich.</summary>
+        Private Shared _passAfterSend As Integer
+        Private Shared _passCount As Long
+
+        Private Shared ReadOnly FrameIntervalTicks As Long = Stopwatch.Frequency * FrameIntervalMilliseconds \ 1000
+
+        ''' <summary>Der lange Takt ohne Browser, solange die Zeichenschleife etwas zeichnen will.
+        ''' Ganz anhalten geht dort nicht: das Toolkit gibt Freigaben erst mit dem naechsten
+        ''' gezeichneten Bild weiter und rechnet dabei auch die Lage der Elemente fuer die
+        ''' Trefferpruefung nach. Laeuft im Behaelter ohne offenen Tab etwa der Katalog durch,
+        ''' blieben sonst Bilder im Speicher liegen. Zwei Bilder je Sekunde kosten fast nichts.</summary>
+        Private Const DetachedIntervalMilliseconds As Integer = 500
+
+        Private Shared ReadOnly DetachedIntervalTicks As Long = Stopwatch.Frequency * DetachedIntervalMilliseconds \ 1000
+
+        ''' <summary>Wie viele Durchgaenge (zeichnen und abholen) bisher liefen. Fuer die Zeile im
+        ''' Diagnoseprotokoll und den Pruefstand.</summary>
+        Friend Shared ReadOnly Property PassCount As Long
+            Get
+                Return Interlocked.Read(_passCount)
+            End Get
+        End Property
+
         Private Shared Sub StartFramePump()
-            If _framePump IsNot Nothing Then Return
-            ' LOADED UND NICHT BACKGROUND: die Abholung muss vor den Eingaben an die Reihe kommen.
-            ' Beim Ziehen eines Reglers steht staendig eine Mausbewegung in der Schlange; mit
-            ' niedrigerer Prioritaet kaeme die Abholung erst dran, wenn die Maus ruht, und der
-            ' Browser saehe gerade waehrend der Bewegung nichts.
-            _framePump = New DispatcherTimer(DispatcherPriority.Loaded) With {
-                .Interval = TimeSpan.FromMilliseconds(FrameIntervalMilliseconds)}
-            AddHandler _framePump.Tick, AddressOf OnFrameTick
-            _framePump.Start()
+            If _pumpActive Then Return
+            _pumpActive = True
+            _passClock = New System.Threading.Timer(AddressOf OnPassClock, Nothing, Timeout.Infinite, Timeout.Infinite)
+            InstallRenderTimer()
+            SchedulePass()
+        End Sub
+
+        ''' <summary>Setzt den Zeichentakt der Bruecke in die Zeichenschleife des Toolkits. Die
+        ''' Schleife haelt ihren Takt in einem internen Feld; ist sie gerade wach, wandert ihr
+        ''' Auftrag mit.</summary>
+        Private Shared Sub InstallRenderTimer()
+            Try
+                ' Die Schleife, an der der Compositor der Plattform haengt; beide sind intern.
+                Dim timerType = GetType(AvaloniaLocator).Assembly.GetType("Avalonia.Rendering.IRenderTimer")
+                Dim compositor = GetType(AvaloniaHeadlessPlatform).GetProperty("Compositor", BindingFlags.Static Or BindingFlags.NonPublic)?.GetValue(Nothing)
+                Dim renderLoop = compositor?.GetType().GetProperty("Loop", BindingFlags.Instance Or BindingFlags.NonPublic Or BindingFlags.Public)?.GetValue(compositor)
+                Dim field = renderLoop?.GetType().GetField("_timer", BindingFlags.Instance Or BindingFlags.NonPublic)
+                Dim tick = timerType?.GetProperty("Tick")
+                Dim original = field?.GetValue(renderLoop)
+                If original Is Nothing OrElse tick Is Nothing OrElse Not timerType.IsAssignableFrom(field.FieldType) OrElse
+                   TypeOf original Is BridgeRenderTimer Then
+                    DiagnosticLogService.LogAlways("BrowserBridge.Frame", "Zeichenschleife nicht erreichbar, es bleibt beim Takt der Plattform")
+                    Return
+                End If
+                Dim replacement = DirectCast(DispatchProxy.Create(timerType, GetType(BridgeRenderTimer)), BridgeRenderTimer)
+                Dim running = tick.GetValue(original)
+                If running IsNot Nothing Then tick.SetValue(original, Nothing)
+                Dim forceTick = original.GetType().GetField("_forceTick", BindingFlags.Instance Or BindingFlags.NonPublic)
+                If forceTick IsNot Nothing AndAlso forceTick.FieldType Is GetType(Action) Then
+                    replacement.PlatformTimer = original
+                    replacement.PlatformForceTick = forceTick
+                End If
+                field.SetValue(renderLoop, replacement)
+                _renderLoop = renderLoop
+                _renderLoopTimerField = field
+                _renderTimerTick = tick
+                _originalRenderTimer = original
+                _renderTimer = replacement
+                If running IsNot Nothing Then tick.SetValue(replacement, running)
+            Catch ex As Exception When TypeOf ex Is FieldAccessException OrElse TypeOf ex Is ArgumentException OrElse
+                                       TypeOf ex Is InvalidOperationException OrElse TypeOf ex Is TargetInvocationException
+                DiagnosticLogService.LogException("BrowserBridge.Frame", If(ex.InnerException, ex))
+                _renderTimer = Nothing
+            End Try
+        End Sub
+
+        ''' <summary>Gibt der Zeichenschleife ihren eigenen Takt zurueck (Anhalten der Bruecke im
+        ''' Pruefstand).</summary>
+        Private Shared Sub RestoreRenderTimer()
+            Dim replacement = _renderTimer
+            _renderTimer = Nothing
+            If replacement Is Nothing OrElse _renderLoopTimerField Is Nothing Then Return
+            Dim running = _renderTimerTick.GetValue(replacement)
+            replacement.PlatformForceTick?.SetValue(replacement.PlatformTimer, Nothing)
+            replacement.PlatformForceTick = Nothing
+            _renderLoopTimerField.SetValue(_renderLoop, _originalRenderTimer)
+            If running IsNot Nothing Then _renderTimerTick.SetValue(_originalRenderTimer, running)
+            _renderLoop = Nothing
+            _renderLoopTimerField = Nothing
+            _originalRenderTimer = Nothing
+        End Sub
+
+        ''' <summary>Sorgt fuer einen Durchgang: sofort, wenn seit dem letzten ein Takt vergangen
+        ''' ist, sonst zum naechsten Takt. Von jedem Faden aus. Ohne Browser nur im langen Takt
+        ''' (<see cref="DetachedIntervalMilliseconds"/>); beim Verbinden kommt der Durchgang sofort.</summary>
+        Private Shared Sub SchedulePass()
+            If Not _pumpActive Then Return
+            If CurrentClient Is Nothing Then
+                If _renderTimer IsNot Nothing AndAlso _renderTimer.IsAwake Then ArmPassClock(DetachedIntervalTicks)
+                Return
+            End If
+            Dim wait = Interlocked.Read(_lastFrameTicks) + FrameIntervalTicks - Stopwatch.GetTimestamp()
+            If wait <= 0 Then
+                PostPass()
+            Else
+                ArmPassClock(wait)
+            End If
+        End Sub
+
+        ''' <summary>Stellt den Zeitgeber, falls er nicht schon frueher faellig ist.</summary>
+        Private Shared Sub ArmPassClock(waitTicks As Long)
+            Dim due = Stopwatch.GetTimestamp() + waitTicks
+            SyncLock PassLock
+                If _passClock Is Nothing Then Return
+                If _clockDueTicks <> 0 AndAlso _clockDueTicks <= due Then Return
+                _clockDueTicks = due
+                ' Aufgerundet: ein Durchgang vor dem Takt wuerde ein zweites Bild in denselben
+                ' Takt legen.
+                Dim milliseconds = CLng(Math.Ceiling(waitTicks * 1000.0 / Stopwatch.Frequency))
+                _passClock.Change(Math.Max(1L, milliseconds), Timeout.Infinite)
+            End SyncLock
+        End Sub
+
+        Private Shared Sub OnPassClock(state As Object)
+            SyncLock PassLock
+                _clockDueTicks = 0
+            End SyncLock
+            PostPass()
+        End Sub
+
+        ''' <summary>LOADED UND NICHT BACKGROUND: der Durchgang muss vor den Eingaben an die Reihe
+        ''' kommen. Beim Ziehen eines Reglers steht staendig eine Mausbewegung in der Schlange; mit
+        ''' niedrigerer Prioritaet kaeme er erst dran, wenn die Maus ruht. Und unter Anordnen und
+        ''' Zeichnen der Oberflaeche: was eine Eingabe dort angestossen hat, laeuft vorher.</summary>
+        Private Shared Sub PostPass()
+            If Interlocked.Exchange(_passPosted, 1) <> 0 Then Return
+            Dispatcher.UIThread.Post(AddressOf RunPass, DispatcherPriority.Loaded)
+        End Sub
+
+        ''' <summary>Ein Durchgang: zeichnen, was ansteht, abholen, und entscheiden, ob der
+        ''' Zeitgeber weiterlaeuft.</summary>
+        Private Shared Sub RunPass()
+            Interlocked.Exchange(_passPosted, 0)
+            If Not _pumpActive Then Return
+            If CurrentClient Is Nothing Then
+                ' Ohne Browser nur die Zeichenschleife, im langen Takt: niemand holt ab.
+                If _renderTimer Is Nothing Then Return
+                DrawFrame()
+                ScheduleFollowingPass()
+                Return
+            End If
+            ' Solange der letzte Schwung noch kodiert oder gesendet wird, wird nicht gezeichnet:
+            ' das Bild haette keinen Abnehmer. Ist er hinaus, kommt der Durchgang (SendFramesAsync).
+            ' Erst die Marke, dann die Frage: endet der Schwung dazwischen, sieht er die Marke.
+            Interlocked.Exchange(_passAfterSend, 1)
+            If Interlocked.CompareExchange(_sending, 0, 0) = 0 Then
+                Interlocked.Exchange(_passAfterSend, 0)
+            Else
+                _skippedTicks += 1
+                ' Eine wartende Mausbewegung bleibt gesperrt, bis ihr Vorgaenger abgeholt ist;
+                ' der Anstoss hier laesst nur ihre Frist greifen.
+                KickInput()
+                Return
+            End If
+            DrawFrame()
+            CollectAndSend()
+            ScheduleFollowingPass()
+        End Sub
+
+        ''' <summary>Laesst die Zeichenschleife laufen. Der Takt zaehlt ab dem letzten BILD, nicht
+        ''' ab dem letzten Durchgang: bleibt die Schleife nach einer Aenderung noch eine Weile wach
+        ''' (das Toolkit tut das zehn Takte lang) oder laeuft eine Animation ohne neues Bild, darf
+        ''' eine Bewegung danach trotzdem sofort ein Bild bekommen. Gemessen: mit dem Durchgang als
+        ''' Mass kam das Bild einer einzelnen Bewegung nach einer Pause im Mittel 8 bis 10 ms
+        ''' spaeter als vorher.</summary>
+        Private Shared Sub DrawFrame()
+            Dim started = Stopwatch.GetTimestamp()
+            Interlocked.Increment(_passCount)
+            Dim windows = VisibleWindows()
+            Dim before = windows.Select(Function(w) CurrentFrameMarker(w)).ToList()
+            Try
+                If _renderTimer IsNot Nothing Then
+                    _renderTimer.Fire()
+                Else
+                    AvaloniaHeadlessPlatform.ForceRenderTimerTick()
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("BrowserBridge.Frame", ex)
+            End Try
+            ' Ohne erreichbares Feld der Plattform gilt jeder Durchgang als Bild.
+            Dim drew = windows.Count = 0
+            For index = 0 To windows.Count - 1
+                If before(index) Is Nothing OrElse CurrentFrameMarker(windows(index)) IsNot before(index) Then
+                    drew = True
+                    Exit For
+                End If
+            Next
+            If drew Then Interlocked.Exchange(_lastFrameTicks, started)
+        End Sub
+
+        ''' <summary>Ob und wann der naechste Durchgang kommt, ohne dass jemand ihn anstoesst: im
+        ''' naechsten Takt, solange die Zeichenschleife wach ist; zum verlustfreien Nachzug, wenn
+        ''' einer aussteht; sonst gar nicht.</summary>
+        Private Shared Sub ScheduleFollowingPass()
+            If CurrentClient Is Nothing Then
+                SchedulePass()
+                Return
+            End If
+            If _renderTimer Is Nothing OrElse _renderTimer.IsAwake Then
+                ArmPassClock(FrameIntervalTicks)
+                Return
+            End If
+            Dim nextLossless = Long.MaxValue
+            For Each state In States.Values
+                If state.HasLossy Then nextLossless = Math.Min(nextLossless, state.LastChange + LosslessDelayMilliseconds)
+            Next
+            If nextLossless = Long.MaxValue Then Return
+            Dim waitMilliseconds = Math.Max(FrameIntervalMilliseconds, nextLossless - Environment.TickCount64)
+            ArmPassClock(waitMilliseconds * Stopwatch.Frequency \ 1000)
         End Sub
 
         ' ------------------------------------------------------------------------------------
@@ -150,38 +449,30 @@ Namespace Services
             End If
         End Sub
 
-        Private Shared _frameNowPosted As Boolean
-
-        ''' <summary>Zeichnet und holt ab, ohne auf die beiden Takte zu warten.
+        ''' <summary>Nach einer Eingabe: zeichnen und abholen, ohne auf einen festen Takt zu warten.
         '''
-        ''' Nach einer Eingabe vergehen sonst bis zu 16 Millisekunden, bis die Anwendung zeichnet,
-        ''' und noch einmal so viel, bis die Abholung das Bild mitnimmt. Beim Malen ist das die
-        ''' Zeit, um die der Pinselkreis der Maus nachlaeuft: er ist ein Element der Szene und
-        ''' kommt nur ueber das Bild im Browser an.
+        ''' Mit einem festen Takt vergingen bis zu 16 Millisekunden, bis die Anwendung zeichnet,
+        ''' und mit getrennten Takten fuer Zeichnen und Abholen noch einmal so viel. Beim Malen ist
+        ''' das die Zeit, um die der Pinselkreis der Maus nachlaeuft: er ist ein Element der Szene
+        ''' und kommt nur ueber das Bild im Browser an. Nach einer Pause kommt der Durchgang
+        ''' deshalb sofort; nur wenn das letzte Bild juenger als ein Takt ist, wartet er bis
+        ''' dahin (SchedulePass).
         '''
         ''' Als eigene Aufgabe mit der Prioritaet der Abholung, nicht sofort: was die Eingabe an
         ''' Anordnung und Zeichnen angestossen hat, steht darueber und laeuft vorher.</summary>
         Private Shared Sub RequestFrameNow()
-            If _frameNowPosted OrElse _framePump Is Nothing Then Return
-            _frameNowPosted = True
-            Dispatcher.UIThread.Post(
-                Sub()
-                    _frameNowPosted = False
-                    If _framePump Is Nothing Then Return
-                    Try
-                        AvaloniaHeadlessPlatform.ForceRenderTimerTick()
-                    Catch ex As Exception
-                        DiagnosticLogService.LogException("BrowserBridge.Frame", ex)
-                    End Try
-                    OnFrameTick(Nothing, EventArgs.Empty)
-                End Sub, DispatcherPriority.Loaded)
+            SchedulePass()
         End Sub
 
         Private Shared Sub StopFramePump()
-            If _framePump Is Nothing Then Return
-            _framePump.Stop()
-            RemoveHandler _framePump.Tick, AddressOf OnFrameTick
-            _framePump = Nothing
+            If Not _pumpActive Then Return
+            _pumpActive = False
+            SyncLock PassLock
+                _passClock?.Dispose()
+                _passClock = Nothing
+                _clockDueTicks = 0
+            End SyncLock
+            RestoreRenderTimer()
             States.Clear()
             _lastLayout = Nothing
             _pointerOwner = Nothing
@@ -198,8 +489,13 @@ Namespace Services
             Next
             _lastLayout = Nothing
             _lastCursor = Nothing
-            _pointerOwner = Nothing
+            ' Ein Druck aus dem abgeloesten Browser bekommt sein Loslassen nicht mehr, und dessen
+            ' Dateiwaehler meldet kein Ende mehr.
+            CancelPointer()
+            FilePickerClosed()
             ApplyViewport(hello)
+            ' Ohne Browser stand der Takt; was seitdem gezeichnet werden will, kommt jetzt.
+            SchedulePass()
         End Sub
 
         ''' <summary>Das Hauptfenster fuellt den Tab, und gezeichnet wird in dessen Pixelverhaeltnis:
@@ -243,24 +539,21 @@ Namespace Services
                     _activationCounter += 1
                     state.ActivationOrder = _activationCounter
                 End Sub
+            ' Ein geschlossenes Fenster aendert die Lage der Fenster im Browser, auch wenn darunter
+            ' nichts neu gezeichnet wird.
+            AddHandler win.Closed, Sub(sender, e) SchedulePass()
             If _scale <> 1.0 Then InvokeHeadless(win, "SetRenderScaling", _scale)
             ' Was im Fenster keine eigene Angabe traegt, erbt die des Fensters.
             If _limitSmoothing Then ClampSmoothing(win, includeUnspecified:=True)
             Return state
         End Function
 
-        Private Shared Sub OnFrameTick(sender As Object, e As EventArgs)
-            If CurrentClient Is Nothing Then Return
-            ' Solange der letzte Schwung noch kodiert oder gesendet wird, kommt kein neuer dazu.
-            ' Verglichen wird immer gegen den GESENDETEN Stand, es geht also nichts verloren: was
-            ' sich inzwischen geaendert hat, steckt im naechsten Ausschnitt.
-            If Volatile.Read(_sending) <> 0 Then
-                _skippedTicks += 1
-                ' Eine wartende Mausbewegung bleibt gesperrt, bis ihr Vorgaenger abgeholt ist;
-                ' der Anstoss hier laesst nur ihre Frist greifen.
-                KickInput()
-                Return
-            End If
+        ''' <summary>Holt die Bilder aller Fenster ab und schickt die geaenderten Ausschnitte.
+        ''' Solange der letzte Schwung noch kodiert oder gesendet wird, kommt kein neuer dazu
+        ''' (RunPass laesst den Durchgang dann aus). Verglichen wird immer gegen den GESENDETEN
+        ''' Stand, es geht also nichts verloren: was sich inzwischen geaendert hat, steckt im
+        ''' naechsten Ausschnitt.</summary>
+        Private Shared Sub CollectAndSend()
             Try
                 Dim started = Stopwatch.GetTimestamp()
                 Dim windows = VisibleWindows()
@@ -340,29 +633,27 @@ Namespace Services
                     Dim height = locked.Size.Height
                     If width <= 0 OrElse height <= 0 Then Return
 
-                    Dim count = width * height
-                    If state.Scratch Is Nothing OrElse state.Scratch.Length <> count Then state.Scratch = New Integer(count - 1) {}
-                    If locked.RowBytes = width * 4 Then
-                        Marshal.Copy(locked.Address, state.Scratch, 0, count)
-                    Else
-                        For row = 0 To height - 1
-                            Marshal.Copy(IntPtr.Add(locked.Address, row * locked.RowBytes), state.Scratch, row * width, width)
-                        Next
-                    End If
-
+                    ' Verglichen wird direkt auf dem Bild der Plattform, und in den gesendeten Stand
+                    ' kommen nur die geaenderten Kacheln. Vorher wurde erst das ganze Bild in einen
+                    ' Arbeitspuffer kopiert (21,6 MB bei 5,4 Megapixeln) und dann verglichen.
                     Dim sameSize = state.Previous IsNot Nothing AndAlso state.PixelWidth = width AndAlso state.PixelHeight = height
                     Dim rects As List(Of PixelRect)
                     If sameSize Then
-                        rects = FindChangedRects(state.Previous, state.Scratch, width, height)
+                        rects = FindChangedRects(state.Previous, locked.Address, locked.RowBytes, width, height)
                     Else
+                        Dim count = width * height
+                        state.Previous = New Integer(count - 1) {}
+                        If locked.RowBytes = width * 4 Then
+                            Marshal.Copy(locked.Address, state.Previous, 0, count)
+                        Else
+                            For row = 0 To height - 1
+                                Marshal.Copy(IntPtr.Add(locked.Address, row * locked.RowBytes), state.Previous, row * width, width)
+                            Next
+                        End If
                         rects = New List(Of PixelRect) From {New PixelRect(0, 0, width, height)}
                         state.HasLossy = False
                     End If
 
-                    ' Der Arbeitspuffer wird zum gesendeten Stand, der alte zum Arbeitspuffer.
-                    Dim swap = state.Previous
-                    state.Previous = state.Scratch
-                    state.Scratch = swap
                     state.PixelWidth = width
                     state.PixelHeight = height
                     state.LastFrame = marker
@@ -435,33 +726,35 @@ Namespace Services
         ''' Gesucht wird in Kacheln. Benachbarte geaenderte Kacheln einer Zeile werden zu einem
         ''' Lauf, gleiche Laeufe untereinander zu einem Rechteck. Zieht jemand einen Regler am
         ''' rechten Rand, aendern sich der Regler und das Bild in der Mitte: das sind dann zwei
-        ''' Rechtecke und nicht eines, das auch alles dazwischen einschliesst.</summary>
-        Friend Shared Function FindChangedRects(previous As Integer(), current As Integer(),
+        ''' Rechtecke und nicht eines, das auch alles dazwischen einschliesst.
+        '''
+        ''' <para><paramref name="previous"/> ist der gesendete Stand, <paramref name="frame"/> das
+        ''' neue Bild der Plattform (32 Bit je Bildpunkt, <paramref name="rowBytes"/> je Zeile).
+        ''' Verglichen wird direkt auf dem neuen Bild, Kachelzeile fuer Kachelzeile auf allen
+        ''' Kernen, und in den gesendeten Stand kommen nur die geaenderten Kacheln: danach ist er
+        ''' gleich dem neuen Bild. Die Schmutzrechtecke des Toolkits waeren genauer, sind aber
+        ''' nicht erreichbar: es setzt sie am Ende desselben Zeichenaufrufs zurueck, in dem es sie
+        ''' bildet.</para></summary>
+        Friend Shared Function FindChangedRects(previous As Integer(), frame As IntPtr, rowBytes As Integer,
                                                 width As Integer, height As Integer) As List(Of PixelRect)
             Dim columns = (width + TileSize - 1) \ TileSize
             Dim rows = (height + TileSize - 1) \ TileSize
+            Dim dirtyTiles = New Boolean(rows * columns - 1) {}
+            If rows > 1 Then
+                Parallel.For(0, rows, Sub(tileRow) CompareTileRow(previous, frame, rowBytes, width, height, tileRow, columns, dirtyTiles))
+            Else
+                CompareTileRow(previous, frame, rowBytes, width, height, 0, columns, dirtyTiles)
+            End If
+
             Dim result As New List(Of PixelRect)()
             ' Offene Rechtecke der vorigen Kachelzeile, nach ihrer ersten Spalte.
             Dim open As New Dictionary(Of Integer, PixelRect)()
             Dim dirty = New Boolean(columns - 1) {}
 
             For tileRow = 0 To rows - 1
-                Array.Clear(dirty, 0, columns)
+                Array.Copy(dirtyTiles, tileRow * columns, dirty, 0, columns)
                 Dim top = tileRow * TileSize
                 Dim bottom = Math.Min(top + TileSize, height)
-                Dim remaining = columns
-                For y = top To bottom - 1
-                    If remaining = 0 Then Exit For
-                    Dim offset = y * width
-                    For column = 0 To columns - 1
-                        If dirty(column) Then Continue For
-                        Dim left = column * TileSize
-                        If SegmentDiffers(previous, current, offset + left, Math.Min(TileSize, width - left)) Then
-                            dirty(column) = True
-                            remaining -= 1
-                        End If
-                    Next
-                Next
 
                 Dim continued As New Dictionary(Of Integer, PixelRect)()
                 Dim first = 0
@@ -501,19 +794,57 @@ Namespace Services
             Return result
         End Function
 
-        ''' <summary>Ob sich zwei Bilder in einem Abschnitt einer Zeile unterscheiden. Verglichen
-        ''' wird in Vektoren, also acht Bildpunkte auf einmal, wo der Prozessor das kann.</summary>
-        Private Shared Function SegmentDiffers(previous As Integer(), current As Integer(), start As Integer, length As Integer) As Boolean
-            Dim index = start
-            Dim limit = start + length
+        ''' <summary>Eine Kachelzeile: welche ihrer Kacheln sich geaendert haben, und deren neuer
+        ''' Inhalt in den gesendeten Stand. Eine Zeile des neuen Bilds wird dafuer in einen kleinen
+        ''' Puffer gelesen (sie passt in den schnellen Speicher des Kerns) und dort verglichen. Ist
+        ''' eine Kachel einmal als geaendert erkannt, wird sie fuer den Rest ihrer Zeilen nur noch
+        ''' kopiert; die Zeilen darueber waren gleich und brauchen nichts.</summary>
+        Private Shared Sub CompareTileRow(previous As Integer(), frame As IntPtr, rowBytes As Integer, width As Integer, height As Integer,
+                                          tileRow As Integer, columns As Integer, dirtyTiles As Boolean())
+            Dim line = System.Buffers.ArrayPool(Of Integer).Shared.Rent(width)
+            Try
+                Dim first = tileRow * columns
+                Dim top = tileRow * TileSize
+                Dim bottom = Math.Min(top + TileSize, height)
+                Dim remaining = columns
+                For y = top To bottom - 1
+                    Dim offset = y * width
+                    Dim source = IntPtr.Add(frame, y * rowBytes)
+                    If remaining = 0 Then
+                        ' Jede Kachel dieser Zeile ist geaendert: die Zeile ganz uebernehmen.
+                        Marshal.Copy(source, previous, offset, width)
+                        Continue For
+                    End If
+                    Marshal.Copy(source, line, 0, width)
+                    For column = 0 To columns - 1
+                        Dim left = column * TileSize
+                        Dim length = Math.Min(TileSize, width - left)
+                        If Not dirtyTiles(first + column) Then
+                            If Not SegmentDiffers(previous, offset + left, line, left, length) Then Continue For
+                            dirtyTiles(first + column) = True
+                            remaining -= 1
+                        End If
+                        Array.Copy(line, left, previous, offset + left, length)
+                    Next
+                Next
+            Finally
+                System.Buffers.ArrayPool(Of Integer).Shared.Return(line)
+            End Try
+        End Sub
+
+        ''' <summary>Ob sich zwei Abschnitte gleicher Laenge unterscheiden. Verglichen wird in
+        ''' Vektoren, also acht Bildpunkte auf einmal, wo der Prozessor das kann.</summary>
+        Private Shared Function SegmentDiffers(previous As Integer(), previousStart As Integer,
+                                               current As Integer(), currentStart As Integer, length As Integer) As Boolean
             Dim stride = System.Numerics.Vector(Of Integer).Count
-            While index + stride <= limit
-                If Not System.Numerics.Vector.EqualsAll(New System.Numerics.Vector(Of Integer)(previous, index),
-                                                        New System.Numerics.Vector(Of Integer)(current, index)) Then Return True
+            Dim index = 0
+            While index + stride <= length
+                If Not System.Numerics.Vector.EqualsAll(New System.Numerics.Vector(Of Integer)(previous, previousStart + index),
+                                                        New System.Numerics.Vector(Of Integer)(current, currentStart + index)) Then Return True
                 index += stride
             End While
-            While index < limit
-                If previous(index) <> current(index) Then Return True
+            While index < length
+                If previous(previousStart + index) <> current(currentStart + index) Then Return True
                 index += 1
             End While
             Return False
@@ -556,6 +887,9 @@ Namespace Services
                 DiagnosticLogService.LogException("BrowserBridge.Send", ex)
             Finally
                 Interlocked.Exchange(_sending, 0)
+                ' Ein Durchgang fiel aus, solange der Schwung unterwegs war: er kommt jetzt, nach
+                ' der Regel des Takts.
+                If Interlocked.Exchange(_passAfterSend, 0) <> 0 Then SchedulePass()
             End Try
         End Function
 
@@ -612,6 +946,7 @@ Namespace Services
         Private Shared _timingPixels As Long
         Private Shared _timingBytes As Long
         Private Shared _timingLossless As Integer
+        Private Shared _timingPasses As Long
         Private Shared _skippedTicks As Integer
 
         Private Shared Sub RecordTiming(collectTicks As Long, encodeTicks As Long, sendTicks As Long,
@@ -633,11 +968,14 @@ Namespace Services
 
                 Dim toMilliseconds = 1000.0 / Stopwatch.Frequency / _timingBatches
                 Dim seconds = (now - _timingStart) / 1000.0
+                Dim passes = PassCount
                 line = String.Format(CultureInfo.InvariantCulture,
-                    "batches/s={0:F1} collect={1:F1}ms encode={2:F1}ms send={3:F1}ms megapixels/batch={4:F2} kB/batch={5:F0} lossless={6} skipped={7}",
+                    "batches/s={0:F1} passes/s={8:F1} collect={1:F1}ms encode={2:F1}ms send={3:F1}ms megapixels/batch={4:F2} kB/batch={5:F0} lossless={6} skipped={7}",
                     _timingBatches / seconds, _timingCollect * toMilliseconds, _timingEncode * toMilliseconds,
                     _timingSend * toMilliseconds, _timingPixels / 1000000.0 / _timingBatches,
-                    _timingBytes / 1024.0 / _timingBatches, _timingLossless, Interlocked.Exchange(_skippedTicks, 0))
+                    _timingBytes / 1024.0 / _timingBatches, _timingLossless, Interlocked.Exchange(_skippedTicks, 0),
+                    (passes - _timingPasses) / seconds)
+                _timingPasses = passes
                 _timingStart = now
                 _timingBatches = 0
                 _timingCollect = 0

@@ -5569,6 +5569,7 @@ Namespace Services
             _toneCacheBitmap = Nothing
             _toneCacheKey = Nothing
             ClearColorNoiseStates()
+            ClearExtensionResults()
             _baseCacheBitmap?.Dispose()
             _baseCacheBitmap = Nothing
             _baseCacheKey = Nothing

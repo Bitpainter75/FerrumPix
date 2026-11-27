@@ -500,12 +500,11 @@ Namespace ViewModels
             list.Add(FooterMenuCatalog.Variants(children))
         End Sub
 
-        ''' <summary>Laesst sich das Element herunterladen? Eine lokale Datei, kein Ordner, kein
-        ''' Serverelement, nicht im Papierkorb, und kopieren duerfte man sie auch.</summary>
+        ''' <summary>Laesst sich das Element herunterladen? Die Regel steht am Element
+        ''' (<see cref="ImageItem.IsDownloadable"/>), weil das Abzeichen auf der Kachel dieselbe
+        ''' braucht.</summary>
         Friend Shared Function IsDownloadable(item As ImageItem) As Boolean
-            Return item IsNot Nothing AndAlso Not item.IsFolder AndAlso Not item.IsParentFolderEntry AndAlso
-                   Not item.IsRemoteAsset AndAlso Not item.IsTrashed AndAlso item.CanFileOperationCopy AndAlso
-                   Not String.IsNullOrEmpty(item.FilePath)
+            Return item IsNot Nothing AndAlso item.IsDownloadable
         End Function
 
         ''' Nimmt den Eintrag nur auf, wenn der Bereich das Kommando ueberhaupt anbietet.

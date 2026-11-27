@@ -44,9 +44,7 @@ Namespace Services
             Using source = SKBitmap.Decode(ReadAsset(AppIconPngAsset))
                 Using scaled = source.Resize(New SKImageInfo(size, size, SKColorType.Rgba8888, SKAlphaType.Premul),
                                              New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear))
-                    Using image = SKImage.FromBitmap(scaled), data = image.Encode(SKEncodedImageFormat.Png, 100)
-                        Return data.ToArray()
-                    End Using
+                    Return PngEncoder.EncodeToBytes(scaled, PngPurpose.Export)
                 End Using
             End Using
         End Function

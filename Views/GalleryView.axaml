@@ -2683,8 +2683,11 @@
                                                             Width="22" Height="22"
                                                             HorizontalAlignment="Center"
                                                             VerticalAlignment="Center">
-                                                        <!-- Ohne den Kreis aus circle-check: der Kreis selbst ist schon rund. -->
-                                                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/check.svg"
+                                                        <!-- Ohne den Kreis aus circle-check: der Kreis selbst ist schon rund.
+                                                             Die kraeftige Fassung (bold): der duenne Haken ging
+                                                             auf dem Akzent unter; im 22er-Kreis bleibt sie mit
+                                                             18 Punkten innerhalb. -->
+                                                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/bold/check-bold.svg"
                                                                        Shadow="Rim"
                                                                        ShadowOnlyWhenLight="True"
                                                                        Width="18"
@@ -2800,6 +2803,33 @@
                                                                        Height="18"
                                                                        IconBrush="White"/>
                                                     </Button>
+                                                    <!-- HERUNTERLADEN: NUR IM BROWSER, rechts neben Loeschen
+                                                         und wie die drei davor gebaut und gezeigt. Der
+                                                         Platzhalter fragt BrowserBridge.IsActive einmal beim
+                                                         Bauen (x:Static, keine Bindung); am Rechner bleibt er
+                                                         leer und unsichtbar. Der Klick laedt wie
+                                                         "Herunterladen" im Kontextmenue und aendert die
+                                                         Auswahl nicht (OnBrowserDownloadBadgeClick). Ob er
+                                                         Platz hat, ohne in Stapel oder Auswahlkreis zu
+                                                         laufen, entscheidet UpdateBrowserDownloadBadge. -->
+                                                    <icons:DeferredPart Load="{x:Static services:BrowserBridge.IsActive}"
+                                                                        IsVisible="{x:Static services:BrowserBridge.IsActive}"><Template>
+                                                    <Button Classes="gallery-overlay-btn tile-action-hit browser-download-badge"
+                                                            Width="30"
+                                                            Height="30"
+                                                            Padding="0"
+                                                            AttachedToVisualTree="OnBrowserDownloadBadgeAttached"
+                                                            DataContextChanged="OnBrowserDownloadBadgeDataContextChanged"
+                                                            Click="OnBrowserDownloadBadgeClick"
+                                                            PointerEntered="OnBrowserDownloadBadgePointerEntered"
+                                                            DoubleTapped="OnBrowserDownloadBadgeDoubleTapped"
+                                                            ToolTip.Tip="Herunterladen">
+                                                        <icons:ShadowedSvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/download-simple.svg"
+                                                                       Width="18"
+                                                                       Height="18"
+                                                                       IconBrush="White"/>
+                                                    </Button>
+                                                    </Template></icons:DeferredPart>
                                                 </StackPanel>
                                                 </Template></icons:DeferredPart>
                                                 <icons:DeferredPart Classes="load-on-hover" Classes.load-always="{Binding DataContext.RatingBadgesAlwaysVisible, RelativeSource={RelativeSource AncestorType=UserControl}}" ZIndex="3"><Template>

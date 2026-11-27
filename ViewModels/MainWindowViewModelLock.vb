@@ -90,6 +90,11 @@ Namespace ViewModels
                 End Try
             Else
                 _lockScreen = Nothing
+                ' Im Browser nach dem Entsperren noch einmal nach einer neueren Fassung fragen: die
+                ' Anwendung laeuft dort oft wochenlang, die Abfrage beim Start ist dann alt. Einmal
+                ' je Entsperren; weitere Browser, die sich anmelden, waehrend entsperrt ist,
+                ' kommen hier nicht vorbei (der Zustand aendert sich nicht).
+                If BrowserBridge.IsActive Then Settings?.RepeatUpdateCheck()
             End If
             Me.RaisePropertyChanged(NameOf(LockScreen))
             Me.RaisePropertyChanged(NameOf(IsAppLocked))

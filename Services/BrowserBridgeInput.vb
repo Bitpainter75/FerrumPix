@@ -31,6 +31,9 @@ Namespace Services
         ''' <summary>Das Fenster, in dem eine Maustaste gedrueckt wurde. Bis sie losgelassen ist,
         ''' gehen alle Mausereignisse dorthin, auch wenn der Zeiger das Fenster verlaesst.</summary>
         Private Shared _pointerOwner As Window
+
+        ''' <summary>Die Maustasten, deren Druecken angekommen ist und deren Loslassen noch nicht.</summary>
+        Private Shared _heldButtons As RawInputModifiers
         Private Shared _lastCursor As String
 
         ' ------------------------------------------------------------------------------------
@@ -249,6 +252,8 @@ Namespace Services
                         HandlePointer(message)
                     Case "k"
                         HandleKey(message)
+                    Case "picked"
+                        FilePickerClosed()
                 End Select
             Catch ex As Exception
                 DiagnosticLogService.LogException("BrowserBridge.Input", ex)
@@ -256,28 +261,110 @@ Namespace Services
         End Sub
 
         Private Shared Sub HandlePointer(message As JsonElement)
+            Dim kind = ReadString(message, "e")
+            If kind = "cancel" Then
+                CancelPointer()
+                Return
+            End If
+
             Dim x = ReadNumber(message, "x", 0)
             Dim y = ReadNumber(message, "y", 0)
             Dim modifiers = CType(CInt(ReadNumber(message, "mods", 0)), RawInputModifiers)
+            Dim browserButton = ToMouseButton(CInt(ReadNumber(message, "b", 0)))
+            ' Eine Taste, die schon gedrueckt ist, kann nicht noch einmal gedrueckt werden: ihr
+            ' Loslassen ging unterwegs verloren. Erst den alten Druck aufheben, sonst ginge dieser
+            ' an das Element, das den Zeiger noch haelt (Begruendung bei CancelPointer).
+            If kind = "down" AndAlso (_heldButtons And ButtonModifier(browserButton)) <> RawInputModifiers.None Then CancelPointer()
+
             Dim local As Point
             Dim win = PointerTarget(x, y, local)
             If win Is Nothing Then Return
 
-            Select Case ReadString(message, "e")
+            Select Case kind
                 Case "move"
                     InvokeHeadless(win, "MouseMove", local, modifiers)
                     UpdateCursor(win, local)
                 Case "down"
                     _pointerOwner = win
+                    _heldButtons = _heldButtons Or ButtonModifier(browserButton)
                     If Not win.IsActive Then win.Activate()
-                    InvokeHeadless(win, "MouseDown", local, ToMouseButton(CInt(ReadNumber(message, "b", 0))), modifiers)
+                    InvokeHeadless(win, "MouseDown", local, browserButton, modifiers)
                 Case "up"
-                    InvokeHeadless(win, "MouseUp", local, ToMouseButton(CInt(ReadNumber(message, "b", 0))), modifiers)
-                    If (modifiers And MouseButtonMask) = RawInputModifiers.None Then _pointerOwner = Nothing
+                    InvokeHeadless(win, "MouseUp", local, browserButton, modifiers)
+                    _heldButtons = _heldButtons And Not ButtonModifier(browserButton)
+                    If (modifiers And MouseButtonMask) = RawInputModifiers.None Then
+                        _pointerOwner = Nothing
+                        _heldButtons = RawInputModifiers.None
+                    End If
                 Case "wheel"
                     InvokeHeadless(win, "MouseWheel", local,
                                    New Vector(ReadNumber(message, "dx", 0), ReadNumber(message, "dy", 0)), modifiers)
             End Select
+        End Sub
+
+        ''' <summary>Das Merkmal einer Maustaste unter den Merkmalen eines Ereignisses.</summary>
+        Private Shared Function ButtonModifier(pressed As MouseButton) As RawInputModifiers
+            Select Case pressed
+                Case MouseButton.Left
+                    Return RawInputModifiers.LeftMouseButton
+                Case MouseButton.Middle
+                    Return RawInputModifiers.MiddleMouseButton
+                Case MouseButton.Right
+                    Return RawInputModifiers.RightMouseButton
+                Case MouseButton.XButton1
+                    Return RawInputModifiers.XButton1MouseButton
+                Case MouseButton.XButton2
+                    Return RawInputModifiers.XButton2MouseButton
+                Case Else
+                    Return RawInputModifiers.None
+            End Select
+        End Function
+
+        ''' <summary>Hebt einen Druck auf, dessen Loslassen nie ankommt, ohne etwas auszuloesen.
+        '''
+        ''' <para>BEFUND (Dateiwaehler oeffnete sich immer wieder): im Zeichentablett-Modus loest ein
+        ''' Knopf beim Druecken aus. "Hochladen" schickt "pick", waehrend die Taste noch gehalten
+        ''' wird, und der Browser oeffnet seinen Dialog; das Loslassen geht an den Dialog und
+        ''' erreicht die Seite nie. Das Toolkit fing beim Druecken den Zeiger fuer das Element unter
+        ''' ihm ein (implizit, MouseDevice.MouseDown) und gibt ihn erst beim Loslassen wieder frei.
+        ''' Bis dahin geht JEDES Druecken an dieses Element statt an das, was unter dem Zeiger
+        ''' liegt: jeder folgende Klick, wo auch immer, war wieder "Hochladen".</para>
+        '''
+        ''' <para>Aufgehoben wird wie auf einer echten Plattform, wenn ihr Fenster den Zeiger
+        ''' verliert: mit dem Ereignis CancelCapture. Der Knopf bekommt PointerCaptureLost und
+        ''' gilt danach als nicht gedrueckt, ein Klick entsteht nicht. Ein nachgemachtes Loslassen
+        ''' waere falsch: ein Knopf, der beim Loslassen ausloest, klickte dabei. Die Seite meldet
+        ''' einen verlorenen Druck ("cancel"); faellt das aus, merkt es die Bruecke am naechsten
+        ''' Druecken derselben Taste.</para>
+        '''
+        ''' <para>CancelCapture und die Ereignisdaten fuehrt das Toolkit als PrivateApi, sie sind
+        ''' deshalb nur ueber Reflexion erreichbar, wie die Eingaben selbst.</para></summary>
+        Private Shared Sub CancelPointer()
+            Dim owner = _pointerOwner
+            _pointerOwner = Nothing
+            _heldButtons = RawInputModifiers.None
+            If owner Is Nothing Then Return
+
+            Dim impl = owner.PlatformImpl
+            If impl Is Nothing Then Return
+            Try
+                Dim implType = impl.GetType()
+                Dim device = implType.GetProperty("MouseDevice")?.GetValue(impl)
+                Dim root = implType.GetProperty("InputRoot")?.GetValue(impl)
+                Dim input = TryCast(implType.GetProperty("Input")?.GetValue(impl), [Delegate])
+                Dim argsType = Type.GetType("Avalonia.Input.Raw.RawPointerEventArgs, Avalonia.Base")
+                Dim eventType = Type.GetType("Avalonia.Input.Raw.RawPointerEventType, Avalonia.Base")
+                If device Is Nothing OrElse root Is Nothing OrElse input Is Nothing OrElse argsType Is Nothing OrElse eventType Is Nothing Then
+                    DiagnosticLogService.LogAlways("BrowserBridge.Input", "CancelCapture nicht erreichbar")
+                    Return
+                End If
+                Dim args = Activator.CreateInstance(argsType, device, CULng(Environment.TickCount64), root,
+                                                    [Enum].Parse(eventType, "CancelCapture"), New Point(), RawInputModifiers.None)
+                input.DynamicInvoke(args)
+            Catch ex As Exception When TypeOf ex Is TargetInvocationException OrElse TypeOf ex Is MissingMethodException OrElse
+                                       TypeOf ex Is ArgumentException OrElse TypeOf ex Is MemberAccessException
+                DiagnosticLogService.LogException("BrowserBridge.Input", If(ex.InnerException, ex))
+            End Try
         End Sub
 
         ''' <summary>Welches Fenster ein Mausereignis bekommt, und wo es darin liegt. Die Angaben

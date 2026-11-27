@@ -116,6 +116,23 @@
                                        FontSize="{DynamicResource FP.Font.Body}"/>
                         </StackPanel>
 
+                        <!-- SPERREN: oben rechts, links neben den Fensterknoepfen bzw. dem Logo, wenn
+                             das rechts steht; den Abstand setzt MainWindow.PlaceWindowLockButton nach
+                             deren Massen. Nur mit Kennwort da (CanLockApp), wie die Taste und der
+                             Knopf der Galerie, und in jeder Ansicht. -->
+                        <Button x:Name="WindowLockButton"
+                                Grid.Column="2"
+                                Classes="icon-btn"
+                                Width="26" Height="26" Padding="0"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding CanLockApp}"
+                                Command="{Binding LockAppCommand}"
+                                ToolTip.Tip="Sperren (STRG+L)">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/lock-simple.svg"
+                                           Width="16" Height="16"/>
+                        </Button>
+
                     </Grid>
                 </Border>
 

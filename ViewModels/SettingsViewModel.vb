@@ -474,7 +474,10 @@ Namespace ViewModels
             _updateCheckRunning = True
             _updateCheckDone = True
             Try
-                Dim published = Await UpdateCheckService.FetchLatestVersionAsync()
+                If Not UpdateCheckService.IsEnabled Then Return
+                UpdateCheckStarts += 1
+                Dim fetch = If(UpdateFetchForTests, Function() UpdateCheckService.FetchLatestVersionAsync())
+                Dim published = Await fetch()
                 ' Leer heißt: keine brauchbare Antwort. Dann bleibt der Hinweis aus.
                 If published.Length = 0 Then Return
                 Dim other = If(UpdateCheckService.IsDifferent(published, DisplayVersion), published, "")
@@ -489,6 +492,25 @@ Namespace ViewModels
             Finally
                 _updateCheckRunning = False
             End Try
+        End Sub
+
+        ''' <summary>Wie oft in dieser Sitzung wirklich nachgefragt wurde (nur mit
+        ''' UpdateCheckService.IsEnabled). Fuer den Pruefstand.</summary>
+        Friend Property UpdateCheckStarts As Integer
+
+        ''' <summary>Statt der Abfrage im Netz, fuer den Pruefstand; Nothing heisst die echte.</summary>
+        Friend Shared Property UpdateFetchForTests As Func(Of Task(Of String))
+
+        ''' <summary>Fragt nach dem ENTSPERREN im Browser noch einmal nach (MainWindowViewModel,
+        ''' SyncLockScreen). Eine Anwendung im Browser laeuft oft wochenlang auf einem Server; die
+        ''' eine Abfrage beim Start ist dann laengst veraltet, und wer sich anmeldet, sieht den
+        ''' Hinweis in der Fensterleiste. Dieselben Regeln wie beim Start: ohne
+        ''' UpdateCheckService.IsEnabled (Flatpak, Store) keine Abfrage, eine laufende wird nicht
+        ''' verdoppelt, ein Fehlschlag bleibt still.</summary>
+        Friend Sub RepeatUpdateCheck()
+            If _updateCheckRunning OrElse Not UpdateCheckService.IsEnabled Then Return
+            _updateCheckDone = False
+            BeginUpdateCheck()
         End Sub
 
         Public ReadOnly Property IsDarkThemeMode As Boolean

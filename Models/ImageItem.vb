@@ -557,6 +557,18 @@ Namespace Models
             End Get
         End Property
 
+        ''' <summary>Laesst sich das Element im Browser herunterladen? Eine lokale Datei, kein
+        ''' Ordner, kein Serverelement, nicht im Papierkorb, und kopieren duerfte man sie auch.
+        ''' Dieselbe Regel fuer "Herunterladen" im Kontextmenue (ContextMenuBuilder.IsDownloadable)
+        ''' und das Abzeichen auf der Kachel; gefragt wird sie nur im Browser.</summary>
+        Public ReadOnly Property IsDownloadable As Boolean
+            Get
+                Return Not IsFolder AndAlso Not IsParentFolderEntry AndAlso Not IsGroupHeader AndAlso
+                       Not IsRemoteAsset AndAlso Not IsTrashed AndAlso Not String.IsNullOrEmpty(FilePath) AndAlso
+                       CanFileOperationCopy
+            End Get
+        End Property
+
         Public ReadOnly Property CanFileOperationRename As Boolean
             Get
                 Return Not IsParentFolderEntry AndAlso Not IsOffline AndAlso FileOperationPolicy.CanRename(FilePath)

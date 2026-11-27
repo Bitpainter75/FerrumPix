@@ -352,10 +352,200 @@ half4 main(float2 p) {
                 Dim inputs = ExtensionInputsFor(definition, entry)
                 processed = RunDetailStage(session, processed, owned, "Pixel: Erweiterung " & definition.Id,
                                            ExtensionOnGpu(definition, inputs),
-                                           Function(s) If(RunExtensionOnBitmap(s, definition.Effect, inputs), CopyBitmap(s)),
+                                           Function(s) RunExtensionKeepingResult(s, definition, entry, inputs),
                                            Function(d) RunExtensionOnBitmap(d, definition.DeepEffect, inputs))
             Next
             Return processed
+        End Function
+
+        ' ------------------------------------------------------------------------------------
+        ' Der Zwischenspeicher hinter jeder Erweiterung.
+        '
+        ' GEMESSEN (Anzeigefadenmessung, Ablauf erweiterungen, Vorschau 1710 x 2560, 24 Kerne): zwei
+        ' Erweiterungen auf dem Prozessor kosteten 216 und 345 ms je Vorschau, und die Detailkette
+        ' hat hinter keiner Stufe einen Zwischenstand. Ein Regler HINTER einer Erweiterung (die
+        ' Koernung, ein Regler einer spaeteren Erweiterung) rechnete sie deshalb jedes Mal neu,
+        ' obwohl ihr Eingang derselbe war.
+        '
+        ' Gemerkt wird je Erweiterung ihr letzter Eingang und ihr Ergebnis. Der Eingang wird
+        ' BILDPUNKT FUER BILDPUNKT verglichen, nicht ueber einen Schluessel aus dem Rezept: was vor
+        ' der Erweiterung in der Kette liegt (Stufen, Reihenfolge, Quelle, Retusche, Variante,
+        ' Groesse der Vorschau), muss so nirgends aufgezaehlt werden, und eine vergessene Stufe
+        ' kann kein altes Bild liefern. Der Vergleich kostet auf allen Kernen wenige Millisekunden.
+        ' Dazu muss der Eintrag gleich sein (Kennung, Werte, Farben, Kurven) und der Stand des
+        ' Bestands (eine getauschte Datei rechnet anders). Ein Treffer liefert eine Abschrift des
+        ' gemerkten Ergebnisses, also dieselben Bytes wie ein neuer Lauf.
+        '
+        ' Nur fuer die Vorschau und das Zoom-Detail (_detailSourceKey gesetzt), nie fuer Ausgabe und
+        ' Export; nur fuer 8 Bit mit vier Kanaelen ohne Zeilenluecke. Je Erweiterung zwei Eintraege
+        ' (Vorschau und Zoom-Detail wechseln sich ab), alle zusammen hoechstens
+        ' ExtensionResultBudgetBytes. Geleert mit dem Basis-Cache, also auch beim Bildwechsel und
+        ' beim Schliessen des Bildes.
+        ' ------------------------------------------------------------------------------------
+
+        Private NotInheritable Class ExtensionResult
+            Public Id As String
+            Public EntryKey As String
+            Public Width As Integer
+            Public Height As Integer
+            Public ColorType As SKColorType
+            Public AlphaType As SKAlphaType
+            ''' <summary>Abschrift des Eingangs, ein Bildpunkt je Eintrag.</summary>
+            Public Input As Integer()
+            Public Output As SKBitmap
+
+            Public ReadOnly Property Bytes As Long
+                Get
+                    Return 8L * Input.Length
+                End Get
+            End Property
+        End Class
+
+        Private Const ExtensionResultsPerExtension As Integer = 2
+
+        ''' <summary>Eingang und Ergebnis zusammen; eine Vorschau 1710 x 2560 belegt je Eintrag 35 MB.</summary>
+        Private Const ExtensionResultBudgetBytes As Long = 192L * 1024 * 1024
+
+        ''' <summary>So viele Bildpunkte vergleicht ein Faden am Stueck.</summary>
+        Private Const ExtensionCompareChunk As Integer = 64 * 1024
+
+        Private Shared ReadOnly _extensionResults As New List(Of ExtensionResult)()
+        Private Shared ReadOnly _extensionResultsLock As New Object()
+        Private Shared _extensionResultHits As Long
+
+        ''' <summary>Wie oft ein gemerktes Ergebnis eine Rechnung ersetzt hat. Fuer den Pruefstand.</summary>
+        Friend Shared ReadOnly Property ExtensionResultHits As Long
+            Get
+                Return Threading.Interlocked.Read(_extensionResultHits)
+            End Get
+        End Property
+
+        ''' <summary>Der Lauf einer Erweiterung auf dem Prozessor, mit dem Zwischenspeicher davor,
+        ''' wo er gilt (siehe oben). Ohne Ergebnis des Shaders bleibt das Bild, wie es war.</summary>
+        Private Shared Function RunExtensionKeepingResult(source As SKBitmap, definition As ExtensionDefinition,
+                                                          entry As ExtensionEntry, inputs As ExtensionInputs) As SKBitmap
+            If _detailSourceKey Is Nothing OrElse Not ExtensionResultFits(source) Then
+                Return If(RunExtensionOnBitmap(source, definition.Effect, inputs), CopyBitmap(source))
+            End If
+            Dim entryKey = ExtensionService.Revision.ToString(Globalization.CultureInfo.InvariantCulture) & "|" &
+                           ExtensionRecipe.Serialize({entry})
+            Dim kept = TakeExtensionResult(definition.Id, entryKey, source)
+            If kept IsNot Nothing Then Return kept
+            Dim result = RunExtensionOnBitmap(source, definition.Effect, inputs)
+            If result Is Nothing Then Return CopyBitmap(source)
+            RememberExtensionResult(definition.Id, entryKey, source, result)
+            Return result
+        End Function
+
+        Private Shared Function ExtensionResultFits(source As SKBitmap) As Boolean
+            If source Is Nothing OrElse source.Width <= 0 OrElse source.Height <= 0 Then Return False
+            If source.ColorType <> SKColorType.Rgba8888 AndAlso source.ColorType <> SKColorType.Bgra8888 Then Return False
+            If source.RowBytes <> source.Width * 4 OrElse source.GetPixels() = IntPtr.Zero Then Return False
+            Return 8L * source.Width * source.Height <= ExtensionResultBudgetBytes \ 2
+        End Function
+
+        ''' <summary>Eine Abschrift des gemerkten Ergebnisses, wenn Eintrag und Eingang gleich sind;
+        ''' sonst Nothing.</summary>
+        Private Shared Function TakeExtensionResult(id As String, entryKey As String, source As SKBitmap) As SKBitmap
+            SyncLock _extensionResultsLock
+                For i = 0 To _extensionResults.Count - 1
+                    Dim kept = _extensionResults(i)
+                    If Not String.Equals(kept.Id, id, StringComparison.Ordinal) OrElse
+                       Not String.Equals(kept.EntryKey, entryKey, StringComparison.Ordinal) OrElse
+                       kept.Width <> source.Width OrElse kept.Height <> source.Height OrElse
+                       kept.ColorType <> source.ColorType OrElse kept.AlphaType <> source.AlphaType Then Continue For
+                    If Not PixelsEqual(kept.Input, source.GetPixels()) Then Continue For
+                    ' Nach vorn: die Eintraege stehen nach letzter Nutzung.
+                    _extensionResults.RemoveAt(i)
+                    _extensionResults.Insert(0, kept)
+                    Threading.Interlocked.Increment(_extensionResultHits)
+                    Return CopyBitmap(kept.Output)
+                Next
+            End SyncLock
+            Return Nothing
+        End Function
+
+        ''' <summary>Merkt Eingang und Ergebnis. Von derselben Erweiterung bleiben hoechstens zwei
+        ''' Eintraege, insgesamt hoechstens das Budget; es faellt der am laengsten nicht benutzte.</summary>
+        Private Shared Sub RememberExtensionResult(id As String, entryKey As String, source As SKBitmap, result As SKBitmap)
+            If result.Width <> source.Width OrElse result.Height <> source.Height Then Return
+            Dim output = CopyBitmap(result)
+            If output Is Nothing Then Return
+            Dim count = source.Width * source.Height
+            Dim input = New Integer(count - 1) {}
+            Runtime.InteropServices.Marshal.Copy(source.GetPixels(), input, 0, count)
+            SyncLock _extensionResultsLock
+                _extensionResults.Insert(0, New ExtensionResult With {
+                    .Id = id, .EntryKey = entryKey, .Width = source.Width, .Height = source.Height,
+                    .ColorType = source.ColorType, .AlphaType = source.AlphaType, .Input = input, .Output = output})
+                Dim total = 0L
+                Dim perId As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
+                For i = 0 To _extensionResults.Count - 1
+                    Dim kept = _extensionResults(i)
+                    Dim seen = 0
+                    perId.TryGetValue(kept.Id, seen)
+                    perId(kept.Id) = seen + 1
+                    total += kept.Bytes
+                    If seen + 1 > ExtensionResultsPerExtension OrElse total > ExtensionResultBudgetBytes Then
+                        kept.Output.Dispose()
+                        kept.Output = Nothing
+                    End If
+                Next
+                _extensionResults.RemoveAll(Function(k) k.Output Is Nothing)
+            End SyncLock
+        End Sub
+
+        ''' <summary>Entsorgt alle Eintraege; gerufen mit dem Leeren des Basis-Caches.</summary>
+        Private Shared Sub ClearExtensionResults()
+            SyncLock _extensionResultsLock
+                For Each kept In _extensionResults
+                    kept.Output?.Dispose()
+                Next
+                _extensionResults.Clear()
+            End SyncLock
+        End Sub
+
+        ''' <summary>Ob ein gemerkter Eingang Bildpunkt fuer Bildpunkt gleich dem Bild im Speicher
+        ''' ist (vier Bytes je Bildpunkt, ohne Zeilenluecke). Auf allen Kernen, je Stueck ueber einen
+        ''' kleinen Puffer und in Vektoren.</summary>
+        Private Shared Function PixelsEqual(kept As Integer(), pixels As IntPtr) As Boolean
+            Dim chunks = (kept.Length + ExtensionCompareChunk - 1) \ ExtensionCompareChunk
+            Dim differs = 0
+            Parallel.For(0, chunks,
+                Sub(chunk, loopState)
+                    If Threading.Volatile.Read(differs) <> 0 Then
+                        loopState.Stop()
+                        Return
+                    End If
+                    Dim start = chunk * ExtensionCompareChunk
+                    Dim length = Math.Min(ExtensionCompareChunk, kept.Length - start)
+                    Dim buffer = Buffers.ArrayPool(Of Integer).Shared.Rent(length)
+                    Try
+                        Runtime.InteropServices.Marshal.Copy(IntPtr.Add(pixels, start * 4), buffer, 0, length)
+                        Dim stride = Numerics.Vector(Of Integer).Count
+                        Dim index = 0
+                        While index + stride <= length
+                            If Not Numerics.Vector.EqualsAll(New Numerics.Vector(Of Integer)(kept, start + index),
+                                                             New Numerics.Vector(Of Integer)(buffer, index)) Then
+                                Threading.Volatile.Write(differs, 1)
+                                loopState.Stop()
+                                Return
+                            End If
+                            index += stride
+                        End While
+                        While index < length
+                            If kept(start + index) <> buffer(index) Then
+                                Threading.Volatile.Write(differs, 1)
+                                loopState.Stop()
+                                Return
+                            End If
+                            index += 1
+                        End While
+                    Finally
+                        Buffers.ArrayPool(Of Integer).Shared.Return(buffer)
+                    End Try
+                End Sub)
+            Return differs = 0
         End Function
 
         ''' <summary>Was in dieser Stufe laeuft, in der Reihenfolge der Kette: nach der Zahl

@@ -2,6 +2,7 @@ Imports System
 Imports System.Collections.Generic
 Imports System.Linq
 Imports System.Threading.Tasks
+Imports FerrumPix.Models
 Imports FerrumPix.Services
 
 Namespace ViewModels
@@ -71,6 +72,34 @@ Namespace ViewModels
                 Return (False, Nothing)
             End If
             Return (True, New BrowserDownloadRun(folder))
+        End Function
+
+        ''' <summary>Die Elemente, die das Abzeichen "Herunterladen" einer Kachel meint: dieselben
+        ''' wie "Herunterladen" im Kontextmenue an dieser Kachel (ContextTarget.Affected). Liegt die
+        ''' Kachel in einer Auswahl mehrerer Bilder, die ganze Auswahl, sonst nur sie. Anders als der
+        ''' Rechtsklick waehlt das Abzeichen dabei nichts aus.</summary>
+        Public Function TileDownloadItems(item As ImageItem) As IList(Of ImageItem)
+            If item Is Nothing Then Return New List(Of ImageItem)()
+            Return Global.FerrumPix.Controls.ContextTarget.Affected(item, SelectedItems, Nothing)
+        End Function
+
+        ''' <summary>Meint das Abzeichen dieser Kachel mehr als ein Bild? Dann heisst sein Hinweis
+        ''' "Auswahl herunterladen".</summary>
+        Public Function TileDownloadsSelection(item As ImageItem) As Boolean
+            Return TileDownloadItems(item).Count > 1
+        End Function
+
+        ''' <summary>Der Klick auf das Abzeichen "Herunterladen" einer Kachel. Derselbe Weg wie im
+        ''' Kontextmenue (MenuCommands.BrowserDownload, sofortiger Start, mehrere Dateien als EIN
+        ''' ZIP samt Beistelldateien, die Dateien wie beim Kopieren ueber GetPathsForTransfer).
+        ''' Ausserhalb des Browsers und an einem Element ohne Datei geschieht nichts. Liefert, ob
+        ''' der Weg angestossen wurde.</summary>
+        Public Function DownloadFromTile(item As ImageItem) As Boolean
+            If item Is Nothing OrElse Not item.IsDownloadable Then Return False
+            Dim command = MenuCommands.BrowserDownload(Function() GetPathsForTransfer(TileDownloadItems(item)))
+            If command Is Nothing Then Return False
+            command.Execute(Nothing)
+            Return True
         End Function
     End Class
 End Namespace

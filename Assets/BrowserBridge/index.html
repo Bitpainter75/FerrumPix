@@ -224,20 +224,40 @@ stage.addEventListener('pointermove', event => {
   pendingMove = { t: 'm', e: 'move', x: event.clientX, y: event.clientY, mods: modifiers(event) };
   if (first) requestAnimationFrame(flushMove);
 });
+// EIN DRUCK OHNE LOSLASSEN WIRD AUFGEHOBEN, nicht losgelassen. Oeffnet sich waehrend des Drucks
+// ein Dialog des Browsers (der Dateiwaehler, wenn ein Knopf schon beim Druecken ausloest), geht
+// das Loslassen an ihn, und die Anwendung hielte den Knopf fuer weiter gedrueckt: jeder folgende
+// Klick traefe wieder ihn. 'cancel' hebt den Druck auf, ohne zu klicken (BrowserBridge.CancelPointer).
+let pointerHeld = false;
+function cancelPointer() {
+  if (!pointerHeld) return;
+  pointerHeld = false;
+  flushMove();
+  send({ t: 'm', e: 'cancel' });
+}
 stage.addEventListener('pointerdown', event => {
   stage.focus();
   stage.setPointerCapture(event.pointerId);
   flushMove();
   lastDragX = event.clientX;
   lastDragY = event.clientY;
+  pointerHeld = true;
   send({ t: 'm', e: 'down', x: event.clientX, y: event.clientY, b: event.button, mods: modifiers(event) });
   event.preventDefault();
 });
 stage.addEventListener('pointerup', event => {
+  event.preventDefault();
+  // Ein Loslassen ohne Druecken (der Druck ist aufgehoben, oder er begann ausserhalb) gehoert
+  // niemandem in der Anwendung.
+  if (!pointerHeld) return;
+  pointerHeld = false;
   flushMove();
   send({ t: 'm', e: 'up', x: event.clientX, y: event.clientY, b: event.button, mods: modifiers(event) });
-  event.preventDefault();
 });
+// Nach einem gewoehnlichen Loslassen ist der Druck schon vorbei, dann tun beide nichts.
+stage.addEventListener('pointercancel', cancelPointer);
+stage.addEventListener('lostpointercapture', cancelPointer);
+addEventListener('blur', cancelPointer);
 stage.addEventListener('wheel', event => {
   // Eine Raste des Mausrads sind im Browser rund hundert Punkte, in der Anwendung eine Einheit,
   // und die Richtung ist umgekehrt.
@@ -338,14 +358,30 @@ addEventListener('drop', event => {
 // begann als pointerdown auf dem Canvas, und die Aktivierung daraus haelt einige Sekunden; die
 // Nachricht kommt Millisekunden spaeter. Sagt der Browser, dass sie vorbei ist, steht statt dessen
 // ein eigener Knopf da, dessen Klick wieder eine Geste ist.
+// Das Ende der Auswahl geht an die Anwendung zurueck ('picked'), nach einer Wahl wie nach
+// Abbrechen; bis dahin schickt sie kein neues 'pick'. Ein 'pick' kurz nach dem Schliessen wird
+// verworfen: es kann nur aus dem Klick stammen, mit dem der Dialog zuging.
+let pickerClosedAt = -Infinity;
+function pickerClosed() {
+  pickerClosedAt = performance.now();
+  send({ t: 'picked' });
+}
 function pickFiles() {
+  if (performance.now() - pickerClosedAt < 1000) {
+    send({ t: 'picked' });
+    return;
+  }
+  // Loest der Knopf schon beim Druecken aus, ist die Taste noch unten; das Loslassen geht
+  // gleich an den Dialog.
+  cancelPointer();
   const activation = navigator.userActivation;
   if (!activation || activation.isActive) {
     filePicker.click();
     return;
   }
+  for (const old of Array.from(offers.querySelectorAll('.pick-offer'))) old.remove();
   const prompt = document.createElement('div');
-  prompt.className = 'offer fp-layer';
+  prompt.className = 'offer fp-layer pick-offer';
   prompt.style.position = 'static';
   const choose = document.createElement('button');
   choose.className = 'fp-button accent';
@@ -356,15 +392,22 @@ function pickFiles() {
   close.className = 'fp-button';
   close.type = 'button';
   close.textContent = text('close');
-  close.addEventListener('click', () => { prompt.remove(); stage.focus(); });
+  close.addEventListener('click', () => { prompt.remove(); pickerClosed(); stage.focus(); });
   const label = document.createElement('span');
   prompt.append(label, choose, close);
   offers.appendChild(prompt);
   choose.focus();
 }
 filePicker.addEventListener('change', () => {
+  pickerClosed();
   if (filePicker.files.length > 0) enqueue(filePicker.files, -1, -1);
   filePicker.value = '';
+  stage.focus();
+});
+// Abbrechen meldet nur 'cancel' (Chrome ab 113, Firefox ab 91, Safari ab 16.4). Ohne das
+// Ereignis gibt die Zeitgrenze der Anwendung den Weg wieder frei.
+filePicker.addEventListener('cancel', () => {
+  pickerClosed();
   stage.focus();
 });
 
