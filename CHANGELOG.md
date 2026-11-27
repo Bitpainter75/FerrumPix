@@ -1,3 +1,10 @@
+## Unreleased
+
+### Changes
+
+- **Familiar share icon on the phone page.** Sharing now uses the usual icon with three connected
+  dots.
+
 ## 0.9.93
 
 ### Changes
