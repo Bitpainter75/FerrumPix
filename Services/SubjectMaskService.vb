@@ -38,6 +38,12 @@ Namespace Services
         ''' Lagekodierung des Netzes ist darauf trainiert.</summary>
         Public Const ModelEdge As Integer = 1024
 
+        ''' <summary>Das Raster, auf dem der Dekodierer seine Maske WIRKLICH rechnet. Die Ausgabe hat
+        ''' zwar 1024 Felder, sie ist aber aus 256 hochgerechnet; feiner als ein Viertel davon liegt
+        ''' die Grenze nicht. Danach richtet sich der Saum, in dem die Maske an das Bild angelegt wird
+        ''' (<see cref="ImageProcessor.ModelMaskEdgeBand"/>).</summary>
+        Public Const MaskGridEdge As Integer = 256
+
         ''' <summary>Steht die Funktion zur Verfuegung? Nur wenn Laufzeit UND beide Modelle da sind.</summary>
         Public Shared ReadOnly Property Available As Boolean
             Get

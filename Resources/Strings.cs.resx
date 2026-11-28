@@ -13894,4 +13894,46 @@
   <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_W_hr_b8d534f5" xml:space="preserve">
     <value>Platí, když prohlížeč sám vyvolává soubory RAW. Zatímco je snímek zobrazen, vyvolají se na pozadí tři další ve směru listování a předchozí, aby se při listování objevily bez čekání. Ustupuje to jakékoli jiné práci a zabírá podle velikosti snímku až 1 GB paměti.</value>
   </data>
+  <data name="Motiv_8e4b2d0a" xml:space="preserve">
+    <value>Motiv</value>
+  </data>
+  <data name="Motiv_ausw_hlen_14c3ff1d" xml:space="preserve">
+    <value>Vybrat motiv</value>
+  </data>
+  <data name="Hintergrund_ausgew_hlt_eaa7e268" xml:space="preserve">
+    <value>Vybráno pozadí</value>
+  </data>
+  <data name="Motiv_wird_gesucht_57becd64" xml:space="preserve">
+    <value>Hledá se motiv…</value>
+  </data>
+  <data name="Motiv_wird_gesucht_4431e1dc" xml:space="preserve">
+    <value>Hledá se motiv</value>
+  </data>
+  <data name="Kein_Motiv_gefunden_062e17c0" xml:space="preserve">
+    <value>Nebyl nalezen žádný motiv</value>
+  </data>
+  <data name="Das_Hauptmotiv_oder_den_Hintergrund_mit_einem_Kl_637bde2a" xml:space="preserve">
+    <value>Vybrat hlavní motiv nebo pozadí jako masku jedním kliknutím, dost jemně pro vlasy a větvičky</value>
+  </data>
+  <data name="Motiv_oder_Hintergrund_mit_einem_Klick_als_Maske_813d97e3" xml:space="preserve">
+    <value>Motiv nebo pozadí jako maska jedním kliknutím.</value>
+  </data>
+  <data name="Das_Hauptmotiv_wird_von_selbst_erkannt_und_ausge_c3a4f840" xml:space="preserve">
+    <value>Hlavní motiv se rozpozná automaticky a vybere, dost jemně pro vlasy a větvičky. Přidání a odebrání přes režim níže</value>
+  </data>
+  <data name="Alles_au_er_dem_Hauptmotiv_ausw_hlen_f14fa193" xml:space="preserve">
+    <value>Vybrat vše kromě hlavního motivu</value>
+  </data>
+  <data name="Das_Hauptmotiv_wird_von_selbst_erkannt_und_als_n_4a47104a" xml:space="preserve">
+    <value>Hlavní motiv se rozpozná automaticky a vytvoří se jako nová vrstva masky, dost jemně pro vlasy a větvičky</value>
+  </data>
+  <data name="Alles_au_er_dem_Hauptmotiv_als_neue_Maskenebene_fcb1c17a" xml:space="preserve">
+    <value>Vše kromě hlavního motivu jako nová vrstva masky</value>
+  </data>
+  <data name="Das_Motiv_wird_gesucht_das_dauert_einige_Sekunde_bc01b99d" xml:space="preserve">
+    <value>Hledá se motiv, potrvá to několik sekund.</value>
+  </data>
+  <data name="BiRefNet_03d8398a" xml:space="preserve">
+    <value>BiRefNet</value>
+  </data>
 </root>

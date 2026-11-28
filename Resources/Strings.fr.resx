@@ -13854,4 +13854,46 @@
   <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_W_hr_b8d534f5" xml:space="preserve">
     <value>S'applique lorsque la visionneuse développe elle-même les RAW. Pendant qu'une image est affichée, les trois suivantes dans le sens de défilement et la précédente sont développées en arrière-plan, afin qu'elles s'affichent sans attente. Cela cède la place à tout autre travail et occupe jusqu'à 1 Go de mémoire selon la taille de l'image.</value>
   </data>
+  <data name="Motiv_8e4b2d0a" xml:space="preserve">
+    <value>Sujet</value>
+  </data>
+  <data name="Motiv_ausw_hlen_14c3ff1d" xml:space="preserve">
+    <value>Sélectionner le sujet</value>
+  </data>
+  <data name="Hintergrund_ausgew_hlt_eaa7e268" xml:space="preserve">
+    <value>Arrière-plan sélectionné</value>
+  </data>
+  <data name="Motiv_wird_gesucht_57becd64" xml:space="preserve">
+    <value>Recherche du sujet…</value>
+  </data>
+  <data name="Motiv_wird_gesucht_4431e1dc" xml:space="preserve">
+    <value>Recherche du sujet</value>
+  </data>
+  <data name="Kein_Motiv_gefunden_062e17c0" xml:space="preserve">
+    <value>Aucun sujet trouvé</value>
+  </data>
+  <data name="Das_Hauptmotiv_oder_den_Hintergrund_mit_einem_Kl_637bde2a" xml:space="preserve">
+    <value>Sélectionner le sujet principal ou l'arrière-plan comme masque en un clic, assez finement pour les cheveux et les brindilles</value>
+  </data>
+  <data name="Motiv_oder_Hintergrund_mit_einem_Klick_als_Maske_813d97e3" xml:space="preserve">
+    <value>Sujet ou arrière-plan comme masque en un clic.</value>
+  </data>
+  <data name="Das_Hauptmotiv_wird_von_selbst_erkannt_und_ausge_c3a4f840" xml:space="preserve">
+    <value>Le sujet principal est détecté automatiquement et sélectionné, assez finement pour les cheveux et les brindilles. Ajouter et soustraire avec le mode ci-dessous</value>
+  </data>
+  <data name="Alles_au_er_dem_Hauptmotiv_ausw_hlen_f14fa193" xml:space="preserve">
+    <value>Sélectionner tout sauf le sujet principal</value>
+  </data>
+  <data name="Das_Hauptmotiv_wird_von_selbst_erkannt_und_als_n_4a47104a" xml:space="preserve">
+    <value>Le sujet principal est détecté automatiquement et créé comme nouveau calque de masque, assez finement pour les cheveux et les brindilles</value>
+  </data>
+  <data name="Alles_au_er_dem_Hauptmotiv_als_neue_Maskenebene_fcb1c17a" xml:space="preserve">
+    <value>Tout sauf le sujet principal comme nouveau calque de masque</value>
+  </data>
+  <data name="Das_Motiv_wird_gesucht_das_dauert_einige_Sekunde_bc01b99d" xml:space="preserve">
+    <value>Recherche du sujet, cela prend quelques secondes.</value>
+  </data>
+  <data name="BiRefNet_03d8398a" xml:space="preserve">
+    <value>BiRefNet</value>
+  </data>
 </root>

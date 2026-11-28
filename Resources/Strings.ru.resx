@@ -13894,4 +13894,46 @@
   <data name="In_dieser_Sitzung_zeigt_der_Reglerzug_wieder_ber_6f14b7c2" xml:space="preserve">
     <value>В этом сеансе перетаскивание ползунков снова показывается через процессор, потому что у окна нет видеокарты, самопроверка не пройдена или работа была слишком медленной.</value>
   </data>
+  <data name="Motiv_8e4b2d0a" xml:space="preserve">
+    <value>Объект</value>
+  </data>
+  <data name="Motiv_ausw_hlen_14c3ff1d" xml:space="preserve">
+    <value>Выбрать объект</value>
+  </data>
+  <data name="Hintergrund_ausgew_hlt_eaa7e268" xml:space="preserve">
+    <value>Фон выбран</value>
+  </data>
+  <data name="Motiv_wird_gesucht_57becd64" xml:space="preserve">
+    <value>Поиск объекта…</value>
+  </data>
+  <data name="Motiv_wird_gesucht_4431e1dc" xml:space="preserve">
+    <value>Поиск объекта</value>
+  </data>
+  <data name="Kein_Motiv_gefunden_062e17c0" xml:space="preserve">
+    <value>Объект не найден</value>
+  </data>
+  <data name="Das_Hauptmotiv_oder_den_Hintergrund_mit_einem_Kl_637bde2a" xml:space="preserve">
+    <value>Выбрать главный объект или фон как маску одним щелчком, достаточно точно для волос и веток</value>
+  </data>
+  <data name="Motiv_oder_Hintergrund_mit_einem_Klick_als_Maske_813d97e3" xml:space="preserve">
+    <value>Объект или фон как маска одним щелчком.</value>
+  </data>
+  <data name="Das_Hauptmotiv_wird_von_selbst_erkannt_und_ausge_c3a4f840" xml:space="preserve">
+    <value>Главный объект распознаётся автоматически и выделяется, достаточно точно для волос и веток. Добавление и вычитание через режим ниже</value>
+  </data>
+  <data name="Alles_au_er_dem_Hauptmotiv_ausw_hlen_f14fa193" xml:space="preserve">
+    <value>Выделить всё, кроме главного объекта</value>
+  </data>
+  <data name="Das_Hauptmotiv_wird_von_selbst_erkannt_und_als_n_4a47104a" xml:space="preserve">
+    <value>Главный объект распознаётся автоматически и создаётся как новый слой маски, достаточно точно для волос и веток</value>
+  </data>
+  <data name="Alles_au_er_dem_Hauptmotiv_als_neue_Maskenebene_fcb1c17a" xml:space="preserve">
+    <value>Всё, кроме главного объекта, как новый слой маски</value>
+  </data>
+  <data name="Das_Motiv_wird_gesucht_das_dauert_einige_Sekunde_bc01b99d" xml:space="preserve">
+    <value>Идёт поиск объекта, это займёт несколько секунд.</value>
+  </data>
+  <data name="BiRefNet_03d8398a" xml:space="preserve">
+    <value>BiRefNet</value>
+  </data>
 </root>

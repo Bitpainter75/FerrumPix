@@ -52,6 +52,7 @@ Namespace ViewModels
             For Each name In {NameOf(IsBokehAvailable), NameOf(BokehHint), NameOf(FogHint),
                               NameOf(IsDepthMaskAvailable), NameOf(DepthMaskHint),
                               NameOf(IsSubjectMaskAvailable), NameOf(SubjectMaskHint),
+                              NameOf(IsSalientSubjectAvailable),
                               NameOf(IsObjectRemovalAvailable), NameOf(CanRemoveObject), NameOf(RemoveObjectHint),
                               NameOf(CanRequestModels), NameOf(CanRequestObjectRemoval),
                               NameOf(CanDenoiseWithModel), NameOf(DenoiseWithModelHint),
@@ -1594,6 +1595,30 @@ Namespace ViewModels
                     If letzterHatEtwas AndAlso _hasActiveSelection Then ClearSelection(captureUndo:=False)
                     Return letzterHatEtwas
                 End If
+
+                ' DIE KANTE AN DAS BILD ANLEGEN. Der Dekodierer rechnet auf 256 Feldern; bei einem
+                ' Bild von 6000 Punkten ist ein Feld 23 Punkte breit, und ein Haar oder ein Zweig
+                ' faellt durch dieses Raster. Der Fuehrungsfilter laesst die Grenze in einem Saum
+                ' nach der Feldgroesse den Farbkanten des Bildes folgen. Verfeinert wird das
+                ' verrechnete ERGEBNIS, einmal, nicht jeder Gegenstand fuer sich.
+                '
+                ' Nicht der weiche Rohwert des Modells geht in den Filter, sondern die fertige Flaeche
+                ' samt Umfang und Kante: der Rohwert laeuft hier erst durch die Bindung an den Klick,
+                ' den Kern und die Abstandsrechnung, und genau die tragen die beiden Regler. Ein Filter
+                ' auf dem Rohwert haette sie umgangen.
+                '
+                ' Mit einer markierten Ebene als Grenze bleibt es beim Ergebnis des Modells: dort ist
+                ' die Huelle der Ebene die Kante, und der Filter liefe ueber sie hinaus.
+                Dim guide = _subjectGuide
+                If guide IsNot Nothing AndAlso confinePlan Is Nothing Then
+                    Dim source = combined, sourceRect = combinedRect
+                    Dim refined = Await Task.Run(Function() ImageProcessor.RefineModelMaskEdge(source, sourceRect, guide, SubjectMaskService.MaskGridEdge))
+                    If refined.HasValue AndAlso refined.Value.Mask IsNot Nothing Then
+                        combined.Dispose()
+                        combined = refined.Value.Mask
+                        combinedRect = refined.Value.Rect
+                    End If
+                End If
                 ApplySelectionCandidate(combined, combinedRect, "MagicWand", Nothing, Nothing,
                                         isMask:=isMask, forceNew:=True)
                 Return letzterHatEtwas
@@ -1649,13 +1674,22 @@ Namespace ViewModels
                     Dim sourcePath = RenderSourcePath
                     Dim workingImage = CloneWorkingFullForRender()
                     Try
-                        _motivEinbettung = Await Task.Run(
-                            Function()
-                                Using fertig = ImageProcessor.RenderDisplayImage(sourcePath, rezept, workingImage)
-                                    If fertig Is Nothing Then Return Nothing
-                                    Return SubjectMaskService.Kodiere(fertig)
-                                End Using
+                        ' Das gerenderte Bild bleibt als Fuehrung liegen: jede Maske aus diesem
+                        ' Bild wird danach an seine Kanten angelegt (RebuildSubjectSelectionAsync).
+                        Dim encoded = Await Task.Run(
+                            Function() As (Embedding As SubjectMaskService.Einbettung, Guide As SKBitmap)
+                                Dim fertig = ImageProcessor.RenderDisplayImage(sourcePath, rezept, workingImage)
+                                If fertig Is Nothing Then Return (Nothing, Nothing)
+                                Dim embedding = SubjectMaskService.Kodiere(fertig)
+                                If embedding Is Nothing Then
+                                    fertig.Dispose()
+                                    Return (Nothing, Nothing)
+                                End If
+                                Return (embedding, fertig)
                             End Function)
+                        _motivEinbettung = encoded.Embedding
+                        _subjectGuide?.Dispose()
+                        _subjectGuide = encoded.Guide
                     Finally
                         _subjectRunning = False
                         Me.RaisePropertyChanged(NameOf(IsSubjectMaskRunning))
@@ -1708,6 +1742,196 @@ Namespace ViewModels
             Finally
                 _motivTor.Release()
             End Try
+        End Function
+
+        ' ── Motiv auswaehlen ────────────────────────────────────────────────────
+        '
+        ' Ein Knopf statt eines Klicks ins Bild: das Modell sucht das Hauptmotiv selbst und liefert
+        ' eine weiche Matte (SalientSubjectService). "Hintergrund" ist dieselbe Matte umgekehrt, und
+        ' weil die Matte je Bild gemerkt wird, kostet der zweite Knopf nach dem ersten nichts mehr.
+        '
+        ' Im MASKEN-Werkzeug entsteht daraus sofort eine neue Korrekturebene, wie beim Einfuegen
+        ' einer abgelegten Form; im AUSWAHL-Werkzeug eine Auswahl, die mit dem eingestellten Modus
+        ' (Neu, Hinzufuegen, Abziehen, Schneiden) verrechnet wird.
+
+        Private ReadOnly _salientGate As New SemaphoreSlim(1, 1)
+        ''' <summary>Die fertig angelegte Motivmaske des aktuellen Bildes in voller Groesse (Alpha8)
+        ''' und wofuer sie gilt. Zugriff nur unter <c>_salientGate</c>.</summary>
+        Private _salientMask As SKBitmap
+        Private _salientKey As String = ""
+        Private _salientRunning As Boolean
+        Private _selectSalientSubjectCommand As ICommand
+
+        ''' <summary>Laeuft gerade die Suche nach dem Motiv? Sie dauert auf dem Prozessor Sekunden.</summary>
+        Public ReadOnly Property IsSalientSubjectRunning As Boolean
+            Get
+                Return _salientRunning
+            End Get
+        End Property
+
+        ''' <summary>Steht "Motiv auswaehlen" bereit, ohne nachzufragen? Die Knoepfe selbst bleiben
+        ''' auch ohne Modelldatei bedienbar und fragen dann nach (siehe EnsureModelsAsync).</summary>
+        Public ReadOnly Property IsSalientSubjectAvailable As Boolean
+            Get
+                Return SalientSubjectService.Available
+            End Get
+        End Property
+
+        ''' <summary>Die Knoepfe "Motiv" und "Hintergrund" in Masken- und Auswahl-Werkzeug.
+        ''' Parameter "Subject" oder "Background"; das Werkzeug entscheidet, ob Maske oder Auswahl.</summary>
+        Public ReadOnly Property SelectSalientSubjectCommand As ICommand
+            Get
+                If _selectSalientSubjectCommand Is Nothing Then
+                    _selectSalientSubjectCommand = ReactiveCommand.Create(Of String)(
+                        Sub(kind)
+                            Dim ignoriert = SelectSalientSubjectAsync(
+                                String.Equals(kind, "Background", StringComparison.Ordinal),
+                                CurrentTool <> EditorTool.Selection)
+                        End Sub)
+                End If
+                Return _selectSalientSubjectCommand
+            End Get
+        End Property
+
+        ''' <summary>Gibt die Bilder der Modellmasken frei: die Fuehrung der Objektauswahl und die
+        ''' gemerkte Motivmaske. Je unter ihrem Tor, denn ein laufender Neuaufbau rechnet auf ihnen.
+        ''' Die Einbettung gilt danach nicht mehr, der naechste Klick liest das Bild neu.</summary>
+        Private Async Sub ReleaseModelMaskImages()
+            If _subjectGuide IsNot Nothing Then
+                Await _motivTor.WaitAsync()
+                Try
+                    _subjectGuide?.Dispose()
+                    _subjectGuide = Nothing
+                    _motivSchluessel = ""
+                Finally
+                    _motivTor.Release()
+                End Try
+            End If
+            If _salientMask IsNot Nothing Then
+                Await _salientGate.WaitAsync()
+                Try
+                    _salientMask?.Dispose()
+                    _salientMask = Nothing
+                    _salientKey = ""
+                Finally
+                    _salientGate.Release()
+                End Try
+            End If
+        End Sub
+
+        ''' <summary>Das Motiv (oder mit <paramref name="background"/> den Hintergrund) als Maske
+        ''' bzw. Auswahl setzen. Fragt nach dem Modell, wenn es fehlt.</summary>
+        ''' <param name="asMask">True im Masken-Werkzeug: es entsteht eine neue Korrekturebene.
+        ''' False im Auswahl-Werkzeug: eine Auswahl nach dem eingestellten Modus.</param>
+        Public Async Function SelectSalientSubjectAsync(background As Boolean, asMask As Boolean) As Task
+            If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
+            If Not Await EnsureModelsAsync(LocalizationService.T("Motiv auswählen"), SalientSubjectService.ModelFile) Then Return
+            Await ApplySalientSubjectAsync(background, asMask)
+        End Function
+
+        ''' <summary>Der Teil hinter der Rueckfrage nach dem Modell: Matte holen (gemerkt oder neu
+        ''' gerechnet) und als Maske bzw. Auswahl einsetzen. Eigene Methode, damit der Pruefstand
+        ''' den Weg mit einer vorgelegten Matte messen kann, ohne Modelldatei.</summary>
+        Private Async Function ApplySalientSubjectAsync(background As Boolean, asMask As Boolean) As Task
+            If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
+            Dim document = _currentImagePath
+            Dim label = If(background, LocalizationService.T("Hintergrund ausgewählt"),
+                                       LocalizationService.T("Motiv ausgewählt"))
+
+            Await _salientGate.WaitAsync()
+            Try
+                If Not String.Equals(document, _currentImagePath, StringComparison.Ordinal) Then Return
+                Dim size = GetAnnotationDisplayPixelSize()
+                If size.Width <= 0 OrElse size.Height <= 0 Then Return
+                ' Das Motiv des FOTOS, ohne die Objekte darauf: ein Textfeld oder eine Form ist nie
+                ' das Motiv, und das Modell saehe sie sonst als Vordergrund.
+                Dim rezept = RecipeWithoutObjects()
+                If rezept Is Nothing Then Return
+                Dim key = SalientSubjectKey(size.Width, size.Height, rezept)
+                If _salientMask Is Nothing OrElse Not String.Equals(_salientKey, key, StringComparison.Ordinal) Then
+                    _salientRunning = True
+                    Me.RaisePropertyChanged(NameOf(IsSalientSubjectRunning))
+                    RefreshBusyState()
+                    StatusText = LocalizationService.T("Motiv wird gesucht…")
+                    SetBusyReason(LocalizationService.T("Motiv wird gesucht"))
+                    Dim sourcePath = RenderSourcePath
+                    Dim workingImage = CloneWorkingFullForRender()
+                    Dim width = size.Width, height = size.Height
+                    Dim neu As SKBitmap = Nothing
+                    Try
+                        neu = Await Task.Run(
+                            Function() As SKBitmap
+                                Using fertig = ImageProcessor.RenderDisplayImage(sourcePath, rezept, workingImage)
+                                    If fertig Is Nothing Then Return Nothing
+                                    Dim mask = SalientSubjectService.SubjectMask(fertig)
+                                    If mask Is Nothing OrElse (mask.Width = width AndAlso mask.Height = height) Then Return mask
+                                    ' Das gerenderte Bild hat nicht die Groesse der Auswahl: dann auf
+                                    ' sie bringen, sonst saesse die Maske versetzt.
+                                    Dim scaled = New SKBitmap(New SKImageInfo(width, height, SKColorType.Alpha8, SKAlphaType.Premul))
+                                    mask.ScalePixels(scaled, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None))
+                                    mask.Dispose()
+                                    Return scaled
+                                End Using
+                            End Function)
+                    Finally
+                        _salientRunning = False
+                        Me.RaisePropertyChanged(NameOf(IsSalientSubjectRunning))
+                        RefreshBusyState()
+                    End Try
+                    If Not String.Equals(document, _currentImagePath, StringComparison.Ordinal) Then
+                        neu?.Dispose()
+                        Return
+                    End If
+                    If neu Is Nothing Then
+                        StatusText = LocalizationService.T("Kein Motiv gefunden")
+                        Return
+                    End If
+                    _salientMask?.Dispose()
+                    _salientMask = neu
+                    _salientKey = key
+                End If
+
+                Using full = If(background, InvertedMask(_salientMask), ImageProcessor.CopyBitmap(_salientMask))
+                    Dim rect = MaskRect(full)
+                    If rect.Width <= 0 OrElse rect.Height <= 0 Then
+                        StatusText = LocalizationService.T("Kein Motiv gefunden")
+                        Return
+                    End If
+                    Using region = ExtractMaskRegion(full, rect)
+                        If region Is Nothing Then Return
+                        PushUndo(label)
+                        ApplySelectionCandidate(region, rect, "MagicWand", Nothing, Nothing,
+                                                isMask:=asMask, forceNew:=asMask)
+                    End Using
+                End Using
+                If asMask Then
+                    Dim layer = Await CreateAdjustmentLayerFromSelectionAsync(captureUndo:=False)
+                    If layer IsNot Nothing Then NameHistoryStep(label)
+                End If
+                StatusText = label
+            Finally
+                _salientGate.Release()
+            End Try
+        End Function
+
+        ''' <summary>Wofuer eine gemerkte Motivmaske gilt: Bild, Groesse der Auswahl und der Stand der
+        ''' Basis ohne Objekte. Aendert sich einer davon, wird das Motiv neu gesucht.</summary>
+        Private Function SalientSubjectKey(width As Integer, height As Integer, recipe As ImageAdjustments) As String
+            Return String.Join("|", _currentImagePath, width, height, ImageProcessor.ComputeBaseKey(recipe))
+        End Function
+
+        ''' <summary>Die Maske umgekehrt, als neues Alpha8 derselben Groesse.</summary>
+        Friend Shared Function InvertedMask(mask As SKBitmap) As SKBitmap
+            If mask Is Nothing Then Return Nothing
+            Dim result = ImageProcessor.CopyBitmap(mask, SKColorType.Alpha8)
+            Dim length = result.RowBytes * result.Height
+            Dim buffer(length - 1) As Byte
+            Marshal.Copy(result.GetPixels(), buffer, 0, length)
+            For i = 0 To length - 1
+                buffer(i) = CByte(255 - buffer(i))
+            Next
+            Marshal.Copy(buffer, 0, result.GetPixels(), length)
+            Return result
         End Function
 
         ' ── Bereichsmasken ──────────────────────────────────────────────────────

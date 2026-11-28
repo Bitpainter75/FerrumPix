@@ -873,7 +873,7 @@ Namespace ViewModels
         ''' Schleier ueber das Bild zu legen.</summary>
         Public ReadOnly Property IsBusy As Boolean
             Get
-                Return _pendingWorkingCommits > 0 OrElse _depthRunning OrElse _subjectRunning OrElse
+                Return _pendingWorkingCommits > 0 OrElse _depthRunning OrElse _subjectRunning OrElse _salientRunning OrElse
                        _creatingAdjustmentLayer OrElse
                        _pendingLayerModelRuns > 0 OrElse _saving OrElse _fullImageModelRunning OrElse
                        _autoGeometryRunning OrElse _layerImportRunning OrElse _presetImportRunning OrElse
@@ -5782,6 +5782,8 @@ Namespace ViewModels
                 ' Das Messbild der Bereichsmaske gehoert zum vorigen Bild; sein Schluessel traefe zwar
                 ' nicht mehr, aber es hielte bis zur naechsten Maske seinen Speicher.
                 ReleaseRangeSampleImage()
+                ' Ebenso die Bilder der Modellmasken: Fuehrung der Objektauswahl und Motivmaske.
+                ReleaseModelMaskImages()
                 Me.RaisePropertyChanged(NameOf(CurrentFileName))
                 RaiseVariantState()
                 _mainVm?.RefreshWindowTitle()
@@ -11931,6 +11933,10 @@ Namespace ViewModels
         ' Bildlage - und das saehe aus wie ein Modellfehler.
 
         Private _motivEinbettung As SubjectMaskService.Einbettung
+        ''' <summary>Das Bild, aus dem die Einbettung entstand, als Fuehrung fuer das Anlegen der
+        ''' Maske an die Kanten (<see cref="ImageProcessor.RefineModelMaskEdge"/>). Gehoert zur
+        ''' Einbettung und lebt und stirbt mit ihr; gelesen nur unter <c>_motivTor</c>.</summary>
+        Private _subjectGuide As SKBitmap
         Private _motivSchluessel As String = ""
         Private ReadOnly _motivTor As New SemaphoreSlim(1, 1)
         ''' <summary>EIN angeklickter Gegenstand: die Punkte, die ihn bestimmen, und wie er mit dem
@@ -12167,6 +12173,7 @@ Namespace ViewModels
             _motivEinbettung = Nothing
             _motivSchluessel = ""
             _motivObjekte.Clear()
+            ReleaseModelMaskImages()
         End Sub
 
         ''' <summary>Nur die gesammelten Klicks vergessen, die teure Einbettung behalten.</summary>

@@ -13854,4 +13854,46 @@
   <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_W_hr_b8d534f5" xml:space="preserve">
     <value>Se aplica cuando el visor revela los RAW por sí mismo. Mientras se muestra una imagen, se revelan en segundo plano las tres siguientes en la dirección de avance y la anterior, para que aparezcan sin espera al pasar de imagen. Esto cede ante cualquier otro trabajo y ocupa hasta 1 GB de memoria según el tamaño de la imagen.</value>
   </data>
+  <data name="Motiv_8e4b2d0a" xml:space="preserve">
+    <value>Sujeto</value>
+  </data>
+  <data name="Motiv_ausw_hlen_14c3ff1d" xml:space="preserve">
+    <value>Seleccionar sujeto</value>
+  </data>
+  <data name="Hintergrund_ausgew_hlt_eaa7e268" xml:space="preserve">
+    <value>Fondo seleccionado</value>
+  </data>
+  <data name="Motiv_wird_gesucht_57becd64" xml:space="preserve">
+    <value>Buscando el sujeto…</value>
+  </data>
+  <data name="Motiv_wird_gesucht_4431e1dc" xml:space="preserve">
+    <value>Buscando el sujeto</value>
+  </data>
+  <data name="Kein_Motiv_gefunden_062e17c0" xml:space="preserve">
+    <value>No se encontró ningún sujeto</value>
+  </data>
+  <data name="Das_Hauptmotiv_oder_den_Hintergrund_mit_einem_Kl_637bde2a" xml:space="preserve">
+    <value>Selecciona el sujeto principal o el fondo como máscara con un clic, con detalle suficiente para cabello y ramitas</value>
+  </data>
+  <data name="Motiv_oder_Hintergrund_mit_einem_Klick_als_Maske_813d97e3" xml:space="preserve">
+    <value>Sujeto o fondo como máscara con un clic.</value>
+  </data>
+  <data name="Das_Hauptmotiv_wird_von_selbst_erkannt_und_ausge_c3a4f840" xml:space="preserve">
+    <value>El sujeto principal se detecta automáticamente y se selecciona, con detalle suficiente para cabello y ramitas. Añadir y restar con el modo de abajo</value>
+  </data>
+  <data name="Alles_au_er_dem_Hauptmotiv_ausw_hlen_f14fa193" xml:space="preserve">
+    <value>Seleccionar todo excepto el sujeto principal</value>
+  </data>
+  <data name="Das_Hauptmotiv_wird_von_selbst_erkannt_und_als_n_4a47104a" xml:space="preserve">
+    <value>El sujeto principal se detecta automáticamente y se crea como nueva capa de máscara, con detalle suficiente para cabello y ramitas</value>
+  </data>
+  <data name="Alles_au_er_dem_Hauptmotiv_als_neue_Maskenebene_fcb1c17a" xml:space="preserve">
+    <value>Todo excepto el sujeto principal como nueva capa de máscara</value>
+  </data>
+  <data name="Das_Motiv_wird_gesucht_das_dauert_einige_Sekunde_bc01b99d" xml:space="preserve">
+    <value>Buscando el sujeto, tarda unos segundos.</value>
+  </data>
+  <data name="BiRefNet_03d8398a" xml:space="preserve">
+    <value>BiRefNet</value>
+  </data>
 </root>

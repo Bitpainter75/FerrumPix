@@ -375,6 +375,17 @@ Namespace Services
             ''' packaging/Diagnostics/Modellmessung.</summary>
             Public Property GpuAllowed As Boolean = False
 
+            ''' <summary>Rechnet dieses Modell OHNE Speicherarena und ohne Speichermuster der
+            ''' Laufzeit? Fuer Modelle, deren einzelner Lauf sehr viel Arbeitsspeicher braucht.
+            '''
+            ''' Die Arena behaelt nach einem Lauf, was er belegt hat, und gibt es erst mit der
+            ''' Sitzung zurueck; Sitzungen bleiben hier aber offen. Beim Motiv (BiRefNet lite auf
+            ''' 1024) sind das gemessen gut 7 GB Spitze je Lauf; mit Arena blieben danach rund 8 GB
+            ''' belegt und wuchsen ueber drei Laeufe bis 16 GB, ohne Arena faellt der Speicher nach
+            ''' dem Lauf zurueck (Messung in packaging/Diagnostics/Motivmessung). Die Zeit aendert
+            ''' sich dabei kaum.</summary>
+            Public Property WithoutMemoryArena As Boolean = False
+
             ''' <summary>Eigene Adresse, falls dieses Modell nicht bei den anderen liegt. Leer heisst:
             ''' <see cref="HerkunftBasis"/> plus Dateiname.
             '''
@@ -464,6 +475,10 @@ Namespace Services
                                         .FileName = "mobilesam-decoder-v1.onnx", .Group = "Objektauswahl",
                                         .Purpose = "Maskendekodierer", .Bytes = 16496934,
                                         .Sha256 = "a21b65b6e1b75e2c6265b36835747a0ab9169ec1ed725139a78ce90297f95126"},
+                New ModelEntry With {.Key = "birefnet-lite",
+                                        .FileName = "birefnet-lite-v1.onnx", .Group = "Motiv",
+                                        .Purpose = "Hauptmotiv als weiche Maske", .Bytes = 114538221, .WithoutMemoryArena = True,
+                                        .Sha256 = "d39b897ceb16ae654c1731f3dba0cf9b368d9cae74b5a57459b455cc8bfec402"},
                 New ModelEntry With {.Key = "depth-anything-v2-small",
                                         .FileName = "depth-anything-v2-small-v1.onnx", .Group = "Tiefe",
                                         .Purpose = "Tiefenkarte", .Bytes = 99060839, .GpuAllowed = True,
@@ -901,6 +916,20 @@ Namespace Services
             Return False
         End Function
 
+        ''' <summary>Soll diese DATEI ohne Speicherarena rechnen (<see cref="ModelEntry.WithoutMemoryArena"/>)?
+        ''' Wie bei <see cref="IsGpuAllowed"/> gilt der Eintrag auch fuer aeltere Fassungen.</summary>
+        Public Shared Function IsWithoutMemoryArena(fileName As String) As Boolean
+            If String.IsNullOrWhiteSpace(fileName) Then Return False
+            For Each entry In KnownEntries
+                If String.Equals(entry.FileName, fileName, StringComparison.OrdinalIgnoreCase) Then Return entry.WithoutMemoryArena
+                If entry.Predecessors IsNot Nothing AndAlso
+                   entry.Predecessors.Any(Function(older) String.Equals(older, fileName, StringComparison.OrdinalIgnoreCase)) Then
+                    Return entry.WithoutMemoryArena
+                End If
+            Next
+            Return False
+        End Function
+
         ''' <summary>Eine offene Sitzung und die Frage, auf welchem Rechenwerk sie gebaut wurde:
         ''' leer heisst Prozessor, sonst steht dort der Schluessel der Grafikkarte.
         '''
@@ -921,8 +950,14 @@ Namespace Services
         ''' Der Aufrufer gibt sie wieder frei - sie halten ein natives Handle. Das geht, sobald die
         ''' Sitzung steht: die Laufzeit liest die Optionen beim Bauen aus und braucht sie danach
         ''' nicht mehr.</summary>
-        Private Shared Function BuildOptions(threads As Integer) As SessionOptions
+        Private Shared Function BuildOptions(threads As Integer, fileName As String) As SessionOptions
             Dim options = New SessionOptions()
+            If IsWithoutMemoryArena(fileName) Then
+                ' Ohne Arena gibt die Laufzeit den Arbeitsspeicher eines Laufs danach wieder her;
+                ' mit ihr behielte die offene Sitzung die ganze Spitze fuer den Rest der Sitzung.
+                options.EnableCpuMemArena = False
+                options.EnableMemoryPattern = False
+            End If
             ' Ein Modell laeuft waehrend der Bearbeitung neben der Vorschau. Alle Kerne zu
             ' belegen liesse die Oberflaeche stehen; ab Werk deshalb die Haelfte, einstellbar
             ' unter Leistung (AppSettings.ModelThreadCount).
@@ -1075,7 +1110,7 @@ Namespace Services
                     Dim options As SessionOptions = Nothing
                     Dim abandoned = False
                     Try
-                        options = BuildOptions(threads)
+                        options = BuildOptions(threads, fileName)
                         ' Vermerkt wird die Karte, die WIRKLICH angehaengt wurde, nicht das
                         ' vorhin gelesene Ziel: dazwischen kann eine andere gewaehlt worden
                         ' sein. Stuende hier das alte Ziel, liefe die Sitzung auf Karte B und
@@ -1131,7 +1166,7 @@ Namespace Services
                 End If
                 Try
                     If created Is Nothing Then
-                        Using options = BuildOptions(threads)
+                        Using options = BuildOptions(threads, fileName)
                             created = New InferenceSession(filePath, options)
                         End Using
                         builtWith = ""

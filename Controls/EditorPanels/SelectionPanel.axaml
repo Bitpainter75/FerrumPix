@@ -82,6 +82,37 @@
                 </Button>
             </StackPanel>
 
+            <!-- MOTIV AUSWAEHLEN: kein Modus, sondern ein einmaliger Griff. Das Modell findet das
+                 Hauptmotiv selbst; das Ergebnis wird mit dem Modus darunter verrechnet wie jede
+                 andere Auswahl. Ohne Modelldatei fragt der Knopf nach, grau nur ohne Laufzeit. -->
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                        IsEnabled="{Binding CanRequestModels}"
+                        Command="{Binding SelectSalientSubjectCommand}" CommandParameter="Subject"
+                        ToolTip.Tip="Das Hauptmotiv wird von selbst erkannt und ausgewählt, fein genug für Haare und Zweige. Hinzufügen und Abziehen über den Modus darunter"
+                        ToolTip.ShowOnDisabled="True">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/user-focus.svg" Width="16" Height="16" />
+                        <TextBlock Text="Motiv" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                        IsEnabled="{Binding CanRequestModels}"
+                        Command="{Binding SelectSalientSubjectCommand}" CommandParameter="Background"
+                        ToolTip.Tip="Alles außer dem Hauptmotiv auswählen"
+                        ToolTip.ShowOnDisabled="True">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/selection-background.svg" Width="16" Height="16" />
+                        <TextBlock Text="Hintergrund" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+            <TextBlock Text="Das Motiv wird gesucht, das dauert einige Sekunden."
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding IsSalientSubjectRunning}"
+                       Foreground="{DynamicResource FP.Text.Muted}"
+                       FontSize="{DynamicResource FP.Font.Caption}" />
+
             <!-- Objektauswahl: dieselben Regler wie im Maskenpanel. Sie zeichnen aus den GEMERKTEN
                  Klicks nach, ohne das Modell erneut zu fragen - ohne sie hier waere die Auswahl
                  nach dem Klick nicht mehr nachzujustieren. -->

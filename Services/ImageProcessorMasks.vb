@@ -4370,6 +4370,70 @@ RasterTeil:
             Return (outMask, New SKRectI(area.Left + minX, area.Top + minY, area.Left + maxX + 1, area.Top + maxY + 1))
         End Function
 
+        ''' <summary>Breite des Saums, in dem eine Modellmaske an das Bild angelegt wird, in
+        ''' Bildpunkten. Ein Modell antwortet auf einem groben Raster (<paramref name="gridEdge"/>
+        ''' Felder an der langen Seite); seine Grenze kann um gut ein Feld daneben liegen. Der Saum
+        ''' ist anderthalb Felder breit, mindestens vier Punkte (darunter sieht das Fenster des
+        ''' Filters zu wenig Bild) und hoechstens 32 (darueber wird die Kante auf gleichfarbigem
+        ''' Grund nur breit und grau, ohne dass das Bild mehr verraet).</summary>
+        Public Shared Function ModelMaskEdgeBand(width As Integer, height As Integer, gridEdge As Integer) As Integer
+            If width <= 0 OrElse height <= 0 OrElse gridEdge <= 0 Then Return 4
+            Dim cell = Math.Max(width, height) / CDbl(gridEdge)
+            Return Math.Max(4, Math.Min(32, CInt(Math.Ceiling(cell * 1.5))))
+        End Function
+
+        ''' <summary>Eine Maske aus einem Modell an die Kanten des Bildes anlegen: KANTE VERFEINERN
+        ''' (<see cref="RefineSelectionEdge"/>) mit einem Saum nach der Rastergroesse des Modells.
+        ''' Laeuft von selbst nach jeder Objektauswahl und jedem Motiv; der Knopf "Kante verfeinern"
+        ''' bleibt fuer einen zweiten Durchgang mit eigenem Saum. <paramref name="mask"/> hat die
+        ''' Groesse von <paramref name="rect"/>, wie im Auswahl-Werkzeug ueblich.</summary>
+        Public Shared Function RefineModelMaskEdge(mask As SKBitmap, rect As SKRectI, guide As SKBitmap,
+                                                   gridEdge As Integer) As (Mask As SKBitmap, Rect As SKRectI)?
+            If guide Is Nothing Then Return Nothing
+            Return RefineSelectionEdge(mask, rect, guide, ModelMaskEdgeBand(guide.Width, guide.Height, gridEdge))
+        End Function
+
+        ''' <summary>Wie <see cref="RefineModelMaskEdge"/>, aber fuer eine Maske in voller Bildgroesse,
+        ''' und das Ergebnis wieder in voller Bildgroesse (Alpha8). Nothing, wenn danach nichts mehr
+        ''' gedeckt ist.</summary>
+        Public Shared Function RefineModelMaskEdgeFull(mask As SKBitmap, guide As SKBitmap, gridEdge As Integer) As SKBitmap
+            If mask Is Nothing OrElse guide Is Nothing Then Return Nothing
+            If mask.Width <> guide.Width OrElse mask.Height <> guide.Height Then Return Nothing
+            Dim refined = RefineModelMaskEdge(mask, New SKRectI(0, 0, mask.Width, mask.Height), guide, gridEdge)
+            If Not refined.HasValue OrElse refined.Value.Mask Is Nothing Then Return Nothing
+            Using region = refined.Value.Mask
+                Return PlaceMaskRegion(region, refined.Value.Rect, mask.Width, mask.Height)
+            End Using
+        End Function
+
+        ''' <summary>Ein Raster in der Groesse seines Rechtecks in ein leeres Alpha8 der Groesse
+        ''' <paramref name="width"/> mal <paramref name="height"/> setzen.</summary>
+        Public Shared Function PlaceMaskRegion(region As SKBitmap, rect As SKRectI, width As Integer, height As Integer) As SKBitmap
+            Dim full = New SKBitmap(New SKImageInfo(width, height, SKColorType.Alpha8, SKAlphaType.Premul))
+            Dim fullRow = full.RowBytes
+            Dim buffer(fullRow * height - 1) As Byte
+            If region IsNot Nothing AndAlso rect.Width > 0 AndAlso rect.Height > 0 Then
+                Using alpha = If(region.ColorType = SKColorType.Alpha8, Nothing, CopyBitmap(region, SKColorType.Alpha8))
+                    Dim source = If(alpha, region)
+                    Dim srcRow = source.RowBytes
+                    Dim row(srcRow - 1) As Byte
+                    Dim basePtr = source.GetPixels()
+                    For y As Integer = 0 To Math.Min(rect.Height, source.Height) - 1
+                        Dim ty = rect.Top + y
+                        If ty < 0 OrElse ty >= height Then Continue For
+                        Marshal.Copy(IntPtr.Add(basePtr, y * srcRow), row, 0, srcRow)
+                        For x As Integer = 0 To Math.Min(rect.Width, source.Width) - 1
+                            Dim tx = rect.Left + x
+                            If tx < 0 OrElse tx >= width Then Continue For
+                            buffer(ty * fullRow + tx) = row(x)
+                        Next
+                    Next
+                End Using
+            End If
+            Marshal.Copy(buffer, 0, full.GetPixels(), buffer.Length)
+            Return full
+        End Function
+
         ''' <summary>Kantenlänge der Kacheln, in denen der Führungsfilter rechnet. Begrenzt den
         ''' Speicher: dreizehn Summenfelder in Double je Kachel samt Rand, statt je Bild.</summary>
         Private Const RefineTileSize As Integer = 256

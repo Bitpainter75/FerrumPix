@@ -13894,4 +13894,46 @@
   <data name="In_dieser_Sitzung_zeigt_der_Reglerzug_wieder_ber_6f14b7c2" xml:space="preserve">
     <value>W tej sesji przeciąganie suwaków znów jest pokazywane przez procesor, ponieważ okno nie ma karty graficznej, autotest się nie powiódł albo było za wolno.</value>
   </data>
+  <data name="Motiv_8e4b2d0a" xml:space="preserve">
+    <value>Motyw</value>
+  </data>
+  <data name="Motiv_ausw_hlen_14c3ff1d" xml:space="preserve">
+    <value>Zaznacz motyw</value>
+  </data>
+  <data name="Hintergrund_ausgew_hlt_eaa7e268" xml:space="preserve">
+    <value>Wybrano tło</value>
+  </data>
+  <data name="Motiv_wird_gesucht_57becd64" xml:space="preserve">
+    <value>Szukanie motywu…</value>
+  </data>
+  <data name="Motiv_wird_gesucht_4431e1dc" xml:space="preserve">
+    <value>Szukanie motywu</value>
+  </data>
+  <data name="Kein_Motiv_gefunden_062e17c0" xml:space="preserve">
+    <value>Nie znaleziono motywu</value>
+  </data>
+  <data name="Das_Hauptmotiv_oder_den_Hintergrund_mit_einem_Kl_637bde2a" xml:space="preserve">
+    <value>Zaznacz główny motyw lub tło jako maskę jednym kliknięciem, dość dokładnie dla włosów i gałązek</value>
+  </data>
+  <data name="Motiv_oder_Hintergrund_mit_einem_Klick_als_Maske_813d97e3" xml:space="preserve">
+    <value>Motyw lub tło jako maska jednym kliknięciem.</value>
+  </data>
+  <data name="Das_Hauptmotiv_wird_von_selbst_erkannt_und_ausge_c3a4f840" xml:space="preserve">
+    <value>Główny motyw jest rozpoznawany automatycznie i zaznaczany, dość dokładnie dla włosów i gałązek. Dodawanie i odejmowanie w trybie poniżej</value>
+  </data>
+  <data name="Alles_au_er_dem_Hauptmotiv_ausw_hlen_f14fa193" xml:space="preserve">
+    <value>Zaznacz wszystko oprócz głównego motywu</value>
+  </data>
+  <data name="Das_Hauptmotiv_wird_von_selbst_erkannt_und_als_n_4a47104a" xml:space="preserve">
+    <value>Główny motyw jest rozpoznawany automatycznie i tworzony jako nowa warstwa maski, dość dokładnie dla włosów i gałązek</value>
+  </data>
+  <data name="Alles_au_er_dem_Hauptmotiv_als_neue_Maskenebene_fcb1c17a" xml:space="preserve">
+    <value>Wszystko oprócz głównego motywu jako nowa warstwa maski</value>
+  </data>
+  <data name="Das_Motiv_wird_gesucht_das_dauert_einige_Sekunde_bc01b99d" xml:space="preserve">
+    <value>Trwa szukanie motywu, to potrwa kilka sekund.</value>
+  </data>
+  <data name="BiRefNet_03d8398a" xml:space="preserve">
+    <value>BiRefNet</value>
+  </data>
 </root>

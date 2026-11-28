@@ -13853,4 +13853,46 @@
   <data name="In_dieser_Sitzung_zeigt_der_Reglerzug_wieder_ber_6f14b7c2" xml:space="preserve">
     <value>Nesta sessão o arrasto dos controles volta a ser mostrado pelo processador, porque falta a placa gráfica da janela, o autoteste falhou ou estava lento demais.</value>
   </data>
+  <data name="Motiv_8e4b2d0a" xml:space="preserve">
+    <value>Assunto</value>
+  </data>
+  <data name="Motiv_ausw_hlen_14c3ff1d" xml:space="preserve">
+    <value>Selecionar assunto</value>
+  </data>
+  <data name="Hintergrund_ausgew_hlt_eaa7e268" xml:space="preserve">
+    <value>Fundo selecionado</value>
+  </data>
+  <data name="Motiv_wird_gesucht_57becd64" xml:space="preserve">
+    <value>Procurando o assunto…</value>
+  </data>
+  <data name="Motiv_wird_gesucht_4431e1dc" xml:space="preserve">
+    <value>Procurando o assunto</value>
+  </data>
+  <data name="Kein_Motiv_gefunden_062e17c0" xml:space="preserve">
+    <value>Nenhum assunto encontrado</value>
+  </data>
+  <data name="Das_Hauptmotiv_oder_den_Hintergrund_mit_einem_Kl_637bde2a" xml:space="preserve">
+    <value>Selecione o assunto principal ou o fundo como máscara com um clique, com precisão suficiente para cabelos e galhos</value>
+  </data>
+  <data name="Motiv_oder_Hintergrund_mit_einem_Klick_als_Maske_813d97e3" xml:space="preserve">
+    <value>Assunto ou fundo como máscara com um clique.</value>
+  </data>
+  <data name="Das_Hauptmotiv_wird_von_selbst_erkannt_und_ausge_c3a4f840" xml:space="preserve">
+    <value>O assunto principal é detectado automaticamente e selecionado, com precisão suficiente para cabelos e galhos. Adicionar e subtrair pelo modo abaixo</value>
+  </data>
+  <data name="Alles_au_er_dem_Hauptmotiv_ausw_hlen_f14fa193" xml:space="preserve">
+    <value>Selecionar tudo exceto o assunto principal</value>
+  </data>
+  <data name="Das_Hauptmotiv_wird_von_selbst_erkannt_und_als_n_4a47104a" xml:space="preserve">
+    <value>O assunto principal é detectado automaticamente e criado como nova camada de máscara, com precisão suficiente para cabelos e galhos</value>
+  </data>
+  <data name="Alles_au_er_dem_Hauptmotiv_als_neue_Maskenebene_fcb1c17a" xml:space="preserve">
+    <value>Tudo exceto o assunto principal como nova camada de máscara</value>
+  </data>
+  <data name="Das_Motiv_wird_gesucht_das_dauert_einige_Sekunde_bc01b99d" xml:space="preserve">
+    <value>Procurando o assunto, isso leva alguns segundos.</value>
+  </data>
+  <data name="BiRefNet_03d8398a" xml:space="preserve">
+    <value>BiRefNet</value>
+  </data>
 </root>

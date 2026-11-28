@@ -386,6 +386,7 @@ presses the button in the settings, and each carries its own license notice
 next to the file it belongs to.
 
   MobileSAM - Apache License 2.0
+  BiRefNet lite - MIT License (Copyright (c) 2024 ZhengPeng)
   Depth Anything V2 Small - Apache License 2.0
   LaMa - Apache License 2.0
   TreeNet from RawForge - MIT License (trained on the RawNIND dataset of

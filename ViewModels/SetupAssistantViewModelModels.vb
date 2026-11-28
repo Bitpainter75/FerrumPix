@@ -46,6 +46,7 @@ Namespace ViewModels
                 Select Case If(Group.Files.FirstOrDefault()?.Group, "")
                     Case "Objektauswahl" : Return LocalizationService.T("Ein Objekt anklicken, die Maske entsteht von selbst.")
                     Case "Tiefe" : Return LocalizationService.T("Masken nach Entfernung und Unschärfe nach Tiefe.")
+                    Case "Motiv" : Return LocalizationService.T("Motiv oder Hintergrund mit einem Klick als Maske.")
                     Case "Objekt entfernen" : Return LocalizationService.T("Störendes entfernen, der Hintergrund wird ergänzt.")
                     Case "Entrauschen" : Return LocalizationService.T("Rauschen aus Fotos mit hoher ISO entfernen.")
                     Case "Hochskalieren" : Return LocalizationService.T("Fotos zwei- oder vierfach vergrößern.")
@@ -65,6 +66,7 @@ Namespace ViewModels
                 Select Case key
                     Case "Objektauswahl" : icon = "cursor-click"
                     Case "Tiefe" : icon = "mountains"
+                    Case "Motiv" : icon = "user-focus"
                     Case "Objekt entfernen" : icon = "eraser"
                     Case "Entrauschen" : icon = "sparkle"
                     Case "Hochskalieren" : icon = "arrows-out"

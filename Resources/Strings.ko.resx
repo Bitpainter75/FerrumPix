@@ -13898,4 +13898,46 @@
   <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_W_hr_b8d534f5" xml:space="preserve">
     <value>뷰어가 RAW를 직접 현상할 때 적용됩니다. 이미지가 표시되는 동안 넘기는 방향의 다음 세 장과 이전 한 장을 백그라운드에서 현상하여 넘길 때 기다림 없이 나타나게 합니다. 다른 모든 작업에 양보하며 이미지 크기에 따라 최대 1GB의 메모리를 사용합니다.</value>
   </data>
+  <data name="Motiv_8e4b2d0a" xml:space="preserve">
+    <value>피사체</value>
+  </data>
+  <data name="Motiv_ausw_hlen_14c3ff1d" xml:space="preserve">
+    <value>피사체 선택</value>
+  </data>
+  <data name="Hintergrund_ausgew_hlt_eaa7e268" xml:space="preserve">
+    <value>배경을 선택했습니다</value>
+  </data>
+  <data name="Motiv_wird_gesucht_57becd64" xml:space="preserve">
+    <value>피사체를 찾는 중…</value>
+  </data>
+  <data name="Motiv_wird_gesucht_4431e1dc" xml:space="preserve">
+    <value>피사체를 찾는 중</value>
+  </data>
+  <data name="Kein_Motiv_gefunden_062e17c0" xml:space="preserve">
+    <value>피사체를 찾지 못했습니다</value>
+  </data>
+  <data name="Das_Hauptmotiv_oder_den_Hintergrund_mit_einem_Kl_637bde2a" xml:space="preserve">
+    <value>클릭 한 번으로 주 피사체나 배경을 마스크로 선택합니다. 머리카락과 잔가지까지 표현할 만큼 정밀합니다</value>
+  </data>
+  <data name="Motiv_oder_Hintergrund_mit_einem_Klick_als_Maske_813d97e3" xml:space="preserve">
+    <value>클릭 한 번으로 피사체나 배경을 마스크로.</value>
+  </data>
+  <data name="Das_Hauptmotiv_wird_von_selbst_erkannt_und_ausge_c3a4f840" xml:space="preserve">
+    <value>주 피사체를 자동으로 인식해 선택합니다. 머리카락과 잔가지까지 표현할 만큼 정밀합니다. 추가와 빼기는 아래 모드에서</value>
+  </data>
+  <data name="Alles_au_er_dem_Hauptmotiv_ausw_hlen_f14fa193" xml:space="preserve">
+    <value>주 피사체를 제외한 모든 영역 선택</value>
+  </data>
+  <data name="Das_Hauptmotiv_wird_von_selbst_erkannt_und_als_n_4a47104a" xml:space="preserve">
+    <value>주 피사체를 자동으로 인식해 새 마스크 레이어로 만듭니다. 머리카락과 잔가지까지 표현할 만큼 정밀합니다</value>
+  </data>
+  <data name="Alles_au_er_dem_Hauptmotiv_als_neue_Maskenebene_fcb1c17a" xml:space="preserve">
+    <value>주 피사체를 제외한 모든 영역을 새 마스크 레이어로</value>
+  </data>
+  <data name="Das_Motiv_wird_gesucht_das_dauert_einige_Sekunde_bc01b99d" xml:space="preserve">
+    <value>피사체를 찾는 중입니다. 몇 초 걸립니다.</value>
+  </data>
+  <data name="BiRefNet_03d8398a" xml:space="preserve">
+    <value>BiRefNet</value>
+  </data>
 </root>

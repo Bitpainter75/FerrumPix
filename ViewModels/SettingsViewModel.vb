@@ -8012,6 +8012,8 @@ Namespace ViewModels
                 Select Case name
                     Case "Tiefe"
                         description = LocalizationService.T("Maske nach Entfernung und Tiefen-Unschärfe")
+                    Case "Motiv"
+                        description = LocalizationService.T("Das Hauptmotiv oder den Hintergrund mit einem Klick als Maske auswählen, fein genug für Haare und Zweige")
                     Case "Objekt entfernen"
                         description = LocalizationService.T("Markiertes verschwinden lassen, der Hintergrund wird fortgesetzt")
                     Case "Personen"
@@ -8032,6 +8034,7 @@ Namespace ViewModels
                 Dim anzeigeName As String
                 Select Case name
                     Case "Tiefe" : anzeigeName = LocalizationService.T("Tiefe")
+                    Case "Motiv" : anzeigeName = LocalizationService.T("Motiv auswählen")
                     Case "Objekt entfernen" : anzeigeName = LocalizationService.T("Objekt entfernen")
                     Case "Personen" : anzeigeName = LocalizationService.T("Personen")
                     Case "Orte" : anzeigeName = LocalizationService.T("Orte")

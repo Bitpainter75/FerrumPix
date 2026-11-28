@@ -2,6 +2,15 @@
 
 ### Changes
 
+- **Select subject and background.** The mask and selection tools have two new buttons, Subject
+  and Background. The main subject of the picture is found by itself and becomes a new mask layer
+  or a selection, fine enough for hair and twigs; Background takes everything else. The model for
+  it is an optional download, offered on the first click.
+
+- **Object selection follows the picture's edges.** A mask from clicking an object now hugs the
+  edges of the picture by itself, where before it lay on a coarse grid and cut through hair, fur
+  and thin branches. Masks you already made stay as they are.
+
 - **Guided perspective.** In the perspective of the distort tool you can now draw two to four
   lines along edges that should stand upright or level, and the picture is straightened so that
   they do, even when the vanishing point lies off to the side or upright and level are needed at
