@@ -26,6 +26,9 @@
 - **Familiar share icon on the phone page.** Sharing now uses the usual icon with three connected
   dots.
 
+- **Clean edges when swiping on the phone page.** Swiping through pictures no longer shows a thin
+  strip of the previous or next picture at the edge.
+
 - **Square icon on the home screen.** The phone page added to the home screen now shows a proper
   square icon instead of one with odd corners.
 

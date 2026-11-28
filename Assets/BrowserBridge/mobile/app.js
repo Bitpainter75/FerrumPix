@@ -1289,11 +1289,20 @@
   }
   window.addEventListener('popstate', () => { if (!viewer.node.hidden) hideViewer(); });
 
+  // Abstand der Nachbarbilder: die genaue Breite der Buehne (getBoundingClientRect, nicht
+  // clientWidth: das ist auf ganze Punkte gerundet, die Scheibe mit 100 Prozent aber nicht, und auf
+  // Telefonen mit gebrochener Pixeldichte schaute so ein Streifen des Nachbarn herein) und dazu ein
+  // schwarzer Spalt, damit auch eine Rundung im Zug nie etwas vom Nachbarn zeigt.
+  const SLIDE_GAP = 16;
+  function slideStep() {
+    return viewer.stage.getBoundingClientRect().width + SLIDE_GAP;
+  }
+
   function placeTrack(offset, animate) {
-    const width = viewer.stage.clientWidth;
+    const step = slideStep();
     viewer.track.style.transition = animate ? 'transform 0.22s ease-out' : 'none';
     viewer.track.style.transform = `translateX(${offset}px)`;
-    viewer.slides.forEach((slide, k) => { slide.style.transform = `translateX(${(k - 1) * width}px)`; });
+    viewer.slides.forEach((slide, k) => { slide.style.transform = `translateX(${(k - 1) * step}px)`; });
   }
 
   async function showIndex(index) {
@@ -1660,8 +1669,7 @@
   }
 
   function slideTo(direction) {
-    const width = viewer.stage.clientWidth;
-    placeTrack(-direction * width, true);
+    placeTrack(-direction * slideStep(), true);
     // Nach der Bewegung stehen die Scheiben wieder auf ihrem Platz; die Bilder davor und danach
     // sind schon geladen (viewer.blobs) und erscheinen ohne neue Anfrage.
     setTimeout(() => showIndex(viewer.index + direction), 230);
