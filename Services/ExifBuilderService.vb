@@ -224,13 +224,19 @@ Namespace Services
         End Function
 
         ''' <summary>Die Belichtungszeit so, wie eine Kamera sie schreibt: 1/250 statt 0,004.
-        ''' Ueber einer Sekunde als Hundertstel, damit 2,5 Sekunden nicht zu 1/0 werden.</summary>
-        Private Shared Function AsShutterRational(seconds As Double) As Rational?
+        ''' Ueber einer Sekunde als Hundertstel, damit 2,5 Sekunden nicht zu 1/0 werden. Darunter als
+        ''' 1/n nur, wenn der Kehrwert (bis auf drei Prozent) eine ganze Zahl ist; Zeiten wie 0,4 oder
+        ''' 0,8 Sekunden sind das nicht und gingen sonst als 1/2 und 1/1 verloren, sie stehen deshalb
+        ''' als Zehntel da (4/10).</summary>
+        Friend Shared Function AsShutterRational(seconds As Double) As Rational?
             If seconds <= 0 OrElse Double.IsNaN(seconds) OrElse Double.IsInfinity(seconds) Then Return Nothing
-            If seconds >= 1.0 Then Return New Rational(CLng(Math.Round(seconds * 100.0)), 100L)
-            Dim denominator = CLng(Math.Round(1.0 / seconds))
-            If denominator < 1 Then denominator = 1
-            Return New Rational(1L, denominator)
+            If seconds >= 1.0 Then Return New Rational(CLng(Math.Round(seconds * 100.0, MidpointRounding.AwayFromZero)), 100L)
+            Dim reciprocal = 1.0 / seconds
+            Dim denominator = CLng(Math.Round(reciprocal, MidpointRounding.AwayFromZero))
+            If Math.Abs(reciprocal - denominator) <= 0.03 * reciprocal OrElse seconds < 0.1 Then
+                Return New Rational(1L, Math.Max(1L, denominator))
+            End If
+            Return New Rational(CLng(Math.Round(seconds * 10.0, MidpointRounding.AwayFromZero)), 10L)
         End Function
 
         ' ---------------------------------------------------------------------------------------

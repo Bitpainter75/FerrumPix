@@ -692,9 +692,9 @@ Namespace Services
         End Function
 
         ''' <summary>Die Symbole der Web-App, aus dem Programmsymbol gerechnet wie die Symbole der
-        ''' Desktop-Seite (BrowserBridgeIcons.vb). Die maskierbaren tragen das Symbol auf dem
-        ''' Hintergrund der Anwendung in der sicheren Zone (80 Prozent): ein Telefon schneidet sie
-        ''' rund oder eckig zu, ohne vom Symbol etwas abzuschneiden.</summary>
+        ''' Desktop-Seite (BrowserBridgeIcons.vb), alle deckend quadratisch auf dem Hintergrund der
+        ''' Anwendung. Die maskierbaren tragen das Symbol kleiner, in der sicheren Zone (80 Prozent):
+        ''' ein Telefon schneidet sie rund oder eckig zu, ohne vom Symbol etwas abzuschneiden.</summary>
         Private Shared Async Function ServeMobileIconAsync(context As HttpListenerContext, path As String) As Task
             Dim bytes = IconCache.GetOrAdd(path, AddressOf BuildMobileIcon)
             Dim response = context.Response
@@ -710,20 +710,7 @@ Namespace Services
         Private Shared Function BuildMobileIcon(path As String) As Byte()
             Dim size = If(path.Contains("512", StringComparison.Ordinal), 512, 192)
             Dim maskable = path.Contains("maskable", StringComparison.Ordinal)
-            Using source = SKBitmap.Decode(ReadAsset(AppIconPngAsset))
-                Using target As New SKBitmap(New SKImageInfo(size, size, SKColorType.Rgba8888, SKAlphaType.Premul))
-                    Using canvas As New SKCanvas(target)
-                        canvas.Clear(If(maskable, SKColor.Parse("#0B0E11"), SKColors.Transparent))
-                        Dim edge = If(maskable, size * 0.72F, CSng(size))
-                        Dim offset = (size - edge) / 2.0F
-                        Using image = SKImage.FromBitmap(source)
-                            canvas.DrawImage(image, SKRect.Create(offset, offset, edge, edge),
-                                             New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear))
-                        End Using
-                    End Using
-                    Return PngEncoder.EncodeToBytes(target, PngPurpose.Export)
-                End Using
-            End Using
+            Return BuildSquareIcon(size, If(maskable, 0.72F, HomeScreenIconFraction))
         End Function
 
         ''' <summary>Die Sprache der Seite: die dieser Anfrage (Benutzer bzw. Browser), sonst die der

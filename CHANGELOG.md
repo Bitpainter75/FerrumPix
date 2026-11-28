@@ -5,6 +5,12 @@
 - **Familiar share icon on the phone page.** Sharing now uses the usual icon with three connected
   dots.
 
+- **Square icon on the home screen.** The phone page added to the home screen now shows a proper
+  square icon instead of one with odd corners.
+
+- **Exposure times in exported files.** Times such as 0.4 or 0.8 seconds that are filled in from
+  the RAW file no longer turn into 1/2 or 1 second in the exported picture.
+
 - **Lock screen password only for the desktop.** The password of the lock screen now only locks
   the window on your computer, and the administrator has a password of their own for the browser.
   Turning the lock screen off no longer touches the browser sign-in, and setting up the
