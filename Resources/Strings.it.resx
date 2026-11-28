@@ -8144,9 +8144,6 @@
   <data name="Ein_Sensor_misst_je_Bildpunkt_nur_eine_Farbe_das_deddea65" xml:space="preserve">
     <value>Un sensore misura un solo colore per pixel; il metodo ne ricava l'immagine completa. Le anteprime vengono ricreate dopo una modifica.</value>
   </data>
-  <data name="Feinere_Zeichnung_daf_r_mehr_Farbrauschen_und_et_f187bdb8" xml:space="preserve">
-    <value>Disegno più fine, ma più rumore di colore e circa due volte e mezzo il tempo per foto.</value>
-  </data>
   <data name="Etwa_ein_F_nftel_schneller_als_die_Vorgabe_67a1755c" xml:space="preserve">
     <value>Circa un quinto più veloce dell'impostazione predefinita.</value>
   </data>
@@ -13775,5 +13772,86 @@
   </data>
   <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
     <value>L'indice del catalogo è già in esecuzione</value>
+  </data>
+  <data name="Perspektivlinien_7b6d24d3" xml:space="preserve">
+    <value>Linee di prospettiva</value>
+  </data>
+  <data name="Zwei_bis_vier_Linien_an_Kanten_ziehen_die_senkre_b57953f3" xml:space="preserve">
+    <value>Traccia da due a quattro linee lungo bordi che devono risultare verticali od orizzontali. Le linee ripide diventano verticali, quelle piatte orizzontali.</value>
+  </data>
+  <data name="ENTF_entfernt_die_gefasste_oder_zuletzt_gesetzte_3ac4db32" xml:space="preserve">
+    <value>CANC rimuove la linea selezionata o l'ultima inserita.</value>
+  </data>
+  <data name="Gef_hrte_Perspektive_03e5f2b8" xml:space="preserve">
+    <value>Prospettiva guidata</value>
+  </data>
+  <data name="H_chstens_vier_Perspektivlinien_07ba69c1" xml:space="preserve">
+    <value>Al massimo quattro linee di prospettiva</value>
+  </data>
+  <data name="Die_Perspektivlinien_verlangen_zu_viel_die_Entze_cc904fe7" xml:space="preserve">
+    <value>Le linee di prospettiva chiedono troppo, il raddrizzamento è stato limitato</value>
+  </data>
+  <data name="Die_Perspektivlinien_widersprechen_sich_5dd460a5" xml:space="preserve">
+    <value>Le linee di prospettiva si contraddicono</value>
+  </data>
+  <data name="Aus_diesen_Perspektivlinien_ergibt_sich_keine_g__fe242b73" xml:space="preserve">
+    <value>Queste linee di prospettiva non danno un raddrizzamento valido</value>
+  </data>
+  <data name="Perspektivlinien_entfernt_die_Ecken_bleiben_und__1c4ae4fb" xml:space="preserve">
+    <value>Linee di prospettiva rimosse, gli angoli restano e si possono regolare</value>
+  </data>
+  <data name="Geometrie_0f3a847b" xml:space="preserve">
+    <value>Geometria</value>
+  </data>
+  <data name="Ausrichten_Drehen_und_Spiegeln_ed641188" xml:space="preserve">
+    <value>Raddrizza, ruota e rifletti</value>
+  </data>
+  <data name="Ein_Haken_ersetzt_diesen_Teil_der_Geometrie_durc_9320ba66" xml:space="preserve">
+    <value>Una spunta sostituisce questa parte della geometria con quella della foto copiata. Se una foto è verticale dove quella copiata era orizzontale, o viceversa, il suo ritaglio resta com'è.</value>
+  </data>
+  <data name="Anpassungen_eingef_gt_ohne_Zuschnitt_das_Bild_st_2e2b5b10" xml:space="preserve">
+    <value>Regolazioni incollate, senza ritaglio: la foto è verticale dove quella copiata era orizzontale, o viceversa.</value>
+  </data>
+  <data name="0_Bild_er_ohne_Zuschnitt_eingef_gt_sie_stehen_ho_293315ce" xml:space="preserve">
+    <value>{0} foto incollate senza ritaglio: sono verticali dove la foto copiata era orizzontale, o viceversa.</value>
+  </data>
+  <data name="An_feinen_roten_und_gr_nen_Mustern_weniger_Falsc_7376eb72" xml:space="preserve">
+    <value>Meno falsi colori su motivi fini rossi e verdi, quasi nessuna differenza nelle foto comuni. Veloce più o meno quanto l'impostazione predefinita.</value>
+  </data>
+  <data name="Etwas_weicher_als_die_Vorgabe_mit_mehr_Farbrausc_41a2a658" xml:space="preserve">
+    <value>Un po' più morbido dell'impostazione predefinita, con più rumore cromatico e talvolta aloni verdi sui bordi scuri contro un cielo chiaro. Richiede un multiplo del tempo.</value>
+  </data>
+  <data name="Ein_Durchgang_462aaf8e" xml:space="preserve">
+    <value>Un passaggio</value>
+  </data>
+  <data name="Drei_Durchg_nge_db150009" xml:space="preserve">
+    <value>Tre passaggi</value>
+  </data>
+  <data name="Gilt_f_r_Sensoren_mit_Bayer_Muster_also_fast_all_e61dea74" xml:space="preserve">
+    <value>Vale per i sensori con matrice Bayer, cioè quasi tutte le fotocamere. I sensori X-Trans di Fujifilm hanno una scelta propria qui sotto.</value>
+  </data>
+  <data name="Durchg_nge_f_r_X_Trans_Sensoren_9d491de6" xml:space="preserve">
+    <value>Passaggi per sensori X-Trans</value>
+  </data>
+  <data name="Fujis_X_Trans_Sensoren_werden_mit_einem_eigenen__61f91da3" xml:space="preserve">
+    <value>I sensori X-Trans di Fujifilm vengono sviluppati con un metodo proprio. Un passaggio misura come tre e richiede circa metà del tempo. Le anteprime vengono ricreate dopo una modifica.</value>
+  </data>
+  <data name="Reglerzug_direkt_auf_der_Grafikkarte_zeigen_11829498" xml:space="preserve">
+    <value>Mostra il trascinamento dei cursori direttamente sulla scheda grafica</value>
+  </data>
+  <data name="Zeigt_beim_Ziehen_an_Licht_und_Farbreglern_das_B_0a0889c7" xml:space="preserve">
+    <value>Mentre trascini i cursori di luce e colore, l'immagine viene disegnata direttamente dalla scheda grafica della finestra, senza passare dal processore. Al rilascio l'immagine viene calcolata come prima. Senza una scheda grafica adatta tutto resta sulla via precedente.</value>
+  </data>
+  <data name="FerrumPix_wurde_beim_letzten_Mal_w_hrend_der_Anz_26ce1fbb" xml:space="preserve">
+    <value>L'ultima volta FerrumPix è stato chiuso durante la visualizzazione sulla scheda grafica. Questa via resta disattivata finché l'interruttore non viene spento e riacceso.</value>
+  </data>
+  <data name="In_dieser_Sitzung_zeigt_der_Reglerzug_wieder_ber_6f14b7c2" xml:space="preserve">
+    <value>In questa sessione il trascinamento dei cursori torna a passare dal processore, perché manca la scheda grafica della finestra, l'autotest non è riuscito o era troppo lenta.</value>
+  </data>
+  <data name="Nachbarbilder_im_Viewer_vorentwickeln_341d1049" xml:space="preserve">
+    <value>Pre-sviluppa le immagini vicine nel visualizzatore</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_W_hr_b8d534f5" xml:space="preserve">
+    <value>Vale quando il visualizzatore sviluppa da sé i RAW. Mentre un'immagine è visualizzata, le tre successive nella direzione di scorrimento e la precedente vengono sviluppate in background, così compaiono senza attesa scorrendo. Questo cede il passo a qualsiasi altro lavoro e occupa fino a 1 GB di memoria a seconda della dimensione dell'immagine.</value>
   </data>
 </root>

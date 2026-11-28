@@ -778,6 +778,11 @@ Namespace Services
         ''' er die eingebettete Vorschau. Die Schnellvorschau entwickelt unabhaengig davon immer
         ''' halb, sie zoomt nicht.
         Public Property ViewerRawFullResolution As Boolean = False
+        ''' Die Nachbarbilder im Betrachter im Leerlauf vorentwickeln (Standard AN): drei in
+        ''' Laufrichtung, eins zurueck, jedem anderen Auftrag weichend. Wirkt nur, wo der Betrachter
+        ''' RAWs ueberhaupt entwickelt (die beiden Schalter darueber); die eingebettete Vorschau ist
+        ''' ohnehin schnell. Siehe ViewerNeighborPrefetch.
+        Public Property PrefetchNeighborsInViewer As Boolean = True
         ''' Fokus-Peaking im Betrachter: scharfe Kanten farbig markieren (Taste K).
         ''' Gemerkt, weil man es beim Aussortieren fuer die ganze Serie will.
         Public Property ViewerFocusPeaking As Boolean = False
@@ -1157,6 +1162,12 @@ Namespace Services
         ''' <c>GpuImageService</c> und <c>ImageProcessor.CheckGpuImageProcessing</c>).</summary>
         Public Property GpuImageProcessing As Boolean = False
 
+        ''' <summary>Den Reglerzug an Licht und Farbe direkt auf der Grafikkarte des Fensters zeigen
+        ''' (Controls.GpuDragDisplay). Unabhaengig von <see cref="GpuImageProcessing"/>: es rechnet
+        ''' nur die Anzeige waehrend des Zugs, nie das gespeicherte Bild. Ab Werk an; wirksam nur
+        ''' unter Linux, unter Windows und macOS erst nach einer Pruefung am Geraet.</summary>
+        Public Property GpuDragDisplay As Boolean = True
+
         ''' <summary>Mit wie vielen Faeden des Prozessors die Modelle rechnen (Entrauschen,
         ''' Vergroessern, Auswahl, Tiefe). 0 heisst Vorgabe: die Haelfte der logischen Kerne, damit
         ''' die Oberflaeche neben einem laufenden Modell bedienbar bleibt. Gelesen wird die Zahl
@@ -1254,11 +1265,18 @@ Namespace Services
         Public Property SaveAsNameTemplates As New List(Of ImportTargetSettings) From {
             New ImportTargetSettings With {.Name = "", .Template = "{name}_{datetaken:yyyy-MM-dd}"}
         }
-        ''' Kopierte Bildanpassungen als Rezept-JSON (nur die Pixel-Anpassungen, keine Geometrie
-        ''' und keine Objekte). Liegt in den Einstellungen statt im Arbeitsspeicher, damit
+        ''' Kopierte Bildanpassungen als Rezept-JSON (die Pixel-Anpassungen, der Rahmen und die
+        ''' Schritte von Ausrichten, Perspektive und Zuschnitt, die nur "Einfügen mit Auswahl"
+        ''' auf Wunsch uebertraegt; keine anderen Objekte). Liegt in den Einstellungen statt im Arbeitsspeicher, damit
         ''' "Kopieren" in der einen Sitzung und "Einfuegen" in der naechsten funktioniert - genau
         ''' dafuer ist die Funktion da. Leer = nichts kopiert.
         Public Property CopiedAdjustments As String = ""
+        ''' Die Haken "Geometrie" im Dialog "Einfügen mit Auswahl": welche Teile der Geometrie aus
+        ''' der Ablage mitkommen (GeometryTransfer). Ab Werk keiner; gemerkt, weil eine Serie vom
+        ''' Stativ meist in mehreren Durchgaengen eingefuegt wird.
+        Public Property PasteGeometryStraighten As Boolean = False
+        Public Property PasteGeometryPerspective As Boolean = False
+        Public Property PasteGeometryCrop As Boolean = False
         Public Property LastBatchResizeWidth As Integer = 0
         Public Property LastBatchResizeHeight As Integer = 0
         Public Property LastBatchResizeScalePercent As Integer = 0
@@ -1392,8 +1410,15 @@ Namespace Services
         ''' <summary>Das Verfahren, mit dem aus den Sensordaten ein Farbbild wird (Demosaic).
         ''' Gespeichert wird der NAME, nicht LibRaws Nummer: die Nummern gehoeren einer fremden
         ''' Bibliothek und koennen sich zwischen ihren Staenden verschieben, der Name nicht.
-        ''' Unbekanntes faellt beim Laden auf die Vorgabe zurueck.</summary>
+        ''' Unbekanntes faellt beim Laden auf die Vorgabe zurueck. Gilt nur fuer Sensoren mit
+        ''' Bayer-Muster; X-Trans hat mit <see cref="RawXTransPasses"/> eine eigene Wahl.</summary>
         Public Property RawDemosaicAlgorithm As String = AppSettingsService.RawDemosaicDefault
+        ''' <summary>Durchgaenge der X-Trans-Interpolation fuer Fujis 6x6-Muster: 3 (Vorgabe) oder 1.
+        ''' Unabhaengig vom Bayer-Verfahren oben. Eine Datei ohne das Feld stammt von davor; dort
+        ''' leitete LibRaw die Durchgaenge aus dem Bayer-Verfahren ab (PPG ergab einen, alles andere
+        ''' drei), und genau das wird beim Laden einmal uebernommen, damit sich kein Bild aendert
+        ''' (<see cref="AppSettingsService.LegacyRawXTransPasses"/>).</summary>
+        Public Property RawXTransPasses As Integer = AppSettingsService.RawXTransPassesDefault
         ' Legacy compatibility only. The RAW decoder always reads highlights un-clipped; this value
         ' is deliberately ignored and is no longer exposed as an application setting.
         Public Property RawHighlightUnclip As Boolean = True
@@ -1549,7 +1574,20 @@ Namespace Services
                 _cachedJson = Nothing
                 _cachedSettings = Nothing
             End SyncLock
+            Threading.Interlocked.Increment(_generation)
         End Sub
+
+        Private Shared _generation As Integer
+
+        ''' <summary>Zaehlt jeden neuen Stand der Einstellungen (Speichern, Neueinlesen). Fuer
+        ''' Abnehmer, die ein fertiges Ergebnis laenger halten und wissen muessen, ob es noch zu den
+        ''' Einstellungen passt (das Vorentwickeln der Nachbarbilder im Betrachter): ein anderer Wert
+        ''' heisst "vielleicht veraltet", nicht "sicher veraltet".</summary>
+        Friend Shared ReadOnly Property Generation As Integer
+            Get
+                Return Threading.Volatile.Read(_generation)
+            End Get
+        End Property
 
         ''' <summary>Schreibt einen ausstehenden Stand sofort und sagt, ob er auf der Platte steht.
         ''' Fuer Schritte, nach denen etwas geloescht wird, das nur der neue Stand noch findet.</summary>
@@ -1653,6 +1691,13 @@ Namespace Services
                     settings.ScopeDefaultsVersion = 1
                 End If
 
+                ' X-TRANS-DURCHGAENGE als eigene Einstellung (2026-11-28). Vorher entschied das
+                ' Bayer-Verfahren mit: PPG ergab an einer RAF einen Durchgang, alles andere drei.
+                ' Eine Datei ohne das Feld behaelt genau das, damit das Update kein Bild aendert.
+                If json.IndexOf("""RawXTransPasses""", StringComparison.Ordinal) < 0 Then
+                    settings.RawXTransPasses = LegacyRawXTransPasses(settings.RawDemosaicAlgorithm)
+                End If
+
                 settings.GalleryThumbnailSize = NormalizeThumbnailSize(settings.GalleryThumbnailSize)
                 settings.GalleryViewMode = NormalizeGalleryViewMode(settings.GalleryViewMode)
                 settings.MapTileUrl = MapTileService.NormalizeTemplate(settings.MapTileUrl)
@@ -1682,6 +1727,7 @@ Namespace Services
                 settings.JpgSaveQuality = NormalizeJpgSaveQuality(settings.JpgSaveQuality)
                 settings.DefaultSaveFormat = NormalizeDefaultSaveFormat(settings.DefaultSaveFormat)
                 settings.RawDemosaicAlgorithm = NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
+                settings.RawXTransPasses = NormalizeRawXTransPasses(settings.RawXTransPasses)
                 NormalizeMacGraphicsSettings(settings)
                 settings.PickerReadout = NormalizePickerReadout(settings.PickerReadout)
                 settings.EditorToolSelectorSide = NormalizeToolSelectorSide(settings.EditorToolSelectorSide)
@@ -1954,6 +2000,7 @@ Namespace Services
                 settings.JpgSaveQuality = NormalizeJpgSaveQuality(settings.JpgSaveQuality)
                 settings.DefaultSaveFormat = NormalizeDefaultSaveFormat(settings.DefaultSaveFormat)
                 settings.RawDemosaicAlgorithm = NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
+                settings.RawXTransPasses = NormalizeRawXTransPasses(settings.RawXTransPasses)
                 NormalizeMacGraphicsSettings(settings)
                 settings.PickerReadout = NormalizePickerReadout(settings.PickerReadout)
                 settings.EditorToolSelectorSide = NormalizeToolSelectorSide(settings.EditorToolSelectorSide)
@@ -2008,6 +2055,7 @@ Namespace Services
                     _cachedJson = json
                     _cachedSettings = CloneSettings(settings)
                 End SyncLock
+                Threading.Interlocked.Increment(_generation)
                 ThumbnailCacheService.InvalidateSettingsCache()
                 ' Und der Schalter des Diagnose-Logs mit. Er liegt dort als gemerktes Feld, weil
                 ' JEDE Protokollzeile ihn abfragt - nachgezogen wurde er aber bisher nur von der
@@ -3208,8 +3256,13 @@ Namespace Services
         ''' und einer 12-MP-NEF (Median aus drei Laeufen, ganzer Decode): PPG 652/504 ms, AHD
         ''' 792/575 ms, linear 778/573 ms, VNG 1836/1211 ms, DCB 2015/1330 ms. VNG kostet also das
         ''' 2,3-fache von AHD, ohne dafuer etwas zu bieten, und linear ist bei gleicher Zeit das
-        ''' schwaechste Verfahren - beide waeren nur eine Falle in einer Auswahlliste.</summary>
-        Public Shared ReadOnly RawDemosaicChoices As String() = {"AHD", "DCB", "PPG"}
+        ''' schwaechste Verfahren - beide waeren nur eine Falle in einer Auswahlliste.
+        '''
+        ''' DHT kam am 2026-11-28 dazu (Diagnostics/Demosaikmessung): an feinen Mustern in Rot und
+        ''' Gruen weniger Falschfarbe, an gewoehnlichen Fotos kaum ein Unterschied, mit allen Kernen
+        ''' gleich schnell wie AHD. Ein aelteres Programm kennt den Namen nicht und faellt beim
+        ''' Laden auf die Vorgabe zurueck.</summary>
+        Public Shared ReadOnly RawDemosaicChoices As String() = {"AHD", "DHT", "DCB", "PPG"}
 
         Public Shared Function NormalizeRawDemosaicAlgorithm(value As String) As String
             If String.IsNullOrWhiteSpace(value) Then Return RawDemosaicDefault
@@ -3218,6 +3271,26 @@ Namespace Services
                 If String.Equals(choice, trimmed, StringComparison.OrdinalIgnoreCase) Then Return choice
             Next
             Return RawDemosaicDefault
+        End Function
+
+        ''' <summary>Die voreingestellten Durchgaenge der X-Trans-Interpolation. Drei sind, was
+        ''' LibRaw bei AHD rechnet, also der Stand vor dieser Einstellung.</summary>
+        Public Const RawXTransPassesDefault As Integer = 3
+
+        ''' <summary>Die waehlbaren Durchgaenge, in der Reihenfolge der Auswahlliste. Mehr gibt
+        ''' LibRaws X-Trans-Weg nicht her: jede hoehere Qualitaet rechnet wieder drei.</summary>
+        Public Shared ReadOnly RawXTransPassesChoices As Integer() = {3, 1}
+
+        Public Shared Function NormalizeRawXTransPasses(value As Integer) As Integer
+            Return If(value = 1, 1, RawXTransPassesDefault)
+        End Function
+
+        ''' <summary>Die Durchgaenge, die ein X-Trans-Bild vor der eigenen Einstellung bekam: LibRaw
+        ''' leitete sie aus dem Bayer-Verfahren ab, PPG (user_qual 2) ergab einen, jedes Verfahren
+        ''' ab AHD drei. Gebraucht fuer die Uebernahme alter Einstellungen und dafuer, dass Kacheln
+        ''' und Schluessel bei dieser Paarung so heissen wie vorher.</summary>
+        Public Shared Function LegacyRawXTransPasses(bayerAlgorithm As String) As Integer
+            Return If(NormalizeRawDemosaicAlgorithm(bayerAlgorithm) = "PPG", 1, RawXTransPassesDefault)
         End Function
 
         ''' <summary>Die Reihenfolge des Toolkits: Metal, dann OpenGL, dann Software.</summary>

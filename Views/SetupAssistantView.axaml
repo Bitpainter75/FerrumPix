@@ -455,6 +455,19 @@
                                         <ToggleSwitch Grid.Column="1" IsChecked="{Binding GpuImageProcessing}" OnContent="" OffContent="" VerticalAlignment="Center"/>
                                     </Grid>
                                 </Border>
+                                <!-- Unabhaengig vom Schalter darueber: nur die Anzeige waehrend des Reglerzugs
+                                     (Controls.GpuDragDisplay). Texte wortgleich mit der Seite Leistung, also
+                                     dieselben Schluessel. Nur dort sichtbar, wo der Weg wirksam ist. -->
+                                <Border Classes="setup-card" IsVisible="{Binding GpuDragDisplayAvailable}">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="Reglerzug direkt auf der Grafikkarte zeigen" FontWeight="SemiBold"/>
+                                            <TextBlock Text="Zeigt beim Ziehen an Licht- und Farbreglern das Bild direkt über die Grafikkarte des Fensters, ohne Umweg über den Prozessor. Nach dem Loslassen entsteht das Bild wie bisher. Ohne passende Grafikkarte bleibt alles beim bisherigen Weg." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                            <TextBlock Classes="no-translate" Text="{Binding GpuDragDisplayStatusText}" IsVisible="{Binding HasGpuDragDisplayStatus}" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding GpuDragDisplay}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
                                 <Border Classes="setup-card">
                                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                                         <StackPanel Spacing="4">

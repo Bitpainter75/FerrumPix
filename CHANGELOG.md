@@ -2,6 +2,27 @@
 
 ### Changes
 
+- **Guided perspective.** In the perspective of the distort tool you can now draw two to four
+  lines along edges that should stand upright or level, and the picture is straightened so that
+  they do, even when the vanishing point lies off to the side or upright and level are needed at
+  the same time. A single line simply levels the picture like the line in the rotate panel.
+
+- **Paste the geometry onto a whole series.** "Paste with selection" can now also take straighten
+  and rotation, perspective and crop from the copied picture, each with its own check box, off by
+  default and remembered. Handy for a series from a tripod where every shot needs the same
+  correction; a picture in portrait where the copied one was landscape keeps its own crop.
+
+- **Smoother light and color sliders.** While you drag a light or color slider in the editor,
+  the picture is now drawn directly by the graphics card of the window, so it follows the slider
+  more closely. After you let go, the picture is finished as before. Without a suitable graphics
+  card nothing changes, and the setting under Performance switches it off. Linux only for now.
+
+- **Browsing developed RAWs without waiting.** When the viewer develops RAW files itself, it now
+  develops the next three pictures in your browsing direction and the previous one in the
+  background, so they appear right away when you move on. It steps aside for anything else the
+  application needs, never develops two pictures at once and can be switched off in the RAW
+  settings.
+
 - **Familiar share icon on the phone page.** Sharing now uses the usual icon with three connected
   dots.
 
@@ -15,6 +36,17 @@
   selected and its camera JPEG lies next to it, the export now gets a free name instead of
   replacing the camera picture, even after "Overwrite all"; on Linux it no longer ends up as a
   second file that only differs in upper and lower case.
+
+- **DHT as a further RAW method.** The method for developing the sensor data now also offers
+  DHT, with less false colour on fine red and green patterns at about the same speed. The
+  default stays as it is, so no picture changes.
+
+- **Own setting for Fujifilm X-Trans.** X-Trans files now have their own choice of one or three
+  passes; one pass looks the same and takes about half the time. The method above now only
+  applies to all other cameras, and earlier choices carry over unchanged.
+
+- **Presets with a transform no longer zoom in.** Taking over the transform of an imported preset
+  no longer enlarges the picture when the preset keeps the size at its neutral value.
 
 - **Pictures with the wrong file extension.** A JPEG, PNG or TIFF that carries a RAW extension now
   opens as the whole picture instead of a tiny preview, an empty tile or an error message.

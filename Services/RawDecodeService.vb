@@ -3158,17 +3158,67 @@ Namespace Services
                 Case "VNG" : Return 1
                 Case "PPG" : Return 2
                 Case "DCB" : Return 4
+                Case "DHT" : Return 11
                 Case Else : Return DefaultDemosaic ' AHD
             End Select
         End Function
 
-        ''' <summary>Das eingestellte Verfahren, oder die Vorgabe, wenn die Einstellungen nicht
-        ''' lesbar sind. Der Decode darf daran nicht scheitern.</summary>
+        ''' <summary>LibRaws Nummer fuer die X-Trans-Interpolation mit der gewaehlten Zahl an
+        ''' Durchgaengen. An einem X-Trans-Bild kennt LibRaw nur drei Wege (dcraw_process): 0 linear,
+        ''' 1 VNG, 2 xtrans_interpolate(1), jede Nummer ab 3 xtrans_interpolate(3).</summary>
+        Private Shared Function XTransDemosaicNumber(passes As Integer) As Integer
+            Return If(AppSettingsService.NormalizeRawXTransPasses(passes) = 1, 2, 3)
+        End Function
+
+        ''' <summary>Woran die Zwischenspeicher das eingestellte Verfahren erkennen, oder die Vorgabe,
+        ''' wenn die Einstellungen nicht lesbar sind. Der Decode darf daran nicht scheitern.
+        '''
+        ''' Das ist NICHT die Nummer fuer LibRaw (die setzt <see cref="DemosaicForHandle"/> erst
+        ''' nach dem Oeffnen, wenn das Muster der Datei bekannt ist), sondern die Kennung beider
+        ''' Wahlen, Bayer-Verfahren und X-Trans-Durchgaenge. Gebraucht wird sie VOR dem Oeffnen, in
+        ''' den Schluesseln des Decode-, Roh- und Entrausch-Zwischenspeichers und im Kopf der .fpdnz.
+        ''' Stehen die Durchgaenge so, wie LibRaw sie vorher aus dem Bayer-Verfahren ableitete
+        ''' (AppSettingsService.LegacyRawXTransPasses), ist sie die alte Nummer: beide Dateiarten
+        ''' ergeben dann dasselbe Bild wie zuvor, und vorhandene .fpdnz-Dateien gelten weiter. Jede
+        ''' andere Paarung bekommt 100 je Durchgang dazu und ist damit eindeutig.</summary>
         Private Shared Function ConfiguredDemosaic() As Integer
             Try
-                Return DemosaicNumber(AppSettingsService.Load().RawDemosaicAlgorithm)
+                Dim settings = AppSettingsService.Load()
+                Dim bayer = DemosaicNumber(settings.RawDemosaicAlgorithm)
+                Dim passes = AppSettingsService.NormalizeRawXTransPasses(settings.RawXTransPasses)
+                If passes = AppSettingsService.LegacyRawXTransPasses(settings.RawDemosaicAlgorithm) Then Return bayer
+                Return bayer + 100 * passes
             Catch
                 Return DefaultDemosaic
+            End Try
+        End Function
+
+        ''' <summary>Die Nummer fuer libraw_set_demosaic an einer GEOEFFNETEN Datei: fuer X-Trans
+        ''' (filters = 9) aus den X-Trans-Durchgaengen, sonst aus dem Bayer-Verfahren. So wirkt die
+        ''' Bayer-Wahl an einer RAF nicht mehr mit und die X-Trans-Wahl nicht an einer Bayer-Datei.
+        ''' Ohne lesbares Muster (Handle noch nicht geoeffnet, fehlender Einstieg) gilt das
+        ''' Bayer-Verfahren; der Decode setzt die Nummer nach dem Oeffnen ohnehin noch einmal.</summary>
+        Private Shared Function DemosaicForHandle(handle As IntPtr) As Integer
+            Dim settings As AppSettings
+            Try
+                settings = AppSettingsService.Load()
+            Catch
+                Return DefaultDemosaic
+            End Try
+            If IsXTransHandle(handle) Then Return XTransDemosaicNumber(settings.RawXTransPasses)
+            Return DemosaicNumber(settings.RawDemosaicAlgorithm)
+        End Function
+
+        ''' <summary>Traegt die geoeffnete Datei Fujis 6x6-Muster? Gelesen wird iparams.filters wie in
+        ''' <see cref="ReadSensorPattern"/>; 9 ist dort X-Trans. Alles Unlesbare heisst nein.</summary>
+        Private Shared Function IsXTransHandle(handle As IntPtr) As Boolean
+            If handle = IntPtr.Zero OrElse _getIparams Is Nothing Then Return False
+            Try
+                Dim iparams = _getIparams(handle)
+                If iparams = IntPtr.Zero Then Return False
+                Return Marshal.ReadInt32(iparams, IparamsFiltersOffset) = 9
+            Catch
+                Return False
             End Try
         End Function
 
@@ -3635,7 +3685,7 @@ Namespace Services
                 Try
                     _setOutputColor.Invoke(handle, 1)
                     _setOutputBps.Invoke(handle, DecodeOutputBits)
-                    _setDemosaic.Invoke(handle, ConfiguredDemosaic())
+                    _setDemosaic.Invoke(handle, DemosaicForHandle(handle))
                     ' Ausdruecklich, nicht auf die Vorgabe der Bibliothek verlassen (HighlightMode).
                     If _setHighlight IsNot Nothing Then _setHighlight.Invoke(handle, HighlightMode)
                     ' Dasselbe fuer die motivabhaengige Weisspunkt-Nachfuehrung, siehe
@@ -3781,7 +3831,9 @@ Namespace Services
                 If _setFbdd IsNot Nothing Then _setFbdd.Invoke(handle, FbddRauschminderung)
                 ' Das gewaehlte Demosaic-Verfahren. Fehlt der Setter (aeltere libraw), bleibt es bei
                 ' LibRaws Vorgabe - die Auswahl ist dann wirkungslos, aber nichts geht kaputt.
-                If _setDemosaic IsNot Nothing Then _setDemosaic.Invoke(handle, ConfiguredDemosaic())
+                ' Die Datei ist hier schon geoeffnet, das Muster also bekannt: X-Trans bekommt seine
+                ' eigene Wahl, alles andere das Bayer-Verfahren.
+                If _setDemosaic IsNot Nothing Then _setDemosaic.Invoke(handle, DemosaicForHandle(handle))
                 ' Kamera-Weißabgleich: die As-Shot-Multiplikatoren als user_mul setzen (die C-API
                 ' hat keinen use_camera_wb-Setter). Ohne gültige cam_mul bleibt der Standard.
                 '

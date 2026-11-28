@@ -14898,6 +14898,17 @@ Namespace ViewModels
             Return New ImageAdjustments()
         End Function
 
+        ''' <summary>Das Mass des Bildes im Quellraum, fuer die Geometrie beim Einfuegen
+        ''' (GeometryTransfer.Apply): aus dem Rezept, sonst die orientierten Masse der Datei. Eine RAW
+        ''' ohne Rezept traegt keines. (0, 0), wenn nichts zu haben ist.</summary>
+        ''' <param name="itemPath">Der Pfad oder der Schluessel einer Variante.</param>
+        Private Shared Function BatchGeometrySourceSize(recipe As ImageAdjustments, itemPath As String) As (Width As Integer, Height As Integer)
+            If recipe IsNot Nothing AndAlso recipe.SourceWidthPixels > 0 AndAlso recipe.SourceHeightPixels > 0 Then
+                Return (recipe.SourceWidthPixels, recipe.SourceHeightPixels)
+            End If
+            Return ImageProcessor.GetOrientedImageSize(VariantKey.FileOf(itemPath))
+        End Function
+
         ''' <summary>Die Ausgabegroesse des Stapels als eigenen Geometrieschritt anhaengen.
         '''
         ''' NICHT MEHR ALS OBERES FELD, und das war ein echter Fehler: die Kette wertet die oberen
@@ -15049,11 +15060,14 @@ Namespace ViewModels
 
         ''' <summary><see cref="WriteRecipeInPlace"/> mit der Auswahl von "Einfügen mit Auswahl":
         ''' <paramref name="entries"/> gilt nur zusammen mit replacePixelAdjustments.</summary>
+        ''' <param name="applyGeometry">Die gewaehlte Geometrie beim Einfuegen, gerufen unter der
+        ''' Sperre mit dem Rezept und dem Schluessel der Kachel; Nothing laesst sie, wie sie ist.</param>
         Private Shared Function WriteRecipeInPlaceWithEntries(source As String, template As ImageAdjustments,
                                                               isAutoEnhance As Boolean,
                                                               replacePixelAdjustments As Boolean,
                                                               denoise As DenoiseModelService.DenoiseRequest,
-                                                              entries As IReadOnlyList(Of AdjustmentEntry)) As RawSidecarService.ModifyRecipeResult
+                                                              entries As IReadOnlyList(Of AdjustmentEntry),
+                                                              Optional applyGeometry As Action(Of ImageAdjustments, String) = Nothing) As RawSidecarService.ModifyRecipeResult
             ' Der Schluessel einer zusaetzlichen Variante (VariantKey) meint IHR Rezept. Alles, was
             ' die Datei liest oder misst, nimmt den Pfad.
             Dim recipeKey = source
@@ -15143,6 +15157,9 @@ Namespace ViewModels
                         End If
                         If isAutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)
                     End If
+                    ' Die gewaehlte Geometrie aus der Ablage, vor dem Rahmen: ein Objekt nimmt eine
+                    ' uebertragene Perspektive mit, der mitgebrachte Rahmen gehoert dem Quellbild.
+                    applyGeometry?.Invoke(adj, recipeKey)
                     ' Ein Rahmen aus Ablage oder Anpassungsvorlage ersetzt den des Rezepts; alle
                     ' anderen Vorlagen bringen keinen mit und lassen ihn stehen.
                     adj.ApplyTransferredFrameFrom(template)
@@ -15202,11 +15219,14 @@ Namespace ViewModels
 
         ''' <summary><see cref="WriteRecipesInPlaceAsync"/> mit der Auswahl von "Einfügen mit
         ''' Auswahl" (<see cref="WriteRecipeInPlaceWithEntries"/>).</summary>
+        ''' <param name="applyGeometry">Legt beim Einfuegen die gewaehlte Geometrie auf das Rezept
+        ''' (Rezept, Pfad); Nothing laesst die Geometrie, wie sie ist.</param>
         Private Async Function WriteRecipesInPlaceWithEntriesAsync(targets As List(Of String), template As ImageAdjustments,
                                                                    isAutoEnhance As Boolean,
                                                                    replacePixelAdjustments As Boolean,
                                                                    denoise As DenoiseModelService.DenoiseRequest,
-                                                                   entries As IReadOnlyList(Of AdjustmentEntry)) As Task(Of Integer)
+                                                                   entries As IReadOnlyList(Of AdjustmentEntry),
+                                                                   Optional applyGeometry As Action(Of ImageAdjustments, String) = Nothing) As Task(Of Integer)
             If targets Is Nothing OrElse targets.Count = 0 Then Return 0
             Dim changedCount = 0
             Dim errorMessage As String = Nothing
@@ -15219,7 +15239,7 @@ Namespace ViewModels
                 Await Task.Run(Sub()
                     For Each source In targets
                         If BatchWasCancelled() Then Exit For
-                        Select Case WriteRecipeInPlaceWithEntries(source, template, isAutoEnhance, replacePixelAdjustments, denoise, entries)
+                        Select Case WriteRecipeInPlaceWithEntries(source, template, isAutoEnhance, replacePixelAdjustments, denoise, entries, applyGeometry)
                             Case RawSidecarService.ModifyRecipeResult.Written
                                 changedCount += 1
                             Case RawSidecarService.ModifyRecipeResult.Unreadable
@@ -15797,7 +15817,9 @@ Namespace ViewModels
         ' Rahmen (ExtractTransferableAdjustments), ohne Zuschnitt, Drehung, Retusche und die übrigen
         ' Ebenen. Eingefügt wird wie im Editor: die Bildanpassungen des Ziels werden ERSETZT
         ' (CopyPixelAdjustmentsFrom), ein mitgebrachter Rahmen ersetzt den des Ziels
-        ' (ApplyTransferredFrameFrom), Geometrie und Retusche bleiben. "Anpassungen anwenden" mit einer Vorlage legt dagegen nur
+        ' (ApplyTransferredFrameFrom), Geometrie und Retusche bleiben. Die Ablage traegt dazu die
+        ' Geometrie des Quellbildes; nur "Einfügen mit Auswahl" uebertraegt davon, was dort
+        ' angehakt ist (GeometryTransfer). "Anpassungen anwenden" mit einer Vorlage legt dagegen nur
         ' die Regler auf, die die Vorlage setzt; das ist eine andere Frage ("diesen Look dazu") als
         ' das Einfügen ("dasselbe wie dort").
 
@@ -15847,7 +15869,16 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("Die Begleitdatei ließ sich nicht lesen.")
                 Return
             End If
-            AppSettingsService.SaveCopiedAdjustments(FpxService.SerializeAdjustments(recipe.ExtractTransferableAdjustments()))
+            Dim transferable = recipe.ExtractTransferableAdjustments()
+            ' Die Geometrie geht mit in die Ablage, samt dem Mass des Bildes fuer die Frage, ob ein
+            ' Zuschnitt auf ein anderes passt (GeometryTransfer). Ohne Mass im Rezept das der Datei.
+            Dim sourceWidth = recipe.SourceWidthPixels, sourceHeight = recipe.SourceHeightPixels
+            If sourceWidth <= 0 OrElse sourceHeight <= 0 Then
+                Dim size = ImageProcessor.GetOrientedImageSize(items(0).FilePath)
+                sourceWidth = size.Width : sourceHeight = size.Height
+            End If
+            GeometryTransfer.AttachTo(transferable, recipe, sourceWidth, sourceHeight)
+            AppSettingsService.SaveCopiedAdjustments(FpxService.SerializeAdjustments(transferable))
             StatusText = LocalizationService.T("Anpassungen kopiert")
             RefreshContextActions()
         End Sub
@@ -15903,10 +15934,14 @@ Namespace ViewModels
         ''' alles, wie bisher.</param>
         ''' <param name="chooseEntries">Vorher fragen, welche Eintraege: der Dialog aus "Anpassung
         ''' speichern" ohne Name und Ordner, vorbelegt mit dem, was in der Ablage vom Neutralwert
-        ''' abweicht.</param>
+        ''' abweicht. Dort stehen auch die Haken der Geometrie.</param>
+        ''' <param name="geometry">Die Teile der Geometrie, die aus der Ablage kommen
+        ''' (GeometryTransfer.Apply); ab Werk keiner. Mit <paramref name="chooseEntries"/> gilt die
+        ''' Wahl im Dialog.</param>
         Public Async Function PasteAdjustmentsToImageItemsAsync(items As IList(Of ImageItem),
                                                                 Optional entries As IReadOnlyList(Of AdjustmentEntry) = Nothing,
-                                                                Optional chooseEntries As Boolean = False) As Task
+                                                                Optional chooseEntries As Boolean = False,
+                                                                Optional geometry As GeometryTransferParts = GeometryTransferParts.None) As Task
             If items Is Nothing Then items = New List(Of ImageItem)()
             Dim template As ImageAdjustments = Nothing
             Try
@@ -15930,7 +15965,22 @@ Namespace ViewModels
                 Dim choice = EditorViewModel.CreatePasteAdjustmentsDialog()
                 If choice Is Nothing OrElse Not Await _mainVm.ShowAdjustmentPresetSaveAsync(choice) Then Return
                 entries = choice.SelectedEntries()
+                choice.RememberGeometryChoice()
+                geometry = choice.GeometryParts
             End If
+            ' Wo der Zuschnitt ausgelassen wurde (anders stehendes Bild), fuer die Meldung am Ende.
+            ' Beschrieben aus mehreren Faeden, deshalb gesperrt.
+            Dim cropSkipped As New List(Of String)()
+            Dim applyGeometry As Action(Of ImageAdjustments, String) = Sub(adj As ImageAdjustments, source As String)
+                                    If geometry = GeometryTransferParts.None Then Return
+                                    Dim size = BatchGeometrySourceSize(adj, source)
+                                    Dim outcome = GeometryTransfer.Apply(adj, template, geometry, size.Width, size.Height)
+                                    If outcome.CropSkipped Then
+                                        SyncLock cropSkipped
+                                            cropSkipped.Add(source)
+                                        End SyncLock
+                                    End If
+                                End Sub
             ' Ab hier sehen Rahmen, Graufarbausgleich und Diaerkennung nur, was eingefuegt wird.
             template = RestrictPastedTemplate(template, entries)
             ' Mit dem Schluessel der Kachel, siehe WriteRecipeInPlace.
@@ -15951,6 +16001,7 @@ Namespace ViewModels
                 Dim quality = AppSettingsService.Load().JpgSaveQuality
                 Dim writer = Function(source As String, target As String)
                                  Dim adj = BatchBaseAdjustments(source)
+                                 applyGeometry(adj, source)
                                  ApplyPastedPixelAdjustments(adj, template, entries)
                                  adj.ApplyTransferredFrameFrom(template)
                                  adj.ForgetTransferredNegativeGrayBalance(template)
@@ -15962,7 +16013,8 @@ Namespace ViewModels
                              End Function
                 Dim changedCount = Await WriteRecipesInPlaceWithEntriesAsync(recipePaths, template, isAutoEnhance:=False,
                                                                              replacePixelAdjustments:=True,
-                                                                             denoise:=Nothing, entries:=entries)
+                                                                             denoise:=Nothing, entries:=entries,
+                                                                             applyGeometry:=If(geometry = GeometryTransferParts.None, Nothing, applyGeometry))
                 If pixelTarget = MainWindowViewModel.PastePixelTarget.Copy Then
                     ' Die Namen entstehen hier, das Freimachen eines belegten Namens erst beim
                     ' Schreiben: zwei Quellen können auf denselben Namen kommen.
@@ -15973,6 +16025,13 @@ Namespace ViewModels
                     changedCount += Await RewriteImagesInPlaceAsync(pixelPaths, writer)
                 End If
                 StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) angepasst"), changedCount, targets.Count)
+                ' Wie die uebrigen Stapelmeldungen in die Warnung des Fensters: die Zahl nennt alle,
+                ' die Liste die ersten zehn. Angepasst sind die Bilder trotzdem, nur ohne Zuschnitt.
+                If cropSkipped.Count > 0 Then
+                    _mainVm.ReportFileWarning(String.Join(ControlChars.Lf,
+                        {String.Format(LocalizationService.T("{0} Bild(er) ohne Zuschnitt eingefügt: sie stehen hoch, wo das kopierte Bild quer stand, oder umgekehrt."), cropSkipped.Count)}.
+                        Concat(cropSkipped.Take(10).Select(Function(p) VariantKey.FileOf(p)))))
+                End If
                 RefreshAfterBatchFileRewrite(recipePaths.Select(Function(p) VariantKey.FileOf(p)).Concat(pixelPaths))
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.PasteAdjustments", ex)

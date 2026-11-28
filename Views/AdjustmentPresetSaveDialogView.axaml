@@ -103,6 +103,23 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
+        <!-- Nur beim Einfuegen: welche Teile der Geometrie aus der Ablage mitkommen. Ab Werk
+             keiner, vorbelegt mit der letzten Wahl (GeometryTransfer). Eine Vorlage nimmt keine
+             Geometrie mit, deshalb fehlt der Block beim Speichern. -->
+        <StackPanel Spacing="4" IsVisible="{Binding ShowsGeometryChoice}">
+            <TextBlock Text="Geometrie" FontWeight="SemiBold" Margin="0,4,0,0"/>
+            <CheckBox IsChecked="{Binding PasteStraighten, Mode=TwoWay}"
+                      Content="Ausrichten, Drehen und Spiegeln"/>
+            <CheckBox IsChecked="{Binding PastePerspective, Mode=TwoWay}"
+                      Content="Perspektive"/>
+            <CheckBox IsChecked="{Binding PasteCrop, Mode=TwoWay}"
+                      Content="Zuschnitt"/>
+            <TextBlock Text="Ein Haken ersetzt diesen Teil der Geometrie durch den des kopierten Bildes. Steht ein Bild hoch, wo das kopierte quer stand, oder umgekehrt, bleibt sein Zuschnitt, wie er ist."
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource FP.Text.Secondary}"
+                       FontSize="{DynamicResource FP.Font.Small}"/>
+        </StackPanel>
+
         <!-- Das Ziel kommt zuletzt: erst steht die Auswahl der Regler, dann graut das Ziel aus,
              was es nicht tragen kann. XMP und LUT gehen in eine Datei an einem frei gewaehlten
              Ort; die Ziele und der Hinweis kommen uebersetzt aus dem ViewModel. -->

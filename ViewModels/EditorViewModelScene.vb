@@ -155,6 +155,9 @@ Namespace ViewModels
             InvalidateZoomDetail()
             EnsureSceneDisplay()
             BlitSceneRegionToDisplay(New SKRectI(0, 0, _sceneSk.Width, _sceneSk.Height))
+            ' Stand bis hierher ein Rahmen der Karte in der Anzeige (Reglerzug), zeigt sie ab jetzt
+            ' wieder die Szene (EditorViewModelGpuDisplay.vb).
+            ClearGpuDragDisplayForScene()
         End Sub
 
         ''' <summary>Stellt sicher, dass die persistente Anzeige-Bitmap existiert und zur Szene passt

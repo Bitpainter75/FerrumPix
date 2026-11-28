@@ -157,6 +157,26 @@
                                        Classes="no-translate"/>
                         </StackPanel>
 
+                        <StackPanel Spacing="8" IsVisible="{Binding GpuDragDisplayAvailable}">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Reglerzug direkt auf der Grafikkarte zeigen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Zeigt beim Ziehen an Licht- und Farbreglern das Bild direkt über die Grafikkarte des Fensters, ohne Umweg über den Prozessor. Nach dem Loslassen entsteht das Bild wie bisher. Ohne passende Grafikkarte bleibt alles beim bisherigen Weg." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1"
+                                              IsChecked="{Binding GpuDragDisplay}"
+                                              OnContent=""
+                                              OffContent=""
+                                              VerticalAlignment="Center"/>
+                            </Grid>
+                            <TextBlock Text="{Binding GpuDragDisplayStatusText}"
+                                       IsVisible="{Binding HasGpuDragDisplayStatus}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Small}"
+                                       TextWrapping="Wrap"
+                                       Classes="no-translate"/>
+                        </StackPanel>
+
                         <StackPanel Spacing="8">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">

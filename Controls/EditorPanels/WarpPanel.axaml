@@ -220,7 +220,53 @@
                                        VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
+                    <!-- GEFUEHRTE PERSPEKTIVE: Linien an Kanten, die senkrecht oder waagerecht
+                         stehen sollen; das Ergebnis landet in den acht Ecken (siehe
+                         EditorViewModelPerspectiveGuides.vb). Kein eigener Verzerrmodus, weil
+                         "Linien" schon die Linienverzerrung ist. Ist der Haken an, liegen statt der
+                         Eckanfasser die Linien ueber dem Bild. Die Rolle folgt dem Winkel, ohne
+                         Umschalter und ohne Staerke: so bleibt die Korrektur als Linien
+                         austauschbar. -->
+                    <CheckBox Content="Perspektivlinien"
+                              IsChecked="{Binding IsPerspectiveGuideMode}"
+                              IsEnabled="{Binding WarpsTheImage}"
+                              FontSize="{DynamicResource FP.Font.Small}"
+                              Margin="0,6,0,0"
+                              ToolTip.Tip="Zwei bis vier Linien an Kanten ziehen, die senkrecht oder waagerecht stehen sollen. Steile Linien werden senkrecht, flache waagerecht." />
+                    <StackPanel Spacing="6" Margin="0,2,0,0" IsVisible="{Binding IsPerspectiveGuideMode}">
+                        <TextBlock Text="Zwei bis vier Linien an Kanten ziehen, die senkrecht oder waagerecht stehen sollen. Steile Linien werden senkrecht, flache waagerecht."
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                        <TextBlock Text="ENTF entfernt die gefasste oder zuletzt gesetzte Linie."
+                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                   FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap" />
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <TextBlock Text="Linien" Foreground="{DynamicResource FP.Text.Secondary}"
+                                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                            <TextBlock Grid.Column="1" Classes="no-translate"
+                                       Text="{Binding PerspectiveGuideCount}"
+                                       VerticalAlignment="Center"
+                                       FontSize="{DynamicResource FP.Font.Small}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,6,*">
+                            <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                                    IsEnabled="{Binding HasPerspectiveGuides}"
+                                    Command="{Binding RemoveLastPerspectiveGuideCommand}">
+                                <TextBlock Text="Letzte Linie entfernen" FontSize="{DynamicResource FP.Font.Small}"
+                                           TextWrapping="Wrap" TextAlignment="Center"
+                                           HorizontalAlignment="Center"/>
+                            </Button>
+                            <Button Grid.Column="2" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                                    IsEnabled="{Binding HasPerspectiveGuides}"
+                                    Command="{Binding ResetPerspectiveGuidesCommand}">
+                                <TextBlock Text="Alle Linien entfernen" FontSize="{DynamicResource FP.Font.Small}"
+                                           TextWrapping="Wrap" TextAlignment="Center"
+                                           HorizontalAlignment="Center"/>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
                     <TextBlock Text="Die vier Ecken lassen sich auch direkt im Bild ziehen."
+                               IsVisible="{Binding !IsPerspectiveGuideMode}"
                                Foreground="{DynamicResource FP.Text.Muted}"
                                FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"
                                Margin="0,6,0,0"/>

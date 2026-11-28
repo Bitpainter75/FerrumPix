@@ -8184,9 +8184,6 @@
   <data name="Ein_Sensor_misst_je_Bildpunkt_nur_eine_Farbe_das_deddea65" xml:space="preserve">
     <value>En sensor måler bare én farge per bildepunkt; metoden regner ut hele bildet fra det. Miniatyrer lages på nytt etter en endring.</value>
   </data>
-  <data name="Feinere_Zeichnung_daf_r_mehr_Farbrauschen_und_et_f187bdb8" xml:space="preserve">
-    <value>Finere tegning, men mer fargestøy og omtrent to og en halv gang så lang tid per bilde.</value>
-  </data>
   <data name="Etwa_ein_F_nftel_schneller_als_die_Vorgabe_67a1755c" xml:space="preserve">
     <value>Omtrent en femtedel raskere enn standard.</value>
   </data>
@@ -13815,5 +13812,86 @@
   </data>
   <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
     <value>Katalogindeksen kjører allerede</value>
+  </data>
+  <data name="Perspektivlinien_7b6d24d3" xml:space="preserve">
+    <value>Perspektivlinjer</value>
+  </data>
+  <data name="Zwei_bis_vier_Linien_an_Kanten_ziehen_die_senkre_b57953f3" xml:space="preserve">
+    <value>Dra to til fire linjer langs kanter som skal stå loddrett eller vannrett. Bratte linjer blir loddrette, flate vannrette.</value>
+  </data>
+  <data name="ENTF_entfernt_die_gefasste_oder_zuletzt_gesetzte_3ac4db32" xml:space="preserve">
+    <value>DEL fjerner den valgte eller sist plasserte linjen.</value>
+  </data>
+  <data name="Gef_hrte_Perspektive_03e5f2b8" xml:space="preserve">
+    <value>Veiledet perspektiv</value>
+  </data>
+  <data name="H_chstens_vier_Perspektivlinien_07ba69c1" xml:space="preserve">
+    <value>Høyst fire perspektivlinjer</value>
+  </data>
+  <data name="Die_Perspektivlinien_verlangen_zu_viel_die_Entze_cc904fe7" xml:space="preserve">
+    <value>Perspektivlinjene krever for mye, rettingen ble begrenset</value>
+  </data>
+  <data name="Die_Perspektivlinien_widersprechen_sich_5dd460a5" xml:space="preserve">
+    <value>Perspektivlinjene motsier hverandre</value>
+  </data>
+  <data name="Aus_diesen_Perspektivlinien_ergibt_sich_keine_g__fe242b73" xml:space="preserve">
+    <value>Disse perspektivlinjene gir ingen gyldig retting</value>
+  </data>
+  <data name="Perspektivlinien_entfernt_die_Ecken_bleiben_und__1c4ae4fb" xml:space="preserve">
+    <value>Perspektivlinjer fjernet, hjørnene blir stående og kan justeres</value>
+  </data>
+  <data name="Geometrie_0f3a847b" xml:space="preserve">
+    <value>Geometri</value>
+  </data>
+  <data name="Ausrichten_Drehen_und_Spiegeln_ed641188" xml:space="preserve">
+    <value>Rett opp, roter og speilvend</value>
+  </data>
+  <data name="Ein_Haken_ersetzt_diesen_Teil_der_Geometrie_durc_9320ba66" xml:space="preserve">
+    <value>En hake erstatter denne delen av geometrien med den kopierte bildets. Står et bilde på høykant der det kopierte lå ned, eller omvendt, blir beskjæringen som den er.</value>
+  </data>
+  <data name="Anpassungen_eingef_gt_ohne_Zuschnitt_das_Bild_st_2e2b5b10" xml:space="preserve">
+    <value>Justeringer limt inn, uten beskjæring: bildet står på høykant der det kopierte lå ned, eller omvendt.</value>
+  </data>
+  <data name="0_Bild_er_ohne_Zuschnitt_eingef_gt_sie_stehen_ho_293315ce" xml:space="preserve">
+    <value>{0} bilde(r) limt inn uten beskjæring: de står på høykant der det kopierte bildet lå ned, eller omvendt.</value>
+  </data>
+  <data name="An_feinen_roten_und_gr_nen_Mustern_weniger_Falsc_7376eb72" xml:space="preserve">
+    <value>Mindre falske farger i fine røde og grønne mønstre, nesten ingen forskjell på vanlige bilder. Omtrent like rask som standard.</value>
+  </data>
+  <data name="Etwas_weicher_als_die_Vorgabe_mit_mehr_Farbrausc_41a2a658" xml:space="preserve">
+    <value>Litt mykere enn standard, med mer fargestøy og av og til grønne kanter ved mørke konturer mot lys himmel. Tar flere ganger så lang tid.</value>
+  </data>
+  <data name="Ein_Durchgang_462aaf8e" xml:space="preserve">
+    <value>Én gjennomgang</value>
+  </data>
+  <data name="Drei_Durchg_nge_db150009" xml:space="preserve">
+    <value>Tre gjennomganger</value>
+  </data>
+  <data name="Gilt_f_r_Sensoren_mit_Bayer_Muster_also_fast_all_e61dea74" xml:space="preserve">
+    <value>Gjelder sensorer med Bayer-mønster, altså nesten alle kameraer. Fujifilms X-Trans-sensorer har sitt eget valg nedenfor.</value>
+  </data>
+  <data name="Durchg_nge_f_r_X_Trans_Sensoren_9d491de6" xml:space="preserve">
+    <value>Gjennomganger for X-Trans-sensorer</value>
+  </data>
+  <data name="Fujis_X_Trans_Sensoren_werden_mit_einem_eigenen__61f91da3" xml:space="preserve">
+    <value>Fujifilms X-Trans-sensorer fremkalles med en egen metode. Én gjennomgang måler det samme som tre og tar omtrent halve tiden. Miniatyrer lages på nytt etter en endring.</value>
+  </data>
+  <data name="Reglerzug_direkt_auf_der_Grafikkarte_zeigen_11829498" xml:space="preserve">
+    <value>Vis glidebryterdrag direkte på grafikkortet</value>
+  </data>
+  <data name="Zeigt_beim_Ziehen_an_Licht_und_Farbreglern_das_B_0a0889c7" xml:space="preserve">
+    <value>Når du drar i lys- og fargeglidebrytere, tegnes bildet direkte av vinduets grafikkort uten omvei via prosessoren. Når du slipper, beregnes bildet som før. Uten et egnet grafikkort blir alt værende på den tidligere måten.</value>
+  </data>
+  <data name="FerrumPix_wurde_beim_letzten_Mal_w_hrend_der_Anz_26ce1fbb" xml:space="preserve">
+    <value>FerrumPix ble sist avsluttet under visning på grafikkortet. Veien forblir av til bryteren slås av og på igjen.</value>
+  </data>
+  <data name="In_dieser_Sitzung_zeigt_der_Reglerzug_wieder_ber_6f14b7c2" xml:space="preserve">
+    <value>I denne økten vises glidebryterdrag igjen via prosessoren, fordi vinduet mangler grafikkort, selvtesten ikke bestod eller det var for tregt.</value>
+  </data>
+  <data name="Nachbarbilder_im_Viewer_vorentwickeln_341d1049" xml:space="preserve">
+    <value>Fremkall nabobilder i visningen på forhånd</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_W_hr_b8d534f5" xml:space="preserve">
+    <value>Gjelder når visningen selv fremkaller RAW-filer. Mens et bilde vises, fremkalles de tre neste bildene i bla-retningen og det forrige i bakgrunnen, slik at de vises uten ventetid når du blar. Dette viker for alt annet arbeid og bruker opptil 1 GB minne avhengig av bildestørrelsen.</value>
   </data>
 </root>

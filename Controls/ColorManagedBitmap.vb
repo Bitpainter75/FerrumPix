@@ -40,6 +40,13 @@ Namespace Controls
 
         Public Sub Draw(context As DrawingContext, sourceRect As Rect, destRect As Rect) Implements IImage.Draw
             Dim filter = DisplayProfileService.CurrentFilter
+            ' Im Reglerzug zeichnet die Karte des Fensters einen Rahmen statt der Bitmap
+            ' (GpuDragDisplay); sonst Nothing, und alles bleibt wie bisher.
+            Dim gpuFrame = GpuDragDisplay.TryCreateOperation(Bitmap, sourceRect, destRect, filter)
+            If gpuFrame IsNot Nothing Then
+                context.Custom(gpuFrame)
+                Return
+            End If
             If filter Is Nothing Then
                 context.DrawImage(Bitmap, sourceRect, destRect)
                 Return

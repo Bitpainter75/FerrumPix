@@ -250,7 +250,9 @@ Namespace ViewModels
     ''' (AdjustmentEntries). Vorbelegt sind die Regler, die im Bild vom Neutralwert abweichen.
     '''
     ''' DERSELBE DIALOG FUER "EINFUEGEN MIT AUSWAHL" (<see cref="IsPaste"/>): dann ohne Name und
-    ''' Ordner, vorbelegt mit dem, was in der Ablage vom Neutralwert abweicht.
+    ''' Ordner, vorbelegt mit dem, was in der Ablage vom Neutralwert abweicht. Nur dort gibt es
+    ''' darunter die drei Haken der Geometrie (Ausrichten, Perspektive, Zuschnitt), vorbelegt mit
+    ''' der letzten Wahl (<see cref="GeometryParts"/>, GeometryTransfer).
     '''
     ''' Der Dialog kennt weder das Bild noch den Bestand: der Editor baut ihn aus dem Rezept
     ''' (EditorViewModel.CreateAdjustmentPresetSaveDialog) und speichert nach dem Bestaetigen, was
@@ -274,6 +276,9 @@ Namespace ViewModels
         Private ReadOnly _exportFolder As String
         Private _chosenFile As String
         Private _fileConfirmedByPicker As Boolean
+        Private _pasteStraighten As Boolean
+        Private _pastePerspective As Boolean
+        Private _pasteCrop As Boolean
 
         Public ReadOnly Property Groups As New List(Of AdjustmentPresetGroupChoice)()
         Public ReadOnly Property SelectAllCommand As ICommand
@@ -333,6 +338,71 @@ Namespace ViewModels
             Next
             SelectAllCommand = ReactiveCommand.Create(Sub() SetAll(True))
             SelectNoneCommand = ReactiveCommand.Create(Sub() SetAll(False))
+            ' Die Geometrie gibt es nur beim Einfuegen; vorbelegt mit der letzten Wahl, ab Werk aus.
+            If isPaste Then
+                Dim remembered = GeometryTransfer.RememberedParts()
+                _pasteStraighten = remembered.HasFlag(GeometryTransferParts.Straighten)
+                _pastePerspective = remembered.HasFlag(GeometryTransferParts.Perspective)
+                _pasteCrop = remembered.HasFlag(GeometryTransferParts.Crop)
+            End If
+        End Sub
+
+        ''' Die Haken "Geometrie" gibt es nur beim Einfuegen: eine Vorlage nimmt keine Geometrie mit.
+        Public ReadOnly Property ShowsGeometryChoice As Boolean
+            Get
+                Return IsPaste
+            End Get
+        End Property
+
+        ''' Ausrichten, Vierteldrehung und Spiegelung aus der Ablage uebertragen.
+        Public Property PasteStraighten As Boolean
+            Get
+                Return _pasteStraighten
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_pasteStraighten, value)
+                Me.RaisePropertyChanged(NameOf(CanConfirm))
+            End Set
+        End Property
+
+        ''' Die Perspektive aus der Ablage uebertragen.
+        Public Property PastePerspective As Boolean
+            Get
+                Return _pastePerspective
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_pastePerspective, value)
+                Me.RaisePropertyChanged(NameOf(CanConfirm))
+            End Set
+        End Property
+
+        ''' Den Zuschnitt aus der Ablage uebertragen.
+        Public Property PasteCrop As Boolean
+            Get
+                Return _pasteCrop
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_pasteCrop, value)
+                Me.RaisePropertyChanged(NameOf(CanConfirm))
+            End Set
+        End Property
+
+        ''' <summary>Die gewaehlten Teile der Geometrie; beim Speichern immer keiner.</summary>
+        Public ReadOnly Property GeometryParts As GeometryTransferParts
+            Get
+                If Not IsPaste Then Return GeometryTransferParts.None
+                Dim parts = GeometryTransferParts.None
+                If _pasteStraighten Then parts = parts Or GeometryTransferParts.Straighten
+                If _pastePerspective Then parts = parts Or GeometryTransferParts.Perspective
+                If _pasteCrop Then parts = parts Or GeometryTransferParts.Crop
+                Return parts
+            End Get
+        End Property
+
+        ''' <summary>Merkt die Haken "Geometrie" fuer das naechste Einfuegen. Gerufen nach dem
+        ''' Bestaetigen, nicht bei jedem Klick: ein abgebrochener Dialog aendert die Vorgabe nicht.</summary>
+        Public Sub RememberGeometryChoice()
+            If IsPaste Then GeometryTransfer.RememberParts(GeometryParts)
         End Sub
 
         Public Property Name As String
@@ -565,11 +635,12 @@ Namespace ViewModels
         End Property
 
         ''' Ohne Namen oder ohne einen einzigen Haken gibt es nichts zu speichern; beim Einfuegen
-        ''' genuegt ein Haken. XMP und LUT brauchen dazu eine Datei.
+        ''' genuegt ein Haken, auch einer der Geometrie allein. XMP und LUT brauchen dazu eine Datei.
         Public ReadOnly Property CanConfirm As Boolean
             Get
                 Dim needsFile = Not IsPaste AndAlso Target <> AdjustmentSaveTarget.Preset
-                Return (IsPaste OrElse Not String.IsNullOrWhiteSpace(_name)) AndAlso HasSelection AndAlso
+                Return (IsPaste OrElse Not String.IsNullOrWhiteSpace(_name)) AndAlso
+                       (HasSelection OrElse GeometryParts <> GeometryTransferParts.None) AndAlso
                        (Not needsFile OrElse Not String.IsNullOrWhiteSpace(TargetFilePath))
             End Get
         End Property

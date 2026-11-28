@@ -46,8 +46,12 @@ Namespace ViewModels
                 Return _perspectiveHorizontal
             End Get
             Set(value As Double)
-                SetUndoableDouble(_perspectiveHorizontal, Math.Max(-100, Math.Min(100, value)),
-                                  NameOf(PerspectiveHorizontal))
+                Dim clamped = Math.Max(-100, Math.Min(100, value))
+                Dim changed = Math.Abs(clamped - _perspectiveHorizontal) >= 0.0001
+                SetUndoableDouble(_perspectiveHorizontal, clamped, NameOf(PerspectiveHorizontal))
+                ' Ein Griff von Hand nimmt die Perspektivlinien weg - nach dem Sichern, damit
+                ' STRG+Z sie mit zurueckholt. Das Rueckschreiben desselben Wertes zaehlt nicht.
+                If changed Then DropPerspectiveGuidesForManualGrip()
                 ApplyPerspectiveAutoFill()
                 RaisePerspectiveStateChanged()
             End Set
@@ -58,8 +62,10 @@ Namespace ViewModels
                 Return _perspectiveVertical
             End Get
             Set(value As Double)
-                SetUndoableDouble(_perspectiveVertical, Math.Max(-100, Math.Min(100, value)),
-                                  NameOf(PerspectiveVertical))
+                Dim clamped = Math.Max(-100, Math.Min(100, value))
+                Dim changed = Math.Abs(clamped - _perspectiveVertical) >= 0.0001
+                SetUndoableDouble(_perspectiveVertical, clamped, NameOf(PerspectiveVertical))
+                If changed Then DropPerspectiveGuidesForManualGrip()
                 ApplyPerspectiveAutoFill()
                 RaisePerspectiveStateChanged()
             End Set
@@ -167,9 +173,10 @@ Namespace ViewModels
 
         Private Sub ResetPerspectiveInternal()
             Dim hasCommitted = HasCommittedPerspective()
-            If Not HasPerspectiveChanges AndAlso Not hasCommitted Then Return
+            If Not HasPerspectiveChanges AndAlso Not hasCommitted AndAlso Not HasPerspectiveGuides Then Return
             CaptureUndoState("Verzerren")
             ResetCommittedPerspective()
+            ClearPerspectiveGuides()
             _perspectiveHorizontal = 0
             _perspectiveVertical = 0
             _perspectiveAspect = 0
@@ -216,6 +223,7 @@ Namespace ViewModels
                 _linienDragIndex = -1
                 _linienDragTeil = -1
                 _envelopeDragIndex = -1
+                CancelPerspectiveGuideDrag()
                 _liquifyStroking = False
                 StopLiquifyTimer()
                 DisposeGridPreview()
@@ -355,6 +363,7 @@ Namespace ViewModels
             Dim v = Math.Max(-60.0, Math.Min(60.0, value))
             If Math.Abs(_perspectiveCorners(index) - v) < 0.0001 Then Return
             CaptureUndoState("Verzerren")
+            DropPerspectiveGuidesForManualGrip()
             _perspectiveCorners(index) = v
             ApplyPerspectiveAutoFill()
             RaiseCornersChanged()
@@ -452,6 +461,8 @@ Namespace ViewModels
             Next
             If bester < 0 Then Return False
             PushUndo(CombineHistoryLabel("Verzerren", "Perspektive"))
+            ' Wer eine Ecke von Hand fasst, uebernimmt sie: die Perspektivlinien gehen weg.
+            DropPerspectiveGuidesForManualGrip()
             _perspectiveCornerDrag = bester
             _perspectiveDragStartX = _perspectiveCorners(bester * 2)
             _perspectiveDragStartY = _perspectiveCorners(bester * 2 + 1)
@@ -1028,13 +1039,19 @@ Namespace ViewModels
             Public Lines As List(Of WarpLine)
             Public LiquifyX As Double()
             Public LiquifyY As Double()
+            ''' <summary>Die Perspektivlinien (EditorViewModelPerspectiveGuides.vb). Ihr Ergebnis
+            ''' steht in den Ecken und damit im Rezept des Schritts; die Linien selbst nicht.</summary>
+            Public PerspectiveGuides As List(Of PerspectiveGuideLine)
+            ''' <summary>Die Ausrichtung vor der ersten Perspektivlinie, zu der "alle Linien weg"
+            ''' zurueckkehrt (siehe dort).</summary>
+            Public PerspectiveGuideStraightenBase As Double?
         End Class
 
         ''' <summary>Den offenen Arbeitsstand sichern - oder Nothing, wenn es keinen gibt. Die Felder
         ''' sind klein (ein 12er-Raster sind 338 Zahlen), das Sichern kostet also nichts.</summary>
         Private Function CaptureWarpSession() As WarpSessionState
             If _warpX Is Nothing AndAlso _envelope Is Nothing AndAlso _linien.Count = 0 AndAlso
-               _liquifyX Is Nothing Then Return Nothing
+               _liquifyX Is Nothing AndAlso _perspectiveGuides.Count = 0 Then Return Nothing
             ' Das Feld des Verfluessigens ist groesser (33 000 Zahlen), wird aber nur mitgenommen,
             ' wenn es bewegt ist.
             Dim liquifyMoved = HasLiquifyChanges
@@ -1045,13 +1062,22 @@ Namespace ViewModels
                 .Envelope = If(_envelope Is Nothing, Nothing, CType(_envelope.Clone(), Double())),
                 .Lines = _linien.Select(Function(l) l.Clone()).ToList(),
                 .LiquifyX = If(liquifyMoved, CType(_liquifyX.Clone(), Double()), Nothing),
-                .LiquifyY = If(liquifyMoved, CType(_liquifyY.Clone(), Double()), Nothing)}
+                .LiquifyY = If(liquifyMoved, CType(_liquifyY.Clone(), Double()), Nothing),
+                .PerspectiveGuides = CapturePerspectiveGuides(),
+                .PerspectiveGuideStraightenBase = _perspectiveGuideStraightenBase}
         End Function
 
         ''' <summary>Den gesicherten Arbeitsstand zurückholen. Ein laufender Zug wird dabei
         ''' abgebrochen und die Vorschau verworfen - sie zeigte sonst den Stand von vorhin.</summary>
         Private Sub RestoreWarpSession(state As WarpSessionState)
-            If state Is Nothing Then Return
+            ' Ohne gesicherten Stand lagen damals auch keine Perspektivlinien: ihr Vorhandensein
+            ' allein macht den Stand schon zu einem. Sie gehen deshalb auch hier weg, sonst holte
+            ' STRG+Z die erste Linie nicht zurueck, wohl aber die Ecken, die sie gesetzt hat.
+            If state Is Nothing Then
+                RestorePerspectiveGuides(Nothing, Nothing)
+                Return
+            End If
+            RestorePerspectiveGuides(state.PerspectiveGuides, state.PerspectiveGuideStraightenBase)
             _warpColumns = state.Columns
             _warpRows = state.Rows
             _warpX = If(state.GridX Is Nothing, Nothing, CType(state.GridX.Clone(), Double()))
@@ -2382,6 +2408,10 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(WarpsTheImage))
             Me.RaisePropertyChanged(NameOf(ShowsObjectCorners))
             Me.RaisePropertyChanged(NameOf(ShowsObjectFrameHandles))
+            ' Die Perspektivlinien gehoeren dem Bild; mit markiertem Objekt oder anderem Modus
+            ' liegen sie nicht ueber dem Bild.
+            Me.RaisePropertyChanged(NameOf(IsPerspectiveGuideActive))
+            Me.RaisePropertyChanged(NameOf(PerspectiveGuideValues))
         End Sub
 
         ' ── Gitter und Linien auf ein markiertes Objekt ─────────────────────────

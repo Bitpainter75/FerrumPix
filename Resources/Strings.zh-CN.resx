@@ -8142,9 +8142,6 @@
   <data name="Ein_Sensor_misst_je_Bildpunkt_nur_eine_Farbe_das_deddea65" xml:space="preserve">
     <value>传感器每个像素只测量一种颜色，该方法据此计算出完整图像。更改后会重新生成缩略图。</value>
   </data>
-  <data name="Feinere_Zeichnung_daf_r_mehr_Farbrauschen_und_et_f187bdb8" xml:space="preserve">
-    <value>细节更细腻，但色彩噪点更多，每张照片耗时约为两倍半。</value>
-  </data>
   <data name="Etwa_ein_F_nftel_schneller_als_die_Vorgabe_67a1755c" xml:space="preserve">
     <value>比默认方法快约五分之一。</value>
   </data>
@@ -13773,5 +13770,86 @@
   </data>
   <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
     <value>目录索引已在运行</value>
+  </data>
+  <data name="Perspektivlinien_7b6d24d3" xml:space="preserve">
+    <value>透视参考线</value>
+  </data>
+  <data name="Zwei_bis_vier_Linien_an_Kanten_ziehen_die_senkre_b57953f3" xml:space="preserve">
+    <value>沿应保持垂直或水平的边缘拖出两到四条线。陡的线变为垂直，平缓的线变为水平。</value>
+  </data>
+  <data name="ENTF_entfernt_die_gefasste_oder_zuletzt_gesetzte_3ac4db32" xml:space="preserve">
+    <value>按 DEL 删除选中的线或最后放置的线。</value>
+  </data>
+  <data name="Gef_hrte_Perspektive_03e5f2b8" xml:space="preserve">
+    <value>引导式透视</value>
+  </data>
+  <data name="H_chstens_vier_Perspektivlinien_07ba69c1" xml:space="preserve">
+    <value>最多四条透视参考线</value>
+  </data>
+  <data name="Die_Perspektivlinien_verlangen_zu_viel_die_Entze_cc904fe7" xml:space="preserve">
+    <value>透视参考线要求过大，矫正幅度已被限制</value>
+  </data>
+  <data name="Die_Perspektivlinien_widersprechen_sich_5dd460a5" xml:space="preserve">
+    <value>透视参考线相互矛盾</value>
+  </data>
+  <data name="Aus_diesen_Perspektivlinien_ergibt_sich_keine_g__fe242b73" xml:space="preserve">
+    <value>这些透视参考线无法得出有效的矫正</value>
+  </data>
+  <data name="Perspektivlinien_entfernt_die_Ecken_bleiben_und__1c4ae4fb" xml:space="preserve">
+    <value>已移除透视参考线，四角保持不变，可继续调整</value>
+  </data>
+  <data name="Geometrie_0f3a847b" xml:space="preserve">
+    <value>几何</value>
+  </data>
+  <data name="Ausrichten_Drehen_und_Spiegeln_ed641188" xml:space="preserve">
+    <value>拉直、旋转和翻转</value>
+  </data>
+  <data name="Ein_Haken_ersetzt_diesen_Teil_der_Geometrie_durc_9320ba66" xml:space="preserve">
+    <value>勾选后，几何的这一部分将替换为所复制照片的相应部分。若照片为竖幅而复制的照片为横幅（或相反），则保留其原有裁剪。</value>
+  </data>
+  <data name="Anpassungen_eingef_gt_ohne_Zuschnitt_das_Bild_st_2e2b5b10" xml:space="preserve">
+    <value>已粘贴调整，未包含裁剪：照片为竖幅而复制的照片为横幅，或相反。</value>
+  </data>
+  <data name="0_Bild_er_ohne_Zuschnitt_eingef_gt_sie_stehen_ho_293315ce" xml:space="preserve">
+    <value>{0} 张照片已粘贴但未包含裁剪：它们为竖幅而复制的照片为横幅，或相反。</value>
+  </data>
+  <data name="An_feinen_roten_und_gr_nen_Mustern_weniger_Falsc_7376eb72" xml:space="preserve">
+    <value>在细小的红色和绿色图案上伪色更少，普通照片几乎没有差别。速度与默认方法大致相同。</value>
+  </data>
+  <data name="Etwas_weicher_als_die_Vorgabe_mit_mehr_Farbrausc_41a2a658" xml:space="preserve">
+    <value>比默认方法稍软，色彩噪点更多，在明亮天空前的深色边缘偶尔出现绿边。耗时是默认的数倍。</value>
+  </data>
+  <data name="Ein_Durchgang_462aaf8e" xml:space="preserve">
+    <value>一遍</value>
+  </data>
+  <data name="Drei_Durchg_nge_db150009" xml:space="preserve">
+    <value>三遍</value>
+  </data>
+  <data name="Gilt_f_r_Sensoren_mit_Bayer_Muster_also_fast_all_e61dea74" xml:space="preserve">
+    <value>适用于拜耳阵列传感器，即几乎所有相机。富士 X-Trans 传感器在下方有单独的选项。</value>
+  </data>
+  <data name="Durchg_nge_f_r_X_Trans_Sensoren_9d491de6" xml:space="preserve">
+    <value>X-Trans 传感器的处理遍数</value>
+  </data>
+  <data name="Fujis_X_Trans_Sensoren_werden_mit_einem_eigenen__61f91da3" xml:space="preserve">
+    <value>富士 X-Trans 传感器使用专门的方法显影。实测一遍与三遍效果相同，耗时约为一半。更改后会重新生成缩略图。</value>
+  </data>
+  <data name="Nachbarbilder_im_Viewer_vorentwickeln_341d1049" xml:space="preserve">
+    <value>在查看器中预先冲洗相邻图像</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_W_hr_b8d534f5" xml:space="preserve">
+    <value>在查看器自行冲洗 RAW 时生效。显示一张图像时，会在后台冲洗浏览方向上的后三张和前一张，翻页时无需等待即可显示。此操作会让位于其他任何工作，并根据图像大小最多占用 1 GB 内存。</value>
+  </data>
+  <data name="Reglerzug_direkt_auf_der_Grafikkarte_zeigen_11829498" xml:space="preserve">
+    <value>直接在显卡上显示滑块拖动</value>
+  </data>
+  <data name="Zeigt_beim_Ziehen_an_Licht_und_Farbreglern_das_B_0a0889c7" xml:space="preserve">
+    <value>拖动光线和颜色滑块时，图像由窗口的显卡直接绘制，不再绕道处理器。松开后，图像照旧计算。没有合适的显卡时，一切保持原来的方式。</value>
+  </data>
+  <data name="FerrumPix_wurde_beim_letzten_Mal_w_hrend_der_Anz_26ce1fbb" xml:space="preserve">
+    <value>FerrumPix 上次在显卡显示期间被关闭。在开关关闭并重新打开一次之前，此方式保持关闭。</value>
+  </data>
+  <data name="In_dieser_Sitzung_zeigt_der_Reglerzug_wieder_ber_6f14b7c2" xml:space="preserve">
+    <value>本次会话中，滑块拖动重新通过处理器显示，因为窗口没有显卡、自检未通过或速度太慢。</value>
   </data>
 </root>

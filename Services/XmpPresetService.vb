@@ -153,7 +153,11 @@ Namespace Services
             If TryGetXmpDouble(values, "PerspectiveHorizontal", d) Then result.Geometry.PerspectiveHorizontal = CSng(Clamp100(d)) : result.HasTransform = True
             If TryGetXmpDouble(values, "PerspectiveVertical", d) Then result.Geometry.PerspectiveVertical = CSng(Clamp100(d)) : result.HasTransform = True
             If TryGetXmpDouble(values, "PerspectiveAspect", d) Then result.Geometry.PerspectiveAspect = CSng(Clamp100(d)) : result.HasTransform = True
-            If TryGetXmpDouble(values, "PerspectiveScale", d) Then result.Geometry.PerspectiveScale = CSng(Clamp100(d)) : result.HasTransform = True
+            ' PerspectiveScale steht im XMP als Prozent von 50 bis 150, neutral bei 100. Unsere Groesse
+            ' ist bei 0 neutral und wirkt als Faktor 1 + Wert/200 (WarpMatrix): 150 Prozent sind also
+            ' 100, 50 Prozent sind -100. Uebernommen wie gelesen hiess das neutrale 100 Faktor 1,5,
+            ' und ein Preset mit Transformation holte das Bild ungewollt heran.
+            If TryGetXmpDouble(values, "PerspectiveScale", d) Then result.Geometry.PerspectiveScale = CSng(Clamp100((d - 100.0) * 2.0)) : result.HasTransform = True
             Dim leftValue As Double, topValue As Double, rightValue As Double, bottomValue As Double
             Dim hasLeft = TryGetXmpDouble(values, "CropLeft", leftValue)
             Dim hasTop = TryGetXmpDouble(values, "CropTop", topValue)

@@ -1221,6 +1221,13 @@
                                                          StrokeBrush="{DynamicResource FP.Accent}"
                                                          IsHitTestVisible="False"
                                                          IsVisible="False" />
+                        <!-- Die Perspektivlinien liegen statt der Eckanfasser ueber dem Bild,
+                             solange ihr Umschalter in der Gruppe Perspektive an ist. -->
+                        <icons:PerspectiveGuideOverlayControl x:Name="PerspectiveGuideOverlay"
+                                                              ZIndex="10"
+                                                              StrokeBrush="{DynamicResource FP.Accent}"
+                                                              IsHitTestVisible="False"
+                                                              IsVisible="False" />
                         <icons:GridWarpOverlayControl x:Name="GridWarpOverlay"
                                                       ZIndex="10"
                                                       StrokeBrush="{DynamicResource FP.Accent}"

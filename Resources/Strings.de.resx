@@ -8144,9 +8144,6 @@
   <data name="Ein_Sensor_misst_je_Bildpunkt_nur_eine_Farbe_das_deddea65" xml:space="preserve">
     <value>Ein Sensor misst je Bildpunkt nur eine Farbe; das Verfahren rechnet daraus das vollständige Bild. Vorschaubilder werden nach einer Änderung neu erzeugt.</value>
   </data>
-  <data name="Feinere_Zeichnung_daf_r_mehr_Farbrauschen_und_et_f187bdb8" xml:space="preserve">
-    <value>Feinere Zeichnung, dafür mehr Farbrauschen und etwa zweieinhalbmal so lange je Bild.</value>
-  </data>
   <data name="Etwa_ein_F_nftel_schneller_als_die_Vorgabe_67a1755c" xml:space="preserve">
     <value>Etwa ein Fünftel schneller als die Vorgabe.</value>
   </data>
@@ -13793,5 +13790,86 @@
   </data>
   <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
     <value>Der Katalogindex läuft bereits</value>
+  </data>
+  <data name="Perspektivlinien_7b6d24d3" xml:space="preserve">
+    <value>Perspektivlinien</value>
+  </data>
+  <data name="Zwei_bis_vier_Linien_an_Kanten_ziehen_die_senkre_b57953f3" xml:space="preserve">
+    <value>Zwei bis vier Linien an Kanten ziehen, die senkrecht oder waagerecht stehen sollen. Steile Linien werden senkrecht, flache waagerecht.</value>
+  </data>
+  <data name="ENTF_entfernt_die_gefasste_oder_zuletzt_gesetzte_3ac4db32" xml:space="preserve">
+    <value>ENTF entfernt die gefasste oder zuletzt gesetzte Linie.</value>
+  </data>
+  <data name="Gef_hrte_Perspektive_03e5f2b8" xml:space="preserve">
+    <value>Geführte Perspektive</value>
+  </data>
+  <data name="H_chstens_vier_Perspektivlinien_07ba69c1" xml:space="preserve">
+    <value>Höchstens vier Perspektivlinien</value>
+  </data>
+  <data name="Die_Perspektivlinien_verlangen_zu_viel_die_Entze_cc904fe7" xml:space="preserve">
+    <value>Die Perspektivlinien verlangen zu viel, die Entzerrung wurde begrenzt</value>
+  </data>
+  <data name="Die_Perspektivlinien_widersprechen_sich_5dd460a5" xml:space="preserve">
+    <value>Die Perspektivlinien widersprechen sich</value>
+  </data>
+  <data name="Aus_diesen_Perspektivlinien_ergibt_sich_keine_g__fe242b73" xml:space="preserve">
+    <value>Aus diesen Perspektivlinien ergibt sich keine gültige Entzerrung</value>
+  </data>
+  <data name="Perspektivlinien_entfernt_die_Ecken_bleiben_und__1c4ae4fb" xml:space="preserve">
+    <value>Perspektivlinien entfernt, die Ecken bleiben und lassen sich nachziehen</value>
+  </data>
+  <data name="Geometrie_0f3a847b" xml:space="preserve">
+    <value>Geometrie</value>
+  </data>
+  <data name="Ausrichten_Drehen_und_Spiegeln_ed641188" xml:space="preserve">
+    <value>Ausrichten, Drehen und Spiegeln</value>
+  </data>
+  <data name="Ein_Haken_ersetzt_diesen_Teil_der_Geometrie_durc_9320ba66" xml:space="preserve">
+    <value>Ein Haken ersetzt diesen Teil der Geometrie durch den des kopierten Bildes. Steht ein Bild hoch, wo das kopierte quer stand, oder umgekehrt, bleibt sein Zuschnitt, wie er ist.</value>
+  </data>
+  <data name="Anpassungen_eingef_gt_ohne_Zuschnitt_das_Bild_st_2e2b5b10" xml:space="preserve">
+    <value>Anpassungen eingefügt, ohne Zuschnitt: das Bild steht hoch, wo das kopierte quer stand, oder umgekehrt.</value>
+  </data>
+  <data name="0_Bild_er_ohne_Zuschnitt_eingef_gt_sie_stehen_ho_293315ce" xml:space="preserve">
+    <value>{0} Bild(er) ohne Zuschnitt eingefügt: sie stehen hoch, wo das kopierte Bild quer stand, oder umgekehrt.</value>
+  </data>
+  <data name="An_feinen_roten_und_gr_nen_Mustern_weniger_Falsc_7376eb72" xml:space="preserve">
+    <value>An feinen roten und grünen Mustern weniger Falschfarben, an gewöhnlichen Fotos kaum ein Unterschied. Etwa so schnell wie die Vorgabe.</value>
+  </data>
+  <data name="Etwas_weicher_als_die_Vorgabe_mit_mehr_Farbrausc_41a2a658" xml:space="preserve">
+    <value>Etwas weicher als die Vorgabe, mit mehr Farbrauschen und an dunklen Kanten vor hellem Himmel mitunter grünen Säumen. Braucht ein Mehrfaches der Zeit.</value>
+  </data>
+  <data name="Ein_Durchgang_462aaf8e" xml:space="preserve">
+    <value>Ein Durchgang</value>
+  </data>
+  <data name="Drei_Durchg_nge_db150009" xml:space="preserve">
+    <value>Drei Durchgänge</value>
+  </data>
+  <data name="Gilt_f_r_Sensoren_mit_Bayer_Muster_also_fast_all_e61dea74" xml:space="preserve">
+    <value>Gilt für Sensoren mit Bayer-Muster, also fast alle Kameras. Fujis X-Trans-Sensoren haben die eigene Wahl darunter.</value>
+  </data>
+  <data name="Durchg_nge_f_r_X_Trans_Sensoren_9d491de6" xml:space="preserve">
+    <value>Durchgänge für X-Trans-Sensoren</value>
+  </data>
+  <data name="Fujis_X_Trans_Sensoren_werden_mit_einem_eigenen__61f91da3" xml:space="preserve">
+    <value>Fujis X-Trans-Sensoren werden mit einem eigenen Verfahren entwickelt. Ein Durchgang sieht gemessen gleich aus wie drei und braucht etwa die halbe Zeit. Vorschaubilder werden nach einer Änderung neu erzeugt.</value>
+  </data>
+  <data name="Reglerzug_direkt_auf_der_Grafikkarte_zeigen_11829498" xml:space="preserve">
+    <value>Reglerzug direkt auf der Grafikkarte zeigen</value>
+  </data>
+  <data name="Zeigt_beim_Ziehen_an_Licht_und_Farbreglern_das_B_0a0889c7" xml:space="preserve">
+    <value>Zeigt beim Ziehen an Licht- und Farbreglern das Bild direkt über die Grafikkarte des Fensters, ohne Umweg über den Prozessor. Nach dem Loslassen entsteht das Bild wie bisher. Ohne passende Grafikkarte bleibt alles beim bisherigen Weg.</value>
+  </data>
+  <data name="FerrumPix_wurde_beim_letzten_Mal_w_hrend_der_Anz_26ce1fbb" xml:space="preserve">
+    <value>FerrumPix wurde beim letzten Mal während der Anzeige auf der Grafikkarte beendet. Der Weg bleibt aus, bis der Schalter einmal aus- und wieder eingeschaltet wird.</value>
+  </data>
+  <data name="In_dieser_Sitzung_zeigt_der_Reglerzug_wieder_ber_6f14b7c2" xml:space="preserve">
+    <value>In dieser Sitzung zeigt der Reglerzug wieder über den Prozessor, weil die Grafikkarte des Fensters fehlt, die Selbstprüfung nicht bestanden hat oder zu langsam war.</value>
+  </data>
+  <data name="Nachbarbilder_im_Viewer_vorentwickeln_341d1049" xml:space="preserve">
+    <value>Nachbarbilder im Viewer vorentwickeln</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_W_hr_b8d534f5" xml:space="preserve">
+    <value>Gilt, wenn der Viewer RAWs selbst entwickelt. Während ein Bild zu sehen ist, werden im Hintergrund die nächsten drei Bilder in Blätterrichtung und das vorige entwickelt, damit sie beim Blättern ohne Wartezeit erscheinen. Das weicht jeder anderen Arbeit und belegt je nach Bildgröße bis zu 1 GB Arbeitsspeicher.</value>
   </data>
 </root>

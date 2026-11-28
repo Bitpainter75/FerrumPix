@@ -8184,9 +8184,6 @@
   <data name="Ein_Sensor_misst_je_Bildpunkt_nur_eine_Farbe_das_deddea65" xml:space="preserve">
     <value>センサーは画素ごとに一色しか測定しません。この方式はそこから完全な画像を計算します。変更後はサムネイルが作り直されます。</value>
   </data>
-  <data name="Feinere_Zeichnung_daf_r_mehr_Farbrauschen_und_et_f187bdb8" xml:space="preserve">
-    <value>描写がより繊細になりますが、色ノイズが増え、1枚あたり約2.5倍の時間がかかります。</value>
-  </data>
   <data name="Etwa_ein_F_nftel_schneller_als_die_Vorgabe_67a1755c" xml:space="preserve">
     <value>既定より約5分の1速くなります。</value>
   </data>
@@ -13815,5 +13812,86 @@
   </data>
   <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
     <value>カタログのインデックス作成はすでに実行中です</value>
+  </data>
+  <data name="Perspektivlinien_7b6d24d3" xml:space="preserve">
+    <value>遠近ライン</value>
+  </data>
+  <data name="Zwei_bis_vier_Linien_an_Kanten_ziehen_die_senkre_b57953f3" xml:space="preserve">
+    <value>垂直または水平にしたい縁に沿って、2 本から 4 本の線を引きます。急な線は垂直に、緩やかな線は水平になります。</value>
+  </data>
+  <data name="ENTF_entfernt_die_gefasste_oder_zuletzt_gesetzte_3ac4db32" xml:space="preserve">
+    <value>DEL で選択中の線、または最後に置いた線を削除します。</value>
+  </data>
+  <data name="Gef_hrte_Perspektive_03e5f2b8" xml:space="preserve">
+    <value>ガイド付き遠近補正</value>
+  </data>
+  <data name="H_chstens_vier_Perspektivlinien_07ba69c1" xml:space="preserve">
+    <value>遠近ラインは最大 4 本です</value>
+  </data>
+  <data name="Die_Perspektivlinien_verlangen_zu_viel_die_Entze_cc904fe7" xml:space="preserve">
+    <value>遠近ラインの要求が大きすぎるため、補正を制限しました</value>
+  </data>
+  <data name="Die_Perspektivlinien_widersprechen_sich_5dd460a5" xml:space="preserve">
+    <value>遠近ラインが互いに矛盾しています</value>
+  </data>
+  <data name="Aus_diesen_Perspektivlinien_ergibt_sich_keine_g__fe242b73" xml:space="preserve">
+    <value>これらの遠近ラインからは有効な補正が得られません</value>
+  </data>
+  <data name="Perspektivlinien_entfernt_die_Ecken_bleiben_und__1c4ae4fb" xml:space="preserve">
+    <value>遠近ラインを削除しました。四隅はそのまま残り、調整できます</value>
+  </data>
+  <data name="Geometrie_0f3a847b" xml:space="preserve">
+    <value>ジオメトリ</value>
+  </data>
+  <data name="Ausrichten_Drehen_und_Spiegeln_ed641188" xml:space="preserve">
+    <value>角度補正、回転、反転</value>
+  </data>
+  <data name="Ein_Haken_ersetzt_diesen_Teil_der_Geometrie_durc_9320ba66" xml:space="preserve">
+    <value>チェックを入れると、ジオメトリのこの部分がコピーした写真のものに置き換わります。コピーした写真が横向きで写真が縦向きの場合（またはその逆）、切り抜きはそのまま残ります。</value>
+  </data>
+  <data name="Anpassungen_eingef_gt_ohne_Zuschnitt_das_Bild_st_2e2b5b10" xml:space="preserve">
+    <value>調整を貼り付けました（切り抜きなし）：コピーした写真が横向きなのに対し、この写真は縦向きです（またはその逆）。</value>
+  </data>
+  <data name="0_Bild_er_ohne_Zuschnitt_eingef_gt_sie_stehen_ho_293315ce" xml:space="preserve">
+    <value>{0} 枚の写真を切り抜きなしで貼り付けました：コピーした写真が横向きなのに対し、縦向きです（またはその逆）。</value>
+  </data>
+  <data name="An_feinen_roten_und_gr_nen_Mustern_weniger_Falsc_7376eb72" xml:space="preserve">
+    <value>細かい赤と緑の模様で偽色が少なく、普通の写真ではほとんど違いがありません。速度は既定とほぼ同じです。</value>
+  </data>
+  <data name="Etwas_weicher_als_die_Vorgabe_mit_mehr_Farbrausc_41a2a658" xml:space="preserve">
+    <value>既定よりやや柔らかく、色ノイズが多く、明るい空を背景にした暗い輪郭に緑の縁が出ることがあります。処理時間は数倍かかります。</value>
+  </data>
+  <data name="Ein_Durchgang_462aaf8e" xml:space="preserve">
+    <value>1回</value>
+  </data>
+  <data name="Drei_Durchg_nge_db150009" xml:space="preserve">
+    <value>3回</value>
+  </data>
+  <data name="Gilt_f_r_Sensoren_mit_Bayer_Muster_also_fast_all_e61dea74" xml:space="preserve">
+    <value>ベイヤー配列のセンサー、つまりほぼすべてのカメラに適用されます。富士フイルムの X-Trans センサーには下に専用の選択があります。</value>
+  </data>
+  <data name="Durchg_nge_f_r_X_Trans_Sensoren_9d491de6" xml:space="preserve">
+    <value>X-Trans センサーの処理回数</value>
+  </data>
+  <data name="Fujis_X_Trans_Sensoren_werden_mit_einem_eigenen__61f91da3" xml:space="preserve">
+    <value>富士フイルムの X-Trans センサーは専用の方式で現像されます。1回でも測定上は3回と同じで、時間は約半分です。変更後はサムネイルが作り直されます。</value>
+  </data>
+  <data name="Reglerzug_direkt_auf_der_Grafikkarte_zeigen_11829498" xml:space="preserve">
+    <value>スライダーのドラッグをグラフィックカードで直接表示</value>
+  </data>
+  <data name="Zeigt_beim_Ziehen_an_Licht_und_Farbreglern_das_B_0a0889c7" xml:space="preserve">
+    <value>光と色のスライダーをドラッグしている間、画像はウィンドウのグラフィックカードが直接描画し、プロセッサーを経由しません。離した後は、これまでどおり画像を計算します。適したグラフィックカードがない場合は、すべて従来の方法のままです。</value>
+  </data>
+  <data name="FerrumPix_wurde_beim_letzten_Mal_w_hrend_der_Anz_26ce1fbb" xml:space="preserve">
+    <value>前回、FerrumPix はグラフィックカードでの表示中に終了しました。スイッチを一度オフにしてから再びオンにするまで、この方法はオフのままです。</value>
+  </data>
+  <data name="In_dieser_Sitzung_zeigt_der_Reglerzug_wieder_ber_6f14b7c2" xml:space="preserve">
+    <value>このセッションでは、ウィンドウのグラフィックカードがない、セルフテストに失敗した、または遅すぎたため、スライダーのドラッグを再びプロセッサー経由で表示しています。</value>
+  </data>
+  <data name="Nachbarbilder_im_Viewer_vorentwickeln_341d1049" xml:space="preserve">
+    <value>ビューアーで隣の画像を先に現像する</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_W_hr_b8d534f5" xml:space="preserve">
+    <value>ビューアーが RAW を自分で現像する場合に有効です。画像を表示している間に、送り方向の次の 3 枚と前の 1 枚をバックグラウンドで現像し、めくるときに待たずに表示します。ほかの処理があれば常にそちらを優先し、画像サイズに応じて最大 1 GB のメモリを使います。</value>
   </data>
 </root>

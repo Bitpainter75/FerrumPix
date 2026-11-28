@@ -44,6 +44,7 @@ Namespace ViewModels
         Private _viewerTransitionTile As Boolean = False
         Private _compareRawFullResolution As Boolean = False
         Private _viewerRawFullResolution As Boolean = False
+        Private _prefetchNeighborsInViewer As Boolean = True
         Private _developRawInBatch As Boolean = True
         Private _thumbnailCacheEnabled As Boolean = True
         Private _viewerOpenFitToWindow As Boolean = True
@@ -122,6 +123,7 @@ Namespace ViewModels
         Private _savedHiddenAdjustmentGroups As String = ""
         Private _savedGpuAccelerationEnabled As Boolean = False
         Private _savedGpuImageProcessing As Boolean = False
+        Private _savedGpuDragDisplay As Boolean = True
         Private _savedModelThreadCount As Integer = 0
         ' Heisst wie die EIGENSCHAFT und nicht wie das Feld dahinter, damit der Waechter ihn ohne
         ' Sonderregel findet; sein Inhalt ist der Schluessel der Karte, kein Listeneintrag.
@@ -262,6 +264,7 @@ Namespace ViewModels
         Private _savedViewerTransitionTile As Boolean = False
         Private _savedCompareRawFullResolution As Boolean = False
         Private _savedViewerRawFullResolution As Boolean = False
+        Private _savedPrefetchNeighborsInViewer As Boolean = True
         Private _savedThumbnailCacheEnabled As Boolean = True
         Private _savedShowHiddenFolders As Boolean = False
         Private _savedGalleryShowCatalogOnlyFolders As Boolean = True
@@ -341,6 +344,7 @@ Namespace ViewModels
         Private _gpuAccelerationDevice As String = ""
         Private _gpuAccelerationBusy As Boolean = False
         Private _gpuImageProcessing As Boolean = False
+        Private _gpuDragDisplay As Boolean = True
         ''' Wie gemerkt: 0 heisst Vorgabe (die Haelfte der Kerne).
         Private _modelThreadCount As Integer = 0
         Private _gpuImageCheckBusy As Boolean = False
@@ -960,6 +964,19 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Die Nachbarbilder im Betrachter im Leerlauf vorentwickeln (Standard AN). Wirkt nur,
+        ''' wo der Betrachter entwickelt, und ab dem naechsten Bild.</summary>
+        Public Property PrefetchNeighborsInViewer As Boolean
+            Get
+                Return _prefetchNeighborsInViewer
+            End Get
+            Set(value As Boolean)
+                If _prefetchNeighborsInViewer = value Then Return
+                Me.RaiseAndSetIfChanged(_prefetchNeighborsInViewer, value)
+                SavePerformanceSettings()
+            End Set
+        End Property
+
         ''' <summary>RAWs OHNE .fpxmp-Rezept auch in den Stapelfunktionen voll entwickeln. Mit
         ''' Rezept wird immer entwickelt - dort waere die eingebettete Vorschau das falsche Bild.
         ''' Der Schalter wirkt beim naechsten Stapellauf; laufende Ablaeufe lesen ihn nicht neu.</summary>
@@ -1293,8 +1310,10 @@ Namespace ViewModels
                 ' sammelt die Texte aus dem Quelltext, und ein zusammengesetzter Text faellt dort
                 ' durch - er waere zur Laufzeit ein anderer Schluessel als der gefundene.
                 Select Case AppSettingsService.NormalizeRawDemosaicAlgorithm(_rawDemosaicAlgorithm)
+                    Case "DHT"
+                        Return LocalizationService.T("An feinen roten und grünen Mustern weniger Falschfarben, an gewöhnlichen Fotos kaum ein Unterschied. Etwa so schnell wie die Vorgabe.")
                     Case "DCB"
-                        Return LocalizationService.T("Feinere Zeichnung, dafür mehr Farbrauschen und etwa zweieinhalbmal so lange je Bild.")
+                        Return LocalizationService.T("Etwas weicher als die Vorgabe, mit mehr Farbrauschen und an dunklen Kanten vor hellem Himmel mitunter grünen Säumen. Braucht ein Mehrfaches der Zeit.")
                     Case "PPG"
                         Return LocalizationService.T("Etwa ein Fünftel schneller als die Vorgabe.")
                     Case Else
@@ -1302,6 +1321,44 @@ Namespace ViewModels
                 End Select
             End Get
         End Property
+
+        ''' <summary>Die Durchgaenge der X-Trans-Interpolation. Die Eintraege tragen die Zahl als Key
+        ''' und den UEBERSETZTEN Namen; nach einem Sprachwechsel zieht RefreshLocalization die Namen
+        ''' am selben Eintrag nach.</summary>
+        Public ReadOnly Property RawXTransPassesOptions As New ObservableCollection(Of RawXTransPassesOption)()
+
+        Private Sub BuildRawXTransPassesOptions()
+            For Each key In AppSettingsService.RawXTransPassesChoices
+                Dim name = If(key = 1, LocalizationService.T("Ein Durchgang"), LocalizationService.T("Drei Durchgänge"))
+                Dim existing = RawXTransPassesOptions.FirstOrDefault(Function(o) o.Key = key)
+                If existing Is Nothing Then
+                    RawXTransPassesOptions.Add(New RawXTransPassesOption With {.Key = key, .Name = name})
+                Else
+                    existing.Name = name
+                End If
+            Next
+            Me.RaisePropertyChanged(NameOf(SelectedRawXTransPasses))
+        End Sub
+
+        ''' <summary>Die gewaehlten Durchgaenge. Sie wirken nur auf Dateien mit X-Trans-Muster, und
+        ''' dort allein; das Bayer-Verfahren darueber gilt fuer sie nicht. Kacheln tragen die Wahl
+        ''' im Namen, wenn sie das Bild aendert, und werden dann von selbst neu erzeugt.</summary>
+        Public Property SelectedRawXTransPasses As RawXTransPassesOption
+            Get
+                Dim key = AppSettingsService.NormalizeRawXTransPasses(_rawXTransPasses)
+                Return If(RawXTransPassesOptions.FirstOrDefault(Function(o) o.Key = key),
+                          RawXTransPassesOptions.FirstOrDefault())
+            End Get
+            Set(value As RawXTransPassesOption)
+                If value Is Nothing Then Return
+                Dim key = AppSettingsService.NormalizeRawXTransPasses(value.Key)
+                If _rawXTransPasses = key Then Return
+                _rawXTransPasses = key
+                AppSettingsService.Update(Sub(s) s.RawXTransPasses = key)
+                Me.RaisePropertyChanged(NameOf(SelectedRawXTransPasses))
+            End Set
+        End Property
+        Private _rawXTransPasses As Integer = AppSettingsService.RawXTransPassesDefault
 
         ''' <summary>Wie viele Objektive die mitgelieferte Sammlung kennt - fuer den Beschreibungstext
         ''' unter dem Schalter.</summary>
@@ -4191,6 +4248,50 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Den Reglerzug an Licht und Farbe direkt auf der Grafikkarte des Fensters zeigen
+        ''' (Controls.GpuDragDisplay). Wirkt beim naechsten Zug. Wer ihn wieder einschaltet, gibt
+        ''' dem Weg eine neue Chance: eine liegengebliebene Marke und die Sperre der Sitzung fallen.</summary>
+        Public Property GpuDragDisplay As Boolean
+            Get
+                Return _gpuDragDisplay
+            End Get
+            Set(value As Boolean)
+                If _gpuDragDisplay = value Then Return
+                Me.RaiseAndSetIfChanged(_gpuDragDisplay, value)
+                AppSettingsService.Update(Sub(s) s.GpuDragDisplay = _gpuDragDisplay)
+                If value Then Controls.GpuDragDisplay.ResetAfterSwitch()
+                Me.RaisePropertyChanged(NameOf(GpuDragDisplayStatusText))
+                Me.RaisePropertyChanged(NameOf(HasGpuDragDisplayStatus))
+            End Set
+        End Property
+
+        ''' <summary>Nur unter Linux: unter Windows und macOS ist der Weg am Geraet nicht geprueft.</summary>
+        Public ReadOnly Property GpuDragDisplayAvailable As Boolean
+            Get
+                Return Controls.GpuDragDisplay.PlatformSupported
+            End Get
+        End Property
+
+        ''' <summary>Warum der Weg in dieser Sitzung aus ist; leer, wenn nichts dagegen spricht.</summary>
+        Public ReadOnly Property GpuDragDisplayStatusText As String
+            Get
+                If Not _gpuDragDisplay Then Return ""
+                If Controls.GpuDragDisplay.SwitchedOffAfterCrash Then
+                    Return LocalizationService.T("FerrumPix wurde beim letzten Mal während der Anzeige auf der Grafikkarte beendet. Der Weg bleibt aus, bis der Schalter einmal aus- und wieder eingeschaltet wird.")
+                End If
+                If Controls.GpuDragDisplay.SwitchedOff Then
+                    Return LocalizationService.T("In dieser Sitzung zeigt der Reglerzug wieder über den Prozessor, weil die Grafikkarte des Fensters fehlt, die Selbstprüfung nicht bestanden hat oder zu langsam war.")
+                End If
+                Return ""
+            End Get
+        End Property
+
+        Public ReadOnly Property HasGpuDragDisplayStatus As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(GpuDragDisplayStatusText)
+            End Get
+        End Property
+
         ''' <summary>Mit wie vielen Faeden des Prozessors die Modelle rechnen. Wirkt ohne Neustart:
         ''' die naechste Modellnutzung baut ihre Sitzung mit der neuen Zahl (AiModelService). Steht
         ''' der Regler auf der Vorgabe, wird 0 gemerkt, damit die Einstellungen auf einem anderen
@@ -5547,6 +5648,7 @@ Namespace ViewModels
             _viewerTransitionTile = _appSettings.ViewerTransitionTile
             _compareRawFullResolution = _appSettings.CompareRawFullResolution
             _viewerRawFullResolution = _appSettings.ViewerRawFullResolution
+            _prefetchNeighborsInViewer = _appSettings.PrefetchNeighborsInViewer
             _developRawInBatch = _appSettings.DevelopRawInBatch
             _useCameraBaselineTable = _appSettings.UseCameraBaselineTable
             _useCameraColorTable = _appSettings.UseCameraColorTable
@@ -5555,6 +5657,7 @@ Namespace ViewModels
             _uneditedRawSharpness = Math.Max(0, Math.Min(150, _appSettings.UneditedRawSharpness))
             _uneditedRawNoiseReduction = Math.Max(0, Math.Min(100, _appSettings.UneditedRawNoiseReduction))
             _rawDemosaicAlgorithm = AppSettingsService.NormalizeRawDemosaicAlgorithm(_appSettings.RawDemosaicAlgorithm)
+            _rawXTransPasses = AppSettingsService.NormalizeRawXTransPasses(_appSettings.RawXTransPasses)
             _windowColorSpaceMethod = MacWindowColorSpaceService.NormalizeMethod(_appSettings.MacWindowColorSpaceMethod)
             _macRenderingMode = AppSettingsService.NormalizeMacRenderingMode(_appSettings.MacRenderingMode)
             _thumbnailCacheEnabled = _appSettings.ThumbnailCacheEnabled
@@ -5658,6 +5761,7 @@ Namespace ViewModels
             _gpuAccelerationEnabled = _appSettings.GpuAccelerationEnabled
             _keepModelDenoiseFiles = _appSettings.KeepModelDenoiseFiles
             _gpuImageProcessing = _appSettings.GpuImageProcessing
+            _gpuDragDisplay = _appSettings.GpuDragDisplay
             _modelThreadCount = AppSettingsService.NormalizeModelThreadCount(_appSettings.ModelThreadCount)
             ' Der Tempovergleich der Karte kommt nach der Selbstpruefung im Hintergrund.
             AddHandler ImageProcessor.GpuCheckChanged,
@@ -5866,6 +5970,7 @@ Namespace ViewModels
             LocalizationService.DateFormatMode = _dateFormatMode
             BuildDateFormatOptions()
             BuildPickerReadoutOptions()
+            BuildRawXTransPassesOptions()
             SnapshotSettings()
         End Sub
 
@@ -5990,6 +6095,7 @@ Namespace ViewModels
             _savedHiddenAdjustmentGroups = _versteckteAnpassungsgruppen
             _savedGpuAccelerationEnabled = _gpuAccelerationEnabled
             _savedGpuImageProcessing = _gpuImageProcessing
+            _savedGpuDragDisplay = _gpuDragDisplay
             _savedModelThreadCount = _modelThreadCount
             _savedSelectedGpuDevice = _gpuAccelerationDevice
             _savedGpuModelBlocks = GpuModelBlockService.Entries()
@@ -6041,6 +6147,7 @@ Namespace ViewModels
             _savedViewerTransitionTile = _viewerTransitionTile
             _savedCompareRawFullResolution = _compareRawFullResolution
             _savedViewerRawFullResolution = _viewerRawFullResolution
+            _savedPrefetchNeighborsInViewer = _prefetchNeighborsInViewer
             _savedThumbnailCacheEnabled = _thumbnailCacheEnabled
             _savedImmichEnabled = _immichEnabled
             _savedImmichServerUrl = _immichServerUrl
@@ -6235,6 +6342,7 @@ Namespace ViewModels
             HiddenAdjustmentGroups = _savedHiddenAdjustmentGroups
             GpuAccelerationEnabled = _savedGpuAccelerationEnabled
             GpuImageProcessing = _savedGpuImageProcessing
+            GpuDragDisplay = _savedGpuDragDisplay
             ModelThreads = AppSettingsService.EffectiveModelThreadCount(_savedModelThreadCount)
             SelectedGpuDevice = GpuDeviceOptions.FirstOrDefault(
                 Function(o) String.Equals(o.Key, _savedSelectedGpuDevice, StringComparison.Ordinal))
@@ -6295,6 +6403,7 @@ Namespace ViewModels
             ViewerTransitionTile = _savedViewerTransitionTile
             CompareRawFullResolution = _savedCompareRawFullResolution
             ViewerRawFullResolution = _savedViewerRawFullResolution
+            PrefetchNeighborsInViewer = _savedPrefetchNeighborsInViewer
             ThumbnailCacheEnabled = _savedThumbnailCacheEnabled
             ImmichServerUrl = _savedImmichServerUrl
             ImmichApiKey = _savedImmichApiKey
@@ -6469,6 +6578,7 @@ Namespace ViewModels
             ViewerTransitionTile = False
             CompareRawFullResolution = False
             ViewerRawFullResolution = False
+            PrefetchNeighborsInViewer = True
             ThumbnailCacheEnabled = True
             ThumbnailQuality = 82
             ThumbnailHighResolution = New AppSettings().ThumbnailHighResolution
@@ -6551,6 +6661,7 @@ Namespace ViewModels
             GpuAccelerationEnabled = False
             SelectedGpuDevice = GpuDeviceOptions.FirstOrDefault()
             GpuImageProcessing = False
+            GpuDragDisplay = True
             ModelThreads = AppSettingsService.DefaultModelThreadCount()
             ' Das Ausschalten der Erkennung loescht hier NICHTS im Stillen: der Schalter fragt vor
             ' dem Entfernen der gefundenen Gesichter nach (siehe SaveFeatureSettings).
@@ -7017,6 +7128,7 @@ Namespace ViewModels
                                           s.ViewerTransitionTile = _viewerTransitionTile
                                           s.CompareRawFullResolution = _compareRawFullResolution
                                           s.ViewerRawFullResolution = _viewerRawFullResolution
+                                          s.PrefetchNeighborsInViewer = _prefetchNeighborsInViewer
                                       End Sub)
         End Sub
 
@@ -7371,6 +7483,7 @@ Namespace ViewModels
             BuildLanguageOptions()
             BuildDateFormatOptions()
             BuildPickerReadoutOptions()
+            BuildRawXTransPassesOptions()
             ' Die Kartennamen tragen ihre Bauart als übersetztes Wort in sich - sie stünden nach
             ' einem Sprachwechsel sonst in der alten Sprache da. Nur, wenn schon abgefragt.
             If GpuAccelerationService.IsChecked Then BuildGpuDeviceOptions()
@@ -8249,6 +8362,31 @@ Namespace ViewModels
         Private _name As String = ""
 
         Public Property Key As String = ""
+
+        ''' <summary>Meldet seine Aenderung: nach einem Sprachwechsel wird der Name am selben
+        ''' Eintrag nachgezogen.</summary>
+        Public Property Name As String
+            Get
+                Return _name
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_name, If(value, ""))
+            End Set
+        End Property
+
+        Public Overrides Function ToString() As String
+            Return Name
+        End Function
+    End Class
+
+    ''' <summary>Ein Eintrag in der Auswahl der X-Trans-Durchgaenge. Key ist die gespeicherte Zahl,
+    ''' Name der uebersetzte Anzeigetext.</summary>
+    Public Class RawXTransPassesOption
+        Inherits ReactiveObject
+
+        Private _name As String = ""
+
+        Public Property Key As Integer = AppSettingsService.RawXTransPassesDefault
 
         ''' <summary>Meldet seine Aenderung: nach einem Sprachwechsel wird der Name am selben
         ''' Eintrag nachgezogen.</summary>

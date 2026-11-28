@@ -8145,9 +8145,6 @@
   <data name="Ein_Sensor_misst_je_Bildpunkt_nur_eine_Farbe_das_deddea65" xml:space="preserve">
     <value>A sensor measures only one colour per pixel; the method works out the full image from that. Thumbnails are rebuilt after a change.</value>
   </data>
-  <data name="Feinere_Zeichnung_daf_r_mehr_Farbrauschen_und_et_f187bdb8" xml:space="preserve">
-    <value>Finer detail, but more colour noise and about two and a half times as long per picture.</value>
-  </data>
   <data name="Etwa_ein_F_nftel_schneller_als_die_Vorgabe_67a1755c" xml:space="preserve">
     <value>About a fifth faster than the default.</value>
   </data>
@@ -13794,5 +13791,86 @@
   </data>
   <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
     <value>The catalogue index is already running</value>
+  </data>
+  <data name="Perspektivlinien_7b6d24d3" xml:space="preserve">
+    <value>Perspective lines</value>
+  </data>
+  <data name="Zwei_bis_vier_Linien_an_Kanten_ziehen_die_senkre_b57953f3" xml:space="preserve">
+    <value>Drag two to four lines along edges that should be vertical or horizontal. Steep lines become vertical, shallow ones horizontal.</value>
+  </data>
+  <data name="ENTF_entfernt_die_gefasste_oder_zuletzt_gesetzte_3ac4db32" xml:space="preserve">
+    <value>DEL removes the selected or most recently placed line.</value>
+  </data>
+  <data name="Gef_hrte_Perspektive_03e5f2b8" xml:space="preserve">
+    <value>Guided perspective</value>
+  </data>
+  <data name="H_chstens_vier_Perspektivlinien_07ba69c1" xml:space="preserve">
+    <value>At most four perspective lines</value>
+  </data>
+  <data name="Die_Perspektivlinien_verlangen_zu_viel_die_Entze_cc904fe7" xml:space="preserve">
+    <value>The perspective lines ask for too much, the straightening was limited</value>
+  </data>
+  <data name="Die_Perspektivlinien_widersprechen_sich_5dd460a5" xml:space="preserve">
+    <value>The perspective lines contradict each other</value>
+  </data>
+  <data name="Aus_diesen_Perspektivlinien_ergibt_sich_keine_g__fe242b73" xml:space="preserve">
+    <value>These perspective lines do not give a valid straightening</value>
+  </data>
+  <data name="Perspektivlinien_entfernt_die_Ecken_bleiben_und__1c4ae4fb" xml:space="preserve">
+    <value>Perspective lines removed, the corners stay and can be adjusted</value>
+  </data>
+  <data name="Geometrie_0f3a847b" xml:space="preserve">
+    <value>Geometry</value>
+  </data>
+  <data name="Ausrichten_Drehen_und_Spiegeln_ed641188" xml:space="preserve">
+    <value>Straighten, rotate and flip</value>
+  </data>
+  <data name="Ein_Haken_ersetzt_diesen_Teil_der_Geometrie_durc_9320ba66" xml:space="preserve">
+    <value>A check mark replaces this part of the geometry with that of the copied picture. Where a picture is portrait and the copied one was landscape, or the other way round, its crop stays as it is.</value>
+  </data>
+  <data name="Anpassungen_eingef_gt_ohne_Zuschnitt_das_Bild_st_2e2b5b10" xml:space="preserve">
+    <value>Adjustments pasted, without crop: the picture is portrait where the copied one was landscape, or the other way round.</value>
+  </data>
+  <data name="0_Bild_er_ohne_Zuschnitt_eingef_gt_sie_stehen_ho_293315ce" xml:space="preserve">
+    <value>{0} picture(s) pasted without crop: they are portrait where the copied picture was landscape, or the other way round.</value>
+  </data>
+  <data name="An_feinen_roten_und_gr_nen_Mustern_weniger_Falsc_7376eb72" xml:space="preserve">
+    <value>Less false colour on fine red and green patterns, hardly any difference on ordinary photos. About as fast as the default.</value>
+  </data>
+  <data name="Etwas_weicher_als_die_Vorgabe_mit_mehr_Farbrausc_41a2a658" xml:space="preserve">
+    <value>Slightly softer than the default, with more colour noise and occasional green fringes on dark edges against a bright sky. Takes several times as long.</value>
+  </data>
+  <data name="Ein_Durchgang_462aaf8e" xml:space="preserve">
+    <value>One pass</value>
+  </data>
+  <data name="Drei_Durchg_nge_db150009" xml:space="preserve">
+    <value>Three passes</value>
+  </data>
+  <data name="Gilt_f_r_Sensoren_mit_Bayer_Muster_also_fast_all_e61dea74" xml:space="preserve">
+    <value>Applies to sensors with a Bayer pattern, which is almost every camera. Fujifilm X-Trans sensors have their own choice below.</value>
+  </data>
+  <data name="Durchg_nge_f_r_X_Trans_Sensoren_9d491de6" xml:space="preserve">
+    <value>Passes for X-Trans sensors</value>
+  </data>
+  <data name="Fujis_X_Trans_Sensoren_werden_mit_einem_eigenen__61f91da3" xml:space="preserve">
+    <value>Fujifilm X-Trans sensors are developed with a method of their own. One pass measures the same as three and takes about half the time. Thumbnails are rebuilt after a change.</value>
+  </data>
+  <data name="Reglerzug_direkt_auf_der_Grafikkarte_zeigen_11829498" xml:space="preserve">
+    <value>Show slider drags directly on the graphics card</value>
+  </data>
+  <data name="Zeigt_beim_Ziehen_an_Licht_und_Farbreglern_das_B_0a0889c7" xml:space="preserve">
+    <value>While you drag light and color sliders, the picture is drawn directly by the window's graphics card, without a detour through the processor. After you let go, the picture is computed as before. Without a suitable graphics card everything stays on the previous path.</value>
+  </data>
+  <data name="FerrumPix_wurde_beim_letzten_Mal_w_hrend_der_Anz_26ce1fbb" xml:space="preserve">
+    <value>FerrumPix was closed last time while drawing on the graphics card. This path stays off until the switch is turned off and on again once.</value>
+  </data>
+  <data name="In_dieser_Sitzung_zeigt_der_Reglerzug_wieder_ber_6f14b7c2" xml:space="preserve">
+    <value>In this session slider drags are shown through the processor again, because the window has no graphics card, the self-test failed or it was too slow.</value>
+  </data>
+  <data name="Nachbarbilder_im_Viewer_vorentwickeln_341d1049" xml:space="preserve">
+    <value>Pre-develop neighboring images in the viewer</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_W_hr_b8d534f5" xml:space="preserve">
+    <value>Applies when the viewer develops RAWs itself. While an image is shown, the next three images in browsing direction and the previous one are developed in the background so they appear without waiting when you browse. This gives way to any other work and uses up to 1 GB of memory depending on image size.</value>
   </data>
 </root>

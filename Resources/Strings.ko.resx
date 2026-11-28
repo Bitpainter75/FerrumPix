@@ -8188,9 +8188,6 @@
   <data name="Ein_Sensor_misst_je_Bildpunkt_nur_eine_Farbe_das_deddea65" xml:space="preserve">
     <value>센서는 화소마다 한 가지 색만 측정하며, 이 방식이 그로부터 완전한 이미지를 계산합니다. 변경 후에는 미리보기가 다시 만들어집니다.</value>
   </data>
-  <data name="Feinere_Zeichnung_daf_r_mehr_Farbrauschen_und_et_f187bdb8" xml:space="preserve">
-    <value>묘사가 더 섬세하지만 색 노이즈가 늘고 사진 한 장당 약 2.5배의 시간이 걸립니다.</value>
-  </data>
   <data name="Etwa_ein_F_nftel_schneller_als_die_Vorgabe_67a1755c" xml:space="preserve">
     <value>기본값보다 약 5분의 1 빠릅니다.</value>
   </data>
@@ -13819,5 +13816,86 @@
   </data>
   <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
     <value>카탈로그 색인이 이미 실행 중입니다</value>
+  </data>
+  <data name="Perspektivlinien_7b6d24d3" xml:space="preserve">
+    <value>원근 안내선</value>
+  </data>
+  <data name="Zwei_bis_vier_Linien_an_Kanten_ziehen_die_senkre_b57953f3" xml:space="preserve">
+    <value>수직 또는 수평이어야 하는 가장자리를 따라 선을 두 개에서 네 개까지 그립니다. 가파른 선은 수직, 완만한 선은 수평이 됩니다.</value>
+  </data>
+  <data name="ENTF_entfernt_die_gefasste_oder_zuletzt_gesetzte_3ac4db32" xml:space="preserve">
+    <value>DEL을 누르면 선택한 선이나 마지막으로 놓은 선이 삭제됩니다.</value>
+  </data>
+  <data name="Gef_hrte_Perspektive_03e5f2b8" xml:space="preserve">
+    <value>안내 원근 보정</value>
+  </data>
+  <data name="H_chstens_vier_Perspektivlinien_07ba69c1" xml:space="preserve">
+    <value>원근 안내선은 최대 네 개입니다</value>
+  </data>
+  <data name="Die_Perspektivlinien_verlangen_zu_viel_die_Entze_cc904fe7" xml:space="preserve">
+    <value>원근 안내선의 요구가 너무 커서 보정이 제한되었습니다</value>
+  </data>
+  <data name="Die_Perspektivlinien_widersprechen_sich_5dd460a5" xml:space="preserve">
+    <value>원근 안내선이 서로 모순됩니다</value>
+  </data>
+  <data name="Aus_diesen_Perspektivlinien_ergibt_sich_keine_g__fe242b73" xml:space="preserve">
+    <value>이 원근 안내선으로는 유효한 보정을 얻을 수 없습니다</value>
+  </data>
+  <data name="Perspektivlinien_entfernt_die_Ecken_bleiben_und__1c4ae4fb" xml:space="preserve">
+    <value>원근 안내선을 제거했습니다. 모서리는 그대로 남아 있으며 조정할 수 있습니다</value>
+  </data>
+  <data name="Geometrie_0f3a847b" xml:space="preserve">
+    <value>지오메트리</value>
+  </data>
+  <data name="Ausrichten_Drehen_und_Spiegeln_ed641188" xml:space="preserve">
+    <value>수평 맞추기, 회전 및 뒤집기</value>
+  </data>
+  <data name="Ein_Haken_ersetzt_diesen_Teil_der_Geometrie_durc_9320ba66" xml:space="preserve">
+    <value>체크하면 지오메트리의 이 부분이 복사한 사진의 것으로 바뀝니다. 복사한 사진은 가로인데 사진이 세로이거나 그 반대이면 자르기는 그대로 유지됩니다.</value>
+  </data>
+  <data name="Anpassungen_eingef_gt_ohne_Zuschnitt_das_Bild_st_2e2b5b10" xml:space="preserve">
+    <value>조정을 붙여 넣었습니다(자르기 제외): 복사한 사진은 가로인데 이 사진은 세로이거나 그 반대입니다.</value>
+  </data>
+  <data name="0_Bild_er_ohne_Zuschnitt_eingef_gt_sie_stehen_ho_293315ce" xml:space="preserve">
+    <value>사진 {0}장을 자르기 없이 붙여 넣었습니다: 복사한 사진은 가로인데 세로이거나 그 반대입니다.</value>
+  </data>
+  <data name="An_feinen_roten_und_gr_nen_Mustern_weniger_Falsc_7376eb72" xml:space="preserve">
+    <value>가는 빨간색과 초록색 무늬에서 위색이 적고, 일반 사진에서는 차이가 거의 없습니다. 속도는 기본값과 비슷합니다.</value>
+  </data>
+  <data name="Etwas_weicher_als_die_Vorgabe_mit_mehr_Farbrausc_41a2a658" xml:space="preserve">
+    <value>기본값보다 약간 부드럽고 색 노이즈가 더 많으며, 밝은 하늘을 배경으로 한 어두운 윤곽에 초록색 테두리가 생기기도 합니다. 시간이 몇 배 더 걸립니다.</value>
+  </data>
+  <data name="Ein_Durchgang_462aaf8e" xml:space="preserve">
+    <value>1회</value>
+  </data>
+  <data name="Drei_Durchg_nge_db150009" xml:space="preserve">
+    <value>3회</value>
+  </data>
+  <data name="Gilt_f_r_Sensoren_mit_Bayer_Muster_also_fast_all_e61dea74" xml:space="preserve">
+    <value>베이어 패턴 센서, 즉 거의 모든 카메라에 적용됩니다. 후지필름 X-Trans 센서는 아래에 별도의 선택이 있습니다.</value>
+  </data>
+  <data name="Durchg_nge_f_r_X_Trans_Sensoren_9d491de6" xml:space="preserve">
+    <value>X-Trans 센서의 처리 횟수</value>
+  </data>
+  <data name="Fujis_X_Trans_Sensoren_werden_mit_einem_eigenen__61f91da3" xml:space="preserve">
+    <value>후지필름 X-Trans 센서는 전용 방식으로 현상됩니다. 1회 처리는 측정상 3회와 같고 시간은 약 절반입니다. 변경 후에는 미리보기가 다시 만들어집니다.</value>
+  </data>
+  <data name="Reglerzug_direkt_auf_der_Grafikkarte_zeigen_11829498" xml:space="preserve">
+    <value>슬라이더 드래그를 그래픽 카드에서 바로 표시</value>
+  </data>
+  <data name="Zeigt_beim_Ziehen_an_Licht_und_Farbreglern_das_B_0a0889c7" xml:space="preserve">
+    <value>빛과 색 슬라이더를 드래그하는 동안 창의 그래픽 카드가 이미지를 직접 그리며 프로세서를 거치지 않습니다. 놓은 뒤에는 이전처럼 이미지를 계산합니다. 알맞은 그래픽 카드가 없으면 모든 것이 기존 방식대로 유지됩니다.</value>
+  </data>
+  <data name="FerrumPix_wurde_beim_letzten_Mal_w_hrend_der_Anz_26ce1fbb" xml:space="preserve">
+    <value>FerrumPix가 지난번 그래픽 카드에서 표시하는 도중 종료되었습니다. 스위치를 한 번 껐다가 다시 켤 때까지 이 방식은 꺼진 상태로 유지됩니다.</value>
+  </data>
+  <data name="In_dieser_Sitzung_zeigt_der_Reglerzug_wieder_ber_6f14b7c2" xml:space="preserve">
+    <value>이번 세션에서는 창의 그래픽 카드가 없거나, 자체 테스트에 실패했거나, 너무 느려서 슬라이더 드래그를 다시 프로세서로 표시합니다.</value>
+  </data>
+  <data name="Nachbarbilder_im_Viewer_vorentwickeln_341d1049" xml:space="preserve">
+    <value>뷰어에서 인접 이미지를 미리 현상</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_W_hr_b8d534f5" xml:space="preserve">
+    <value>뷰어가 RAW를 직접 현상할 때 적용됩니다. 이미지가 표시되는 동안 넘기는 방향의 다음 세 장과 이전 한 장을 백그라운드에서 현상하여 넘길 때 기다림 없이 나타나게 합니다. 다른 모든 작업에 양보하며 이미지 크기에 따라 최대 1GB의 메모리를 사용합니다.</value>
   </data>
 </root>

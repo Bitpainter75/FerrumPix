@@ -1670,17 +1670,27 @@ Namespace Services
         ''' Kachel auf dem alten Verfahren stehen, waehrend das Bild daneben im Editor anders
         ''' aussieht. Dieselbe Ueberlegung wie bei der Drehung aus der Beistelldatei: bei der
         ''' Vorgabe bleibt der Name unveraendert, damit kein vorhandener Cache-Bestand entwertet
-        ''' wird. Ein JPEG hat kein Demosaic, dort waere das Suffix nur Ballast.</summary>
+        ''' wird. Ein JPEG hat kein Demosaic, dort waere das Suffix nur Ballast.
+        '''
+        ''' Die X-Trans-Durchgaenge stehen als _x1 oder _x3 dabei, aber nur, wenn sie von dem
+        ''' abweichen, was LibRaw vorher aus dem Bayer-Verfahren ableitete
+        ''' (AppSettingsService.LegacyRawXTransPasses). Bei dieser Paarung entsteht dasselbe Bild
+        ''' wie vor der eigenen Einstellung, und die Kachel heisst wie damals. Ob die Datei X-Trans
+        ''' traegt, ist am Namen nicht zu sehen; eine Bayer-Kachel wird deshalb nach einem Wechsel
+        ''' der Durchgaenge einmal unnoetig neu gebaut, nie aber eine alte stehen gelassen.</summary>
         Private Shared Function DemosaicSuffix(filePath As String) As String
             If Not RawPreviewService.IsSupportedRaw(filePath) Then Return ""
             Dim algorithm As String
+            Dim passes As Integer
             Try
                 Dim settings = AppSettingsService.Load()
                 algorithm = AppSettingsService.NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
+                passes = AppSettingsService.NormalizeRawXTransPasses(settings.RawXTransPasses)
             Catch
                 Return ""
             End Try
             Dim suffix = If(algorithm = AppSettingsService.RawDemosaicDefault, "", $"_d{algorithm}")
+            If passes <> AppSettingsService.LegacyRawXTransPasses(algorithm) Then suffix &= $"_x{passes}"
             Return suffix
         End Function
 

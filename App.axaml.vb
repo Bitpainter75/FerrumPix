@@ -497,6 +497,8 @@ Public Class App
         ' Nur der Merker; die Karte wird erst beim ersten Bild angesprochen. Endete die letzte
         ' Sitzung im Treiber, geht der Schalter dabei aus.
         GpuImageService.StartFromSettings()
+        ' Ebenso fuer die Anzeige im Reglerzug auf der Karte des Fensters.
+        Controls.GpuDragDisplay.StartFromSettings()
         ' EINMAL beim Start nachsehen, welche gelernten Modelle vorliegen. Danach steht fuer
         ' diese Sitzung fest, welche Funktionen es gibt; was fehlt, blendet die Oberflaeche aus.
         ' Vor dem ViewModel, damit dessen Bindungen schon den richtigen Stand sehen.

@@ -73,6 +73,14 @@ Namespace ViewModels
             End If
 
             PushUndo(LocalizationService.T("Perspektive automatisch korrigiert"))
+            ' STEHEN PERSPEKTIVLINIEN, ersetzt die Automatik deren Ergebnis. Die Linien stehen in
+            ' den Ecken, die Automatik schreibt die Kipp-Regler, und beides addiert sich: liesse sie
+            ' die Ecken stehen, korrigierte sie doppelt. Also gehen Linien und Ecken weg, im selben
+            ' Schritt; STRG+Z holt beides zurueck.
+            If ClearPerspectiveGuides() Then
+                Array.Clear(_perspectiveCorners, 0, _perspectiveCorners.Length)
+                RaiseCornersChanged()
+            End If
             ' EIN Undo-Schritt fuer beide Regler: PushUndo hat den Stand gesichert, die Setter
             ' duerfen nicht jeder noch einen eigenen anlegen.
             _suppressUndoCapture = True

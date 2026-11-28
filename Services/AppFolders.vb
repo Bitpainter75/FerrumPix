@@ -533,6 +533,14 @@ Namespace Services
             End Get
         End Property
 
+        ''' <summary>Die Marke, solange die Kartenanzeige im Reglerzug ihre ersten Bilder zeichnet
+        ''' (Controls.GpuDragDisplay). Liegt sie beim Start noch, bleibt der Weg aus.</summary>
+        Public Shared ReadOnly Property GpuDragDisplayMarkerPath As String
+            Get
+                Return Path.Combine(DataRoot, MachineSpecificName("gpu-drag-display", ".marker"))
+            End Get
+        End Property
+
         ''' <summary>Die Sperren von Modell und Karte (GpuModelBlockService). Sie gelten fuer die
         ''' Karte dieses Rechners.</summary>
         Public Shared ReadOnly Property GpuBlockPath As String

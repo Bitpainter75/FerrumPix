@@ -8144,9 +8144,6 @@
   <data name="Ein_Sensor_misst_je_Bildpunkt_nur_eine_Farbe_das_deddea65" xml:space="preserve">
     <value>Un capteur ne mesure qu'une seule couleur par pixel ; la méthode en calcule l'image complète. Les vignettes sont recréées après un changement.</value>
   </data>
-  <data name="Feinere_Zeichnung_daf_r_mehr_Farbrauschen_und_et_f187bdb8" xml:space="preserve">
-    <value>Dessin plus fin, mais davantage de bruit de couleur et environ deux fois et demie plus de temps par photo.</value>
-  </data>
   <data name="Etwa_ein_F_nftel_schneller_als_die_Vorgabe_67a1755c" xml:space="preserve">
     <value>Environ un cinquième plus rapide que la valeur par défaut.</value>
   </data>
@@ -13775,5 +13772,86 @@
   </data>
   <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
     <value>L'index du catalogue est déjà en cours</value>
+  </data>
+  <data name="Perspektivlinien_7b6d24d3" xml:space="preserve">
+    <value>Lignes de perspective</value>
+  </data>
+  <data name="Zwei_bis_vier_Linien_an_Kanten_ziehen_die_senkre_b57953f3" xml:space="preserve">
+    <value>Tracez deux à quatre lignes le long de bords qui doivent être verticaux ou horizontaux. Les lignes raides deviennent verticales, les lignes plates horizontales.</value>
+  </data>
+  <data name="ENTF_entfernt_die_gefasste_oder_zuletzt_gesetzte_3ac4db32" xml:space="preserve">
+    <value>SUPPR supprime la ligne sélectionnée ou la dernière posée.</value>
+  </data>
+  <data name="Gef_hrte_Perspektive_03e5f2b8" xml:space="preserve">
+    <value>Perspective guidée</value>
+  </data>
+  <data name="H_chstens_vier_Perspektivlinien_07ba69c1" xml:space="preserve">
+    <value>Quatre lignes de perspective au maximum</value>
+  </data>
+  <data name="Die_Perspektivlinien_verlangen_zu_viel_die_Entze_cc904fe7" xml:space="preserve">
+    <value>Les lignes de perspective en demandent trop, le redressement a été limité</value>
+  </data>
+  <data name="Die_Perspektivlinien_widersprechen_sich_5dd460a5" xml:space="preserve">
+    <value>Les lignes de perspective se contredisent</value>
+  </data>
+  <data name="Aus_diesen_Perspektivlinien_ergibt_sich_keine_g__fe242b73" xml:space="preserve">
+    <value>Ces lignes de perspective ne donnent pas de redressement valide</value>
+  </data>
+  <data name="Perspektivlinien_entfernt_die_Ecken_bleiben_und__1c4ae4fb" xml:space="preserve">
+    <value>Lignes de perspective supprimées, les coins restent en place et peuvent être ajustés</value>
+  </data>
+  <data name="Geometrie_0f3a847b" xml:space="preserve">
+    <value>Géométrie</value>
+  </data>
+  <data name="Ausrichten_Drehen_und_Spiegeln_ed641188" xml:space="preserve">
+    <value>Redresser, faire pivoter et retourner</value>
+  </data>
+  <data name="Ein_Haken_ersetzt_diesen_Teil_der_Geometrie_durc_9320ba66" xml:space="preserve">
+    <value>Une case cochée remplace cette partie de la géométrie par celle de la photo copiée. Si une photo est en portrait là où la copiée était en paysage, ou l'inverse, son recadrage reste tel quel.</value>
+  </data>
+  <data name="Anpassungen_eingef_gt_ohne_Zuschnitt_das_Bild_st_2e2b5b10" xml:space="preserve">
+    <value>Réglages collés, sans recadrage : la photo est en portrait là où la copiée était en paysage, ou l'inverse.</value>
+  </data>
+  <data name="0_Bild_er_ohne_Zuschnitt_eingef_gt_sie_stehen_ho_293315ce" xml:space="preserve">
+    <value>{0} photo(s) collée(s) sans recadrage : elles sont en portrait là où la photo copiée était en paysage, ou l'inverse.</value>
+  </data>
+  <data name="An_feinen_roten_und_gr_nen_Mustern_weniger_Falsc_7376eb72" xml:space="preserve">
+    <value>Moins de fausses couleurs sur les motifs fins rouges et verts, presque aucune différence sur les photos ordinaires. À peu près aussi rapide que la valeur par défaut.</value>
+  </data>
+  <data name="Etwas_weicher_als_die_Vorgabe_mit_mehr_Farbrausc_41a2a658" xml:space="preserve">
+    <value>Un peu plus doux que la valeur par défaut, avec plus de bruit chromatique et parfois des liserés verts sur les bords sombres devant un ciel clair. Prend plusieurs fois plus de temps.</value>
+  </data>
+  <data name="Ein_Durchgang_462aaf8e" xml:space="preserve">
+    <value>Une passe</value>
+  </data>
+  <data name="Drei_Durchg_nge_db150009" xml:space="preserve">
+    <value>Trois passes</value>
+  </data>
+  <data name="Gilt_f_r_Sensoren_mit_Bayer_Muster_also_fast_all_e61dea74" xml:space="preserve">
+    <value>S'applique aux capteurs à matrice de Bayer, c'est-à-dire presque tous les appareils. Les capteurs X-Trans de Fujifilm ont leur propre choix ci-dessous.</value>
+  </data>
+  <data name="Durchg_nge_f_r_X_Trans_Sensoren_9d491de6" xml:space="preserve">
+    <value>Passes pour les capteurs X-Trans</value>
+  </data>
+  <data name="Fujis_X_Trans_Sensoren_werden_mit_einem_eigenen__61f91da3" xml:space="preserve">
+    <value>Les capteurs X-Trans de Fujifilm sont développés avec leur propre méthode. Une passe donne la même mesure que trois et prend environ la moitié du temps. Les vignettes sont recréées après un changement.</value>
+  </data>
+  <data name="Reglerzug_direkt_auf_der_Grafikkarte_zeigen_11829498" xml:space="preserve">
+    <value>Afficher le glissement des curseurs directement sur la carte graphique</value>
+  </data>
+  <data name="Zeigt_beim_Ziehen_an_Licht_und_Farbreglern_das_B_0a0889c7" xml:space="preserve">
+    <value>Lorsque vous faites glisser les curseurs de lumière et de couleur, l'image est dessinée directement par la carte graphique de la fenêtre, sans passer par le processeur. Une fois relâchée, l'image est calculée comme avant. Sans carte graphique adaptée, tout reste sur le chemin habituel.</value>
+  </data>
+  <data name="FerrumPix_wurde_beim_letzten_Mal_w_hrend_der_Anz_26ce1fbb" xml:space="preserve">
+    <value>FerrumPix a été fermé la dernière fois pendant l'affichage sur la carte graphique. Cette voie reste désactivée jusqu'à ce que l'interrupteur soit désactivé puis réactivé.</value>
+  </data>
+  <data name="In_dieser_Sitzung_zeigt_der_Reglerzug_wieder_ber_6f14b7c2" xml:space="preserve">
+    <value>Dans cette session, le glissement des curseurs repasse par le processeur, car la fenêtre n'a pas de carte graphique, l'autotest a échoué ou elle était trop lente.</value>
+  </data>
+  <data name="Nachbarbilder_im_Viewer_vorentwickeln_341d1049" xml:space="preserve">
+    <value>Prédévelopper les images voisines dans la visionneuse</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_W_hr_b8d534f5" xml:space="preserve">
+    <value>S'applique lorsque la visionneuse développe elle-même les RAW. Pendant qu'une image est affichée, les trois suivantes dans le sens de défilement et la précédente sont développées en arrière-plan, afin qu'elles s'affichent sans attente. Cela cède la place à tout autre travail et occupe jusqu'à 1 Go de mémoire selon la taille de l'image.</value>
   </data>
 </root>

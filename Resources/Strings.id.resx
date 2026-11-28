@@ -8188,9 +8188,6 @@
   <data name="Ein_Sensor_misst_je_Bildpunkt_nur_eine_Farbe_das_deddea65" xml:space="preserve">
     <value>Sensor hanya mengukur satu warna per piksel; metode ini menghitung gambar utuh dari data itu. Gambar mini dibuat ulang setelah perubahan.</value>
   </data>
-  <data name="Feinere_Zeichnung_daf_r_mehr_Farbrauschen_und_et_f187bdb8" xml:space="preserve">
-    <value>Detail lebih halus, tetapi derau warna lebih banyak dan sekitar dua setengah kali lebih lama per foto.</value>
-  </data>
   <data name="Etwa_ein_F_nftel_schneller_als_die_Vorgabe_67a1755c" xml:space="preserve">
     <value>Sekitar seperlima lebih cepat daripada bawaan.</value>
   </data>
@@ -13819,5 +13816,86 @@
   </data>
   <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
     <value>Indeks katalog sudah berjalan</value>
+  </data>
+  <data name="Perspektivlinien_7b6d24d3" xml:space="preserve">
+    <value>Garis perspektif</value>
+  </data>
+  <data name="Zwei_bis_vier_Linien_an_Kanten_ziehen_die_senkre_b57953f3" xml:space="preserve">
+    <value>Tarik dua sampai empat garis di sepanjang tepi yang seharusnya tegak atau mendatar. Garis curam menjadi tegak, garis landai menjadi mendatar.</value>
+  </data>
+  <data name="ENTF_entfernt_die_gefasste_oder_zuletzt_gesetzte_3ac4db32" xml:space="preserve">
+    <value>DEL menghapus garis yang dipilih atau yang terakhir dipasang.</value>
+  </data>
+  <data name="Gef_hrte_Perspektive_03e5f2b8" xml:space="preserve">
+    <value>Perspektif terpandu</value>
+  </data>
+  <data name="H_chstens_vier_Perspektivlinien_07ba69c1" xml:space="preserve">
+    <value>Paling banyak empat garis perspektif</value>
+  </data>
+  <data name="Die_Perspektivlinien_verlangen_zu_viel_die_Entze_cc904fe7" xml:space="preserve">
+    <value>Garis perspektif meminta terlalu banyak, pelurusan dibatasi</value>
+  </data>
+  <data name="Die_Perspektivlinien_widersprechen_sich_5dd460a5" xml:space="preserve">
+    <value>Garis perspektif saling bertentangan</value>
+  </data>
+  <data name="Aus_diesen_Perspektivlinien_ergibt_sich_keine_g__fe242b73" xml:space="preserve">
+    <value>Garis perspektif ini tidak menghasilkan pelurusan yang valid</value>
+  </data>
+  <data name="Perspektivlinien_entfernt_die_Ecken_bleiben_und__1c4ae4fb" xml:space="preserve">
+    <value>Garis perspektif dihapus, sudut tetap dan dapat disesuaikan</value>
+  </data>
+  <data name="Geometrie_0f3a847b" xml:space="preserve">
+    <value>Geometri</value>
+  </data>
+  <data name="Ausrichten_Drehen_und_Spiegeln_ed641188" xml:space="preserve">
+    <value>Luruskan, putar, dan balik</value>
+  </data>
+  <data name="Ein_Haken_ersetzt_diesen_Teil_der_Geometrie_durc_9320ba66" xml:space="preserve">
+    <value>Tanda centang mengganti bagian geometri ini dengan milik foto yang disalin. Jika foto tegak sedangkan yang disalin mendatar, atau sebaliknya, potongannya tetap seperti semula.</value>
+  </data>
+  <data name="Anpassungen_eingef_gt_ohne_Zuschnitt_das_Bild_st_2e2b5b10" xml:space="preserve">
+    <value>Penyesuaian ditempel tanpa potongan: foto tegak sedangkan yang disalin mendatar, atau sebaliknya.</value>
+  </data>
+  <data name="0_Bild_er_ohne_Zuschnitt_eingef_gt_sie_stehen_ho_293315ce" xml:space="preserve">
+    <value>{0} foto ditempel tanpa potongan: foto tegak sedangkan foto yang disalin mendatar, atau sebaliknya.</value>
+  </data>
+  <data name="An_feinen_roten_und_gr_nen_Mustern_weniger_Falsc_7376eb72" xml:space="preserve">
+    <value>Lebih sedikit warna palsu pada pola halus merah dan hijau, hampir tidak ada beda pada foto biasa. Kira-kira secepat bawaan.</value>
+  </data>
+  <data name="Etwas_weicher_als_die_Vorgabe_mit_mehr_Farbrausc_41a2a658" xml:space="preserve">
+    <value>Sedikit lebih lembut daripada bawaan, dengan lebih banyak derau warna dan kadang tepi hijau pada kontur gelap di depan langit terang. Memakan waktu beberapa kali lipat.</value>
+  </data>
+  <data name="Ein_Durchgang_462aaf8e" xml:space="preserve">
+    <value>Satu lintasan</value>
+  </data>
+  <data name="Drei_Durchg_nge_db150009" xml:space="preserve">
+    <value>Tiga lintasan</value>
+  </data>
+  <data name="Gilt_f_r_Sensoren_mit_Bayer_Muster_also_fast_all_e61dea74" xml:space="preserve">
+    <value>Berlaku untuk sensor dengan pola Bayer, yaitu hampir semua kamera. Sensor X-Trans Fujifilm punya pilihan sendiri di bawah.</value>
+  </data>
+  <data name="Durchg_nge_f_r_X_Trans_Sensoren_9d491de6" xml:space="preserve">
+    <value>Lintasan untuk sensor X-Trans</value>
+  </data>
+  <data name="Fujis_X_Trans_Sensoren_werden_mit_einem_eigenen__61f91da3" xml:space="preserve">
+    <value>Sensor X-Trans Fujifilm dikembangkan dengan metode tersendiri. Satu lintasan terukur sama dengan tiga dan butuh sekitar separuh waktu. Gambar mini dibuat ulang setelah perubahan.</value>
+  </data>
+  <data name="Reglerzug_direkt_auf_der_Grafikkarte_zeigen_11829498" xml:space="preserve">
+    <value>Tampilkan geseran penggeser langsung di kartu grafis</value>
+  </data>
+  <data name="Zeigt_beim_Ziehen_an_Licht_und_Farbreglern_das_B_0a0889c7" xml:space="preserve">
+    <value>Saat Anda menggeser penggeser cahaya dan warna, gambar digambar langsung oleh kartu grafis jendela, tanpa memutar lewat prosesor. Setelah dilepas, gambar dihitung seperti sebelumnya. Tanpa kartu grafis yang sesuai, semuanya tetap memakai cara sebelumnya.</value>
+  </data>
+  <data name="FerrumPix_wurde_beim_letzten_Mal_w_hrend_der_Anz_26ce1fbb" xml:space="preserve">
+    <value>FerrumPix terakhir kali tertutup saat menampilkan di kartu grafis. Cara ini tetap nonaktif sampai sakelar dimatikan dan dinyalakan lagi.</value>
+  </data>
+  <data name="In_dieser_Sitzung_zeigt_der_Reglerzug_wieder_ber_6f14b7c2" xml:space="preserve">
+    <value>Dalam sesi ini geseran penggeser kembali ditampilkan lewat prosesor, karena jendela tidak memiliki kartu grafis, uji mandiri gagal, atau terlalu lambat.</value>
+  </data>
+  <data name="Nachbarbilder_im_Viewer_vorentwickeln_341d1049" xml:space="preserve">
+    <value>Kembangkan gambar di sekitarnya lebih dulu di penampil</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_W_hr_b8d534f5" xml:space="preserve">
+    <value>Berlaku jika penampil mengembangkan RAW sendiri. Selama sebuah gambar ditampilkan, tiga gambar berikutnya searah penelusuran dan satu sebelumnya dikembangkan di latar belakang agar muncul tanpa menunggu saat menelusuri. Ini mengalah pada pekerjaan lain apa pun dan memakai memori hingga 1 GB tergantung ukuran gambar.</value>
   </data>
 </root>

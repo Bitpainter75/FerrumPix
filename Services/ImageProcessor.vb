@@ -1367,6 +1367,10 @@ Namespace Services
             End If
             Using original = If(reduced, DecodeForRender(sourcePath, adj, renderAdj))
                 If original Is Nothing Then Return Nothing
+                ' Braucht das Ergebnis niemand mehr (RawDecodeService.RunWhileWanted, etwa ein Vorlauf
+                ' der Nachbarbilder, vor dessen Schleuse jetzt ein echter Auftrag wartet), entfaellt die
+                ' Reglerkette: sie hat keinen Abbruch und hielte die Schleuse sonst so lange fest.
+                If RawDecodeService.IsAbandoned() Then Return Nothing
 
                 Using processed = ProcessBitmap(original, renderAdj)
                     Return ToAvaloniaBitmap(processed)

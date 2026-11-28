@@ -385,6 +385,7 @@ Namespace ViewModels
         ''' <summary>Meldet den Wechsel der Ansicht. Beim Betreten holt der Betrachter nach, was in
         ''' der Zwischenzeit ausgefallen ist.</summary>
         Friend Sub SetViewActive(active As Boolean)
+            SetNeighborPrefetchViewActive(active)
             InfoPanel.IsOwnerViewActive = active
             If active Then EnsureHistogramLoaded()
         End Sub
@@ -511,7 +512,15 @@ Namespace ViewModels
                     FocusPointNotice = ""
                     Dispatcher.UIThread.Post(Sub() RefreshImageMarkGeometry(), DispatcherPriority.Background)
                 End If
-                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
+                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then
+                    ' Ein Bild, das an den Vorlauf der Nachbarbilder ging, gehoert jetzt ihm
+                    ' (OfferShownToNeighborPrefetch); er gibt es frei, wenn er es verwirft.
+                    If Object.ReferenceEquals(previous, _handedToNeighborPrefetch) Then
+                        _handedToNeighborPrefetch = Nothing
+                    Else
+                        DisposeDeferred(previous)
+                    End If
+                End If
             End Set
         End Property
 
@@ -3101,6 +3110,8 @@ Namespace ViewModels
             _focusedComparePane = 0
             SetPinnedPath(entries(0))
             IsCompareMode = True
+            ' Der Vergleich laedt seine Flaechen selbst; der Vorlauf der Nachbarbilder gibt Platz frei.
+            _neighborPrefetch?.Clear()
             SyncComparePaneState()
             RaiseCompareFieldCountChanged()
             LoadCompareMarkers()
@@ -3909,6 +3920,9 @@ Namespace ViewModels
             ' Bewegtbild: ein laufender Film gehoert zum vorigen Bild, und fuer das neue wird
             ' nachgesehen, ob es eines mit Film ist (ViewerViewModelMotion.vb).
             OnMotionImageChanged()
+            ' Das verlassene entwickelte Bild ist beim Weiterblaettern das eine zurueck: es geht an
+            ' den Vorlauf der Nachbarbilder, bevor CurrentImage es unten freigaebe.
+            OfferShownToNeighborPrefetch(_currentImagePath)
             If VideoPreviewService.IsSupportedVideo(_currentImagePath) Then
                 ' Laufende Bild-Loads (inkl. FPX-Vollaufloesung) verwerfen - sonst wuerde ein spaet
                 ' eintreffendes Bitmap das Video-Layout ueberschreiben.
@@ -3969,6 +3983,8 @@ Namespace ViewModels
         Private Async Sub RunBitmapLoad(path As String, token As Integer, isFpx As Boolean)
             Dim bmp As Bitmap = Nothing
             Dim rawDeveloped = False
+            Dim reduced = True
+            Dim shownKey As Task(Of String) = Nothing
             ' Die Aenderungszeit VOR dem Decode: aendert sich die Datei waehrenddessen, passt das Bild
             ' nicht mehr zu ihr, und die Uebergabe an den Editor verwirft es.
             Dim writeTime = DateTime.MinValue
@@ -3978,7 +3994,7 @@ Namespace ViewModels
             End Try
             Try
                 ' Bei jedem Laden neu gelesen, damit ein umgelegter Schalter beim naechsten Bild wirkt.
-                Dim reduced = Not AppSettingsService.Load().ViewerRawFullResolution
+                reduced = Not AppSettingsService.Load().ViewerRawFullResolution
                 ' In der Diashow ist das naechste Bild womoeglich schon entwickelt, oder es wird
                 ' gerade entwickelt (StartSlideshowPrefetch): dann dieses Ergebnis, kein zweiter Lauf.
                 Dim prefetched = TakeSlideshowPrefetch(path, reduced)
@@ -3990,6 +4006,23 @@ Namespace ViewModels
                     Else
                         early.Bitmap?.Dispose()
                     End If
+                End If
+                ' Beim Blaettern von Hand: das Bild ist womoeglich schon vorentwickelt oder laeuft
+                ' gerade vor (ViewerNeighborPrefetch). Der Schluessel, unter dem das Ergebnis gilt,
+                ' entsteht neben dem Decode und geht beim Weiterblaettern mit dem Bild an den Vorlauf.
+                shownKey = Nothing
+                If _neighborPrefetch IsNot Nothing AndAlso bmp Is Nothing AndAlso Not VariantKey.IsVariant(ItemPathFor(path)) Then
+                    Dim taken = Await _neighborPrefetch.TakeAsync(path, reduced)
+                    If taken.Bitmap IsNot Nothing Then
+                        bmp = taken.Bitmap
+                        rawDeveloped = taken.RawDeveloped
+                        shownKey = Task.FromResult(taken.Key)
+                    End If
+                End If
+                If bmp Is Nothing AndAlso IsNeighborPrefetchAllowed() AndAlso Not VariantKey.IsVariant(ItemPathFor(path)) AndAlso
+                   RawPreviewService.IsSupportedRaw(path) Then
+                    Dim generation = AppSettingsService.Generation
+                    shownKey = Task.Run(Function() ViewerNeighborPrefetch.KeyFor(path, reduced, generation))
                 End If
                 If bmp Is Nothing Then
                     Dim recipeKey = ItemPathFor(path)
@@ -4022,8 +4055,14 @@ Namespace ViewModels
             If isFpx AndAlso bmp IsNot Nothing Then LoadFpxFullResolutionBitmapAsync(path, token)
             ' In der Diashow geht niemand in den Editor; das Vorwaermen dafuer stuende dem
             ' Entwickeln des naechsten Bildes nur im Weg (ein Decode zur Zeit, DecodeGate).
-            If RawPreviewService.IsSupportedRaw(path) AndAlso Not _slideshowSession Then WarmRawCacheAfterDwellAsync(path, token)
+            ' Mit dem Vorlauf der Nachbarbilder in voller Aufloesung waermt dieser nach seinen Zielen vor.
+            If RawPreviewService.IsSupportedRaw(path) AndAlso Not _slideshowSession AndAlso
+               Not NeighborPrefetchWarmsEditor(reduced) Then WarmRawCacheAfterDwellAsync(path, token)
             If _isSlideshowPlaying AndAlso bmp IsNot Nothing Then StartSlideshowPrefetch()
+            ' Die Nachbarbilder vorentwickeln, jetzt, wo dieses Bild steht.
+            _shownPrefetchKey = If(rawDeveloped, shownKey, Nothing)
+            _shownPrefetchReduced = reduced
+            ScheduleNeighborPrefetch(path, reduced, bmp)
         End Sub
 
         ' ── Das naechste Bild der Diashow vorab entwickeln ───────────────────────
@@ -4154,8 +4193,10 @@ Namespace ViewModels
                     DiagnosticLogService.LogAlways("Viewer.RawWarm", $"nicht entwickelbar (LibRaw oder Leser fehlt) file={name}")
                     Return
                 End If
-                Dim filled = Await Task.Run(Function() RawDecodeService.WarmRawCache(
-                    path, Function() token = System.Threading.Volatile.Read(_bitmapLoadToken)))
+                ' Als Arbeit, die weicht (DecodeGate.RunYielding): das Vorwaermen bringt den Vorlauf der
+                ' Nachbarbilder nicht zum Abbruch, beide stehen nacheinander in der Schleuse.
+                Dim filled = Await Task.Run(Function() DecodeGate.RunYielding(Function() RawDecodeService.WarmRawCache(
+                    path, Function() token = System.Threading.Volatile.Read(_bitmapLoadToken))))
                 DiagnosticLogService.LogAlways("Viewer.RawWarm",
                     $"{If(filled, "abgelegt", "nichts abgelegt")} file={name}; token={token}; jetzt={System.Threading.Volatile.Read(_bitmapLoadToken)}")
             Catch ex As Exception
@@ -5757,6 +5798,8 @@ Namespace ViewModels
                 If String.IsNullOrEmpty(nextPath) OrElse Not EntryExists(nextPath) Then Return
             End If
 
+            ' Die Laufrichtung des Vorlaufs der Nachbarbilder folgt den Schritten.
+            NoteNeighborPrefetchStep(_currentIndex, idx)
             SetCurrentEntry(nextPath)
             CurrentIndex = idx
             BeginInfoPanelSwitch(_currentImagePath)
@@ -6668,6 +6711,8 @@ Namespace ViewModels
             If Not _slideshowSession Then _slideshowShuffleQueue.Clear()
             _slideshowSession = True
             IsSlideshowPlaying = True
+            ' Die laufende Diashow entwickelt ihr naechstes Bild selbst vor.
+            _neighborPrefetch?.Clear()
             Dim intervalSeconds = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.ViewerSlideshowIntervalSeconds, 3)
             _slideshowIntervalMs = Math.Max(1, intervalSeconds) * 1000.0
             _slideshowTimer = New Timer(_slideshowIntervalMs)

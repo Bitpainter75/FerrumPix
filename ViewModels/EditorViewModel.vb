@@ -17564,6 +17564,10 @@ Namespace ViewModels
             Dim clamped = Math.Round(Math.Max(-180, Math.Min(180, value)), 2)
             If Math.Abs(_straightenDegrees - clamped) < 0.0001 Then Return
             CaptureUndoState(NameOf(StraightenDegrees))
+            ' Liegen Perspektivlinien, gehoert die Ausrichtung bei EINER Linie ihr. Ein Griff von Hand
+            ' nimmt sie weg wie ein Griff an Ecke oder Kipp-Regler (nach dem Sichern, damit
+            ' STRG+Z sie zurueckholt); sonst setzte die naechste Linie den Winkel still zurueck.
+            DropPerspectiveGuidesForManualGrip()
             Me.RaiseAndSetIfChanged(_straightenDegrees, clamped, NameOf(StraightenDegrees))
             Me.RaisePropertyChanged(NameOf(HasRotateChanges))
             Me.RaisePropertyChanged(NameOf(HasTransformChanges))
@@ -19035,6 +19039,10 @@ Namespace ViewModels
         ' Bildkanten und misst in Anteilen des Bildes, passt also auf jedes Foto. Er wandert mit,
         ' solange er in der Rahmengruppe aktiv ist, und ersetzt beim Einfuegen einen vorhandenen
         ' (ApplyTransferredFrameFrom). Bringt die Ablage keinen mit, bleibt der des Ziels.
+        '
+        ' DIE GEOMETRIE LIEGT IN DER ABLAGE, wird aber nur auf Wunsch eingefuegt: "Einfügen mit
+        ' Auswahl" hat drei Haken dafuer (Ausrichten, Perspektive, Zuschnitt), ab Werk aus und
+        ' gemerkt. Die Regeln stehen in GeometryTransfer; Vorlagen nehmen keine Geometrie mit.
 
         Public ReadOnly Property CopyAdjustmentsCommand As ICommand
         Public ReadOnly Property PasteAdjustmentsCommand As ICommand
@@ -19064,7 +19072,12 @@ Namespace ViewModels
 
         Public Sub CopyCurrentAdjustments()
             If Not HasDocument Then Return
-            Dim recipe = FpxService.SerializeAdjustments(GetCurrentAdjustments().ExtractTransferableAdjustments())
+            Dim current = GetCurrentAdjustments()
+            Dim transferable = current.ExtractTransferableAdjustments()
+            ' Die Geometrie geht mit in die Ablage; ob sie eingefuegt wird, entscheidet erst
+            ' "Einfügen mit Auswahl" (GeometryTransfer).
+            GeometryTransfer.AttachTo(transferable, current, GetBaseWidth(), GetBaseHeight())
+            Dim recipe = FpxService.SerializeAdjustments(transferable)
             If String.IsNullOrWhiteSpace(recipe) Then Return
             AppSettingsService.SaveCopiedAdjustments(recipe)
             Me.RaisePropertyChanged(NameOf(CanPasteAdjustments))
@@ -19549,14 +19562,20 @@ Namespace ViewModels
                 Return
             End If
             If _mainVm Is Nothing OrElse Not Await _mainVm.ShowAdjustmentPresetSaveAsync(dialog) Then Return
-            PasteCopiedAdjustments(dialog.SelectedEntries())
+            dialog.RememberGeometryChoice()
+            PasteCopiedAdjustments(dialog.SelectedEntries(), dialog.GeometryParts)
         End Function
 
         ''' <summary>Fuegt die Ablage ein. Ohne <paramref name="entries"/> alles, wie bisher: die
         ''' Pixel-Anpassungen des Bildes werden ersetzt. Mit <paramref name="entries"/> nur diese
         ''' Eintraege (AdjustmentEntries.Apply): ein gewaehlter ersetzt auch mit dem Neutralwert,
-        ''' jeder nicht gewaehlte Regler des Bildes bleibt bitgleich.</summary>
-        Public Sub PasteCopiedAdjustments(Optional entries As IEnumerable(Of AdjustmentEntry) = Nothing)
+        ''' jeder nicht gewaehlte Regler des Bildes bleibt bitgleich.
+        '''
+        ''' <paramref name="geometry"/> sind die Teile der Geometrie, die aus der Ablage kommen
+        ''' (GeometryTransfer.Apply); ab Werk keiner. Sie gehen in denselben Schritt der Historie,
+        ''' Rueckgaengig nimmt Regler und Geometrie zusammen zurueck.</summary>
+        Public Sub PasteCopiedAdjustments(Optional entries As IEnumerable(Of AdjustmentEntry) = Nothing,
+                                          Optional geometry As GeometryTransferParts = GeometryTransferParts.None)
             If Not HasDocument Then Return
             Dim gespeichert = ReadCopiedAdjustments()
             If gespeichert Is Nothing Then
@@ -19567,8 +19586,16 @@ Namespace ViewModels
             PushUndo()
             ' Auf dem AKTUELLEN Stand aufsetzen und nur die Pixel-Anpassungen ersetzen: Geometrie,
             ' Objekte und Masken dieses Bildes bleiben damit unangetastet. Einzig ein mitgebrachter
-            ' Rahmen tritt an die Stelle des vorhandenen.
+            ' Rahmen tritt an die Stelle des vorhandenen, und die gewaehlten Teile der Geometrie.
+            ' Wie bei jedem Geometrieschritt von Hand: die Auswahl liegt im Anzeigeraum und passte
+            ' danach nicht mehr (ClearActiveSelectionForGeometry). Sie steht im eben abgelegten
+            ' Schritt, Rueckgaengig holt sie zurueck.
+            If geometry <> GeometryTransferParts.None Then ClearActiveSelectionForGeometry()
             Dim target = GetCurrentAdjustments()
+            Dim geometryOutcome As GeometryTransferOutcome = Nothing
+            If geometry <> GeometryTransferParts.None Then
+                geometryOutcome = GeometryTransfer.Apply(target, gespeichert, geometry, GetBaseWidth(), GetBaseHeight())
+            End If
             Dim chosen = entries?.ToList()
             If chosen Is Nothing Then
                 target.CopyPixelAdjustmentsFrom(gespeichert)
@@ -19592,7 +19619,15 @@ Namespace ViewModels
             RaiseResetButtonStateChanged()
             NameHistoryStep(LocalizationService.T("Anpassungen eingefügt"))
             SchedulePreviewUpdate()
-            StatusText = LocalizationService.T("Anpassungen eingefügt")
+            StatusText = If(geometryOutcome IsNot Nothing AndAlso geometryOutcome.CropSkipped,
+                            LocalizationService.T("Anpassungen eingefügt, ohne Zuschnitt: das Bild steht hoch, wo das kopierte quer stand, oder umgekehrt."),
+                            LocalizationService.T("Anpassungen eingefügt"))
+            If geometryOutcome IsNot Nothing AndAlso geometryOutcome.Applied <> GeometryTransferParts.None Then
+                ' Wie nach einer Drehung von Hand: Masse und Lage des Bildes haben sich geaendert,
+                ' die Ansicht passt es neu ein.
+                RaiseDisplayImageGeometryProperties()
+                RaiseEvent ImageGeometryChanged(Me, EventArgs.Empty)
+            End If
         End Sub
 
         Public ReadOnly Property ApplyCropCommand As ICommand
@@ -24447,6 +24482,9 @@ Namespace ViewModels
         ''' <see cref="SliderPreviewMaxDimension"/>.</param>
         Public Sub BeginSliderPreviewDrag(Optional scaleSensitive As Boolean = False)
             _sliderDragActive = True
+            ' Regler je Bildpunkt: wenn moeglich zeichnet die Karte des Fensters den Zug
+            ' (EditorViewModelGpuDisplay.vb).
+            BeginGpuDragDisplay(scaleSensitive)
             ' Wer einen massstabsabhaengigen Regler selbst zieht (Schaerfe, Koernung, Rauschen),
             ' will dessen Wirkung sehen: dann keine verkleinerte Quelle, der Takt laeuft, und das
             ' Loslassen zieht nach.
@@ -24490,6 +24528,7 @@ Namespace ViewModels
             _sliderDragActive = False
             _sliderPreviewDragActive = False
             _sliderPreviewRequestedMaxDimension = 0
+            EndGpuDragDisplay()
             MarkPreviewPending()
             RestartPreviewTimer(1.0)
         End Sub
@@ -25195,6 +25234,9 @@ Namespace ViewModels
                 .PerspectiveCorner3X = CSng(_perspectiveCorners(6)), .PerspectiveCorner3Y = CSng(_perspectiveCorners(7))}})
             _perspectiveHorizontal = 0 : _perspectiveVertical = 0 : _perspectiveAspect = 0 : _perspectiveScale = 0
             Array.Clear(_perspectiveCorners, 0, _perspectiveCorners.Length)
+            ' Die Perspektivlinien sind mit dem Schritt verbraucht, wie Raster und Linien der
+            ' anderen Arten: der Schritt traegt nur die Ecken. Rueckgaengig holt sie zurueck.
+            ClearPerspectiveGuides()
             RaiseCornersChanged()
             _hasChanges = True
             RaiseResetButtonStateChanged()
@@ -25222,6 +25264,10 @@ Namespace ViewModels
                 previewSource = GetPreviewSourceForRender()
                 If previewSource Is Nothing Then Return
             End If
+
+            ' Im Zug ueber die Karte des Fensters entsteht statt der Szene nur ein Rahmen
+            ' (EditorViewModelGpuDisplay.vb); faellt der Zug zurueck, rechnet die Kette weiter.
+            If Await TryRenderGpuDragFrameAsync(previewSource) Then Return
 
             RegisterPreviewRenderStart()
             Dim requestId = _previewRequestId
@@ -27183,6 +27229,9 @@ Namespace ViewModels
                         reverted = True
                         discarded.Add(LocalizationService.T("Perspektive"))
                     End If
+                    ' Die Perspektivlinien gehen mit: ihr Ergebnis stand in den Ecken, und die
+                    ' Linien selbst sieht man nur im Werkzeug.
+                    If ClearPerspectiveGuides() Then discarded.Add(LocalizationService.T("Perspektivlinien"))
             End Select
             If reverted Then
                 RaiseResetButtonStateChanged()
@@ -29029,6 +29078,7 @@ Namespace ViewModels
             _perspectiveAspect = 0
             _perspectiveScale = 0
             Array.Clear(_perspectiveCorners, 0, _perspectiveCorners.Length)
+            ClearPerspectiveGuides()
             ' Die Rasterverzerrung gehoert genauso dazu. Sie steht seit dem Rezept-Umbau als eigener
             ' SCHRITT statt in den Pixeln - ohne das Leeren der Liste ueberlebte sie ein
             ' "Zuruecksetzen" und wanderte beim Oeffnen des naechsten Bildes sogar mit.
@@ -33645,6 +33695,7 @@ Namespace ViewModels
                     _perspectiveAspect = 0
                     _perspectiveScale = 0
                     Array.Clear(_perspectiveCorners, 0, _perspectiveCorners.Length)
+                    ClearPerspectiveGuides()
                     For Each name In {NameOf(PerspectiveHorizontal), NameOf(PerspectiveVertical),
                                       NameOf(PerspectiveAspect), NameOf(PerspectiveScale)}
                         Me.RaisePropertyChanged(name)

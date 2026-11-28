@@ -8143,9 +8143,6 @@
   <data name="Ein_Sensor_misst_je_Bildpunkt_nur_eine_Farbe_das_deddea65" xml:space="preserve">
     <value>Um sensor mede apenas uma cor por pixel; o método calcula a imagem completa a partir disso. As miniaturas são recriadas após uma alteração.</value>
   </data>
-  <data name="Feinere_Zeichnung_daf_r_mehr_Farbrauschen_und_et_f187bdb8" xml:space="preserve">
-    <value>Desenho mais fino, mas mais ruído de cor e cerca de duas vezes e meia o tempo por foto.</value>
-  </data>
   <data name="Etwa_ein_F_nftel_schneller_als_die_Vorgabe_67a1755c" xml:space="preserve">
     <value>Cerca de um quinto mais rápido do que a predefinição.</value>
   </data>
@@ -13774,5 +13771,86 @@
   </data>
   <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
     <value>O índice do catálogo já está em execução</value>
+  </data>
+  <data name="Perspektivlinien_7b6d24d3" xml:space="preserve">
+    <value>Linhas de perspetiva</value>
+  </data>
+  <data name="Zwei_bis_vier_Linien_an_Kanten_ziehen_die_senkre_b57953f3" xml:space="preserve">
+    <value>Arraste duas a quatro linhas ao longo de arestas que devam ficar verticais ou horizontais. As linhas íngremes passam a verticais, as planas a horizontais.</value>
+  </data>
+  <data name="ENTF_entfernt_die_gefasste_oder_zuletzt_gesetzte_3ac4db32" xml:space="preserve">
+    <value>DEL remove a linha selecionada ou a última colocada.</value>
+  </data>
+  <data name="Gef_hrte_Perspektive_03e5f2b8" xml:space="preserve">
+    <value>Perspetiva guiada</value>
+  </data>
+  <data name="H_chstens_vier_Perspektivlinien_07ba69c1" xml:space="preserve">
+    <value>No máximo quatro linhas de perspetiva</value>
+  </data>
+  <data name="Die_Perspektivlinien_verlangen_zu_viel_die_Entze_cc904fe7" xml:space="preserve">
+    <value>As linhas de perspetiva pedem demasiado, o endireitamento foi limitado</value>
+  </data>
+  <data name="Die_Perspektivlinien_widersprechen_sich_5dd460a5" xml:space="preserve">
+    <value>As linhas de perspetiva contradizem-se</value>
+  </data>
+  <data name="Aus_diesen_Perspektivlinien_ergibt_sich_keine_g__fe242b73" xml:space="preserve">
+    <value>Estas linhas de perspetiva não dão um endireitamento válido</value>
+  </data>
+  <data name="Perspektivlinien_entfernt_die_Ecken_bleiben_und__1c4ae4fb" xml:space="preserve">
+    <value>Linhas de perspetiva removidas, os cantos mantêm-se e podem ser ajustados</value>
+  </data>
+  <data name="Geometrie_0f3a847b" xml:space="preserve">
+    <value>Geometria</value>
+  </data>
+  <data name="Ausrichten_Drehen_und_Spiegeln_ed641188" xml:space="preserve">
+    <value>Endireitar, rodar e espelhar</value>
+  </data>
+  <data name="Ein_Haken_ersetzt_diesen_Teil_der_Geometrie_durc_9320ba66" xml:space="preserve">
+    <value>Uma marca substitui esta parte da geometria pela da foto copiada. Se uma foto estiver na vertical onde a copiada estava na horizontal, ou ao contrário, o seu recorte fica como está.</value>
+  </data>
+  <data name="Anpassungen_eingef_gt_ohne_Zuschnitt_das_Bild_st_2e2b5b10" xml:space="preserve">
+    <value>Ajustes colados, sem recorte: a foto está na vertical onde a copiada estava na horizontal, ou ao contrário.</value>
+  </data>
+  <data name="0_Bild_er_ohne_Zuschnitt_eingef_gt_sie_stehen_ho_293315ce" xml:space="preserve">
+    <value>{0} foto(s) colada(s) sem recorte: estão na vertical onde a foto copiada estava na horizontal, ou ao contrário.</value>
+  </data>
+  <data name="An_feinen_roten_und_gr_nen_Mustern_weniger_Falsc_7376eb72" xml:space="preserve">
+    <value>Menos cores falsas em padrões finos vermelhos e verdes, quase nenhuma diferença em fotos comuns. Mais ou menos tão rápido quanto a predefinição.</value>
+  </data>
+  <data name="Etwas_weicher_als_die_Vorgabe_mit_mehr_Farbrausc_41a2a658" xml:space="preserve">
+    <value>Um pouco mais suave do que a predefinição, com mais ruído de cor e por vezes orlas verdes em contornos escuros contra um céu claro. Demora várias vezes mais.</value>
+  </data>
+  <data name="Ein_Durchgang_462aaf8e" xml:space="preserve">
+    <value>Uma passagem</value>
+  </data>
+  <data name="Drei_Durchg_nge_db150009" xml:space="preserve">
+    <value>Três passagens</value>
+  </data>
+  <data name="Gilt_f_r_Sensoren_mit_Bayer_Muster_also_fast_all_e61dea74" xml:space="preserve">
+    <value>Aplica-se a sensores com padrão Bayer, ou seja, quase todas as câmaras. Os sensores X-Trans da Fujifilm têm a sua própria opção abaixo.</value>
+  </data>
+  <data name="Durchg_nge_f_r_X_Trans_Sensoren_9d491de6" xml:space="preserve">
+    <value>Passagens para sensores X-Trans</value>
+  </data>
+  <data name="Fujis_X_Trans_Sensoren_werden_mit_einem_eigenen__61f91da3" xml:space="preserve">
+    <value>Os sensores X-Trans da Fujifilm são revelados com um método próprio. Uma passagem mede o mesmo que três e demora cerca de metade do tempo. As miniaturas são recriadas após uma alteração.</value>
+  </data>
+  <data name="Nachbarbilder_im_Viewer_vorentwickeln_341d1049" xml:space="preserve">
+    <value>Pré-revelar as imagens vizinhas no visualizador</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_W_hr_b8d534f5" xml:space="preserve">
+    <value>Aplica-se quando o visualizador revela os RAW por si próprio. Enquanto uma imagem é mostrada, as três seguintes no sentido de navegação e a anterior são reveladas em segundo plano, para aparecerem sem espera ao navegar. Isto cede a qualquer outro trabalho e ocupa até 1 GB de memória, conforme o tamanho da imagem.</value>
+  </data>
+  <data name="Reglerzug_direkt_auf_der_Grafikkarte_zeigen_11829498" xml:space="preserve">
+    <value>Mostrar o arrasto dos controles diretamente na placa gráfica</value>
+  </data>
+  <data name="Zeigt_beim_Ziehen_an_Licht_und_Farbreglern_das_B_0a0889c7" xml:space="preserve">
+    <value>Ao arrastar os controles de luz e cor, a imagem é desenhada diretamente pela placa gráfica da janela, sem passar pelo processador. Ao soltar, a imagem é calculada como antes. Sem uma placa gráfica adequada, tudo continua pelo caminho anterior.</value>
+  </data>
+  <data name="FerrumPix_wurde_beim_letzten_Mal_w_hrend_der_Anz_26ce1fbb" xml:space="preserve">
+    <value>Da última vez o FerrumPix foi encerrado durante a exibição na placa gráfica. Esse caminho continua desativado até que o interruptor seja desligado e ligado de novo.</value>
+  </data>
+  <data name="In_dieser_Sitzung_zeigt_der_Reglerzug_wieder_ber_6f14b7c2" xml:space="preserve">
+    <value>Nesta sessão o arrasto dos controles volta a ser mostrado pelo processador, porque falta a placa gráfica da janela, o autoteste falhou ou estava lento demais.</value>
   </data>
 </root>

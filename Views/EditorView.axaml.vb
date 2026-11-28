@@ -157,6 +157,7 @@ Namespace Views
         Private _isLineDragging As Boolean = False
         Private _isObjectCornerDragging As Boolean = False
         Private _isPerspectiveDragging As Boolean = False
+        Private _isPerspectiveGuideDragging As Boolean = False
         Private _isMaskMoveDragging As Boolean = False
         Private _selectionStart As Avalonia.Point
         Private _selectionEnd As Avalonia.Point
@@ -1705,6 +1706,18 @@ Namespace Views
                 End Select
             End If
 
+            ' ENTF NIMMT DIE GEFASSTE PERSPEKTIVLINIE WEG, oder die zuletzt gesetzte. Im Tunnel aus
+            ' demselben Grund wie ENTER und ESC einer offenen Verzerrung: nach einem Klick ins Panel
+            ' hat ein Knopf den Fokus, und der Weg ueber die Ansicht loeschte sonst eine Ebene.
+            If tunnelVm IsNot Nothing AndAlso e.Key = Key.Delete AndAlso tunnelVm.IsPerspectiveGuideActive AndAlso
+               tunnelVm.HasPerspectiveGuides AndAlso Not TypeOf e.Source Is TextBox AndAlso
+               Not _isPerspectiveGuideDragging Then
+                tunnelVm.DeleteSelectedPerspectiveGuide()
+                UpdateSliderLayout()
+                e.Handled = True
+                Return
+            End If
+
             ' EINE OFFENE VERZERRUNG wird ebenfalls hier abgeschlossen, und aus demselben Grund wie
             ' der Pfad-Entwurf: nach einem Klick ins Panel gehoert die Eingabetaste einem Knopf, der
             ' sie schluckt. Bis dahin ging Anwenden nur ueber den Knopf, und Escape waehlte
@@ -2283,6 +2296,8 @@ Namespace Views
                 ' darunter aus- bzw. wieder eingeblendet werden - das passiert im Layoutdurchlauf.
                 Case NameOf(EditorViewModel.WarpGridValues),
                      NameOf(EditorViewModel.PerspectiveCornerValues),
+                     NameOf(EditorViewModel.PerspectiveGuideValues),
+                     NameOf(EditorViewModel.IsPerspectiveGuideActive),
                      NameOf(EditorViewModel.LineValues),
                      NameOf(EditorViewModel.ObjectCornerValues),
                      NameOf(EditorViewModel.EnvelopeValues),
@@ -3055,7 +3070,25 @@ Namespace Views
             ' GITTERVERZERRUNG: die Rasterpunkte liegen ueber dem Bild und werden mit derselben
             ' Greiftoleranz gefasst wie die Verlaufs-Anfasser. Ohne Treffer faellt der Klick durch,
             ' damit im Transformationswerkzeug weiterhin geschoben und gezoomt werden kann.
-            If ShowsPerspective(vm) Then
+            ' PERSPEKTIVLINIEN: liegen sie ueber dem Bild, gehoert ihnen der Druck, und die Ecken
+            ' sind ausgeblendet. Ein Endpunkt darf nach dem Entzerren ausserhalb liegen, also NICHT
+            ' klemmen; eine neue Linie beginnt nur auf dem Bild (das prueft das ViewModel).
+            If ShowsPerspective(vm) AndAlso vm.IsPerspectiveGuideActive Then
+                Dim guideRect = GetDisplayedImageRect(canvas, vm)
+                If guideRect.Width > 0 AndAlso guideRect.Height > 0 Then
+                    Dim guidePos = e.GetPosition(canvas)
+                    If vm.TryBeginPerspectiveGuideDrag((guidePos.X - guideRect.Left) / guideRect.Width * 100.0,
+                                                       (guidePos.Y - guideRect.Top) / guideRect.Height * 100.0,
+                                                       CornerHandleTolerance / guideRect.Width * 100.0,
+                                                       CornerHandleTolerance / guideRect.Height * 100.0,
+                                                       guideRect.Width, guideRect.Height) Then
+                        _isPerspectiveGuideDragging = True
+                        e.Pointer.Capture(canvas)
+                        e.Handled = True
+                        Return
+                    End If
+                End If
+            ElseIf ShowsPerspective(vm) Then
                 Dim eckRect = GetDisplayedImageRect(canvas, vm)
                 If eckRect.Width > 0 AndAlso eckRect.Height > 0 Then
                     ' Die Ecken zuerst: sie duerfen ausserhalb des Bildes liegen, also NICHT auf das
@@ -3962,6 +3995,20 @@ Namespace Views
                 e.Handled = True
                 Return
             End If
+            If _isPerspectiveGuideDragging Then
+                Dim gCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+                Dim gVm = TryCast(DataContext, EditorViewModel)
+                If gCanvas Is Nothing OrElse gVm Is Nothing Then Return
+                Dim gRect = GetDisplayedImageRect(gCanvas, gVm)
+                If gRect.Width <= 0 OrElse gRect.Height <= 0 Then Return
+                ' Ungeklemmt: ein Endpunkt darf ueber die Bildkante hinaus.
+                Dim gPos = e.GetPosition(gCanvas)
+                gVm.UpdatePerspectiveGuideDrag((gPos.X - gRect.Left) / gRect.Width * 100.0,
+                                               (gPos.Y - gRect.Top) / gRect.Height * 100.0)
+                UpdateSliderLayout()
+                e.Handled = True
+                Return
+            End If
             If _isWarpDragging Then
                 Dim wCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
                 Dim wVm = TryCast(DataContext, EditorViewModel)
@@ -4149,7 +4196,8 @@ Namespace Views
                    _isSelectionDragging OrElse _isSelectionMoveDragging OrElse _isLassoDrawing OrElse
                    _isMaskBrushDrawing OrElse _isBrushDrawing OrElse _isRetouching OrElse
                    _isGuideDragging OrElse _objectMarqueeActive OrElse _isMaskMoveDragging OrElse
-                   _isPerspectiveDragging OrElse _isWarpDragging OrElse _isEnvelopeDragging OrElse
+                   _isPerspectiveDragging OrElse _isPerspectiveGuideDragging OrElse
+                   _isWarpDragging OrElse _isEnvelopeDragging OrElse
                    _isLiquifyStroking OrElse
                    _isLineDragging OrElse _isObjectCornerDragging OrElse _isGradientDragging OrElse
                    _isPathPointerActive
@@ -4242,6 +4290,11 @@ Namespace Views
             If _isPerspectiveDragging Then
                 TryCast(DataContext, EditorViewModel)?.EndPerspectiveCornerDrag()
                 _isPerspectiveDragging = False
+            End If
+            If _isPerspectiveGuideDragging Then
+                TryCast(DataContext, EditorViewModel)?.EndPerspectiveGuideDrag()
+                _isPerspectiveGuideDragging = False
+                UpdateSliderLayout()
             End If
             If _isWarpDragging Then
                 TryCast(DataContext, EditorViewModel)?.EndWarpDrag()
@@ -5858,6 +5911,7 @@ Namespace Views
             ' er dieselbe rote Deckung. Deshalb reicht hier auch ein markierter Verlauf als Grund.
             PositionPreview(ix, iy, iw, ih)
             PositionPerspectiveOverlay(ix, iy, iw, ih)
+            PositionPerspectiveGuideOverlay(ix, iy, iw, ih)
             PositionGridWarpOverlay(ix, iy, iw, ih)
             PositionLineWarpOverlay(ix, iy, iw, ih)
             PositionEnvelopeWarpOverlay(ix, iy, iw, ih)
@@ -5969,6 +6023,25 @@ Namespace Views
             If vm Is Nothing OrElse canvas Is Nothing Then Return False
             Dim rect = GetDisplayedImageRect(canvas, vm)
             If rect.Width <= 0 OrElse rect.Height <= 0 Then Return False
+            ' Liegen die Perspektivlinien ueber dem Bild, sind deren Endpunkte die Anfasser: auch
+            ' sie koennen nach dem Entzerren ausserhalb liegen, und der Druck muss dort ankommen.
+            If vm.IsPerspectiveGuideActive Then
+                Dim g = vm.PerspectiveGuideValues
+                If g Is Nothing OrElse g.Length < 2 Then Return False
+                Dim count = CInt(g(0))
+                If g.Length < 2 + count * 5 Then Return False
+                For i = 0 To count - 1
+                    For part = 0 To 1
+                        Dim px = g(2 + i * 5 + part * 2), py = g(3 + i * 5 + part * 2)
+                        If Double.IsNaN(px) OrElse Double.IsNaN(py) Then Continue For
+                        Dim gx = rect.Left + px / 100.0 * rect.Width
+                        Dim gy = rect.Top + py / 100.0 * rect.Height
+                        If Math.Abs(position.X - gx) <= CornerHandleTolerance AndAlso
+                           Math.Abs(position.Y - gy) <= CornerHandleTolerance Then Return True
+                    Next
+                Next
+                Return False
+            End If
             ' Bei einer markierten Ebene sind es deren Ecken, nicht die Perspektive des
             ' Gesamtbilds. Die können bewusst weit über die Bildgrenze hinausreichen; mit den
             ' Bildwerten traf die Außenbereich-Prüfung nie und der Canvas räumte die Auswahl vor
@@ -6146,7 +6219,11 @@ Namespace Views
                     Return
                 End If
             End If
-            If vm Is Nothing OrElse Not ShowsPerspective(vm) OrElse iw <= 0 OrElse ih <= 0 Then
+            ' Liegen die Perspektivlinien ueber dem Bild, verschwinden die Eckanfasser: zwei
+            ' Werkzeuge an denselben Stellen hiessen, dass ein Druck je nach Pixel das eine oder
+            ' das andere meint.
+            If vm Is Nothing OrElse Not ShowsPerspective(vm) OrElse vm.IsPerspectiveGuideActive OrElse
+               iw <= 0 OrElse ih <= 0 Then
                 overlay.IsVisible = False
                 overlay.CornerValues = Nothing
                 Return
@@ -6164,6 +6241,45 @@ Namespace Views
                 values(i * 2 + 1) = e(i * 2 + 1) / 100.0 * ih + border
             Next
             overlay.CornerValues = values
+            Avalonia.Controls.Canvas.SetLeft(overlay, ix - border)
+            Avalonia.Controls.Canvas.SetTop(overlay, iy - border)
+            overlay.Width = iw + border * 2
+            overlay.Height = ih + border * 2
+            overlay.IsVisible = True
+            overlay.InvalidateVisual()
+        End Sub
+
+        ''' <summary>Legt die Perspektivlinien ueber das Bild. Wie bei den Ecken bekommt das
+        ''' Steuerelement Platz ueber den Bildrand hinaus: nach dem Entzerren kann ein Endpunkt
+        ''' draussen liegen und muss dort sichtbar und greifbar bleiben.</summary>
+        Private Sub PositionPerspectiveGuideOverlay(ix As Double, iy As Double, iw As Double, ih As Double)
+            Dim overlay = Me.FindControl(Of PerspectiveGuideOverlayControl)("PerspectiveGuideOverlay")
+            If overlay Is Nothing Then Return
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing OrElse Not ShowsPerspective(vm) OrElse Not vm.IsPerspectiveGuideActive OrElse
+               iw <= 0 OrElse ih <= 0 Then
+                overlay.IsVisible = False
+                overlay.GuideValues = Nothing
+                Return
+            End If
+            Dim g = vm.PerspectiveGuideValues
+            If g Is Nothing OrElse g.Length < 2 Then
+                overlay.IsVisible = False
+                Return
+            End If
+            Const border As Double = 400.0
+            Dim values(g.Length - 1) As Double
+            values(0) = g(0) : values(1) = g(1)
+            Dim count = CInt(g(0))
+            For i = 0 To count - 1
+                Dim b = 2 + i * 5
+                values(b) = g(b) / 100.0 * iw + border
+                values(b + 1) = g(b + 1) / 100.0 * ih + border
+                values(b + 2) = g(b + 2) / 100.0 * iw + border
+                values(b + 3) = g(b + 3) / 100.0 * ih + border
+                values(b + 4) = g(b + 4)
+            Next
+            overlay.GuideValues = values
             Avalonia.Controls.Canvas.SetLeft(overlay, ix - border)
             Avalonia.Controls.Canvas.SetTop(overlay, iy - border)
             overlay.Width = iw + border * 2

@@ -86,6 +86,18 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Nachbarbilder im Viewer vorentwickeln" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Gilt, wenn der Viewer RAWs selbst entwickelt. Während ein Bild zu sehen ist, werden im Hintergrund die nächsten drei Bilder in Blätterrichtung und das vorige entwickelt, damit sie beim Blättern ohne Wartezeit erscheinen. Das weicht jeder anderen Arbeit und belegt je nach Bildgröße bis zu 1 GB Arbeitsspeicher." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding PrefetchNeighborsInViewer}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="RAWs ohne Bearbeitung im Stapel entwickeln" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Stapelfunktionen wie Bildgröße ändern oder Exportieren nach entwickeln RAWs in voller Sensorauflösung. Ausgeschaltet nehmen sie für unbearbeitete RAWs die eingebettete Vorschau – schneller, aber kleiner. RAWs MIT Bearbeitung (.fpxmp) werden unabhängig davon immer entwickelt und mit ihrem Rezept geschrieben." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
@@ -221,18 +233,43 @@
                              unbeschnittenen Lesen. Ein Schalter, der das nicht heilt, verwirrt nur.
                              Der Wortlaut liegt in den Ressourcendateien bereit, falls er
                              zurueckkommt. -->
-                        <!-- Die Abkuerzungen bleiben unuebersetzt (Klasse no-translate): AHD, DCB
-                             und PPG sind die Namen der Verfahren, nicht Beschreibungen. Was sie
+                        <!-- Die Abkuerzungen bleiben unuebersetzt (Klasse no-translate): AHD, DHT,
+                             DCB und PPG sind die Namen der Verfahren, nicht Beschreibungen. Was sie
                              bedeuten, steht in der Zeile darunter. -->
                         <Grid ColumnDefinitions="*,Auto" Margin="0,12,0,0">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Verfahren zum Entwickeln der Sensordaten" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Ein Sensor misst je Bildpunkt nur eine Farbe; das Verfahren rechnet daraus das vollständige Bild. Vorschaubilder werden nach einer Änderung neu erzeugt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Gilt für Sensoren mit Bayer-Muster, also fast alle Kameras. Fujis X-Trans-Sensoren haben die eigene Wahl darunter." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Text="{Binding RawDemosaicDescription}" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ComboBox Grid.Column="1"
                                       ItemsSource="{Binding RawDemosaicOptions}"
                                       SelectedItem="{Binding SelectedRawDemosaic, Mode=TwoWay}"
+                                      MinWidth="140"
+                                      VerticalAlignment="Center"
+                                      FontSize="{DynamicResource FP.Font.Body}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </Grid>
+
+                        <!-- Die X-Trans-Durchgaenge (AppSettings.RawXTransPasses). LibRaw kennt fuer
+                             Fujis 6x6-Muster nur ein eigenes Verfahren, mit einem oder drei
+                             Durchgaengen; das Bayer-Verfahren darueber wirkt dort nicht. Die Namen
+                             kommen uebersetzt aus dem ViewModel (BuildRawXTransPassesOptions),
+                             deshalb no-translate. -->
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,12,0,0">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Durchgänge für X-Trans-Sensoren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Fujis X-Trans-Sensoren werden mit einem eigenen Verfahren entwickelt. Ein Durchgang sieht gemessen gleich aus wie drei und braucht etwa die halbe Zeit. Vorschaubilder werden nach einer Änderung neu erzeugt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding RawXTransPassesOptions}"
+                                      SelectedItem="{Binding SelectedRawXTransPasses, Mode=TwoWay}"
                                       MinWidth="140"
                                       VerticalAlignment="Center"
                                       FontSize="{DynamicResource FP.Font.Body}">

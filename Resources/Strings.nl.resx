@@ -8184,9 +8184,6 @@
   <data name="Ein_Sensor_misst_je_Bildpunkt_nur_eine_Farbe_das_deddea65" xml:space="preserve">
     <value>Een sensor meet per beeldpunt maar één kleur; de methode berekent daaruit het volledige beeld. Miniaturen worden na een wijziging opnieuw gemaakt.</value>
   </data>
-  <data name="Feinere_Zeichnung_daf_r_mehr_Farbrauschen_und_et_f187bdb8" xml:space="preserve">
-    <value>Fijnere tekening, maar meer kleurruis en ongeveer tweeënhalf keer zo lang per foto.</value>
-  </data>
   <data name="Etwa_ein_F_nftel_schneller_als_die_Vorgabe_67a1755c" xml:space="preserve">
     <value>Ongeveer een vijfde sneller dan de standaard.</value>
   </data>
@@ -13815,5 +13812,86 @@
   </data>
   <data name="Der_Katalogindex_l_uft_bereits_b5bc4f74" xml:space="preserve">
     <value>De catalogusindex draait al</value>
+  </data>
+  <data name="Perspektivlinien_7b6d24d3" xml:space="preserve">
+    <value>Perspectieflijnen</value>
+  </data>
+  <data name="Zwei_bis_vier_Linien_an_Kanten_ziehen_die_senkre_b57953f3" xml:space="preserve">
+    <value>Trek twee tot vier lijnen langs randen die verticaal of horizontaal moeten staan. Steile lijnen worden verticaal, vlakke horizontaal.</value>
+  </data>
+  <data name="ENTF_entfernt_die_gefasste_oder_zuletzt_gesetzte_3ac4db32" xml:space="preserve">
+    <value>DEL verwijdert de gekozen of laatst geplaatste lijn.</value>
+  </data>
+  <data name="Gef_hrte_Perspektive_03e5f2b8" xml:space="preserve">
+    <value>Geleid perspectief</value>
+  </data>
+  <data name="H_chstens_vier_Perspektivlinien_07ba69c1" xml:space="preserve">
+    <value>Maximaal vier perspectieflijnen</value>
+  </data>
+  <data name="Die_Perspektivlinien_verlangen_zu_viel_die_Entze_cc904fe7" xml:space="preserve">
+    <value>De perspectieflijnen vragen te veel, het rechttrekken is begrensd</value>
+  </data>
+  <data name="Die_Perspektivlinien_widersprechen_sich_5dd460a5" xml:space="preserve">
+    <value>De perspectieflijnen spreken elkaar tegen</value>
+  </data>
+  <data name="Aus_diesen_Perspektivlinien_ergibt_sich_keine_g__fe242b73" xml:space="preserve">
+    <value>Deze perspectieflijnen leveren geen geldige rechttrekking op</value>
+  </data>
+  <data name="Perspektivlinien_entfernt_die_Ecken_bleiben_und__1c4ae4fb" xml:space="preserve">
+    <value>Perspectieflijnen verwijderd, de hoeken blijven staan en kunnen worden bijgesteld</value>
+  </data>
+  <data name="Geometrie_0f3a847b" xml:space="preserve">
+    <value>Geometrie</value>
+  </data>
+  <data name="Ausrichten_Drehen_und_Spiegeln_ed641188" xml:space="preserve">
+    <value>Rechtzetten, draaien en spiegelen</value>
+  </data>
+  <data name="Ein_Haken_ersetzt_diesen_Teil_der_Geometrie_durc_9320ba66" xml:space="preserve">
+    <value>Een vinkje vervangt dit deel van de geometrie door dat van de gekopieerde foto. Staat een foto staand waar de gekopieerde liggend was, of andersom, dan blijft de uitsnede zoals die is.</value>
+  </data>
+  <data name="Anpassungen_eingef_gt_ohne_Zuschnitt_das_Bild_st_2e2b5b10" xml:space="preserve">
+    <value>Aanpassingen geplakt, zonder uitsnede: de foto staat staand waar de gekopieerde liggend was, of andersom.</value>
+  </data>
+  <data name="0_Bild_er_ohne_Zuschnitt_eingef_gt_sie_stehen_ho_293315ce" xml:space="preserve">
+    <value>{0} foto('s) zonder uitsnede geplakt: ze staan staand waar de gekopieerde foto liggend was, of andersom.</value>
+  </data>
+  <data name="An_feinen_roten_und_gr_nen_Mustern_weniger_Falsc_7376eb72" xml:space="preserve">
+    <value>Minder valse kleuren bij fijne rode en groene patronen, bij gewone foto's nauwelijks verschil. Ongeveer even snel als de standaard.</value>
+  </data>
+  <data name="Etwas_weicher_als_die_Vorgabe_mit_mehr_Farbrausc_41a2a658" xml:space="preserve">
+    <value>Iets zachter dan de standaard, met meer kleurruis en bij donkere randen tegen een heldere lucht soms groene randjes. Duurt een veelvoud van de tijd.</value>
+  </data>
+  <data name="Ein_Durchgang_462aaf8e" xml:space="preserve">
+    <value>Eén doorgang</value>
+  </data>
+  <data name="Drei_Durchg_nge_db150009" xml:space="preserve">
+    <value>Drie doorgangen</value>
+  </data>
+  <data name="Gilt_f_r_Sensoren_mit_Bayer_Muster_also_fast_all_e61dea74" xml:space="preserve">
+    <value>Geldt voor sensoren met een Bayer-patroon, dus bijna alle camera's. Fujifilm X-Trans-sensoren hebben hieronder een eigen keuze.</value>
+  </data>
+  <data name="Durchg_nge_f_r_X_Trans_Sensoren_9d491de6" xml:space="preserve">
+    <value>Doorgangen voor X-Trans-sensoren</value>
+  </data>
+  <data name="Fujis_X_Trans_Sensoren_werden_mit_einem_eigenen__61f91da3" xml:space="preserve">
+    <value>Fujifilm X-Trans-sensoren worden met een eigen methode ontwikkeld. Eén doorgang meet hetzelfde als drie en kost ongeveer de helft van de tijd. Miniaturen worden na een wijziging opnieuw gemaakt.</value>
+  </data>
+  <data name="Reglerzug_direkt_auf_der_Grafikkarte_zeigen_11829498" xml:space="preserve">
+    <value>Schuifregelaars slepen direct op de grafische kaart tonen</value>
+  </data>
+  <data name="Zeigt_beim_Ziehen_an_Licht_und_Farbreglern_das_B_0a0889c7" xml:space="preserve">
+    <value>Terwijl je aan licht- en kleurregelaars sleept, tekent de grafische kaart van het venster het beeld direct, zonder omweg via de processor. Na het loslaten wordt het beeld berekend zoals voorheen. Zonder geschikte grafische kaart blijft alles bij de bestaande weg.</value>
+  </data>
+  <data name="FerrumPix_wurde_beim_letzten_Mal_w_hrend_der_Anz_26ce1fbb" xml:space="preserve">
+    <value>FerrumPix werd de vorige keer afgesloten tijdens de weergave op de grafische kaart. Deze weg blijft uit totdat de schakelaar een keer uit en weer aan wordt gezet.</value>
+  </data>
+  <data name="In_dieser_Sitzung_zeigt_der_Reglerzug_wieder_ber_6f14b7c2" xml:space="preserve">
+    <value>In deze sessie wordt het slepen aan regelaars weer via de processor getoond, omdat het venster geen grafische kaart heeft, de zelftest niet is geslaagd of het te traag was.</value>
+  </data>
+  <data name="Nachbarbilder_im_Viewer_vorentwickeln_341d1049" xml:space="preserve">
+    <value>Naburige foto's in de viewer vooraf ontwikkelen</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_W_hr_b8d534f5" xml:space="preserve">
+    <value>Geldt wanneer de viewer RAW-bestanden zelf ontwikkelt. Terwijl een foto wordt getoond, worden de volgende drie foto's in bladerrichting en de vorige op de achtergrond ontwikkeld, zodat ze bij het bladeren zonder wachttijd verschijnen. Dit wijkt voor elk ander werk en gebruikt afhankelijk van de fotogrootte tot 1 GB werkgeheugen.</value>
   </data>
 </root>
