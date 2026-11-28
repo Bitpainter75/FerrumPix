@@ -805,7 +805,13 @@ Namespace Services
                         ' auf dem Fenster der Videoflaeche bei jedem Film mit "Could not make context
                         ' current" (XWayland, NVIDIA); ohne Ausweichweg blieb das Bild schwarz und nur
                         ' der Ton lief.
-                        SetOptionStringRaw("gpu-context", "x11egl,x11")
+                        ' GLX ist in mpv ein abschaltbares Modul, und viele Verteilungen (Debian,
+                        ' Ubuntu) bauen es nicht mit. Kennt die libmpv "x11" nicht, verwirft sie die
+                        ' GANZE Liste mit -7, und der Spieler galt als gescheitert. Dann bleibt EGL
+                        ' allein, wie vor dem Ausweichweg.
+                        If TrySetOptionStringRaw("gpu-context", "x11egl,x11") = MpvInterop.ErrorOptionError Then
+                            SetOptionStringRaw("gpu-context", "x11egl")
+                        End If
                     End If
                     SetOptionStringRaw("wid", WindowHandleToUnsignedString(_windowHandle))
                 End If
@@ -1148,11 +1154,16 @@ Namespace Services
         End Function
 
         Private Sub SetOptionStringRaw(name As String, value As String)
-            Using namePtr = New Utf8String(name), valuePtr = New Utf8String(value)
-                Dim result = MpvInterop.SetOptionString(_handle, namePtr.Pointer, valuePtr.Pointer)
-                If result < 0 Then Throw New InvalidOperationException($"libmpv option {name} fehlgeschlagen ({result}).")
-            End Using
+            Dim result = TrySetOptionStringRaw(name, value)
+            If result < 0 Then Throw New InvalidOperationException($"libmpv option {name} fehlgeschlagen ({result}).")
         End Sub
+
+        ''' <summary>Setzt eine Option und gibt den Rueckgabewert von mpv zurueck, ohne zu werfen.</summary>
+        Private Function TrySetOptionStringRaw(name As String, value As String) As Integer
+            Using namePtr = New Utf8String(name), valuePtr = New Utf8String(value)
+                Return MpvInterop.SetOptionString(_handle, namePtr.Pointer, valuePtr.Pointer)
+            End Using
+        End Function
 
         Private Sub SetPropertyStringRaw(name As String, value As String)
             Using namePtr = New Utf8String(name), valuePtr = New Utf8String(value)

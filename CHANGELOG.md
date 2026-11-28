@@ -92,3 +92,7 @@
   could stay empty until the tile size changed, and after a while not even that helped. Every
   tile on screen now gets its thumbnail, in the grid, the grouped view and the photo wall.
 
+- **Videos play with the libmpv of more distributions.** On systems whose libmpv comes without
+  the older OpenGL path, the AppImage said that mpv was missing and played no video at all. It
+  now uses the path that libmpv has.
+

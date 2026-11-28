@@ -236,6 +236,10 @@ Namespace Services
         ''' <summary>MPV_ERROR_OPTION_NOT_FOUND: diese libmpv kennt die Option nicht.</summary>
         Friend Const ErrorOptionNotFound As Integer = -5
 
+        ''' <summary>MPV_ERROR_OPTION_ERROR: die Option gibt es, der Wert passt aber nicht zu dieser
+        ''' libmpv (etwa ein Grafikkontext, der nicht mitgebaut ist).</summary>
+        Friend Const ErrorOptionError As Integer = -7
+
         ''' <summary>Setzt eine Option, die nicht jede libmpv kennt. False, wenn diese Fassung sie nicht
         ''' hat; jeder andere Fehler wirft wie beim gewoehnlichen Setzen.
         '''
