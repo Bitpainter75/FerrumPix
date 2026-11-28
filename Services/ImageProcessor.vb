@@ -425,7 +425,11 @@ Namespace Services
         ''' Unverändert gilt: die RAW-Datei wird nie als Schreibziel berührt - Speichern schreibt
         ''' immer in eine neue Zieldatei, Reglerstände gehen in das .fpxmp-Sidecar.
         Private Shared Function OpenSourceStream(path As String) As Stream
-            If RawPreviewService.IsSupportedRaw(path) Then Return RawPreviewService.ExtractPreview(path)
+            If RawPreviewService.IsSupportedRaw(path) Then
+                ' Hier ist LibRaw schon gescheitert (DecodeOriented); ein gewoehnliches TIFF unter
+                ' RAW-Endung liest dann der TIFF-Leser (siehe RawPreviewService.PlainImageKind).
+                Return If(RawPreviewService.ExtractPreview(path), RawPreviewService.PlainTiffFallback(path))
+            End If
             ' ICO ist ein Container, den SkiaSharp nicht kennt - hier als PNG hereingereicht.
             If IcoPreviewService.IsSupportedIco(path) Then Return IcoPreviewService.ExtractPreview(path)
             ' PSD/PSB nur-lesend: das zusammengesetzte Gesamtbild als PNG (siehe PsdPreviewService).
@@ -941,9 +945,12 @@ Namespace Services
             ' Kamera-Weißabgleich statt der eingebetteten JPEG-Vorschau. Liefert der Decode nichts
             ' (defekte Datei, exotisches Format), greift darunter der bisherige Vorschau-Weg.
             ' Lineares Licht (EXR, Radiance, TIFF mit Gleitkomma) traegt keine Vorschau: es wird
-            ' immer entwickelt, auch wenn der Aufrufer die Vorschau einer RAW wollte.
+            ' immer entwickelt, auch wenn der Aufrufer die Vorschau einer RAW wollte. Ein JPEG oder
+            ' PNG mit RAW-Endung ist sicher kein RAW: LibRaw nicht erst fragen, der Vorschauweg
+            ' darunter liefert die ganze Datei (RawPreviewService.PlainImageKind).
             If (developRaw OrElse RawDecodeService.IsLinearLightSource(path)) AndAlso
-               RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.CanDevelop(path) Then
+               RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.CanDevelop(path) AndAlso
+               Not RawPreviewService.IsJpegOrPngContent(path) Then
                 Dim developed = RawDecodeService.TryDecode(path, lensChoice, recoverHighlights)
                 If developed IsNot Nothing Then Return developed
                 ' Abgebrochen, weil niemand das Ergebnis mehr braucht (RawDecodeService.RunWhileWanted):
@@ -1182,7 +1189,8 @@ Namespace Services
             rawStage = False
             ' Lineares Licht immer entwickelt, siehe DecodeOriented.
             If (developRaw OrElse RawDecodeService.IsLinearLightSource(path)) AndAlso
-               RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.CanDevelop(path) Then
+               RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.CanDevelop(path) AndAlso
+               Not RawPreviewService.IsJpegOrPngContent(path) Then
                 ' Ohne Belichtung und mit dem Knie ab Werk derselbe Aufruf wie in DecodeOriented.
                 Dim developed = RawDecodeService.TryDecode(path, lensChoice, recoverHighlights, knee:=knee, exposureEv:=exposureEv)
                 If developed IsNot Nothing Then

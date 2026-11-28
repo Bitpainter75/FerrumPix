@@ -16974,6 +16974,14 @@ Namespace ViewModels
             Dim sourceList = If(sources, Enumerable.Empty(Of String)()).Where(Function(s) Not String.IsNullOrEmpty(s)).ToList()
             Dim sourceFiles As New HashSet(Of String)(sourceList.Select(Function(s) NormalizePath(VariantKey.FileOf(s))),
                                                       StringComparer.OrdinalIgnoreCase)
+            ' Ordner und Stamm jeder Quelle. Eine vorhandene Datei mit demselben Stamm neben einer
+            ' Quelle ist ihr Partner (das Kamera-JPEG zu DSC_0001.NEF) und zaehlt wie eine Quelle,
+            ' auch wenn nur die RAW gewaehlt ist: sonst ersetzte "Alle überschreiben" beim Export
+            ' neben das Original die Kamera-JPEGs aller Paare des Laufs endgueltig. Ein frueherer
+            ' eigener Export desselben Namens laesst sich davon nicht unterscheiden (der Export
+            ' traegt keine eigene Kennung) und bekommt deshalb ebenfalls einen freien Namen.
+            Dim sourceStems As New HashSet(Of String)(sourceList.Select(Function(s) CompanionKey(VariantKey.FileOf(s))),
+                                                      StringComparer.OrdinalIgnoreCase)
             Dim pictures = FolderRoots.PicturesFolder()
             Dim outsideRoots = 0
             Dim firstNotShared = ""
@@ -17012,9 +17020,10 @@ Namespace ViewModels
                 Dim isReserved As Func(Of String, Boolean) =
                     Function(candidate)
                         Dim normalized = NormalizePath(candidate)
-                        Return claimed.Contains(normalized) OrElse
-                               (sourceFiles.Contains(normalized) AndAlso
-                                Not String.Equals(normalized, ownFile, StringComparison.OrdinalIgnoreCase))
+                        If claimed.Contains(normalized) Then Return True
+                        If sourceFiles.Contains(normalized) AndAlso
+                           Not String.Equals(normalized, ownFile, StringComparison.OrdinalIgnoreCase) Then Return True
+                        Return IsSourceCompanion(candidate, ownFile, sourceStems)
                     End Function
                 If isReserved(target) Then
                     target = MakeUniqueFilePath(target, isReserved)
@@ -17035,6 +17044,38 @@ Namespace ViewModels
                 Await _mainVm.ShowMessageAsync(LocalizationService.T("Ort nicht verwendbar"), FlatpakSandbox.WriteDenial(firstNotShared))
             End If
             Return pairs
+        End Function
+
+        ''' <summary>Ordner und Stamm einer Datei als Schluessel, um Partner gleichen Namens zu finden.</summary>
+        Private Shared Function CompanionKey(path As String) As String
+            Return NormalizePath(If(IO.Path.GetDirectoryName(path), "")) & "|" & IO.Path.GetFileNameWithoutExtension(path)
+        End Function
+
+        ''' <summary>Liegt unter dem Ziel (auch nur in Gross- und Kleinschreibung verschieden) eine
+        ''' Datei, die Partner einer Quelle des Laufs ist: gleicher Ordner, gleicher Stamm, nicht die
+        ''' eigene Quelle? Die Schreibweise zaehlt nicht, weil die Ziele mit kleiner Endung entstehen:
+        ''' auf Linux laege DSC_0001.jpg sonst still neben dem Kamerabild DSC_0001.JPG.</summary>
+        Private Shared Function IsSourceCompanion(candidate As String, ownFile As String, sourceStems As HashSet(Of String)) As Boolean
+            If Not sourceStems.Contains(CompanionKey(candidate)) Then Return False
+            Dim existing = FindFileIgnoringCase(candidate)
+            Return existing IsNot Nothing AndAlso
+                   Not String.Equals(NormalizePath(existing), ownFile, StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <summary>Die Datei unter diesem Namen, auch wenn sie sich nur in Gross- und Kleinschreibung
+        ''' unterscheidet; Nothing, wenn keine da ist.</summary>
+        Private Shared Function FindFileIgnoringCase(path As String) As String
+            If File.Exists(path) Then Return path
+            Dim folder = IO.Path.GetDirectoryName(path)
+            Dim name = IO.Path.GetFileName(path)
+            If String.IsNullOrEmpty(folder) OrElse String.IsNullOrEmpty(name) OrElse
+               name.IndexOfAny({"*"c, "?"c}) >= 0 OrElse Not Directory.Exists(folder) Then Return Nothing
+            Try
+                Dim options As New EnumerationOptions With {.MatchCasing = MatchCasing.CaseInsensitive, .IgnoreInaccessible = True}
+                Return Directory.EnumerateFiles(folder, name, options).FirstOrDefault()
+            Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is UnauthorizedAccessException
+                Return Nothing
+            End Try
         End Function
 
         ''' <summary>Wie MakeUniqueFilePath, weicht aber außer vorhandenen Dateien auch Namen aus,
@@ -17508,8 +17549,9 @@ Namespace ViewModels
         ''' <summary>„Exportieren nach": der Sammel-Export der Galerie. Wie „Konvertieren nach",
         ''' aber mit Namensmuster, Look/Auto-Verbesserung, Wasserzeichen, Bildgröße und
         ''' Metadaten-Wahl in einem Durchgang. Funktioniert auch auf RAW/PSD-Quellen (der Decode
-        ''' läuft über DecodeOriented); Originale werden NIE überschrieben - Ziel ist immer eine
-        ''' neue Datei, vorhandene Namen bekommen automatisch einen Zähler.</summary>
+        ''' läuft über DecodeOriented). Ein vorhandenes Ziel klärt der Konfliktdialog
+        ''' (ResolveBatchTargetsAsync); Quellen des Laufs und ihre Partner gleichen Stamms (das
+        ''' Kamera-JPEG neben der RAW) bekommen ohne Frage einen freien Namen.</summary>
         ''' Async Sub: eine durchgereichte Ausnahme landet beim Dispatcher und beendet den Prozess
         ''' (siehe ResizeSelected/RemoveMetadataSelected) - deshalb der aeussere Schutz.
         Private Async Sub ExportSelected(Optional vorgabe As IList(Of ImageItem) = Nothing)

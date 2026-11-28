@@ -108,6 +108,17 @@ Namespace Services
             End If
             developed?.Dispose()
 
+            ' Nichts gefunden und nicht entwickelbar: vielleicht ein gewoehnliches TIFF unter
+            ' RAW-Endung (siehe PlainImageKind).
+            If LongestEdge(scanned) = 0 AndAlso LongestEdge(thumb) = 0 Then
+                Dim plainTiff = PlainTiffFallback(filePath)
+                If plainTiff IsNot Nothing Then
+                    scanned?.Dispose()
+                    thumb?.Dispose()
+                    Return plainTiff
+                End If
+            End If
+
             ' Entwickeln ging nicht (libraw fehlt oder kennt die Datei nicht): dann ist ein kleines
             ' Bild immer noch besser als ein schwarzer Betrachter. Groesseres von beiden nehmen.
             If LongestEdge(scanned) >= LongestEdge(thumb) Then
@@ -151,6 +162,49 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Was am Anfang der Datei steht, wenn sie inhaltlich ein gewoehnliches Bild ist:
+        ''' JPEG, PNG oder TIFF; sonst <see cref="PlainImage.None"/>. Die Endung entscheidet ueberall
+        ''' sonst, und eine umbenannte Datei (ein Webexport als .nef, ein PNG als .cr2) fiel so durch
+        ''' alle RAW-Wege: der Scanner nahm beim Kamera-JPEG das eingebettete Miniaturbild, PNG und
+        ''' TIFF blieben leer. TIFF ist dabei nur ein Hinweis, denn die meisten RAWs sind selbst
+        ''' TIFF-Abkoemmlinge; es zaehlt erst, wenn LibRaw die Datei nicht entwickeln kann.</summary>
+        Friend Enum PlainImage
+            None
+            Jpeg
+            Png
+            Tiff
+        End Enum
+
+        Friend Shared Function PlainImageKind(filePath As String) As PlainImage
+            Try
+                Dim head(7) As Byte
+                Using fs As New FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite Or FileShare.Delete, 16)
+                    If fs.Read(head, 0, head.Length) < head.Length Then Return PlainImage.None
+                End Using
+                If head(0) = &HFF AndAlso head(1) = &HD8 AndAlso head(2) = &HFF Then Return PlainImage.Jpeg
+                If head(0) = &H89 AndAlso head(1) = &H50 AndAlso head(2) = &H4E AndAlso head(3) = &H47 AndAlso
+                   head(4) = &HD AndAlso head(5) = &HA AndAlso head(6) = &H1A AndAlso head(7) = &HA Then Return PlainImage.Png
+                If (head(0) = &H49 AndAlso head(1) = &H49 AndAlso head(2) = &H2A AndAlso head(3) = 0) OrElse
+                   (head(0) = &H4D AndAlso head(1) = &H4D AndAlso head(2) = 0 AndAlso head(3) = &H2A) Then Return PlainImage.Tiff
+            Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is UnauthorizedAccessException
+            End Try
+            Return PlainImage.None
+        End Function
+
+        ''' <summary>JPEG oder PNG unter RAW-Endung: sicher kein RAW, LibRaw muss nicht gefragt werden.</summary>
+        Friend Shared Function IsJpegOrPngContent(filePath As String) As Boolean
+            Dim kind = PlainImageKind(filePath)
+            Return kind = PlainImage.Jpeg OrElse kind = PlainImage.Png
+        End Function
+
+        ''' <summary>Ein gewoehnliches TIFF unter RAW-Endung, als PNG-Strom, fuer die Stellen, an
+        ''' denen LibRaw schon gescheitert ist und keine Vorschau gefunden wurde. Sensordaten (CFA,
+        ''' LinearRaw) bleiben aussen vor, sonst kaeme ein Mosaik als Graubild.</summary>
+        Friend Shared Function PlainTiffFallback(filePath As String) As MemoryStream
+            If PlainImageKind(filePath) <> PlainImage.Tiff OrElse Not TiffPreviewService.HasPlainPhotometric(filePath) Then Return Nothing
+            Return TiffPreviewService.ExtractPreview(filePath)
+        End Function
+
         ''' Liefert einen Speicherstrom mit den JPEG-Bytes, auf Position 0 gestellt - oder
         ''' Nothing, wenn nichts zu finden war.
         Public Shared Function ExtractPreview(filePath As String) As MemoryStream
@@ -161,6 +215,17 @@ Namespace Services
                 ' (ExtractPreviewWithFallback, Kachel). Der Scanner faende in einer EXR hoechstens
                 ' zufaellige JPEG-Kennungen.
                 If RawDecodeService.IsLinearLightSource(filePath) Then Return Nothing
+
+                ' Ein JPEG oder PNG mit RAW-Endung ist selbst das Bild: die ganze Datei, nicht ein
+                ' eingebettetes Miniaturbild aus seinem Exif-Block (siehe PlainImageKind).
+                If IsJpegOrPngContent(filePath) Then
+                    Dim whole As New MemoryStream()
+                    Using fs As New FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite Or FileShare.Delete)
+                        fs.CopyTo(whole)
+                    End Using
+                    whole.Position = 0
+                    Return whole
+                End If
 
                 ' CR3: zuerst ueber die Kastenstruktur - schneller, weil sie gezielt die
                 ' richtigen Kaesten ansteuert statt die Datei abzusuchen.

@@ -630,6 +630,30 @@ Namespace Services
             End Using
         End Function
 
+        ''' <summary>Traegt die erste Seite ein gewoehnliches Bild (Grau, RGB, Palette, CMYK, YCbCr)
+        ''' und keine Sensordaten (CFA, LinearRaw)? Fuer eine Datei mit RAW-Endung, die LibRaw nicht
+        ''' entwickeln kann und die inhaltlich ein TIFF ist (siehe RawPreviewService.PlainImageKind).</summary>
+        Friend Shared Function HasPlainPhotometric(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return False
+            EnsureSilentHandler()
+            Try
+                Using tif = Tiff.Open(path, "r")
+                    If tif Is Nothing Then Return False
+                    Dim field = tif.GetField(TiffTag.PHOTOMETRIC)
+                    If field Is Nothing OrElse field.Length = 0 Then Return False
+                    Select Case field(0).ToInt()
+                        Case 0, 1, 2, 3, 5, 6
+                            Return True
+                        Case Else
+                            Return False
+                    End Select
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Tiff.HasPlainPhotometric", ex)
+                Return False
+            End Try
+        End Function
+
         ''' <summary>Maße aus den Kopfdaten, ohne die Bilddaten zu lesen.</summary>
         Public Shared Function TryGetSize(path As String) As (Width As Integer, Height As Integer)
             If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return (0, 0)

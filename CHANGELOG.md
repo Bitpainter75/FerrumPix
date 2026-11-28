@@ -11,6 +11,14 @@
 - **Exposure times in exported files.** Times such as 0.4 or 0.8 seconds that are filled in from
   the RAW file no longer turn into 1/2 or 1 second in the exported picture.
 
+- **Camera JPEGs stay safe when exporting next to the original.** If only the RAW file is
+  selected and its camera JPEG lies next to it, the export now gets a free name instead of
+  replacing the camera picture, even after "Overwrite all"; on Linux it no longer ends up as a
+  second file that only differs in upper and lower case.
+
+- **Pictures with the wrong file extension.** A JPEG, PNG or TIFF that carries a RAW extension now
+  opens as the whole picture instead of a tiny preview, an empty tile or an error message.
+
 - **Lock screen password only for the desktop.** The password of the lock screen now only locks
   the window on your computer, and the administrator has a password of their own for the browser.
   Turning the lock screen off no longer touches the browser sign-in, and setting up the
@@ -49,139 +57,3 @@
   could stay empty until the tile size changed, and after a while not even that helped. Every
   tile on screen now gets its thumbnail, in the grid, the grouped view and the photo wall.
 
-## 0.9.93
-
-### Changes
-
-- **Only your photo folders in the container.** In the Docker image FerrumPix now shows just
-  `/photos`: the folder tree, every folder and file chooser, Save as, Export to and the batch tools
-  stay inside it, and it is the home and start folder. Other folders can be set with
-  `FERRUMPIX_FOLDER_ROOTS` or `--folder-roots=`; without them nothing changes.
-
-- **More fonts in the container.** The Docker image now brings free fonts for text in the editor:
-  stand-ins with the same widths as the common office fonts, and Roboto, Open Sans, Lato, Montserrat, Source Sans 3, Source Serif 4, Oswald, Nunito and Inter.
-
-- **Download whole folders in the browser.** Folder tiles in the gallery now have the download
-  badge too, and Download is in the right-click menu of a folder tile and of the folder tree. The
-  folder comes as one ZIP named after it, with its subfolders and sidecar files; hidden files are
-  left out. A very large folder asks first, an empty one says so.
-
-- **User name and password set in the browser.** In the browser FerrumPix now always asks for a
-  user name and a password. The first time you open the page you choose both there, so the
-  container templates no longer need a password file; until then nothing else is reachable.
-  Signing in also lets you pick the full desktop interface or a simpler page for phones and
-  tablets. The sign-in page fits phones, tablets and large screens alike.
-
-- **A page for phones.** The simpler page in the browser shows all photos by day with a timeline
-  of the years along the edge to jump through them, more and smaller tiles on large screens
-  (CTRL and the mouse wheel change their size), the folders, search with people and places, and a full screen view to swipe and zoom
-  that shows your edits. The full screen view and the info sheet show the file name, the info
-  sheet also folder, resolution, file size and format; variants of a raw picture appear as their
-  own tiles as in the gallery, and a tile whose file is gone or cannot be read shows a sign
-  instead of staying grey. Rate, favourite, label, keep or reject there and the desktop sees it.
-  Upload photos and videos from the phone into a folder, download the original, a JPEG with your
-  edits or several pictures as a ZIP, and share from the full screen view. Raw, HEIC, TIFF and
-  other formats a phone cannot open download there only as a JPEG with your edits, also in a ZIP;
-  the full desktop interface in the browser still downloads every original. Select several pictures
-  or whole days (long press, the select button, the circle at a day, or CTRL and SHIFT with the
-  mouse) and download, share, rate, favourite, label, keep, reject or delete them at once; keep
-  and reject use the thumbs of the gallery. Over HTTPS the page can
-  be installed on the home screen. Live Photos and Motion Photos carry a mark on their tile and
-  play their short video once, muted at first, from a large play button on the photo, the button
-  at the top or a long press, and then the photo is back; share links show it only when they pass
-  on all metadata.
-
-- **Play button on Live Photos and Motion Photos.** In the viewer and in full screen a large play
-  button now sits in the middle of such a photo, like on a video tile. One click plays the short
-  video once, then the photo is back.
-
-- **Several users with rights per folder.** In Settings, User management (now below Performance,
-  together with the password of the sign-in window) the administrator adds further
-  users for the browser and decides per folder what each may do: view and download, also rate,
-  mark and upload, or also rename and delete. Other users only get the page for phones and see
-  nothing beyond their folders, not even through links in them; ratings and marks stay shared. Each user can pick a language for
-  that page. Every user name can be changed, the administrator's too: there by the administrator,
-  and on the phone page under More for your own account; signed in browsers stay signed in.
-
-- **Forgot your password?** With a mail server and the address of FerrumPix in the browser set up under
-  Settings, User management, the sign-in page in the browser sends a link for a new password to the
-  user's email address; the link always starts with that address. If the administrator
-  can no longer sign in, starting once with `FERRUMPIX_RESET_ADMIN_PASSWORD=1` lets them choose a
-  new password again.
-
-- **Second factor for signing in.** Every user can add a code from an authenticator app to the
-  sign-in in the browser: on the page for phones under More, Second factor, and for the
-  administrator also in Settings, User management. It is set up with a QR code, takes effect only
-  after a valid code, and comes with ten recovery codes. Forgot your password keeps it and asks
-  for a code of the second factor too before the new password takes effect; the
-  administrator can reset it for another user. Signing in at the computer itself stays without a code.
-
-- **Share links.** In the browser, pictures can be shared with people who have no account: one
-  picture, a selection, a folder or a search result, from the page for phones or the right-click
-  menu of the gallery. Each link can expire, have its own password, allow or forbid downloads and
-  leave out place, people and camera; the page behind it shows only those pictures, with your
-  edits. Downloads, one by one or as a ZIP, come with your edits too: an edited picture, a variant
-  and every format other than JPEG, PNG and WebP (raw, HEIC, TIFF and the like) arrive as a full
-  size JPEG, and only unedited JPEG, PNG and WebP pictures go out as the original. A raw picture
-  with its camera JPEG gives one JPEG: the camera's while the raw is unedited, the edited raw
-  otherwise; the same goes for downloads on the page for phones. Variants of a
-  raw picture can be shared on their own. Saving a link again keeps its end date unless you pick
-  a new one, so an expired link stays expired. My shares on the phone page and Settings, User
-  management list the links with their views, revoke them or pause them all. A picture saved
-  again in FerrumPix stays in its links; one that is replaced by a different file or deleted
-  leaves them.
-
-- **One search everywhere.** The search field in a folder and over the whole catalog, saved
-  searches and the page for phones now all find the same pictures: file names, keywords, recognised
-  content, titles and descriptions, places, ratings and the names of people in the picture, with
-  the same `+word`, `-word` and `"quoted phrase"` rules. Typing a person's name finds their
-  pictures even without a keyword.
-
-- **Copy and paste with your device in the browser.** Text and pictures copied in FerrumPix now
-  land in the clipboard of the device you sit at, and pasting brings text and pictures from there
-  into FerrumPix; files copied on the device are uploaded when you paste them. Copying out needs
-  HTTPS or localhost, over plain HTTP only text gets there.
-
-- **Security events in the container log.** Sign-ins, failed attempts, locking, password changes,
-  users, folder rules, share links, uploads, downloads and deletions each get one line starting
-  with `FerrumPix security:`, with time, user and address, easy to filter with `grep`. Passwords,
-  links and mail addresses never appear.
-
-- **Faster thumbnails of edited pictures.** Thumbnails of edited JPEG and WebP pictures are now
-  created several times faster and with far less memory, and look a little cleaner in fine detail.
-
-### Fixes
-
-- While FerrumPix is locked, the window bar now stays at the top, so the window can still be
-  moved, resized, minimized, maximized and closed. It shows only the logo and the window buttons,
-  no file name. With unsaved changes the window stays open and asks you to unlock first.
-
-- In the browser, users without the administrator role can no longer upload sidecar files or
-  projects, and pictures from folders they may not open no longer appear inside other pictures on
-  the phone page or in shared links. The delete question on the phone page now says when the trash
-  is switched off and deleting is permanent. Searches with many `*` stay fast.
-
-- In the full interface in the browser, dragging the handle of a scroll bar follows the mouse
-  again; before, it jumped from the top straight to the bottom unless the mouse moved very slowly.
-
-- In the browser, videos and the short videos of Live Photos and Motion Photos in the viewer now
-  play with a picture; before, the area stayed black and the viewer went back to the photo.
-  Videos recorded with the phone turned, among them the short video of a Motion Photo, now play
-  the right way up there and on macOS instead of turned on their side.
-
-- In the container, deleting, renaming, moving and copying pictures under `/photos` work again
-  without switching on file operations outside the personal folder, and the download badge on the
-  tiles and Download in the right-click menu appear again. Downloading only reads a picture and no
-  longer depends on permission to change it.
-
-- The search field in the gallery no longer loses the keyboard while you type when a catalog
-  search, the catalog index or a face search is running; before, you had to click into the field
-  again after every letter. The field now stays next to the running search, and a catalog search
-  starts once you pause typing for a moment.
-
-- In the Flatpak from Flathub, importing into a folder in your home folder that the Flatpak can't
-  see, such as `~/2026`, no longer puts pictures where they vanish after closing FerrumPix (GitHub
-  #166). FerrumPix now warns in the import dialog and writes nothing there, and the same goes for
-  Save as, exporting, the batch tools, pasting, moving, new folders, backups and the data folder.
-  The message explains how to share the folder with Flatseal or `flatpak override`, or to pick it
-  with the folder chooser.
